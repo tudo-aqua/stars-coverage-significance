@@ -32,7 +32,7 @@ fun main() {
   val tsc = tsc()
 
   println("Loading simulation runs...")
-  val simulationRunsWrapper = loadSingleExperiment("simulations")
+  val simulationRunsWrapper = loadSingleExperiment("manual_tests/manual_recording_1")
 
   println("Loading segments...")
   val segments =
