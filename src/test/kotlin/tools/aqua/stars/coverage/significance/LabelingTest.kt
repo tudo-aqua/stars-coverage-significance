@@ -21,7 +21,7 @@ import tools.aqua.stars.core.validation.manuallyLabelledFile
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.importer.carla.loadSegments
 
-val simulationRun = ExperimentConfiguration.loadSingleExperiment("manual_tests/manual_recording_1")
+val simulationRun = loadSingleExperiment("manual_tests/manual_recording_1")
 val segments = loadSegments(listOf(simulationRun)).toList()
 
 val manualTests =
