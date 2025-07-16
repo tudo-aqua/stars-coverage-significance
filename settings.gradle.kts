@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-rootProject.name = "stars-carla-experiments"
+rootProject.name = "stars-coverage-significance"
 
 includeBuild("../stars")
