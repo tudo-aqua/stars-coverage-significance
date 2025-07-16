@@ -29,8 +29,6 @@ import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
 import tools.aqua.stars.importer.carla.loadSegments
 
 fun main() {
-  val tsc = tsc()
-
   println("Loading simulation runs...")
   val simulationRunsWrapper = loadSingleExperiment("manual_tests/manual_recording_1")
 
