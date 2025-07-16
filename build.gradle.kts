@@ -68,6 +68,6 @@ spotless {
 
 tasks.test { useJUnitPlatform() }
 
-application { mainClass.set("tools.aqua.stars.carla.experiments.Experiment") }
+application { mainClass.set("tools.aqua.stars.coverage.significance.MainKt") }
 
 kotlin { jvmToolchain(17) }
