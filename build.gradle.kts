@@ -32,8 +32,8 @@ var starsVersion = "0.5"
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.13.4")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.13.4")
   testImplementation(group = "tools.aqua", name = "stars-core", configuration = "tests")
   testImplementation(kotlin("test"))
   implementation(group = "tools.aqua", name = "stars-core", version = starsVersion)
