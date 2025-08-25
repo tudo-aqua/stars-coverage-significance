@@ -70,4 +70,4 @@ tasks.test { useJUnitPlatform() }
 
 application { mainClass.set("tools.aqua.stars.coverage.significance.MainKt") }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
