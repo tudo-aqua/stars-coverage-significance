@@ -30,12 +30,12 @@ private const val LAYER_PEDESTRIAN = "pedestrian"
 private const val LAYER_MULTI_LANE_DYNAMIC_RELATIONS = "multi-lane-dynamic-relations"
 
 /**
- * Returns the [TSC] with the dataclasses [Actor], [TickData], [Segment], [TickDataUnitSeconds], and
+ * Returns the [TSC] with the dataclasses [Actor], [TickData], [TickDataUnitSeconds], and
  * [TickDataDifferenceSeconds] that is used in this experiment.
  */
 @Suppress("StringLiteralDuplication")
 fun tsc() =
-    tsc<Actor, TickData, Segment, TickDataUnitSeconds, TickDataDifferenceSeconds> {
+    tsc<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds> {
       all("TSCRoot") {
         projections {
           projectionRecursive(FULL_TSC) // all
@@ -53,13 +53,13 @@ fun tsc() =
             projectionRecursive(LAYER_PEDESTRIAN)
           }
 
-          leaf("Clear") { condition { ctx -> ctx.weatherClear() } }
-          leaf("Cloudy") { condition { ctx -> ctx.weatherCloudy() } }
-          leaf("Wet") { condition { ctx -> ctx.weatherWet() } }
-          leaf("Wet Cloudy") { condition { ctx -> ctx.weatherWetCloudy() } }
-          leaf("Soft Rain") { condition { ctx -> ctx.weatherSoftRain() } }
-          leaf("Mid Rain") { condition { ctx -> ctx.weatherMidRain() } }
-          leaf("Hard Rain") { condition { ctx -> ctx.weatherHardRain() } }
+          leaf("Clear") { condition { _ -> true } }
+          leaf("Cloudy") { condition { _ -> true } }
+          leaf("Wet") { condition { _ -> true } }
+          leaf("Wet Cloudy") { condition { _ -> true } }
+          leaf("Soft Rain") { condition { _ -> true } }
+          leaf("Mid Rain") { condition { _ -> true } }
+          leaf("Hard Rain") { condition { _ -> true } }
         }
 
         exclusive("Road Type") {
@@ -72,7 +72,7 @@ fun tsc() =
           }
 
           all("Junction") {
-            condition { ctx -> isInJunction.holds(ctx) }
+            condition { _ -> true }
 
             projections {
               projection(LAYER_PEDESTRIAN)
@@ -91,33 +91,19 @@ fun tsc() =
               leaf("Pedestrian Crossed") {
                 projections { projection(LAYER_PEDESTRIAN) }
 
-                condition { ctx -> pedestrianCrossed.holds(ctx) }
+                condition { _ -> true }
               }
 
               leaf("Must Yield") {
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    mustYield.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
+                condition { _ -> true }
 
-                monitors {
-                  monitor("Did not yield") { ctx ->
-                    ctx.entityIds.any { otherVehicleId ->
-                      hasYielded.holds(ctx, entityId2 = otherVehicleId)
-                    }
-                  }
-                }
+                monitors { monitor("Did not yield") { _ -> true } }
               }
 
               leaf("Following Leading Vehicle") {
                 projections { projection(LAYER_4) }
 
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    follows.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
+                condition { _ -> true }
               }
             }
 
@@ -127,9 +113,9 @@ fun tsc() =
                 projectionRecursive(LAYER_1_2_4)
               }
 
-              leaf("Lane Follow") { condition { ctx -> makesNoTurn.holds(ctx) } }
-              leaf("Right Turn") { condition { ctx -> makesRightTurn.holds(ctx) } }
-              leaf("Left Turn") { condition { ctx -> makesLeftTurn.holds(ctx) } }
+              leaf("Lane Follow") { condition { _ -> true } }
+              leaf("Right Turn") { condition { _ -> true } }
+              leaf("Left Turn") { condition { _ -> true } }
             }
           }
           all("Multi-Lane") {
@@ -141,10 +127,7 @@ fun tsc() =
               projection(LAYER_MULTI_LANE_DYNAMIC_RELATIONS)
             }
 
-            condition { ctx ->
-              isOnMultiLane.holds(
-                  ctx, ctx.segment.tickData.first().currentTick, ctx.segment.primaryEntityId)
-            }
+            condition { tick -> isOnMultilaneRoad.holds(tick) }
 
             optional("Dynamic Relation") {
               projections {
@@ -153,30 +136,20 @@ fun tsc() =
                 projectionRecursive(LAYER_1_2_4)
                 projectionRecursive(LAYER_MULTI_LANE_DYNAMIC_RELATIONS)
               }
-              leaf("Oncoming traffic") {
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    oncoming.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
-              }
+              leaf("Oncoming traffic") { condition { _ -> true } }
               leaf("Overtaking") {
-                condition { ctx -> hasOvertaken.holds(ctx) }
-                monitors { monitor("Right Overtaking") { ctx -> noRightOvertaking.holds(ctx) } }
+                condition { _ -> true }
+                monitors { monitor("Right Overtaking") { _ -> true } }
               }
               leaf("Pedestrian Crossed") {
                 projections { projection(LAYER_PEDESTRIAN) }
 
-                condition { ctx -> pedestrianCrossed.holds(ctx) }
+                condition { _ -> true }
               }
               leaf("Following Leading Vehicle") {
                 projections { projection(LAYER_4) }
 
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    follows.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
+                condition { _ -> true }
               }
             }
 
@@ -185,8 +158,8 @@ fun tsc() =
                 projectionRecursive(LAYER_1_2)
                 projectionRecursive(LAYER_1_2_4)
               }
-              leaf("Lane Change") { condition { ctx -> changedLane.holds(ctx) } }
-              leaf("Lane Follow") { condition { ctx -> !changedLane.holds(ctx) } }
+              leaf("Lane Change") { condition { _ -> true } }
+              leaf("Lane Follow") { condition { _ -> true } }
             }
 
             bounded("Stop Type", Pair(0, 1)) {
@@ -196,8 +169,8 @@ fun tsc() =
               }
 
               leaf("Has Red Light") {
-                condition { ctx -> hasRelevantRedLight.holds(ctx) }
-                monitors { monitor("Crossed red light") { ctx -> !didCrossRedLight.holds(ctx) } }
+                condition { _ -> true }
+                monitors { monitor("Crossed red light") { _ -> true } }
               }
             }
           }
@@ -209,10 +182,7 @@ fun tsc() =
               projection(LAYER_1_2_4)
             }
 
-            condition { ctx ->
-              isOnSingleLane.holds(
-                  ctx, ctx.segment.tickData.first().currentTick, ctx.segment.primaryEntityId)
-            }
+            condition { _ -> true }
 
             optional("Dynamic Relation") {
               projections {
@@ -221,18 +191,12 @@ fun tsc() =
                 projectionRecursive(LAYER_1_2_4)
               }
 
-              leaf("Oncoming traffic") {
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    oncoming.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
-              }
+              leaf("Oncoming traffic") { condition { _ -> true } }
 
               leaf("Pedestrian Crossed") {
                 projections { projection(LAYER_PEDESTRIAN) }
 
-                condition { ctx -> pedestrianCrossed.holds(ctx) }
+                condition { _ -> true }
               }
 
               leaf("Following Leading Vehicle") {
@@ -241,11 +205,7 @@ fun tsc() =
                   projection(LAYER_1_2_4)
                 }
 
-                condition { ctx ->
-                  ctx.entityIds.any { otherVehicleId ->
-                    follows.holds(ctx, entityId2 = otherVehicleId)
-                  }
-                }
+                condition { _ -> true }
               }
             }
 
@@ -256,13 +216,13 @@ fun tsc() =
               }
 
               leaf("Has Stop Sign") {
-                condition { ctx -> hasStopSign.holds(ctx) }
-                monitors { monitor("Stopped at stop sign") { ctx -> stopAtEnd.holds(ctx) } }
+                condition { _ -> true }
+                monitors { monitor("Stopped at stop sign") { _ -> true } }
               }
-              leaf("Has Yield Sign") { condition { ctx -> hasYieldSign.holds(ctx) } }
+              leaf("Has Yield Sign") { condition { _ -> true } }
               leaf("Has Red Light") {
-                condition { ctx -> hasRelevantRedLight.holds(ctx) }
-                monitors { monitor("Crossed red light") { ctx -> !didCrossRedLight.holds(ctx) } }
+                condition { _ -> true }
+                monitors { monitor("Crossed red light") { _ -> true } }
               }
             }
           }
@@ -275,9 +235,9 @@ fun tsc() =
             projectionRecursive(LAYER_1_2_4)
           }
 
-          leaf("High Traffic") { condition { ctx -> hasHighTrafficDensity.holds(ctx) } }
-          leaf("Middle Traffic") { condition { ctx -> hasMidTrafficDensity.holds(ctx) } }
-          leaf("Low Traffic") { condition { ctx -> hasLowTrafficDensity.holds(ctx) } }
+          leaf("High Traffic") { condition { _ -> true } }
+          leaf("Middle Traffic") { condition { _ -> true } }
+          leaf("Low Traffic") { condition { _ -> true } }
         }
 
         exclusive("Time of Day") {
@@ -286,9 +246,9 @@ fun tsc() =
             projectionRecursive(LAYER_PEDESTRIAN)
           }
 
-          leaf("Sunset") { condition { ctx -> ctx.sunset() } }
+          leaf("Sunset") { condition { _ -> true } }
 
-          leaf("Noon") { condition { ctx -> ctx.noon() } }
+          leaf("Noon") { condition { _ -> true } }
         }
       }
     }

@@ -19,72 +19,86 @@ package tools.aqua.stars.coverage.significance
 
 import java.io.File
 import java.nio.file.Path
+import java.util.zip.ZipFile
 import kotlin.io.path.name
+import kotlin.sequences.forEach
 import tools.aqua.stars.core.evaluation.TSCEvaluation
-import tools.aqua.stars.core.metric.metrics.evaluation.*
-import tools.aqua.stars.core.metric.metrics.postEvaluation.*
-import tools.aqua.stars.data.av.dataclasses.*
-import tools.aqua.stars.data.av.metrics.AverageVehiclesInEgosBlockMetric
+import tools.aqua.stars.core.metric.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
-import tools.aqua.stars.importer.carla.loadSegments
+import tools.aqua.stars.importer.carla.loadTicks
 
-fun main() {
-  println("Loading simulation runs...")
-  val simulationRunsWrapper = loadSingleExperiment("manual_tests/manual_recording_1")
+fun main(args: Array<String>) {
+  val tsc = tsc()
+  val simulationRuns = getSimulationRuns("manual_tests")
+  val ticks = loadTicks(simulationRuns)
 
-  println("Loading segments...")
-  val segments =
-      loadSegments(
-          simulationRunsWrappers = listOf(simulationRunsWrapper),
-      )
-
-  val validTSCInstancesPerProjectionMetric =
-      ValidTSCInstancesPerTSCMetric<
-          Actor, TickData, Segment, TickDataUnitSeconds, TickDataDifferenceSeconds>()
-
-  println("Creating TSC...")
-  val evaluation =
-      TSCEvaluation(tscList = listOf(tsc())).apply {
-        registerMetricProviders(
-            TotalSegmentTickDifferencePerIdentifierMetric(),
-            SegmentCountMetric(),
-            AverageVehiclesInEgosBlockMetric(),
-            TotalSegmentTickDifferenceMetric(),
-            validTSCInstancesPerProjectionMetric,
-            InvalidTSCInstancesPerTSCMetric(),
-            MissedTSCInstancesPerTSCMetric(),
-            MissedPredicateCombinationsPerTSCMetric(validTSCInstancesPerProjectionMetric),
-            FailedMonitorsMetric(validTSCInstancesPerProjectionMetric),
-        )
-        println("Run Evaluation")
-        runEvaluation(segments = segments)
+  TSCEvaluation(tscList = listOf(tsc))
+      .apply {
+        clearHooks()
+        registerDefaultHooks()
+        registerMetricProviders(InvalidTSCInstancesPerTSCMetric())
       }
+      .runEvaluation(ticks = ticks)
 }
 
-fun loadSingleExperiment(
-    folderName: String,
+fun getSimulationRuns(
+    simulationRunFolder: String,
     staticFilter: String = ".*",
     dynamicFilter: String = ".*"
-): CarlaSimulationRunsWrapper {
-  var staticFile: Path? = null
-  val dynamicFiles = mutableListOf<Path>()
-  val mapFolder = File(folderName)
-  mapFolder.walk().forEach { mapFile ->
-    if (mapFile.nameWithoutExtension.contains("static_data") &&
-        staticFilter.toRegex().containsMatchIn(mapFile.name)) {
-      staticFile = mapFile.toPath()
+): List<CarlaSimulationRunsWrapper> =
+    File(simulationRunFolder).let { file ->
+      file
+          .walk()
+          .filter {
+            it.isDirectory && it != file && staticFilter.toRegex().containsMatchIn(it.name)
+          }
+          .toList()
+          .mapNotNull { mapFolder ->
+            var staticFile: Path? = null
+            val dynamicFiles = mutableListOf<Path>()
+            mapFolder.walk().forEach { mapFile ->
+              if (mapFile.nameWithoutExtension.contains("static_data") &&
+                  staticFilter.toRegex().containsMatchIn(mapFile.name)) {
+                staticFile = mapFile.toPath()
+              }
+              if (mapFile.nameWithoutExtension.contains("dynamic_data") &&
+                  dynamicFilter.toRegex().containsMatchIn(mapFile.name)) {
+                dynamicFiles.add(mapFile.toPath())
+              }
+            }
+
+            if (staticFile == null || dynamicFiles.isEmpty()) {
+              return@mapNotNull null
+            }
+
+            dynamicFiles.sortBy {
+              "_seed([0-9]{1,4})".toRegex().find(it.fileName.name)?.groups?.get(1)?.value?.toInt()
+                  ?: 0
+            }
+            return@mapNotNull CarlaSimulationRunsWrapper(staticFile, dynamicFiles)
+          }
     }
-    if (mapFile.nameWithoutExtension.contains("dynamic_data") &&
-        dynamicFilter.toRegex().containsMatchIn(mapFile.name)) {
-      dynamicFiles.add(mapFile.toPath())
+
+/**
+ * Extract a zip file into any directory.
+ *
+ * @param zipFile src zip file
+ * @param outputDir directory to extract into. There will be new folder with the zip's name inside
+ *   [outputDir] directory.
+ * @return the extracted directory i.e.
+ */
+private fun extractZipFile(zipFile: File, outputDir: File): File? {
+  ZipFile(zipFile).use { zip ->
+    zip.entries().asSequence().forEach { entry ->
+      zip.getInputStream(entry).use { input ->
+        if (entry.isDirectory) File(outputDir, entry.name).also { it.mkdirs() }
+        else
+            File(outputDir, entry.name)
+                .also { it.parentFile.mkdirs() }
+                .outputStream()
+                .use { output -> input.copyTo(output) }
+      }
     }
   }
-
-  checkNotNull(staticFile) { "Static data file not found." }
-  check(dynamicFiles.isNotEmpty()) { "Dynamic data file not found." }
-
-  dynamicFiles.sortBy {
-    "_seed([0-9]{1,4})".toRegex().find(it.fileName.name)?.groups?.get(1)?.value?.toInt() ?: 0
-  }
-  return CarlaSimulationRunsWrapper(staticFile, dynamicFiles)
+  return outputDir
 }
