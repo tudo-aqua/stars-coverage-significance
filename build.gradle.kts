@@ -53,7 +53,7 @@ dependencies {
   implementation(group = "tools.aqua", name = "stars-core", version = starsVersion)
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl", version = starsVersion)
   implementation(
-      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")
+      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.12.0")
 }
 
 spotless {
