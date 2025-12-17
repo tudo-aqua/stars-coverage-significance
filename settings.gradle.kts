@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 The STARS Coverage Significance Authors
+ * Copyright 2023-2025 The STARS OWA Coverage Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,4 @@
  * limitations under the License.
  */
 
-rootProject.name = "stars-coverage-significance"
-
-includeBuild("../stars")
+rootProject.name = "stars-owa-coverage"
