@@ -37,7 +37,7 @@ import java.net.URI
 plugins {
   kotlin("jvm") version "2.2.0"
   application
-  id("com.diffplug.spotless") version "7.0.2"
+  id("com.diffplug.spotless") version "8.1.0"
 }
 
 repositories {
