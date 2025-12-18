@@ -1,176 +1,202 @@
-/*
- * Copyright 2025 The STARS OWA Coverage Authors
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-import java.io.File
-import java.util.BitSet
 import kotlin.random.Random
 
-/**
- * Traffic scenario generator for a 3-lane road with 100 blocks per lane. Each block can contain at
- * most one vehicle (bitmask representation).
- */
-object TrafficScenarioGen {
-  const val LANES = 3
-  const val BLOCKS_PER_LANE = 100
-  const val N_BITS = LANES * BLOCKS_PER_LANE // 300
+object TrafficScenarioGenSingleMaskReadable {
 
-  // Hard-coded lane probabilities: right -> middle -> left
-  // Tune as you like; this is a "keep-right"-ish distribution that still uses middle/left.
-  val P_LANE = doubleArrayOf(0.45, 0.35, 0.20)
+  enum class VehicleType(val sumoId: String) {
+    TRUCK("truck"),
+    CAR_CALM("car_calm"),
+    CAR_NORMAL("car_normal"),
+    CAR_SPORTY("car_sporty")
+  }
 
-  /** Efficient "sample without replacement" pool for positions 0..(n-1). */
-  private class IntPool(n: Int) {
-    private val a = IntArray(n) { it }
-    var size: Int = n
-      private set
+  data class Config(
+    val x: Int,
+    val kMin: Int,
+    val kMax: Int,
+    val nL: Int = 3,
+    val nP: Int = 100,
+    val types: List<VehicleType> = VehicleType.entries.toList(),
 
-    fun isEmpty(): Boolean = size <= 0
+    // q=(0.2,0.4,0.3,0.1) in the same order as `types`
+    val qType: DoubleArray = doubleArrayOf(0.2, 0.4, 0.3, 0.1),
 
-    fun drawUniform(rng: Random): Int {
-      val i = rng.nextInt(size)
-      val v = a[i]
-      // swap-remove
-      size -= 1
-      a[i] = a[size]
-      a[size] = v
-      return v
+    // p^(t) in lane order: right(0) -> middle(1) -> left(2)
+    val pLaneByType: Map<VehicleType, DoubleArray> = mapOf(
+      VehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
+      VehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
+      VehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
+      VehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
+    ),
+
+    val seed: Int? = null
+  )
+
+  data class Scenario(
+    val mask: Array<VehicleType?>, // null = empty, else vehicle type
+    val nL: Int,
+    val nP: Int
+  ) {
+    fun n(): Int = nL * nP
+    fun vehiclesCount(): Int = mask.count { it != null }
+  }
+
+  data class Spawn(val type: VehicleType, val lane: Int, val area: Int, val idx: Int)
+
+  private fun validate(cfg: Config) {
+    require(cfg.x > 0) { "x must be > 0" }
+    require(cfg.kMin <= cfg.kMax) { "kMin must be <= kMax" }
+    require(cfg.nL > 0 && cfg.nP > 0) { "nL and nP must be > 0" }
+    require(cfg.qType.size == cfg.types.size) { "qType must match number of types" }
+    require(cfg.qType.all { it >= 0.0 } && cfg.qType.sum() > 0.0) { "qType must be non-negative and not all zero" }
+    cfg.types.forEach { t ->
+      val p = cfg.pLaneByType[t] ?: error("Missing lane probabilities for type $t")
+      require(p.size == cfg.nL) { "pLane($t) must have length nL=${cfg.nL}" }
+      require(p.all { it >= 0.0 } && p.sum() > 0.0) { "pLane($t) must be non-negative and not all zero" }
     }
   }
 
-  /**
-   * Draw a lane index according to probabilities pLane, restricted to lanes that still have
-   * capacity.
-   */
-  private fun drawLaneRestricted(rng: Random, pLane: DoubleArray, pools: Array<IntPool>): Int {
-    var sum = 0.0
-    for (l in 0 until LANES) {
-      if (!pools[l].isEmpty()) sum += pLane[l]
-    }
-    // sum should be > 0 as long as at least one lane has capacity
+  private fun categoricalIndex(rng: Random, probs: DoubleArray): Int {
+    val sum = probs.sum()
     val r = rng.nextDouble() * sum
     var acc = 0.0
-    for (l in 0 until LANES) {
-      if (pools[l].isEmpty()) continue
-      acc += pLane[l]
-      if (r <= acc) return l
+    for (i in probs.indices) {
+      acc += probs[i]
+      if (r <= acc) return i
     }
-    // Fallback (shouldn't happen due to numerical issues only)
-    for (l in 0 until LANES) if (!pools[l].isEmpty()) return l
-    error("No lanes have remaining capacity.")
+    return probs.size - 1
   }
 
-  /** Generate ONE scenario bitmask with k vehicles. */
-  fun sampleScenario(rng: Random, k: Int, pLane: DoubleArray = P_LANE): BitSet {
-    val kk = k.coerceIn(0, N_BITS) // hard cap
-    val pools = Array(LANES) { IntPool(BLOCKS_PER_LANE) }
-    val mask = BitSet(N_BITS)
+  private fun chooseLane(
+    rng: Random,
+    pLane: DoubleArray,
+    lanesWithCapacity: BooleanArray
+  ): Int {
+    // restrict to lanes that still have free spawn areas AND have p>0
+    val restricted = DoubleArray(pLane.size) { i ->
+      if (lanesWithCapacity[i] && pLane[i] > 0.0) pLane[i] else 0.0
+    }
+    if (restricted.sum() <= 0.0) return -1
+    return categoricalIndex(rng, restricted)
+  }
+
+  fun sampleOne(cfg: Config, rng: Random, k: Int): Scenario {
+    val n = cfg.nL * cfg.nP
+    val mask: Array<VehicleType?> = arrayOfNulls(n)
+
+    // Available spawn areas per lane (readable version: MutableList)
+    val availablePerLane: Array<MutableList<Int>> =
+      Array(cfg.nL) { lane -> (0 until cfg.nP).toMutableList() }
+
+    val kk = k.coerceIn(0, n)
 
     repeat(kk) {
-      val lane = drawLaneRestricted(rng, pLane, pools)
-      val pos = pools[lane].drawUniform(rng)
-      val idx = lane * BLOCKS_PER_LANE + pos
-      mask.set(idx)
+      // 1) choose vehicle type
+      val typeIdx = categoricalIndex(rng, cfg.qType)
+      val type = cfg.types[typeIdx]
+
+      // 2) choose lane allowed for this type and with remaining capacity
+      val lanesWithCapacity = BooleanArray(cfg.nL) { l -> availablePerLane[l].isNotEmpty() }
+      val lane = chooseLane(rng, cfg.pLaneByType.getValue(type), lanesWithCapacity)
+
+      if (lane < 0) {
+        // No allowed lane has capacity (rare unless you get near-full lanes).
+        // For readability, we just skip this placement attempt.
+        return@repeat
+      }
+
+      // 3) choose spawn area uniformly within lane, without replacement
+      val list = availablePerLane[lane]
+      val pickedIndex = rng.nextInt(list.size)
+      val area = list.removeAt(pickedIndex)
+
+      val idx = lane * cfg.nP + area
+      mask[idx] = type
     }
-    return mask
+
+    return Scenario(mask = mask, nL = cfg.nL, nP = cfg.nP)
   }
 
-  /** Generate x UNIQUE scenarios (BitSets). k is sampled uniformly from [kMin, kMax]. */
-  fun generateUniqueScenarios(
-      x: Int,
-      kMin: Int,
-      kMax: Int,
-      seed: Int? = null,
-      pLane: DoubleArray = P_LANE
-  ): List<BitSet> {
-    require(x > 0) { "x must be > 0" }
-    require(kMin <= kMax) { "kMin must be <= kMax" }
+  fun generate(cfg: Config): List<Scenario> {
+    validate(cfg)
+    val rng = if (cfg.seed != null) Random(cfg.seed) else Random.Default
 
-    val rng = if (seed != null) Random(seed) else Random.Default
+    val out = ArrayList<Scenario>(cfg.x)
 
-    val seen = HashSet<BitSet>(x * 2)
-    val out = ArrayList<BitSet>(x)
+    // Readable uniqueness key: snapshot List<VehicleType?>
+    val seen = HashSet<List<VehicleType?>>(cfg.x * 2)
 
-    while (out.size < x) {
-      val k = rng.nextInt(kMax - kMin + 1) + kMin
-      val m = sampleScenario(rng, k, pLane)
-      // BitSet is mutable; we won't mutate m further, so it's safe to store directly.
-      if (seen.add(m)) out.add(m)
+    while (out.size < cfg.x) {
+      val k = rng.nextInt(cfg.kMax - cfg.kMin + 1) + cfg.kMin
+      val scenario = sampleOne(cfg, rng, k)
+
+      val key: List<VehicleType?> = scenario.mask.toList()
+      if (seen.add(key)) out.add(scenario)
+    }
+
+    return out
+  }
+
+  fun toCoordinates(s: Scenario): List<Spawn> {
+    val out = ArrayList<Spawn>(s.vehiclesCount())
+    for (idx in s.mask.indices) {
+      val t = s.mask[idx] ?: continue
+      val lane = idx / s.nP
+      val area = idx % s.nP
+      out.add(Spawn(type = t, lane = lane, area = area, idx = idx))
     }
     return out
   }
 
-  /**
-   * Decode a bitmask into a list of (lane, block) coordinates. lane in [0..2] (right->left by
-   * convention), block in [0..99] along the road.
-   */
-  fun bitmapToCoordinates(mask: BitSet): List<Pair<Int, Int>> {
-    val coords = ArrayList<Pair<Int, Int>>(mask.cardinality())
-    var i = mask.nextSetBit(0)
-    while (i >= 0) {
-      val lane = i / BLOCKS_PER_LANE
-      val block = i % BLOCKS_PER_LANE
-      coords.add(lane to block)
-      i = mask.nextSetBit(i + 1)
-    }
-    return coords
-  }
-
-  /**
-   * Create TikZ code for ONE scenario: base checkerboard road + colored spawn boxes.
-   *
-   * Note on coordinates:
-   * - x = block index (0..99)
-   * - y = lane index (0..2), lane 0 drawn at bottom row.
-   */
-  fun scenarioToTikz(
-      mask: BitSet,
-      laneHeightCm: Double = 0.8,
-      spawnStyle: String = "fill=red!70,opacity=0.85",
-      showLabels: Boolean = true
+  fun toTikz(
+    s: Scenario,
+    laneHeightCm: Double = 0.8,
+    showLabels: Boolean = true,
+    tikzFillByType: Map<VehicleType, String> = mapOf(
+      VehicleType.TRUCK to "fill=orange!75,opacity=0.85",
+      VehicleType.CAR_CALM to "fill=blue!60,opacity=0.80",
+      VehicleType.CAR_NORMAL to "fill=green!60,opacity=0.80",
+      VehicleType.CAR_SPORTY to "fill=red!70,opacity=0.85",
+    )
   ): String {
-    val coords = bitmapToCoordinates(mask)
 
-    // Build a TikZ-friendly list: "block/lane,block/lane,..."
-    // TikZ uses (x,y) = (block, lane)
-    val spawnList = coords.joinToString(",") { (lane, block) -> "${block}/${lane}" }
+    fun listForType(type: VehicleType): String {
+      val items = mutableListOf<String>()
+      for (idx in s.mask.indices) {
+        if (s.mask[idx] == type) {
+          val lane = idx / s.nP
+          val area = idx % s.nP
+          items.add("${area}/${lane}") // (x,y)=(block,lane)
+        }
+      }
+      return items.joinToString(",")
+    }
 
-    val labels =
-        if (showLabels) {
-          """
-            \node[below, anchor=west, inner sep=0pt,yshift=-6pt] at (0,0) {0 km};
-            \node[below, anchor=east, inner sep=0pt,yshift=-6pt] at (\linewidth,0) {10 km};
-            """
-              .trimIndent()
-        } else ""
+    val overlays = buildString {
+      for (t in VehicleType.entries) {
+        val list = listForType(t)
+        if (list.isBlank()) continue
+        val style = tikzFillByType[t] ?: "fill=black!60,opacity=0.7"
+        appendLine("""  \foreach \x/\y in {$list} { \path[$style] (\x,\y) rectangle ++(1,1); }""")
+      }
+    }.trimEnd()
+
+    val labels = if (showLabels) {
+      """
+            \node[below, anchor=west, inner sep=0pt, yshift=-6pt] at (0,0) {0 km};
+            \node[below, anchor=east, inner sep=0pt, yshift=-6pt] at (\linewidth,0) {10 km};
+            """.trimIndent()
+    } else ""
 
     return """
         \begin{tikzpicture}[line join=round]
+        \def\nLanes{${s.nL}}
+        \def\nBlocks{${s.nP}}
 
-        % Hard-coded: 3 lanes, 100 blocks per lane
-        \def\nLanes{3}
-        \def\nBlocks{100}
-
-        % Fit road width to \linewidth while keeping text unscaled
         \newlength{\RoadXUnit}
         \setlength{\RoadXUnit}{\dimexpr\linewidth/\nBlocks\relax}
 
         \begin{scope}[x=\RoadXUnit, y=${laneHeightCm}cm]
 
-          % Checkerboard base
           \foreach \i in {0,...,\numexpr\nBlocks-1\relax}{
             \foreach \j in {0,...,\numexpr\nLanes-1\relax}{
               \pgfmathtruncatemacro{\p}{mod(\i+\j,2)}
@@ -183,15 +209,10 @@ object TrafficScenarioGen {
             }
           }
 
-          % Spawn overlays (selected cells)
-          \foreach \x/\y in {$spawnList}{
-            \path[$spawnStyle] (\x,\y) rectangle ++(1,1);
-          }
+$overlays
 
-          % Road outline
           % \draw[black, very thick] (0,0) rectangle (\nBlocks,\nLanes);
 
-          % Dashed lane separators
           \foreach \k in {1,...,\numexpr\nLanes-1\relax}{
             \draw[white, line width=0.6pt, dashed] (0,\k) -- (\nBlocks,\k);
           }
@@ -199,33 +220,35 @@ object TrafficScenarioGen {
         \end{scope}
 
         $labels
-
         \end{tikzpicture}
-        """
-        .trimIndent()
-  }
-
-  /** Convenience: write a scenario's TikZ code to a .tex snippet file. */
-  fun writeTikzToFile(mask: BitSet, file: File) {
-    file.writeText(scenarioToTikz(mask))
+        """.trimIndent()
   }
 }
 
-/** Example usage */
+/** Example usage with your configured values */
 fun main() {
-  val x = 1 // e.g. 10k..100k in your experiment
-  val kMin = 200
-  val kMax = 200
+  val cfg = TrafficScenarioGenSingleMaskReadable.Config(
+    x = 10_000,
+    kMin = 200,
+    kMax = 200,
+    nL = 3,
+    nP = 100,
+    qType = doubleArrayOf(0.2, 0.4, 0.3, 0.1),
+    pLaneByType = mapOf(
+      TrafficScenarioGenSingleMaskReadable.VehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
+      TrafficScenarioGenSingleMaskReadable.VehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
+      TrafficScenarioGenSingleMaskReadable.VehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
+      TrafficScenarioGenSingleMaskReadable.VehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
+    ),
+    seed = 4
+  )
 
-  val scenarios =
-      TrafficScenarioGen.generateUniqueScenarios(
-          x = x, kMin = kMin, kMax = kMax, seed = Random.nextInt())
+  val scenarios = TrafficScenarioGenSingleMaskReadable.generate(cfg)
 
-  // Pick one scenario and export to TikZ
-  val one = scenarios.first()
-  val tikz = TrafficScenarioGen.scenarioToTikz(one, spawnStyle = "fill=blue!70,opacity=0.85")
+  val first = scenarios.first()
+//  println("vehicles=${first.vehiclesCount()}")
+//  println(TrafficScenarioGenSingleMaskReadable.toCoordinates(first).take(5))
+
+  val tikz = TrafficScenarioGenSingleMaskReadable.toTikz(first)
   println(tikz)
-
-  // Or write to file:
-  // TrafficScenarioGen.writeTikzToFile(one, File("scenario.tex"))
 }
