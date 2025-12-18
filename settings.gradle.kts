@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-rootProject.name = "stars-owa-coverage"
+rootProject.name = "stars-coverage-significance"
