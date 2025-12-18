@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+package tools.aqua.stars.coverage.significance
+
 import kotlin.random.Random
 
 object TrafficScenarioGenSingleMaskReadable {
