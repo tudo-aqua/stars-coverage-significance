@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2025-2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,12 +22,14 @@ import tools.aqua.stars.core.types.TickDataType
 /**
  * One tick (timestep) of simulation data as a STARS [TickDataType].
  *
+ * @param identifier The identifier of the [TimeStep].
  * @property tickTimeMillis Tick time in milliseconds.
  * @property vehiclesInTick Vehicles present in this tick.
  * @property collisionsInTick Collisions occurring during this tick.
- * @property ego Ego vehicle required by STARS.
+ * @property ego The ego vehicle.
  */
 class TimeStep(
+    identifier: String,
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,
@@ -36,9 +38,4 @@ class TimeStep(
     TickDataType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>(
         currentTickUnit = TickUnitMilliseconds(tickTimeMillis),
         entities = LinkedHashSet(vehiclesInTick),
-        identifier = IDENTIFIER) {
-  companion object {
-    /** Identifier used by STARS' [TickDataType.toString]. */
-    const val IDENTIFIER: String = "SUMO"
-  }
-}
+        identifier = identifier)

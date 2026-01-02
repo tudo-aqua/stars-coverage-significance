@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2025-2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,6 @@ package tools.aqua.stars.data.sumo.staticData
 
 /**
  * Direction code of a SUMO `<connection>` (attribute `dir`).
- *
- * Backed by the single-character encoding used by SUMO.
  *
  * @property xmlCode The single-character code used in SUMO XML files.
  */

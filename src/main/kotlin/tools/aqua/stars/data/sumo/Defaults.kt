@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,11 +18,42 @@
 package tools.aqua.stars.data.sumo
 
 import tools.aqua.stars.data.sumo.dynamicData.VehicleType
+import tools.aqua.stars.data.sumo.staticData.BoundaryBox
 import tools.aqua.stars.data.sumo.staticData.Edge
+import tools.aqua.stars.data.sumo.staticData.Junction
+import tools.aqua.stars.data.sumo.staticData.JunctionType
 import tools.aqua.stars.data.sumo.staticData.Lane
+import tools.aqua.stars.data.sumo.staticData.Location
+import tools.aqua.stars.data.sumo.staticData.Point
+import tools.aqua.stars.data.sumo.staticData.Projection
 
 /** Non-null placeholder objects used when SUMO output omits or references unknown ids. */
 object Defaults {
+
+  /** Placeholder location used when no location data is available. */
+  val unknownLocation =
+      Location(
+          netOffset = Point(0.0f, 0.0f),
+          convertedBoundary = BoundaryBox(0.0, 0.0, 0.0, 0.0),
+          originalBoundary = BoundaryBox(0.0, 0.0, 0.0, 0.0),
+          projection = Projection.None)
+
+  /** Placeholder junction used for internal/unknown edges. */
+  val unknownJunction: Junction =
+      Junction(
+          junctionId = "UNKNOWN_JUNCTION",
+          junctionType = JunctionType.UNKNOWN,
+          location = Point(0.0f, 0.0f),
+          shape = emptyList())
+
+  /** Placeholder edge used when an edge id cannot be resolved. */
+  val unknownEdge: Edge =
+      Edge(
+          edgeId = "UNKNOWN_EDGE",
+          fromJunction = unknownJunction,
+          toJunction = unknownJunction,
+          edgeFunction = "",
+          edgePriority = 0)
 
   /** Placeholder lane used when a lane id cannot be resolved. */
   val unknownLane: Lane =
@@ -31,18 +62,9 @@ object Defaults {
           laneIndex = 0,
           speedLimitMetersPerSecond = 0.0f,
           laneLengthMeters = 0.0f,
-          laneShape = emptyList())
+          laneShape = emptyList(),
+          parentEdge = unknownEdge)
 
-  /** Placeholder edge used when an edge id cannot be resolved. */
-  val unknownEdge: Edge =
-      Edge(
-          edgeId = "UNKNOWN_EDGE",
-          fromJunctionId = "",
-          toJunctionId = "",
-          edgeFunction = "",
-          edgePriority = 0,
-          lanes = emptyList())
-
-  /** Placeholder type used when vehicle type inference fails. */
+  /** Placeholder vehicle type used when inference fails. */
   val unknownVehicleType: VehicleType = VehicleType(typeId = "UNKNOWN_TYPE")
 }

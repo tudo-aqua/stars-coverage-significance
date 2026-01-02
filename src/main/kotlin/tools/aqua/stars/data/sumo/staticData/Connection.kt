@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,22 +18,22 @@
 package tools.aqua.stars.data.sumo.staticData
 
 /**
- * A SUMO connection between two edges.
+ * A directed connection between lanes in a SUMO network (`<connection>` in *.net.xml).
  *
- * @property fromEdgeId Source edge id.
- * @property toEdgeId Target edge id.
- * @property fromLaneIndex Source lane index.
- * @property toLaneIndex Target lane index.
- * @property viaLaneId Via (internal) lane id.
- * @property direction Direction (e.g., "s").
- * @property signalState Signal state (e.g., "M").
+ * In your model, `fromEdgeId`, `toEdgeId`, and `viaLaneId` are represented as direct references to
+ * [Lane] instances.
+ *
+ * @property incomingLane The lane the connection starts from (derived from `from` + `fromLane`).
+ * @property outgoingLane The lane the connection leads to (derived from `to` + `toLane`).
+ * @property viaLane Optional internal lane (attribute `via`). This is `null` when the network does
+ *   not model internal lanes for that connection (e.g. built with `--no-internal-links`).
+ * @property direction Turning direction (attribute `dir`).
+ * @property signalState Right-of-way / traffic-light state (attribute `state`).
  */
 data class Connection(
-    val fromEdgeId: String,
-    val toEdgeId: String,
-    val fromLaneIndex: Int,
-    val toLaneIndex: Int,
-    val viaLaneId: String,
-    val direction: String,
-    val signalState: String
+    val incomingLane: Lane,
+    val outgoingLane: Lane,
+    val viaLane: Lane?,
+    val direction: ConnectionDirection,
+    val signalState: ConnectionSignalState,
 )

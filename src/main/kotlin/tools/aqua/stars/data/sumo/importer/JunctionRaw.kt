@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,19 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.dynamicData
+package tools.aqua.stars.data.sumo.importer
 
-import tools.aqua.stars.data.sumo.staticData.RoadNetwork
+import tools.aqua.stars.data.sumo.staticData.Junction
 
 /**
- * Container for the imported SUMO scenario.
+ * Raw junction record used to postpone lane pointer resolution.
  *
- * @property net Parsed SUMO network.
- * @property ticks Ordered ticks; they are linked via [TimeStep.previousTick] / [TimeStep.nextTick].
- * @property warnings Non-fatal issues encountered during import (e.g., missing attributes).
+ * @property junction Parsed junction object (without incoming/internal lanes filled yet).
+ * @property incomingLaneIds Lane ids referenced in `incLanes`.
+ * @property internalLaneIds Lane ids referenced in `intLanes`.
  */
-data class Scenario(val net: RoadNetwork, val ticks: List<TimeStep>, val warnings: List<String>)
+data class JunctionRaw(
+    val junction: Junction,
+    val incomingLaneIds: List<String>,
+    val internalLaneIds: List<String>
+)

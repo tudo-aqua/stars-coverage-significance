@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +18,19 @@
 package tools.aqua.stars.data.sumo.staticData
 
 /**
- * Location metadata for a SUMO network.
+ * Parsed location metadata from SUMO `.net.xml`.
  *
- * @property netOffset Raw SUMO net offset string (e.g., "0.00,0.00").
- * @property convBoundary Raw converted boundary string.
- * @property origBoundary Raw original boundary string.
- * @property projParameter Raw projection parameter string.
+ * Contains numeric fields for boundaries/offset and a structured representation of the projection
+ * parameter string (`projParameter`).
+ *
+ * @property netOffset Network offset parsed from `netOffset="x,y"`.
+ * @property convertedBoundary Converted boundary parsed from `convBoundary="minX,minY,maxX,maxY"`.
+ * @property originalBoundary Original boundary parsed from `origBoundary="minX,minY,maxX,maxY"`.
+ * @property projection Projection definition parsed from `projParameter`.
  */
 data class Location(
-    val netOffset: String,
-    val convBoundary: String,
-    val origBoundary: String,
-    val projParameter: String
+    val netOffset: Point,
+    val convertedBoundary: BoundaryBox,
+    val originalBoundary: BoundaryBox,
+    val projection: Projection
 )

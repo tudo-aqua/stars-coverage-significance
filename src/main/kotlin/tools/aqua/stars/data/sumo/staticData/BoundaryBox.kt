@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.dynamicData
-
-import tools.aqua.stars.data.sumo.staticData.RoadNetwork
+package tools.aqua.stars.data.sumo.staticData
 
 /**
- * Container for the imported SUMO scenario.
+ * Axis-aligned bounding box represented by min/max coordinates.
  *
- * @property net Parsed SUMO network.
- * @property ticks Ordered ticks; they are linked via [TimeStep.previousTick] / [TimeStep.nextTick].
- * @property warnings Non-fatal issues encountered during import (e.g., missing attributes).
+ * Parsed from SUMO boundary attributes like: `minX,minY,maxX,maxY`
+ *
+ * @property minX Minimum x coordinate.
+ * @property minY Minimum y coordinate.
+ * @property maxX Maximum x coordinate.
+ * @property maxY Maximum y coordinate.
  */
-data class Scenario(val net: RoadNetwork, val ticks: List<TimeStep>, val warnings: List<String>)
+data class BoundaryBox(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)

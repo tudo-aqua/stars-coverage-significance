@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,8 +42,11 @@ data class RoadNetwork(
     for (edge in edges) for (lane in edge.lanes) put(lane.laneId, lane)
   }
 
-  /** Edge lookup by lane id. */
+  /** Edge lookup by lane id (convenience). */
   val edgeByLaneId: Map<String, Edge> = buildMap {
-    for (edge in edges) for (lane in edge.lanes) put(lane.laneId, edge)
+    for (lane in laneById.values) put(lane.laneId, lane.parentEdge)
   }
+
+  /** Flat list of all lanes. */
+  val lanes: List<Lane> = laneById.values.toList()
 }

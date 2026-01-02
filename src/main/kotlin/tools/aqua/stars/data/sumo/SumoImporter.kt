@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The STARS Coverage Significance Authors
+ * Copyright 2025-2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,17 +19,31 @@ package tools.aqua.stars.data.sumo
 
 import java.nio.file.Path
 import javax.xml.stream.XMLStreamConstants
+import javax.xml.stream.XMLStreamReader
 import kotlin.math.round
 import tools.aqua.stars.data.sumo.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dynamicData.Scenario
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.dynamicData.VehicleType
+import tools.aqua.stars.data.sumo.importer.CollisionEventRaw
+import tools.aqua.stars.data.sumo.importer.ConnectionRaw
+import tools.aqua.stars.data.sumo.importer.EdgeRaw
+import tools.aqua.stars.data.sumo.importer.JunctionRaw
+import tools.aqua.stars.data.sumo.importer.LaneRaw
+import tools.aqua.stars.data.sumo.staticData.BoundaryBox
 import tools.aqua.stars.data.sumo.staticData.Connection
+import tools.aqua.stars.data.sumo.staticData.ConnectionDirection
+import tools.aqua.stars.data.sumo.staticData.ConnectionSignalState
 import tools.aqua.stars.data.sumo.staticData.Edge
 import tools.aqua.stars.data.sumo.staticData.Junction
+import tools.aqua.stars.data.sumo.staticData.JunctionType
 import tools.aqua.stars.data.sumo.staticData.Lane
 import tools.aqua.stars.data.sumo.staticData.Location
+import tools.aqua.stars.data.sumo.staticData.Point
+import tools.aqua.stars.data.sumo.staticData.ProjToken
+import tools.aqua.stars.data.sumo.staticData.ProjValue
+import tools.aqua.stars.data.sumo.staticData.Projection
 import tools.aqua.stars.data.sumo.staticData.RoadNetwork
 
 /**
@@ -38,12 +52,14 @@ import tools.aqua.stars.data.sumo.staticData.RoadNetwork
  * Inputs:
  * - `.net.xml` : network geometry/topology
  * - `export.xml` : per-timestep vehicle data (id, pos, speed)
- * - `collision.xml` : optional collisions (your file is currently empty)
+ * - `collision.xml` : optional collisions
  *
- * @property warnings Collector for non-fatal import warnings.
+ * The importer is intentionally resilient and will create placeholders for unknown ids while adding
+ * warnings to [warnings].
  */
-class Importer {
+class SumoImporter {
 
+  /** Collector for non-fatal import warnings. */
   private val warnings: MutableList<String> = mutableListOf()
 
   /**
@@ -65,11 +81,12 @@ class Importer {
     warnings.clear()
 
     val net: RoadNetwork = parseNet(netFilePath)
-    val collisions: List<CollisionEvent> =
-        collisionFilePath?.let { parseCollisions(it, net) } ?: emptyList()
+
+    val collisionEvents: List<CollisionEventRaw> =
+        collisionFilePath?.let { parseCollisionEvents(it) } ?: emptyList()
 
     val collisionsByTickMillis: Map<Long, List<CollisionEventRaw>> =
-        collisionsToRaw(collisions).groupBy { it.tickMillis }
+        collisionEvents.groupBy { it.tickMillis }
 
     val ticks: List<TimeStep> =
         parseExport(exportFilePath, net, collisionsByTickMillis, egoVehicleId)
@@ -79,120 +96,417 @@ class Importer {
     return Scenario(net = net, ticks = ticks, warnings = warnings.toList())
   }
 
-  /** Parses `.net.xml` into [RoadNetwork]. */
+  /**
+   * Parses a SUMO `.net.xml` file into a [RoadNetwork].
+   *
+   * Important: SUMO often lists `<edge>` elements before `<junction>` elements. Therefore edges are
+   * parsed as [EdgeRaw] first and only resolved to [Edge] after all junctions are known.
+   */
   private fun parseNet(netFilePath: Path): RoadNetwork {
     val reader = createXmlReader(netFilePath)
 
     var location: Location? = null
+
     val junctions = mutableListOf<Junction>()
-    val edges = mutableListOf<Edge>()
-    val connections = mutableListOf<Connection>()
+    val junctionById = linkedMapOf<String, Junction>()
+
+    val incomingLaneIdsByJunctionId = mutableMapOf<String, List<String>>()
+    val internalLaneIdsByJunctionId = mutableMapOf<String, List<String>>()
+
+    val edgeRaws = mutableListOf<EdgeRaw>()
+    val connectionRaws = mutableListOf<ConnectionRaw>()
 
     while (reader.hasNext()) {
       val eventType = reader.next()
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
 
       when (reader.localName) {
-        "location" -> {
-          location =
-              Location(
-                  netOffset = reader.attribute("netOffset") ?: "",
-                  convBoundary = reader.attribute("convBoundary") ?: "",
-                  origBoundary = reader.attribute("origBoundary") ?: "",
-                  projParameter = reader.attribute("projParameter") ?: "")
-        }
+        "location" -> location = parseLocation(reader)
 
         "junction" -> {
-          val junctionId = reader.attribute("id") ?: ""
-          val junctionType = reader.attribute("type") ?: ""
-
-          val x = reader.attribute("x")?.toFloatOrNull() ?: 0.0f
-          val y = reader.attribute("y")?.toFloatOrNull() ?: 0.0f
-
-          val incLanesRaw = reader.attribute("incLanes") ?: ""
-          val intLanesRaw = reader.attribute("intLanes") ?: ""
-
-          val shapeRaw = reader.attribute("shape") ?: ""
-          val shape = parseShape(shapeRaw)
-
-          junctions +=
-              Junction(
-                  junctionId = junctionId,
-                  junctionType = junctionType,
-                  x = x,
-                  y = y,
-                  incomingLaneIds = splitSpaceList(incLanesRaw),
-                  internalLaneIds = splitSpaceList(intLanesRaw),
-                  shape = shape)
+          val raw = parseJunctionRaw(reader)
+          junctions += raw.junction
+          junctionById[raw.junction.junctionId] = raw.junction
+          incomingLaneIdsByJunctionId[raw.junction.junctionId] = raw.incomingLaneIds
+          internalLaneIdsByJunctionId[raw.junction.junctionId] = raw.internalLaneIds
         }
 
-        "edge" -> {
-          val edgeId = reader.attribute("id") ?: ""
-          val from = reader.attribute("from") ?: ""
-          val to = reader.attribute("to") ?: ""
-          val function = reader.attribute("function") ?: ""
-          val priority = reader.attribute("priority")?.toIntOrNull() ?: 0
+        "edge" -> edgeRaws += parseEdgeRaw(reader)
 
-          val lanes = mutableListOf<Lane>()
-
-          // consume nested lanes until </edge>
-          while (reader.hasNext()) {
-            val inner = reader.next()
-
-            if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
-              val laneId = reader.attribute("id") ?: ""
-              val laneIndex = reader.attribute("index")?.toIntOrNull() ?: 0
-              val speed = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f
-              val length = reader.attribute("length")?.toFloatOrNull() ?: 0.0f
-              val shapeRaw = reader.attribute("shape") ?: ""
-              val laneShape = parseShape(shapeRaw)
-
-              lanes +=
-                  Lane(
-                      laneId = laneId,
-                      laneIndex = laneIndex,
-                      speedLimitMetersPerSecond = speed,
-                      laneLengthMeters = length,
-                      laneShape = laneShape)
-            } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
-              break
-            }
-          }
-
-          edges +=
-              Edge(
-                  edgeId = edgeId,
-                  fromJunctionId = from,
-                  toJunctionId = to,
-                  edgeFunction = function,
-                  edgePriority = priority,
-                  lanes = lanes)
-        }
-
-        "connection" -> {
-          connections +=
-              Connection(
-                  fromEdgeId = reader.attribute("from") ?: "",
-                  toEdgeId = reader.attribute("to") ?: "",
-                  fromLaneIndex = reader.attribute("fromLane")?.toIntOrNull() ?: 0,
-                  toLaneIndex = reader.attribute("toLane")?.toIntOrNull() ?: 0,
-                  viaLaneId = reader.attribute("via") ?: "",
-                  direction = reader.attribute("dir") ?: "",
-                  signalState = reader.attribute("state") ?: "")
-        }
+        "connection" -> connectionRaws += parseConnectionRaw(reader)
       }
     }
 
     reader.close()
 
-    return RoadNetwork(
-        location = location ?: Location("", "", "", ""),
+    val edges: List<Edge> = resolveEdges(edgeRaws, junctionById)
+
+    // Build lane lookup from resolved edges
+    val laneById: Map<String, Lane> = buildMap {
+      for (edge in edges) for (lane in edge.lanes) put(lane.laneId, lane)
+    }
+
+    // Fill junction incoming/internal lane pointers
+    resolveJunctionLanePointers(
         junctions = junctions,
-        edges = edges,
-        connections = connections)
+        laneById = laneById,
+        incomingLaneIdsByJunctionId = incomingLaneIdsByJunctionId,
+        internalLaneIdsByJunctionId = internalLaneIdsByJunctionId)
+
+    val defaultLocation =
+        Location(
+            netOffset = Point(0.0f, 0.0f),
+            convertedBoundary = BoundaryBox(0.0, 0.0, 0.0, 0.0),
+            originalBoundary = BoundaryBox(0.0, 0.0, 0.0, 0.0),
+            projection = Projection.None)
+
+    val networkWithoutConnections =
+        RoadNetwork(
+            location = location ?: defaultLocation,
+            junctions = junctions,
+            edges = edges,
+            connections = emptyList())
+
+    // Resolve connections using lane ids AFTER all lanes exist
+    val resolvedConnections: List<Connection> =
+        connectionRaws.map { raw -> importConnection(raw, laneById) }
+
+    return networkWithoutConnections.copy(connections = resolvedConnections)
   }
 
-  /** Parses `export.xml` into ordered [TimeStep]s and resolves lane/edge pointers. */
+  /**
+   * Parses an `<edge>...</edge>` element into an [EdgeRaw], including nested `<lane/>` children.
+   *
+   * @param reader XML stream reader positioned at `<edge>`.
+   * @return Raw edge record.
+   */
+  private fun parseEdgeRaw(reader: XMLStreamReader): EdgeRaw {
+    val edgeId = reader.attribute("id") ?: ""
+    val fromId = reader.attribute("from") ?: ""
+    val toId = reader.attribute("to") ?: ""
+    val function = reader.attribute("function") ?: ""
+    val priority = reader.attribute("priority")?.toIntOrNull() ?: 0
+
+    val laneRaws = mutableListOf<LaneRaw>()
+
+    while (reader.hasNext()) {
+      val inner = reader.next()
+      if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
+        laneRaws += parseLaneRaw(reader)
+      } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
+        break
+      }
+    }
+
+    return EdgeRaw(
+        edgeId = edgeId,
+        fromJunctionId = fromId,
+        toJunctionId = toId,
+        edgeFunction = function,
+        edgePriority = priority,
+        laneRaws = laneRaws)
+  }
+
+  /**
+   * Parses a `<lane .../>` element into a [LaneRaw].
+   *
+   * @param reader XML stream reader positioned at `<lane>`.
+   * @return Raw lane record.
+   */
+  private fun parseLaneRaw(reader: XMLStreamReader): LaneRaw =
+      LaneRaw(
+          laneId = reader.attribute("id") ?: "",
+          laneIndex = reader.attribute("index")?.toIntOrNull() ?: 0,
+          speedLimitMetersPerSecond = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f,
+          laneLengthMeters = reader.attribute("length")?.toFloatOrNull() ?: 0.0f,
+          shapeRaw = reader.attribute("shape") ?: "")
+
+  /**
+   * Parses a `<junction .../>` element into a [JunctionRaw].
+   *
+   * The returned [Junction] is created immediately, but incoming/internal lane pointers are
+   * resolved later when all lanes are known.
+   *
+   * @param reader XML stream reader positioned at `<junction>`.
+   * @return Parsed [JunctionRaw].
+   */
+  private fun parseJunctionRaw(reader: XMLStreamReader): JunctionRaw {
+    val junctionId = reader.attribute("id") ?: ""
+    val junctionType = JunctionType.fromXml(reader.attribute("type") ?: "")
+    val x = reader.attribute("x")?.toFloatOrNull() ?: 0.0f
+    val y = reader.attribute("y")?.toFloatOrNull() ?: 0.0f
+    val incLanesRaw = reader.attribute("incLanes") ?: ""
+    val intLanesRaw = reader.attribute("intLanes") ?: ""
+    val shapeRaw = reader.attribute("shape") ?: ""
+    val shape = parseShape(shapeRaw)
+
+    val junction =
+        Junction(
+            junctionId = junctionId,
+            junctionType = junctionType,
+            location = Point(x, y),
+            shape = shape)
+
+    return JunctionRaw(
+        junction = junction,
+        incomingLaneIds = splitSpaceList(incLanesRaw),
+        internalLaneIds = splitSpaceList(intLanesRaw))
+  }
+
+  /**
+   * Resolves raw edges into pointer-based [Edge] objects once junctions are known.
+   *
+   * @param edgeRaws Raw edges parsed from XML.
+   * @param junctionById Junction lookup map.
+   * @return Resolved edges.
+   */
+  private fun resolveEdges(
+      edgeRaws: List<EdgeRaw>,
+      junctionById: Map<String, Junction>
+  ): List<Edge> {
+    val edges = mutableListOf<Edge>()
+
+    for (raw in edgeRaws) {
+      val fromJunction =
+          junctionById[raw.fromJunctionId]
+              ?: run {
+                // Internal edges often have empty from/to; that's fine.
+                if (raw.fromJunctionId.isNotBlank()) {
+                  warnings +=
+                      "Unknown junction '${raw.fromJunctionId}' referenced by edge '${raw.edgeId}'."
+                }
+                Defaults.unknownJunction
+              }
+
+      val toJunction =
+          junctionById[raw.toJunctionId]
+              ?: run {
+                if (raw.toJunctionId.isNotBlank()) {
+                  warnings +=
+                      "Unknown junction '${raw.toJunctionId}' referenced by edge '${raw.edgeId}'."
+                }
+                Defaults.unknownJunction
+              }
+
+      val edge =
+          Edge(
+              edgeId = raw.edgeId,
+              fromJunction = fromJunction,
+              toJunction = toJunction,
+              edgeFunction = raw.edgeFunction,
+              edgePriority = raw.edgePriority)
+
+      // Create lanes with parentEdge pointer
+      for (laneRaw in raw.laneRaws) {
+        val lane =
+            Lane(
+                laneId = laneRaw.laneId,
+                laneIndex = laneRaw.laneIndex,
+                speedLimitMetersPerSecond = laneRaw.speedLimitMetersPerSecond,
+                laneLengthMeters = laneRaw.laneLengthMeters,
+                laneShape = parseShape(laneRaw.shapeRaw),
+                parentEdge = edge)
+        edge.lanes += lane
+      }
+
+      edges += edge
+    }
+
+    return edges
+  }
+
+  /**
+   * Resolves and fills [Junction.incomingLanes] and [Junction.internalLanes] based on lane ids.
+   *
+   * @param junctions Junction objects to update.
+   * @param laneById Lane lookup map.
+   * @param incomingLaneIdsByJunctionId Incoming lane ids by junction id.
+   * @param internalLaneIdsByJunctionId Internal lane ids by junction id.
+   */
+  private fun resolveJunctionLanePointers(
+      junctions: List<Junction>,
+      laneById: Map<String, Lane>,
+      incomingLaneIdsByJunctionId: Map<String, List<String>>,
+      internalLaneIdsByJunctionId: Map<String, List<String>>
+  ) {
+    for (junction in junctions) {
+      junction.incomingLanes.clear()
+      junction.internalLanes.clear()
+
+      val incomingIds = incomingLaneIdsByJunctionId[junction.junctionId].orEmpty()
+      val internalIds = internalLaneIdsByJunctionId[junction.junctionId].orEmpty()
+
+      for (laneId in incomingIds) {
+        val lane = laneById[laneId]
+        if (lane != null) junction.incomingLanes += lane
+        else
+            warnings +=
+                "Unresolved incoming laneId '$laneId' for junction '${junction.junctionId}'."
+      }
+
+      for (laneId in internalIds) {
+        val lane = laneById[laneId]
+        if (lane != null) junction.internalLanes += lane
+        else
+            warnings +=
+                "Unresolved internal laneId '$laneId' for junction '${junction.junctionId}'."
+      }
+    }
+  }
+
+  /**
+   * Parses a `<location .../>` element into a typed [Location].
+   *
+   * @param reader XML stream reader positioned at `<location>`.
+   * @return Parsed [Location] (never null).
+   */
+  private fun parseLocation(reader: XMLStreamReader): Location {
+    val netOffsetRaw = reader.attribute("netOffset") ?: "0.0,0.0"
+    val convBoundaryRaw = reader.attribute("convBoundary") ?: "0.0,0.0,0.0,0.0"
+    val origBoundaryRaw = reader.attribute("origBoundary") ?: "0.0,0.0,0.0,0.0"
+    val projParameterRaw = reader.attribute("projParameter") ?: "!"
+
+    return Location(
+        netOffset = parsePoint(netOffsetRaw),
+        convertedBoundary = parseBoundaryBox(convBoundaryRaw),
+        originalBoundary = parseBoundaryBox(origBoundaryRaw),
+        projection = parseProjection(projParameterRaw))
+  }
+
+  /**
+   * Parses SUMO `projParameter`.
+   *
+   * @param raw Raw `projParameter` attribute.
+   * @return Parsed [Projection].
+   */
+  private fun parseProjection(raw: String): Projection {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty() || trimmed == "!") return Projection.None
+
+    // Typical format: "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs"
+    val tokens =
+        trimmed
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .mapNotNull { token ->
+              val normalized = token.trim()
+              if (!normalized.startsWith("+") || normalized.length == 1) return@mapNotNull null
+
+              val withoutPlus = normalized.substring(1)
+              val parts = withoutPlus.split("=", limit = 2)
+
+              val key = parts[0].trim()
+              if (key.isEmpty()) return@mapNotNull null
+
+              val value =
+                  if (parts.size == 1) {
+                    ProjValue.Flag
+                  } else {
+                    val rawValue = parts[1].trim()
+                    rawValue.toDoubleOrNull()?.let { ProjValue.Number(it) }
+                        ?: ProjValue.Text(rawValue)
+                  }
+
+              ProjToken(key = key, value = value)
+            }
+
+    return Projection.Proj4(tokens)
+  }
+
+  /**
+   * Parses a SUMO point attribute formatted as `"x,y"`.
+   *
+   * @param raw Raw attribute value.
+   * @return Parsed [Point].
+   */
+  private fun parsePoint(raw: String): Point {
+    val values = raw.split(",").mapNotNull { it.trim().toFloatOrNull() }
+    if (values.size != 2) {
+      warnings += "Invalid netOffset '$raw' in <location>; using (0,0)."
+      return Point(0.0f, 0.0f)
+    }
+    return Point(values[0], values[1])
+  }
+
+  /**
+   * Parses a SUMO boundary attribute formatted as `"minX,minY,maxX,maxY"`.
+   *
+   * @param raw Raw attribute value.
+   * @return Parsed [BoundaryBox].
+   */
+  private fun parseBoundaryBox(raw: String): BoundaryBox {
+    val values = raw.split(",").mapNotNull { it.trim().toDoubleOrNull() }
+    if (values.size != 4) {
+      warnings += "Invalid boundary '$raw' in <location>; using zeros."
+      return BoundaryBox(0.0, 0.0, 0.0, 0.0)
+    }
+    return BoundaryBox(values[0], values[1], values[2], values[3])
+  }
+
+  /**
+   * Parses a `<connection .../>` element into a raw record.
+   *
+   * The returned [ConnectionRaw] is resolved into an actual [Connection] object later via
+   * [importConnection] once all lanes are known.
+   *
+   * @param reader XML stream reader positioned at `<connection>`.
+   * @return Raw connection record.
+   */
+  private fun parseConnectionRaw(reader: XMLStreamReader): ConnectionRaw =
+      ConnectionRaw(
+          fromEdgeId = reader.attribute("from") ?: "",
+          toEdgeId = reader.attribute("to") ?: "",
+          fromLaneIndex = reader.attribute("fromLane")?.toIntOrNull() ?: 0,
+          toLaneIndex = reader.attribute("toLane")?.toIntOrNull() ?: 0,
+          viaLaneId = reader.attribute("via") ?: "",
+          directionRaw = reader.attribute("dir") ?: "",
+          signalStateRaw = reader.attribute("state") ?: "")
+
+  /**
+   * Resolves a [ConnectionRaw] into a [Connection] by mapping ids to actual [Lane] pointers.
+   *
+   * SUMO encodes the participating lanes by edge id + lane index:
+   * - incoming lane id: `"<fromEdgeId>_<fromLaneIndex>"`
+   * - outgoing lane id: `"<toEdgeId>_<toLaneIndex>"`
+   *
+   * @param raw Raw connection record.
+   * @param laneById Lane lookup map.
+   * @return Resolved [Connection].
+   */
+  private fun importConnection(raw: ConnectionRaw, laneById: Map<String, Lane>): Connection {
+    val incomingLaneId = "${raw.fromEdgeId}_${raw.fromLaneIndex}"
+    val outgoingLaneId = "${raw.toEdgeId}_${raw.toLaneIndex}"
+
+    val incomingLane =
+        laneById[incomingLaneId]
+            ?: error("Unknown incoming lane id '$incomingLaneId' referenced by <connection>.")
+    val outgoingLane =
+        laneById[outgoingLaneId]
+            ?: error("Unknown outgoing lane id '$outgoingLaneId' referenced by <connection>.")
+
+    val viaLane =
+        raw.viaLaneId
+            .takeIf { it.isNotBlank() }
+            ?.let { id ->
+              laneById[id] ?: error("Unknown via lane id '$id' referenced by <connection>.")
+            }
+
+    return Connection(
+        incomingLane = incomingLane,
+        outgoingLane = outgoingLane,
+        viaLane = viaLane,
+        direction = ConnectionDirection.fromXml(raw.directionRaw),
+        signalState = ConnectionSignalState.fromXml(raw.signalStateRaw))
+  }
+
+  /**
+   * Parses `export.xml` into ordered [TimeStep]s and resolves lane/edge pointers.
+   *
+   * Parsing is delegated to dedicated functions for each element:
+   * - `<timestep>` -> [parseTimeStep]
+   * - `<edge>` (inside timestep) -> [skipEdgeContainer] + [parseLaneInExport]
+   * - `<vehicle>` -> [parseVehicle]
+   */
   private fun parseExport(
       exportFilePath: Path,
       net: RoadNetwork,
@@ -207,109 +521,7 @@ class Importer {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
-      val tickMillis = secondsToMillis(timeSeconds)
-
-      val vehiclesInTick = mutableListOf<Vehicle>()
-
-      // consume until </timestep>
-      while (reader.hasNext()) {
-        val inner = reader.next()
-
-        if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "edge") {
-          // consume lanes until </edge>
-          while (reader.hasNext()) {
-            val edgeInner = reader.next()
-
-            if (edgeInner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
-              val laneId = reader.attribute("id") ?: ""
-              val lane =
-                  net.laneById[laneId]
-                      ?: run {
-                        warnings += "Unresolved laneId '$laneId' in export.xml at time=$timeSeconds"
-                        Defaults.unknownLane
-                      }
-              val edge =
-                  net.edgeByLaneId[laneId]
-                      ?: run {
-                        warnings +=
-                            "Unresolved edge for laneId '$laneId' in export.xml at time=$timeSeconds"
-                        Defaults.unknownEdge
-                      }
-
-              // consume vehicles until </lane>
-              while (reader.hasNext()) {
-                val laneInner = reader.next()
-
-                if (laneInner == XMLStreamConstants.START_ELEMENT &&
-                    reader.localName == "vehicle") {
-                  val vehicleId = reader.attribute("id") ?: ""
-                  val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
-                  val speed = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f
-
-                  val typeId = inferVehicleTypeId(vehicleId)
-                  val vehicleType = VehicleType(typeId)
-
-                  vehiclesInTick +=
-                      Vehicle(
-                          vehicleId = vehicleId,
-                          vehicleType = vehicleType,
-                          currentLane = lane,
-                          currentEdge = edge,
-                          positionOnLaneMeters = pos,
-                          speedMetersPerSecond = speed)
-                } else if (laneInner == XMLStreamConstants.END_ELEMENT &&
-                    reader.localName == "lane") {
-                  break
-                }
-              }
-            } else if (edgeInner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
-              break
-            }
-          }
-        } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "timestep") {
-          break
-        }
-      }
-
-      val vehiclesById: Map<String, Vehicle> = vehiclesInTick.associateBy { it.vehicleId }
-
-      val collisionsInTick: List<CollisionEvent> =
-          collisionsByTickMillis[tickMillis].orEmpty().map { raw ->
-            val lane = net.laneById[raw.laneId].orDefaultLane(raw.laneId)
-            val edge = net.edgeByLaneId[raw.laneId] ?: Defaults.unknownEdge
-
-            val collider =
-                vehiclesById[raw.colliderId] ?: placeholderVehicle(raw.colliderId, lane, edge)
-            val victim = vehiclesById[raw.victimId] ?: placeholderVehicle(raw.victimId, lane, edge)
-
-            CollisionEvent(
-                collisionTimeSeconds = raw.timeSeconds,
-                lane = lane,
-                edge = edge,
-                positionOnLaneMeters = raw.positionOnLaneMeters,
-                colliderVehicle = collider,
-                victimVehicle = victim,
-                collisionType = raw.collisionType,
-                rawAttributes = raw.rawAttributes)
-          }
-
-      val ego: Vehicle =
-          if (egoVehicleId.isNotBlank()) {
-            vehiclesInTick.firstOrNull { it.vehicleId == egoVehicleId }
-                ?: vehiclesInTick.firstOrNull()
-                ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
-          } else {
-            vehiclesInTick.firstOrNull()
-                ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
-          }
-
-      ticks +=
-          TimeStep(
-              tickTimeMillis = tickMillis,
-              vehiclesInTick = vehiclesInTick,
-              collisionsInTick = collisionsInTick,
-              ego = ego)
+      ticks += parseTimeStep(reader, net, collisionsByTickMillis, egoVehicleId)
     }
 
     reader.close()
@@ -317,15 +529,15 @@ class Importer {
   }
 
   /**
-   * Parses `collision.xml` into collision events.
+   * Parses `collision.xml` into raw collision records.
    *
-   * Your file is currently empty; this supports typical SUMO attributes.
+   * Vehicle pointers are resolved later per tick when `export.xml` has been parsed.
+   *
+   * @param collisionFilePath Path to the collision output.
+   * @return Raw collision records.
    */
-  private fun parseCollisions(collisionFilePath: Path, net: RoadNetwork): List<CollisionEvent> {
+  private fun parseCollisionEvents(collisionFilePath: Path): List<CollisionEventRaw> {
     val reader = createXmlReader(collisionFilePath)
-    val collisions = mutableListOf<CollisionEvent>()
-
-    // We first parse into raw records; final vehicle pointers are resolved per tick later.
     val rawEvents = mutableListOf<CollisionEventRaw>()
 
     while (reader.hasNext()) {
@@ -333,49 +545,229 @@ class Importer {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "collision") continue
 
-      val rawAttributes =
-          (0 until reader.attributeCount).associate { idx ->
-            reader.getAttributeLocalName(idx) to (reader.getAttributeValue(idx) ?: "")
-          }
-
-      val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
-      val laneId = (reader.attribute("lane") ?: reader.attribute("laneID") ?: "").trim()
-      val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
-      val collisionType = (reader.attribute("type") ?: "").trim()
-
-      val colliderId = (reader.attribute("collider") ?: reader.attribute("colliderID") ?: "").trim()
-      val victimId = (reader.attribute("victim") ?: reader.attribute("victimID") ?: "").trim()
-
-      if (laneId.isEmpty()) warnings += "Collision without lane id; using UNKNOWN_LANE."
-      if (colliderId.isEmpty()) warnings += "Collision without collider id; using empty id."
-      if (victimId.isEmpty()) warnings += "Collision without victim id; using empty id."
-
-      rawEvents +=
-          CollisionEventRaw(
-              tickMillis = secondsToMillis(timeSeconds),
-              timeSeconds = timeSeconds,
-              laneId = laneId,
-              positionOnLaneMeters = pos,
-              colliderId = colliderId,
-              victimId = victimId,
-              collisionType = collisionType,
-              rawAttributes = rawAttributes)
+      rawEvents += parseCollision(reader)
     }
 
     reader.close()
-
-    // Return placeholder CollisionEvent list (will be re-resolved per tick anyway).
-    // Keeping this method signature makes it easy to extend, but we actually bucket raw events.
-    return collisions
+    return rawEvents
   }
 
   /**
-   * Converts already-parsed collision events (none in your file) to raw; kept for API completeness.
+   * Parses a single `<collision .../>` element into a [CollisionEventRaw].
+   *
+   * @param reader XML stream reader positioned at `<collision>`.
+   * @return Raw collision record.
    */
-  private fun collisionsToRaw(collisions: List<CollisionEvent>): List<CollisionEventRaw> =
-      emptyList()
+  private fun parseCollision(reader: XMLStreamReader): CollisionEventRaw {
+    val rawAttributes =
+        (0 until reader.attributeCount).associate { idx ->
+          reader.getAttributeLocalName(idx) to (reader.getAttributeValue(idx) ?: "")
+        }
 
-  /** Links ticks bidirectionally via [TimeStep.previousTick] and [TimeStep.nextTick]. */
+    val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
+    val laneId = (reader.attribute("lane") ?: reader.attribute("laneID") ?: "").trim()
+    val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
+    val collisionType = (reader.attribute("type") ?: "").trim()
+    val colliderId = (reader.attribute("collider") ?: reader.attribute("colliderID") ?: "").trim()
+    val victimId = (reader.attribute("victim") ?: reader.attribute("victimID") ?: "").trim()
+
+    if (laneId.isEmpty()) warnings += "Collision without lane id; using UNKNOWN_LANE."
+    if (colliderId.isEmpty()) warnings += "Collision without collider id; using empty id."
+    if (victimId.isEmpty()) warnings += "Collision without victim id; using empty id."
+
+    return CollisionEventRaw(
+        tickMillis = secondsToMillis(timeSeconds),
+        timeSeconds = timeSeconds,
+        laneId = laneId,
+        positionOnLaneMeters = pos,
+        colliderId = colliderId,
+        victimId = victimId,
+        collisionType = collisionType,
+        rawAttributes = rawAttributes)
+  }
+
+  /**
+   * Parses a `<timestep ...>...</timestep>` block from `export.xml`.
+   *
+   * The reader must be positioned at the `<timestep>` start element when calling this function.
+   *
+   * @param reader XML stream reader positioned at `<timestep>`.
+   * @param net Parsed road network for pointer resolution.
+   * @param collisionsByTickMillis Pre-bucketed collisions.
+   * @param egoVehicleId Optional ego vehicle id.
+   * @return Parsed [TimeStep].
+   */
+  private fun parseTimeStep(
+      reader: XMLStreamReader,
+      net: RoadNetwork,
+      collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
+      egoVehicleId: String
+  ): TimeStep {
+    val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
+    val tickMillis = secondsToMillis(timeSeconds)
+    val vehiclesInTick = mutableListOf<Vehicle>()
+
+    while (reader.hasNext()) {
+      val inner = reader.next()
+      if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "edge") {
+        skipEdgeContainer(reader, net, vehiclesInTick, timeSeconds)
+      } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "timestep") {
+        break
+      }
+    }
+
+    val vehiclesById: Map<String, Vehicle> = vehiclesInTick.associateBy { it.vehicleId }
+    val collisionsInTick =
+        resolveCollisionsForTick(net, tickMillis, collisionsByTickMillis, vehiclesById)
+    val ego = resolveEgoVehicle(vehiclesInTick, egoVehicleId)
+
+    return TimeStep(
+        identifier = "SUMO_TICK_$tickMillis",
+        tickTimeMillis = tickMillis,
+        vehiclesInTick = vehiclesInTick,
+        collisionsInTick = collisionsInTick,
+        ego = ego)
+  }
+
+  /**
+   * Consumes an `<edge>...</edge>` block inside `export.xml` and extracts vehicles from nested
+   * lanes.
+   *
+   * @param reader XML stream reader positioned at `<edge>`.
+   * @param net Parsed road network.
+   * @param vehiclesInTick Mutable output list for all vehicles in the current tick.
+   * @param timeSeconds Current timestep time in seconds (for warnings).
+   */
+  private fun skipEdgeContainer(
+      reader: XMLStreamReader,
+      net: RoadNetwork,
+      vehiclesInTick: MutableList<Vehicle>,
+      timeSeconds: Float
+  ) {
+    while (reader.hasNext()) {
+      val edgeInner = reader.next()
+      if (edgeInner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
+        parseLaneInExport(reader, net, vehiclesInTick, timeSeconds)
+      } else if (edgeInner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
+        break
+      }
+    }
+  }
+
+  /**
+   * Consumes a `<lane>...</lane>` block inside `export.xml` and extracts nested `<vehicle/>`
+   * elements.
+   *
+   * @param reader XML stream reader positioned at `<lane>`.
+   * @param net Parsed road network.
+   * @param vehiclesInTick Mutable output list of vehicles for this tick.
+   * @param timeSeconds Current timestep time in seconds (for warnings).
+   */
+  private fun parseLaneInExport(
+      reader: XMLStreamReader,
+      net: RoadNetwork,
+      vehiclesInTick: MutableList<Vehicle>,
+      timeSeconds: Float
+  ) {
+    val laneId = reader.attribute("id") ?: ""
+    val lane =
+        net.laneById[laneId]
+            ?: run {
+              warnings += "Unresolved laneId '$laneId' in export.xml at time=$timeSeconds"
+              Defaults.unknownLane
+            }
+
+    val edge: Edge = lane.parentEdge
+
+    while (reader.hasNext()) {
+      val laneInner = reader.next()
+      if (laneInner == XMLStreamConstants.START_ELEMENT && reader.localName == "vehicle") {
+        vehiclesInTick += parseVehicle(reader, lane, edge)
+      } else if (laneInner == XMLStreamConstants.END_ELEMENT && reader.localName == "lane") {
+        break
+      }
+    }
+  }
+
+  /**
+   * Parses a `<vehicle .../>` element from `export.xml` into a [Vehicle].
+   *
+   * @param reader XML stream reader positioned at `<vehicle>`.
+   * @param lane Resolved lane pointer.
+   * @param edge Resolved edge pointer.
+   * @return Parsed [Vehicle].
+   */
+  private fun parseVehicle(reader: XMLStreamReader, lane: Lane, edge: Edge): Vehicle {
+    val vehicleId = reader.attribute("id") ?: ""
+    val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
+    val speed = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f
+    val typeId = inferVehicleTypeId(vehicleId)
+    val vehicleType = VehicleType(typeId)
+
+    return Vehicle(
+        vehicleId = vehicleId,
+        vehicleType = vehicleType,
+        currentLane = lane,
+        currentEdge = edge,
+        positionOnLaneMeters = pos,
+        speedMetersPerSecond = speed)
+  }
+
+  /**
+   * Resolves collisions for a particular tick and maps them to [CollisionEvent] objects.
+   *
+   * @param net Parsed road network.
+   * @param tickMillis Tick timestamp (ms).
+   * @param collisionsByTickMillis Pre-bucketed raw collisions.
+   * @param vehiclesById Vehicles present in the tick, indexed by id.
+   * @return Collision events for the tick.
+   */
+  private fun resolveCollisionsForTick(
+      net: RoadNetwork,
+      tickMillis: Long,
+      collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
+      vehiclesById: Map<String, Vehicle>
+  ): List<CollisionEvent> =
+      collisionsByTickMillis[tickMillis].orEmpty().map { raw ->
+        val lane = net.laneById[raw.laneId].orDefaultLane(raw.laneId)
+        val edge: Edge = lane.parentEdge
+        val collider =
+            vehiclesById[raw.colliderId] ?: placeholderVehicle(raw.colliderId, lane, edge)
+        val victim = vehiclesById[raw.victimId] ?: placeholderVehicle(raw.victimId, lane, edge)
+
+        CollisionEvent(
+            collisionTimeSeconds = raw.timeSeconds,
+            lane = lane,
+            edge = edge,
+            positionOnLaneMeters = raw.positionOnLaneMeters,
+            colliderVehicle = collider,
+            victimVehicle = victim,
+            collisionType = raw.collisionType,
+            rawAttributes = raw.rawAttributes)
+      }
+
+  /**
+   * Resolves the ego vehicle for a tick.
+   *
+   * @param vehiclesInTick Vehicles present in the tick.
+   * @param egoVehicleId Optional ego id.
+   * @return Ego [Vehicle] (placeholder if none exist).
+   */
+  private fun resolveEgoVehicle(vehiclesInTick: List<Vehicle>, egoVehicleId: String): Vehicle =
+      if (egoVehicleId.isNotBlank()) {
+        vehiclesInTick.firstOrNull { it.vehicleId == egoVehicleId }
+            ?: vehiclesInTick.firstOrNull()
+            ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
+      } else {
+        vehiclesInTick.firstOrNull()
+            ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
+      }
+
+  /**
+   * Links ticks bidirectionally via [TimeStep.previousTick] and [TimeStep.nextTick].
+   *
+   * @param ticks Ordered tick list.
+   */
   private fun linkTicks(ticks: List<TimeStep>) {
     for (i in ticks.indices) {
       ticks[i].previousTick = ticks.getOrNull(i - 1)
@@ -383,19 +775,41 @@ class Importer {
     }
   }
 
-  /** Converts SUMO seconds into milliseconds using rounding. */
+  /**
+   * Converts SUMO seconds into milliseconds using rounding.
+   *
+   * @param seconds Time in seconds.
+   * @return Time in milliseconds.
+   */
   private fun secondsToMillis(seconds: Float): Long = round(seconds * 1000.0f).toLong()
 
-  /** Splits a SUMO space-separated list attribute into a list. */
+  /**
+   * Splits a SUMO space-separated list attribute into a list.
+   *
+   * @param value Raw attribute value.
+   * @return Parsed list (empty if blank).
+   */
   private fun splitSpaceList(value: String): List<String> =
       value.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
 
-  /** Infers type from vehicle id prefix (before '.'). */
+  /**
+   * Infers type from vehicle id prefix (before '.').
+   *
+   * Example: `normal.12` -> `normal`
+   *
+   * @param vehicleId SUMO vehicle id.
+   * @return Inferred type id.
+   */
   private fun inferVehicleTypeId(vehicleId: String): String =
       vehicleId.substringBefore('.', missingDelimiterValue = Defaults.unknownVehicleType.typeId)
 
   /**
    * Produces a placeholder vehicle for collision linking when the vehicle is not present in a tick.
+   *
+   * @param vehicleId Vehicle id.
+   * @param lane Lane pointer.
+   * @param edge Edge pointer.
+   * @return Placeholder [Vehicle].
    */
   private fun placeholderVehicle(vehicleId: String, lane: Lane, edge: Edge): Vehicle =
       Vehicle(
@@ -406,23 +820,17 @@ class Importer {
           positionOnLaneMeters = 0.0f,
           speedMetersPerSecond = 0.0f)
 
-  /** Returns a lane if resolvable, else a placeholder lane with warnings. */
+  /**
+   * Returns a lane if resolvable, else a placeholder lane with warnings.
+   *
+   * @param laneId Lane id used for warning message.
+   * @return Non-null [Lane].
+   * @receiver Resolved lane or null.
+   */
   private fun Lane?.orDefaultLane(laneId: String): Lane =
       this
           ?: run {
             warnings += "Unresolved laneId '$laneId' in collision.xml; using UNKNOWN_LANE."
             Defaults.unknownLane
           }
-
-  /** Raw collision record used for bucketing before resolving vehicle pointers per tick. */
-  private data class CollisionEventRaw(
-      val tickMillis: Long,
-      val timeSeconds: Float,
-      val laneId: String,
-      val positionOnLaneMeters: Float,
-      val colliderId: String,
-      val victimId: String,
-      val collisionType: String,
-      val rawAttributes: Map<String, String>
-  )
 }

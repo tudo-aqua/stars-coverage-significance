@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,21 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.dynamicData
-
-import tools.aqua.stars.data.sumo.staticData.RoadNetwork
+package tools.aqua.stars.data.sumo.importer
 
 /**
- * Container for the imported SUMO scenario.
+ * Raw lane record parsed from `.net.xml` before its parent edge is created.
  *
- * @property net Parsed SUMO network.
- * @property ticks Ordered ticks; they are linked via [TimeStep.previousTick] / [TimeStep.nextTick].
- * @property warnings Non-fatal issues encountered during import (e.g., missing attributes).
+ * @property laneId Lane id.
+ * @property laneIndex Lane index.
+ * @property speedLimitMetersPerSecond Speed limit (m/s).
+ * @property laneLengthMeters Lane length (m).
+ * @property shapeRaw Raw shape string (`"x,y x,y ..."`) from XML.
  */
-data class Scenario(val net: RoadNetwork, val ticks: List<TimeStep>, val warnings: List<String>)
+data class LaneRaw(
+    val laneId: String,
+    val laneIndex: Int,
+    val speedLimitMetersPerSecond: Float,
+    val laneLengthMeters: Float,
+    val shapeRaw: String
+)

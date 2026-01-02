@@ -17,11 +17,26 @@
 
 package tools.aqua.stars.coverage.significance
 
+import kotlin.io.path.Path
 import tools.aqua.stars.coverage.significance.generator.TrafficScenarioGenerator
 import tools.aqua.stars.coverage.significance.generator.VehicleType
+import tools.aqua.stars.data.sumo.SumoImporter
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
+  val sumoImporter = SumoImporter()
+  val scenario =
+      sumoImporter.importScenario(
+          Path("sumo_data/autobahnCollisions/autobahnCollisions.net.xml"),
+          Path("sumo_data/autobahnCollisions/export_autobahnCollisions.xml"),
+          Path("sumo_data/autobahnCollisions/collision_autobahnCollisions.xml"),
+      )
+
+  println("Imported scenario with ${scenario.ticks.size} ticks.")
+}
+
+/** Function to generate traffic scenarios and print the TikZ code for the first scenario. */
+fun generateTrafficScenarios() {
   val generator =
       TrafficScenarioGenerator(
           scenarioCount = 10_000,
