@@ -754,13 +754,14 @@ class SumoImporter {
    * @return Ego [Vehicle] (placeholder if none exist).
    */
   private fun resolveEgoVehicle(vehiclesInTick: List<Vehicle>, egoVehicleId: String): Vehicle =
-      if (egoVehicleId.isNotBlank()) {
-        vehiclesInTick.firstOrNull { it.vehicleId == egoVehicleId }
-            ?: vehiclesInTick.firstOrNull()
-            ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
-      } else {
-        vehiclesInTick.firstOrNull()
-            ?: placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
+      if (egoVehicleId.isBlank())
+          placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
+      else {
+        val ego = vehiclesInTick.find { it.vehicleId == egoVehicleId }
+        checkNotNull(ego) {
+          "Ego vehicle with id '$egoVehicleId' not found in tick; cannot resolve ego."
+        }
+        ego
       }
 
   /**
