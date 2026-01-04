@@ -15,16 +15,12 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.dynamicData
-
-import tools.aqua.stars.data.sumo.routeData.VehicleTypeDefinition
+package tools.aqua.stars.data.sumo.routeData
 
 /**
- * Vehicle type reference used by vehicles in ticks.
+ * Custom parameter entry within `<vType>`.
  *
- * @property definition The referenced vehicle type definition from the `.rou.xml`.
+ * @property key Parameter key.
+ * @property value Parameter value.
  */
-data class VehicleType(val definition: VehicleTypeDefinition) {
-  /** Convenience id accessor. */
-  val typeId: String = definition.typeId
-}
+data class TypeParameter(val key: String, val value: String)

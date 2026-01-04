@@ -15,16 +15,22 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.dynamicData
+package tools.aqua.stars.data.sumo.routeData
 
-import tools.aqua.stars.data.sumo.routeData.VehicleTypeDefinition
+/** Route specification used by `<vehicle>` and `<flow>`. */
+sealed interface VehicleRouteSpecification {
 
-/**
- * Vehicle type reference used by vehicles in ticks.
- *
- * @property definition The referenced vehicle type definition from the `.rou.xml`.
- */
-data class VehicleType(val definition: VehicleTypeDefinition) {
-  /** Convenience id accessor. */
-  val typeId: String = definition.typeId
+  /**
+   * Inline route defined by a list of edge ids (`<route edges="..."/>`).
+   *
+   * @property edgeIds Ordered list of edge ids.
+   */
+  data class InlineEdges(val edgeIds: List<String>) : VehicleRouteSpecification
+
+  /**
+   * Reference to a named route (`route="..."`).
+   *
+   * @property routeId Route id reference.
+   */
+  data class RouteReference(val routeId: String) : VehicleRouteSpecification
 }

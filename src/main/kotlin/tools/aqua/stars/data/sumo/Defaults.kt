@@ -18,6 +18,7 @@
 package tools.aqua.stars.data.sumo
 
 import tools.aqua.stars.data.sumo.dynamicData.VehicleType
+import tools.aqua.stars.data.sumo.routeData.VehicleTypeDefinition
 import tools.aqua.stars.data.sumo.staticData.BoundaryBox
 import tools.aqua.stars.data.sumo.staticData.Edge
 import tools.aqua.stars.data.sumo.staticData.Junction
@@ -65,6 +66,16 @@ object Defaults {
           laneShape = emptyList(),
           parentEdge = unknownEdge)
 
-  /** Placeholder vehicle type used when inference fails. */
-  val unknownVehicleType: VehicleType = VehicleType(typeId = "UNKNOWN_TYPE")
+  /** Placeholder vehicle type used when a vehicle's type cannot be resolved. */
+  val unknownVehicleTypeDefinition =
+      VehicleTypeDefinition(
+          typeId = "UNKNOWN_TYPE",
+          vehicleClass = "",
+          minGapMeters = 0.0,
+          tauSeconds = 0.0,
+          parameters = emptyList(),
+          rawAttributes = emptyMap())
+
+  /** Placeholder vehicle type used when a vehicle's type cannot be resolved. */
+  val unknownVehicleType = VehicleType(unknownVehicleTypeDefinition)
 }

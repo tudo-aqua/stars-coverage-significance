@@ -27,9 +27,10 @@ fun main() {
   val sumoImporter = SumoImporter()
   val scenario =
       sumoImporter.importScenario(
-          Path("sumo_data/autobahnCollisions/autobahnCollisions.net.xml"),
-          Path("sumo_data/autobahnCollisions/export_autobahnCollisions.xml"),
-          Path("sumo_data/autobahnCollisions/collision_autobahnCollisions.xml"),
+          netFilePath = Path("sumo_data/autobahnCollisions/autobahnCollisions.net.xml"),
+          exportFilePath = Path("sumo_data/autobahnCollisions/export_autobahnCollisions.xml"),
+          routesFilePath = Path("sumo_data/autobahnCollisions/autobahnCollisions.rou.xml"),
+          collisionFilePath = Path("sumo_data/autobahnCollisions/collision_autobahnCollisions.xml"),
       )
 
   println("Imported scenario with ${scenario.ticks.size} ticks.")

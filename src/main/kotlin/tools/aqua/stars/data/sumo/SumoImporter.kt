@@ -31,6 +31,14 @@ import tools.aqua.stars.data.sumo.importer.ConnectionRaw
 import tools.aqua.stars.data.sumo.importer.EdgeRaw
 import tools.aqua.stars.data.sumo.importer.JunctionRaw
 import tools.aqua.stars.data.sumo.importer.LaneRaw
+import tools.aqua.stars.data.sumo.routeData.FlowDefinition
+import tools.aqua.stars.data.sumo.routeData.RouteDefinition
+import tools.aqua.stars.data.sumo.routeData.RoutesFile
+import tools.aqua.stars.data.sumo.routeData.StopDefinition
+import tools.aqua.stars.data.sumo.routeData.TypeParameter
+import tools.aqua.stars.data.sumo.routeData.VehicleDefinition
+import tools.aqua.stars.data.sumo.routeData.VehicleRouteSpecification
+import tools.aqua.stars.data.sumo.routeData.VehicleTypeDefinition
 import tools.aqua.stars.data.sumo.staticData.BoundaryBox
 import tools.aqua.stars.data.sumo.staticData.Connection
 import tools.aqua.stars.data.sumo.staticData.ConnectionDirection
@@ -67,6 +75,7 @@ class SumoImporter {
    *
    * @param netFilePath Path to `.net.xml`.
    * @param exportFilePath Path to `export.xml`.
+   * @param routesFilePath Path to `routes.xml`.
    * @param collisionFilePath Optional path to `collision.xml`.
    * @param egoVehicleId Optional ego vehicle id. If absent or not present in a tick, the first
    *   vehicle is used.
@@ -75,11 +84,13 @@ class SumoImporter {
   fun importScenario(
       netFilePath: Path,
       exportFilePath: Path,
+      routesFilePath: Path,
       collisionFilePath: Path? = null,
       egoVehicleId: String = ""
   ): Scenario {
     warnings.clear()
 
+    val routesFile = parseRoutesFile(routesFilePath)
     val net: RoadNetwork = parseNet(netFilePath)
 
     val collisionEvents: List<CollisionEventRaw> =
@@ -89,11 +100,183 @@ class SumoImporter {
         collisionEvents.groupBy { it.tickMillis }
 
     val ticks: List<TimeStep> =
-        parseExport(exportFilePath, net, collisionsByTickMillis, egoVehicleId)
+        parseExport(exportFilePath, net, routesFile, collisionsByTickMillis, egoVehicleId)
 
     linkTicks(ticks)
 
-    return Scenario(net = net, ticks = ticks, warnings = warnings.toList())
+    return Scenario(net = net, routes = routesFile, ticks = ticks, warnings = warnings.toList())
+  }
+
+  /**
+   * Parses a SUMO routes file (`*.rou.xml`) into a [RoutesFile].
+   *
+   * Note: some example files contain literal `...` lines; these are removed before XML parsing.
+   *
+   * @param routesFilePath Path to the routes file.
+   * @return Parsed [RoutesFile].
+   */
+  private fun parseRoutesFile(routesFilePath: Path): RoutesFile {
+    val reader = createXmlReader(routesFilePath)
+
+    val vTypes = mutableListOf<VehicleTypeDefinition>()
+    val routes = mutableListOf<RouteDefinition>()
+    val vehicles = mutableListOf<VehicleDefinition>()
+    val flows = mutableListOf<FlowDefinition>()
+
+    while (reader.hasNext()) {
+      val eventType = reader.next()
+      if (eventType != XMLStreamConstants.START_ELEMENT) continue
+
+      when (reader.localName) {
+        "vType" -> vTypes += parseVType(reader)
+        "route" -> {
+          // Top-level <route id="..."> only (inline vehicle routes are handled inside vehicle
+          // parsing)
+          val routeId = reader.attribute("id") ?: ""
+          if (routeId.isNotBlank()) routes += parseRouteDefinition(reader, routeId)
+        }
+        "vehicle" -> vehicles += parseVehicleDefinition(reader)
+        "flow" -> flows += parseFlowDefinition(reader)
+      }
+    }
+
+    reader.close()
+    return RoutesFile(vehicleTypes = vTypes, routes = routes, vehicles = vehicles, flows = flows)
+  }
+
+  /**
+   * Parses a `<vType ...>...</vType>` element.
+   *
+   * @param reader XML reader positioned at `<vType>`.
+   * @return Parsed [VehicleTypeDefinition].
+   */
+  private fun parseVType(reader: XMLStreamReader): VehicleTypeDefinition {
+    val typeId = reader.attribute("id") ?: ""
+    val vClass = reader.attribute("vClass") ?: ""
+    val minGap = reader.attribute("minGap")?.toDoubleOrNull() ?: 0.0
+    val tau = reader.attribute("tau")?.toDoubleOrNull() ?: 0.0
+
+    val rawAttributes =
+        (0 until reader.attributeCount).associate { idx ->
+          reader.getAttributeLocalName(idx) to (reader.getAttributeValue(idx) ?: "")
+        }
+
+    val params = mutableListOf<TypeParameter>()
+
+    // consume until </vType>
+    while (reader.hasNext()) {
+      val ev = reader.next()
+      if (ev == XMLStreamConstants.START_ELEMENT && reader.localName == "param") {
+        params += parseTypeParam(reader)
+      } else if (ev == XMLStreamConstants.END_ELEMENT && reader.localName == "vType") {
+        break
+      }
+    }
+
+    return VehicleTypeDefinition(
+        typeId = typeId,
+        vehicleClass = vClass,
+        minGapMeters = minGap,
+        tauSeconds = tau,
+        parameters = params,
+        rawAttributes = rawAttributes)
+  }
+
+  /** Parses a `<param key="..." value="..."/>` inside `<vType>`. */
+  private fun parseTypeParam(reader: XMLStreamReader): TypeParameter =
+      TypeParameter(key = reader.attribute("key") ?: "", value = reader.attribute("value") ?: "")
+
+  /**
+   * Parses a top-level `<route id="..." edges="..."/>` element.
+   *
+   * @param reader XML reader positioned at `<route>`.
+   * @param routeId Route id.
+   * @return Parsed [RouteDefinition].
+   */
+  private fun parseRouteDefinition(reader: XMLStreamReader, routeId: String): RouteDefinition {
+    val edgesRaw = reader.attribute("edges") ?: ""
+    return RouteDefinition(routeId = routeId, edgeIds = splitSpaceList(edgesRaw))
+  }
+
+  /**
+   * Parses `<vehicle ...>...</vehicle>`.
+   *
+   * Supports inline `<route edges="..."/>` and/or stops.
+   */
+  private fun parseVehicleDefinition(reader: XMLStreamReader): VehicleDefinition {
+    val vehicleId = reader.attribute("id") ?: ""
+    val typeId = reader.attribute("type") ?: ""
+    val depart = reader.attribute("depart")?.toDoubleOrNull() ?: 0.0
+    val departLane = reader.attribute("departLane") ?: ""
+    val departSpeed = reader.attribute("departSpeed") ?: ""
+
+    var routeSpec: VehicleRouteSpecification = VehicleRouteSpecification.InlineEdges(emptyList())
+    val stops = mutableListOf<StopDefinition>()
+
+    while (reader.hasNext()) {
+      val ev = reader.next()
+      if (ev == XMLStreamConstants.START_ELEMENT && reader.localName == "route") {
+        val edges = reader.attribute("edges") ?: ""
+        routeSpec = VehicleRouteSpecification.InlineEdges(splitSpaceList(edges))
+      } else if (ev == XMLStreamConstants.START_ELEMENT && reader.localName == "stop") {
+        stops += parseStopDefinition(reader)
+      } else if (ev == XMLStreamConstants.END_ELEMENT && reader.localName == "vehicle") {
+        break
+      }
+    }
+
+    return VehicleDefinition(
+        vehicleId = vehicleId,
+        vehicleTypeId = typeId,
+        departTimeSeconds = depart,
+        departLaneSpec = departLane,
+        departSpeedSpec = departSpeed,
+        route = routeSpec,
+        stops = stops)
+  }
+
+  /** Parses `<flow ...>...</flow>`. */
+  private fun parseFlowDefinition(reader: XMLStreamReader): FlowDefinition {
+    val flowId = reader.attribute("id") ?: ""
+    val begin = reader.attribute("begin")?.toDoubleOrNull() ?: 0.0
+    val end = reader.attribute("end")?.toDoubleOrNull() ?: 0.0
+    val typeId = reader.attribute("type") ?: ""
+    val routeRef = reader.attribute("route") ?: ""
+    val number = reader.attribute("number")?.toIntOrNull() ?: 0
+    val departSpeed = reader.attribute("departSpeed") ?: ""
+
+    // consume until </flow> (flows can contain children, but your file has none)
+    while (reader.hasNext()) {
+      val ev = reader.next()
+      if (ev == XMLStreamConstants.END_ELEMENT && reader.localName == "flow") break
+    }
+
+    val routeSpec =
+        if (routeRef.isNotBlank()) VehicleRouteSpecification.RouteReference(routeRef)
+        else VehicleRouteSpecification.InlineEdges(emptyList())
+
+    return FlowDefinition(
+        flowId = flowId,
+        beginTimeSeconds = begin,
+        endTimeSeconds = end,
+        vehicleTypeId = typeId,
+        route = routeSpec,
+        number = number,
+        departSpeedSpec = departSpeed)
+  }
+
+  /** Parses `<stop .../>`. */
+  private fun parseStopDefinition(reader: XMLStreamReader): StopDefinition {
+    val rawAttributes =
+        (0 until reader.attributeCount).associate { idx ->
+          reader.getAttributeLocalName(idx) to (reader.getAttributeValue(idx) ?: "")
+        }
+
+    return StopDefinition(
+        laneId = reader.attribute("lane") ?: "",
+        endPosMeters = reader.attribute("endPos")?.toDoubleOrNull() ?: 0.0,
+        untilTimeSeconds = reader.attribute("until")?.toDoubleOrNull() ?: 0.0,
+        rawAttributes = rawAttributes)
   }
 
   /**
@@ -510,6 +693,7 @@ class SumoImporter {
   private fun parseExport(
       exportFilePath: Path,
       net: RoadNetwork,
+      routesFile: RoutesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
       egoVehicleId: String
   ): List<TimeStep> {
@@ -521,7 +705,7 @@ class SumoImporter {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      ticks += parseTimeStep(reader, net, collisionsByTickMillis, egoVehicleId)
+      ticks += parseTimeStep(reader, net, routesFile, collisionsByTickMillis, egoVehicleId)
     }
 
     reader.close()
@@ -593,6 +777,7 @@ class SumoImporter {
    *
    * @param reader XML stream reader positioned at `<timestep>`.
    * @param net Parsed road network for pointer resolution.
+   * @param routesFile Parsed routes file for vehicle type inference.
    * @param collisionsByTickMillis Pre-bucketed collisions.
    * @param egoVehicleId Optional ego vehicle id.
    * @return Parsed [TimeStep].
@@ -600,6 +785,7 @@ class SumoImporter {
   private fun parseTimeStep(
       reader: XMLStreamReader,
       net: RoadNetwork,
+      routesFile: RoutesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
       egoVehicleId: String
   ): TimeStep {
@@ -610,7 +796,7 @@ class SumoImporter {
     while (reader.hasNext()) {
       val inner = reader.next()
       if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "edge") {
-        skipEdgeContainer(reader, net, vehiclesInTick, timeSeconds)
+        skipEdgeContainer(reader, net, routesFile, vehiclesInTick, timeSeconds)
       } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "timestep") {
         break
       }
@@ -635,19 +821,21 @@ class SumoImporter {
    *
    * @param reader XML stream reader positioned at `<edge>`.
    * @param net Parsed road network.
+   * @param routesFile Parsed routes file for vehicle type inference.
    * @param vehiclesInTick Mutable output list for all vehicles in the current tick.
    * @param timeSeconds Current timestep time in seconds (for warnings).
    */
   private fun skipEdgeContainer(
       reader: XMLStreamReader,
       net: RoadNetwork,
+      routesFile: RoutesFile,
       vehiclesInTick: MutableList<Vehicle>,
       timeSeconds: Float
   ) {
     while (reader.hasNext()) {
       val edgeInner = reader.next()
       if (edgeInner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
-        parseLaneInExport(reader, net, vehiclesInTick, timeSeconds)
+        parseLaneInExport(reader, net, routesFile, vehiclesInTick, timeSeconds)
       } else if (edgeInner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
         break
       }
@@ -660,12 +848,14 @@ class SumoImporter {
    *
    * @param reader XML stream reader positioned at `<lane>`.
    * @param net Parsed road network.
+   * @param routesFile Parsed routes file for vehicle type inference.
    * @param vehiclesInTick Mutable output list of vehicles for this tick.
    * @param timeSeconds Current timestep time in seconds (for warnings).
    */
   private fun parseLaneInExport(
       reader: XMLStreamReader,
       net: RoadNetwork,
+      routesFile: RoutesFile,
       vehiclesInTick: MutableList<Vehicle>,
       timeSeconds: Float
   ) {
@@ -682,7 +872,7 @@ class SumoImporter {
     while (reader.hasNext()) {
       val laneInner = reader.next()
       if (laneInner == XMLStreamConstants.START_ELEMENT && reader.localName == "vehicle") {
-        vehiclesInTick += parseVehicle(reader, lane, edge)
+        vehiclesInTick += parseVehicle(reader, routesFile, lane, edge)
       } else if (laneInner == XMLStreamConstants.END_ELEMENT && reader.localName == "lane") {
         break
       }
@@ -693,20 +883,26 @@ class SumoImporter {
    * Parses a `<vehicle .../>` element from `export.xml` into a [Vehicle].
    *
    * @param reader XML stream reader positioned at `<vehicle>`.
+   * @param routesFile Parsed routes file for vehicle type inference.
    * @param lane Resolved lane pointer.
    * @param edge Resolved edge pointer.
    * @return Parsed [Vehicle].
    */
-  private fun parseVehicle(reader: XMLStreamReader, lane: Lane, edge: Edge): Vehicle {
+  private fun parseVehicle(
+      reader: XMLStreamReader,
+      routesFile: RoutesFile,
+      lane: Lane,
+      edge: Edge
+  ): Vehicle {
     val vehicleId = reader.attribute("id") ?: ""
     val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
     val speed = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f
-    val typeId = inferVehicleTypeId(vehicleId)
-    val vehicleType = VehicleType(typeId)
+
+    val typeDefinition = inferVehicleTypeDefinition(vehicleId, routesFile)
 
     return Vehicle(
         vehicleId = vehicleId,
-        vehicleType = vehicleType,
+        vehicleType = VehicleType(typeDefinition),
         currentLane = lane,
         currentEdge = edge,
         positionOnLaneMeters = pos,
@@ -794,15 +990,45 @@ class SumoImporter {
       value.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
 
   /**
-   * Infers type from vehicle id prefix (before '.').
+   * Infers the vehicle type definition for a SUMO vehicle id using the imported routes file.
    *
-   * Example: `normal.12` -> `normal`
-   *
-   * @param vehicleId SUMO vehicle id.
-   * @return Inferred type id.
+   * @param vehicleId Vehicle id from `export.xml`.
+   * @param routesFile Parsed routes file.
+   * @return The resolved [VehicleTypeDefinition] (never null).
    */
-  private fun inferVehicleTypeId(vehicleId: String): String =
-      vehicleId.substringBefore('.', missingDelimiterValue = Defaults.unknownVehicleType.typeId)
+  private fun inferVehicleTypeDefinition(
+      vehicleId: String,
+      routesFile: RoutesFile
+  ): VehicleTypeDefinition {
+    // explicit <vehicle id="...">
+    val explicit = routesFile.vehicleById[vehicleId]
+    if (explicit != null) {
+      return routesFile.vehicleTypeById[explicit.vehicleTypeId]
+          ?: run {
+            warnings +=
+                "Vehicle '$vehicleId' references unknown vType '${explicit.vehicleTypeId}' in .rou.xml."
+            Defaults.unknownVehicleTypeDefinition
+          }
+    }
+
+    // flow vehicles: flowId.N
+    val dotIndex = vehicleId.indexOf('.')
+    if (dotIndex > 0) {
+      val flowId = vehicleId.substring(0, dotIndex)
+      val flow = routesFile.flowById[flowId]
+      if (flow != null) {
+        return routesFile.vehicleTypeById[flow.vehicleTypeId]
+            ?: run {
+              warnings +=
+                  "Flow '$flowId' references unknown vType '${flow.vehicleTypeId}' in .rou.xml."
+              Defaults.unknownVehicleTypeDefinition
+            }
+      }
+    }
+
+    warnings += "Could not infer vType for vehicle '$vehicleId' from .rou.xml; using UNKNOWN_TYPE."
+    return Defaults.unknownVehicleTypeDefinition
+  }
 
   /**
    * Produces a placeholder vehicle for collision linking when the vehicle is not present in a tick.
@@ -815,7 +1041,7 @@ class SumoImporter {
   private fun placeholderVehicle(vehicleId: String, lane: Lane, edge: Edge): Vehicle =
       Vehicle(
           vehicleId = vehicleId,
-          vehicleType = VehicleType(inferVehicleTypeId(vehicleId)),
+          vehicleType = Defaults.unknownVehicleType,
           currentLane = lane,
           currentEdge = edge,
           positionOnLaneMeters = 0.0f,
