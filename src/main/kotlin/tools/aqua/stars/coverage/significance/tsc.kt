@@ -171,31 +171,31 @@ fun oldTsc() =
               leaf("Follow Lane") { condition { true } }
               leaf("Change to Right Lane") { condition { true } }
             }
-            all("Middle Lane") {
-              condition { true }
-              optional("Road") {
-                leaf("Vehicle in Front") { condition { true } }
-                leaf("Vehicle Behind") { condition { true } }
-                leaf("Vehicle on Left Lane") { condition { true } }
-                leaf("Vehicle on Right Lane") { condition { true } }
-              }
-              exclusive("Maneuver") {
-                leaf("Follow Lane") { condition { true } }
-                leaf("Change to Left Lane") { condition { true } }
-                leaf("Change to Right Lane") { condition { true } }
-              }
+          }
+          all("Middle Lane") {
+            condition { true }
+            optional("Road") {
+              leaf("Vehicle in Front") { condition { true } }
+              leaf("Vehicle Behind") { condition { true } }
+              leaf("Vehicle on Left Lane") { condition { true } }
+              leaf("Vehicle on Right Lane") { condition { true } }
             }
-            all("Right Lane") {
-              condition { true }
-              optional("Road") {
-                leaf("Vehicle in Front") { condition { true } }
-                leaf("Vehicle Behind") { condition { true } }
-                leaf("Vehicle on Left Lane") { condition { true } }
-              }
-              exclusive("Maneuver") {
-                leaf("Follow Lane") { condition { true } }
-                leaf("Change to Left Lane") { condition { true } }
-              }
+            exclusive("Maneuver") {
+              leaf("Follow Lane") { condition { true } }
+              leaf("Change to Left Lane") { condition { true } }
+              leaf("Change to Right Lane") { condition { true } }
+            }
+          }
+          all("Right Lane") {
+            condition { true }
+            optional("Road") {
+              leaf("Vehicle in Front") { condition { true } }
+              leaf("Vehicle Behind") { condition { true } }
+              leaf("Vehicle on Left Lane") { condition { true } }
+            }
+            exclusive("Maneuver") {
+              leaf("Follow Lane") { condition { true } }
+              leaf("Change to Left Lane") { condition { true } }
             }
           }
         }
