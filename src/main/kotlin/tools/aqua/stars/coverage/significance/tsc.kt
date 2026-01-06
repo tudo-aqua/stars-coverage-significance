@@ -23,9 +23,135 @@ import tools.aqua.stars.data.sumo.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dynamicData.Vehicle
 
+/** TSC for static starting configurations. */
+fun staticTsc() =
+    tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Static TSC") {
+      all("Root") {
+        exclusive("Lane") {
+          optional("Left Lane") {
+            condition { isOnLeftLane.holds(it) }
+            exclusive("Has Vehicle in Front Same Lane") {
+              condition { hasVehicleInFrontOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle Behind Same Lane") {
+              condition { hasVehicleBehindOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle on Right Lane Besides") {
+              condition { hasVehicleBesidesOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBesideIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneBesideSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBesideIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Front on Right Lane") {
+              condition { hasVehicleInFrontOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnRightLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Behind on Right Lane") {
+              condition { hasVehicleInBehindOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBehindIsSlower.holds(it) } }
+            }
+          }
+          optional("Middle Lane") {
+            condition { isOnMiddleLane.holds(it) }
+            exclusive("Has Vehicle in Front Same Lane") {
+              condition { hasVehicleInFrontOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle Behind Same Lane") {
+              condition { hasVehicleBehindOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle on Left Lane Besides") {
+              condition { hasVehicleBesidesOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBesideIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneBesideSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBesideIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle on Right Lane Besides") {
+              condition { hasVehicleBesidesOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBesideIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneBesideSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBesideIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Front on Left Lane") {
+              condition { hasVehicleInFrontOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnLeftLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Front on Right Lane") {
+              condition { hasVehicleInFrontOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnRightLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Behind on Left Lane") {
+              condition { hasVehicleInBehindOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+            }
+            exclusive("Has Vehicle in Behind on Right Lane") {
+              condition { hasVehicleInBehindOnRightLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnRightLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBehindIsSlower.holds(it) } }
+            }
+          }
+          optional("Right Lane") {
+            condition { isOnRightLane.holds(it) }
+            exclusive("Has Vehicle in Front Same Lane") {
+              condition { hasVehicleInFrontOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle Behind Same Lane") {
+              condition { hasVehicleBehindOnSameLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle on Left Lane Besides") {
+              condition { hasVehicleBesidesOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBesideIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneBesideSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBesideIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Front on Left Lane") {
+              condition { hasVehicleInFrontOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehiclesOnLeftLaneInFrontIsSlower.holds(it) } }
+            }
+            exclusive("Has Vehicle in Behind on Left Lane") {
+              condition { hasVehicleInBehindOnLeftLane.holds(it) }
+              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+              leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+            }
+          }
+        }
+      }
+    }
+
 @SuppressWarnings("StringLiteralDuplication")
 /** TSC for SUMO highway scenarios. */
-fun tsc() =
+fun oldTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("SUMO Highway TSC") {
       all("Root") {
         exclusive("Traffic Density") {

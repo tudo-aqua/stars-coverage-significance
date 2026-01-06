@@ -35,8 +35,9 @@ fun main() {
 
   println("Imported scenario with ${scenario.ticks.size} ticks.")
 
-  val tsc = tsc()
-  println("TSC size: ${tsc.instanceCount}")
+  val tsc = staticTsc()
+  println("TSC size: ${tsc.possibleTSCInstances.size}")
+  TSCTikzRenderer.render(tsc).let { tikzCode -> println(tikzCode) }
 }
 
 /** Function to generate traffic scenarios and print the TikZ code for the first scenario. */
