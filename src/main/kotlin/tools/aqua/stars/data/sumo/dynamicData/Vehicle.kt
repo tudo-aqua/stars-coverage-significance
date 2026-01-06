@@ -40,6 +40,9 @@ data class Vehicle(
     val speedMetersPerSecond: Float
 ) : EntityType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>() {
 
+  /** Speed in km/h. */
+  val speedKmPerHour: Float = speedMetersPerSecond * 3.6f
+
   /** Tracks vehicles across ticks by id only. */
   override fun equals(other: Any?): Boolean = other is Vehicle && other.vehicleId == this.vehicleId
 
