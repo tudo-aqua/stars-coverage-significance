@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.significance
 
 import kotlin.io.path.Path
-import tools.aqua.stars.coverage.significance.generator.TrafficScenarioGenerator
-import tools.aqua.stars.coverage.significance.generator.VehicleType
+import tools.aqua.stars.coverage.significance.fullTrafficGenerator.TrafficScenarioGenerator
+import tools.aqua.stars.coverage.significance.fullTrafficGenerator.VehicleType
 import tools.aqua.stars.data.sumo.SumoImporter
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */

@@ -15,23 +15,14 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.generator
+package tools.aqua.stars.coverage.significance.fullTrafficGenerator
 
 /**
- * Supported vehicle categories used by the generator.
+ * Coordinate form of a placed vehicle.
  *
- * @property sumoId Identifier that can be used in SUMO route/type files.
+ * @property type The vehicle type.
+ * @property lane Lane index (0..numberOfLanes-1).
+ * @property area Longitudinal area index (0..numberOfBlocksPerLane-1).
+ * @property index Flat index in the mask (`lane * numberOfBlocksPerLane + area`).
  */
-enum class VehicleType(val sumoId: String) {
-  /** Heavy goods vehicle. */
-  TRUCK("truck"),
-
-  /** Passenger car with calm driving style. */
-  CAR_CALM("car_calm"),
-
-  /** Passenger car with normal driving style. */
-  CAR_NORMAL("car_normal"),
-
-  /** Passenger car with sporty driving style. */
-  CAR_SPORTY("car_sporty")
-}
+data class Spawn(val type: VehicleType, val lane: Int, val area: Int, val index: Int)

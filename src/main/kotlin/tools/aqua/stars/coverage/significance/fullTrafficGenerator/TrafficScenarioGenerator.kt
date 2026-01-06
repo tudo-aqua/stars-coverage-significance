@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.generator
+package tools.aqua.stars.coverage.significance.fullTrafficGenerator
 
 import kotlin.random.Random
 
 /**
  * Generator for synthetic highway traffic placement scenarios.
  *
- * The generator produces *unique* scenarios that place vehicles of different [VehicleType]s on a
- * discretized road:
+ * The fullTrafficGenerator produces *unique* scenarios that place vehicles of different
+ * [VehicleType]s on a discretized road:
  * - the road has [numberOfLanes] lanes
  * - each lane is divided into [numberOfBlocksPerLane] discrete longitudinal "areas" (blocks)
  *

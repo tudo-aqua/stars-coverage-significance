@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.generator
+package tools.aqua.stars.coverage.significance.fullTrafficGenerator
 
 /**
  * A generated placement scenario represented by a 1D mask.
