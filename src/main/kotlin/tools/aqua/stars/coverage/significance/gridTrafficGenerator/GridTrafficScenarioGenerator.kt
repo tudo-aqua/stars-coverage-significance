@@ -35,10 +35,6 @@ import kotlin.random.Random
  * @property i2Start Start of row 2 interval (meters).
  * @property i2End End of row 2 interval (meters).
  * @property minForwardGapMeters Minimum forward gap between vehicles (meters).
- * @property egoSpeedKmh Initial speed of ego vehicle (km/h).
- * @property calmSpeedKmh Initial speed of calm background vehicles (km/h).
- * @property normalSpeedKmh Initial speed of normal background vehicles (km/h).
- * @property speedySpeedKmh Initial speed of speedy background vehicles (km/h).
  */
 data class GridTrafficScenarioGenerator(
     val enablePositionVariance: Boolean,
@@ -55,12 +51,6 @@ data class GridTrafficScenarioGenerator(
 
     // Constraint (meters)
     val minForwardGapMeters: Double = 50.0,
-
-    // Speeds (km/h) are associated with types; kept here for downstream simulation wiring.
-    val egoSpeedKmh: Int = 100,
-    val calmSpeedKmh: Int = 70,
-    val normalSpeedKmh: Int = 100,
-    val speedySpeedKmh: Int = 130,
 ) {
 
   private data class Interval(val start: Double, val end: Double) {
@@ -99,15 +89,6 @@ data class GridTrafficScenarioGenerator(
       "I2.end must be at least d_min ahead of I0.start"
     }
   }
-
-  /** Returns the initial speed in km/h associated with [type]. */
-  fun speedFor(type: VehicleType): Int =
-      when (type) {
-        VehicleType.EGO -> egoSpeedKmh
-        VehicleType.CAR_CALM -> calmSpeedKmh
-        VehicleType.CAR_NORMAL -> normalSpeedKmh
-        VehicleType.CAR_SPEEDY -> speedySpeedKmh
-      }
 
   /** Generates all possible scenarios based on the configured parameters. */
   fun generateAll(): Sequence<GeneratedScenario> {

@@ -20,22 +20,23 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 /**
  * Vehicle categories used by the 3x3-grid scenario generator.
  *
- * The [sumoId] must match the configured SUMO `vType` identifiers.
- *
- * Note: the paper uses the abstract type name `ego`. If your SUMO setup does not define a dedicated
- * ego vType, set [EGO]'s [sumoId] to an existing vType (e.g., `car_normal`) and distinguish the AUT
- * via scenario metadata.
+ * @property sumoId Must match the SUMO vType id.
+ * @property departSpeedKmh Initial departure speed in km/h (converted to m/s for SUMO exports).
  */
-enum class VehicleType(val sumoId: String) {
+enum class VehicleType(val sumoId: String, val departSpeedKmh: Int) {
   /** The ego vehicle (AUT). */
-  EGO("ego"),
+  EGO("ego", 100),
 
   /** Passenger car with calm driving style (70 km/h at initialization). */
-  CAR_CALM("car_calm"),
+  CAR_CALM("car_calm", 70),
 
   /** Passenger car with normal driving style (100 km/h at initialization). */
-  CAR_NORMAL("car_normal"),
+  CAR_NORMAL("car_normal", 100),
 
   /** Passenger car with fast driving style (130 km/h at initialization). */
-  CAR_SPEEDY("car_speedy"),
+  CAR_SPEEDY("car_speedy", 130);
+
+  /** Initial departure speed in m/s (converted from km/h). */
+  val departSpeedMs: Double
+    get() = departSpeedKmh / 3.6
 }
