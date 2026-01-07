@@ -18,20 +18,23 @@
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
 import kotlin.io.path.Path
+import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.ConsoleProgress
 
 /**
  * Function to generate grid traffic scenarios.
  *
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
+ * @param seed Seed for random number generation.
  */
-fun generateGridTrafficScenarios(n: Int? = null) {
+fun generateGridTrafficScenarios(n: Int? = null, seed: Int = 1) {
+  val rng = Random(seed)
   val generator =
       GridTrafficScenarioGenerator(
           enablePositionVariance = false,
           positionVariantsPerOccupancy = 3,
-          seed = 1,
-          minForwardGapMeters = 50.0,
+          seed = seed,
+          minForwardGapMeters = 75.0,
           i0Start = 0.0,
           i0End = 100.0,
           i1Start = 100.0,
@@ -52,17 +55,17 @@ fun generateGridTrafficScenarios(n: Int? = null) {
   }
 
   var allScenarios = generator.generateAll().toList()
-  val total = allScenarios.size
-  val pb = ConsoleProgress(total, label = "Grid Traffic Generator")
-  pb.render(0, "starting")
 
   var done = 0
 
   if (n != null && n < allScenarios.size) {
-    allScenarios = allScenarios.shuffled().take(n)
+    allScenarios = allScenarios.shuffled(rng).take(n)
   }
-
+  val total = allScenarios.size
   println("Generating and writing ${allScenarios.size} scenarios...")
+
+  val pb = ConsoleProgress(total, label = "Grid Traffic Generator")
+  pb.render(0, "starting")
   allScenarios.forEach { scenario ->
     scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/${scenario.id}.rou.xml"))
     done++

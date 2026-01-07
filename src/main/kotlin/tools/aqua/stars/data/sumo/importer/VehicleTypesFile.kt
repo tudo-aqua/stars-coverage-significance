@@ -15,21 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.sumo
+package tools.aqua.stars.data.sumo.importer
 
-import java.nio.file.Path
+import tools.aqua.stars.data.sumo.routeData.VehicleTypeDefinition
 
 /**
- * Result of a SUMO run for a scenario.
+ * In-memory representation of a SUMO additional file that only contains `<vType ...>` entries.
  *
- * @property scenarioId The identifier of the scenario.
- * @property exitCode The exit code of the SUMO process.
- * @property stdout The standard output of the SUMO process.
- * @property scenarioFilePath The file path of the scenario.
+ * @property vehicleTypes Vehicle type definitions.
  */
-data class SumoRunResult(
-    val scenarioId: String,
-    val exitCode: Int,
-    val stdout: String,
-    val scenarioFilePath: Path
-)
+data class VehicleTypesFile(val vehicleTypes: List<VehicleTypeDefinition>) {
+  /** Lookup of vehicle types by their id. */
+  val vehicleTypeById: Map<String, VehicleTypeDefinition> = vehicleTypes.associateBy { it.typeId }
+}

@@ -148,11 +148,14 @@ data class GeneratedScenario(
       appendLine("""  <route id="${esc(id)}" edges="$edgesAttr"/>""")
 
       for ((k, sp) in sorted.withIndex()) {
-        val vehId = "${cfg.vehicleIdPrefix}_${esc(id)}_r${sp.row}_l${sp.lane}_$k"
+        val vehId = "${cfg.vehicleIdPrefix}_${sp.type}_${esc(id)}_r${sp.row}_l${sp.lane}_$k"
         val typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
         val departLane = sp.lane
 
         appendLine(
+            //            """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}"
+            // depart="begin" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}"
+            // departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
             """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}" depart="${fmtTime(cfg.departTimeSeconds)}" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}" departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
       }
 

@@ -34,14 +34,16 @@ const val SCENARIO_DIR = "$GRID_TRAFFIC_DIR/scenarios"
 const val EXPORT_DIR = "$GRID_TRAFFIC_DIR/export"
 /** Sub-directory for collision files. */
 const val COLLISION_DIR = "$GRID_TRAFFIC_DIR/collision"
+/** File extension for scenario files. */
+const val SCENARIO_FILE_EXTENSION = "rou.xml"
 /** File extension for exported SUMO files. */
 const val EXPORT_FILE_EXTENSION = "export.xml"
 /** File extension for collision files. */
-const val COLLISION_FILE_EXTENSION = "collision.xml"
+const val COLLISION_FILE_EXTENSION = "collisions.xml"
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
-  generateGridTrafficScenarios(n = 100)
+  generateGridTrafficScenarios(n = 1, seed = 2)
 
   val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
 
@@ -60,7 +62,8 @@ fun main() {
           exportFiles = exportFiles,
           collisionsFiles = collisionFiles,
           bufferSize = 60,
-          netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"))
+          netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"),
+          vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"))
 
   val staticTsc = staticTsc()
   val tscEvaluation = TSCEvaluation(staticTsc)

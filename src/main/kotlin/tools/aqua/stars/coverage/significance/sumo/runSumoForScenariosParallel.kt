@@ -60,6 +60,7 @@ fun runSumoForScenariosParallel(
 
   if (inputs.isEmpty()) return emptyList()
 
+  println("Simulate ${inputs.size} scenarios with SUMO using $parallelism threads...")
   val pb = ConsoleProgress(inputs.size, label = "SUMO", barWidth = 30)
   pb.render(0, "starting")
 
@@ -68,9 +69,14 @@ fun runSumoForScenariosParallel(
   fun buildCmd(routeFile: Path, scenarioId: String): List<String> {
     val netstateOut = exportDir.resolve("$scenarioId.export.xml")
     val collisionOut = collisionDir.resolve("$scenarioId.collisions.xml")
+    val tripInfoOut = baseDir.resolve("$scenarioId.tripinfo.xml")
 
     return buildList {
       add(sumoBinary)
+      add("--route-steps")
+      add("0")
+      add("--step-length")
+      add("0.1")
       add("--net-file")
       add(netFile.absolutePathString())
       add("--additional-files")
@@ -81,6 +87,8 @@ fun runSumoForScenariosParallel(
       add(netstateOut.absolutePathString())
       add("--collision-output")
       add(collisionOut.absolutePathString())
+      add("--tripinfo-output")
+      add(tripInfoOut.absolutePathString())
     }
   }
 
@@ -101,7 +109,8 @@ fun runSumoForScenariosParallel(
             val stdout = proc.inputStream.bufferedReader().readText()
             val code = proc.waitFor()
 
-            SumoRunResult(scenarioId = sid, exitCode = code, stdout = stdout)
+            SumoRunResult(
+                scenarioId = sid, exitCode = code, stdout = stdout, scenarioFilePath = f.toPath())
           })
     }
 
@@ -118,6 +127,8 @@ fun runSumoForScenariosParallel(
         println()
         println("SUMO failed for scenarioId=${res.scenarioId} (exit=${res.exitCode})")
         println("Output:\n${res.stdout}")
+        println("Command:")
+        println(buildCmd(res.scenarioFilePath, res.scenarioId).joinToString(" "))
 
         if (failFast) throw IllegalStateException("SUMO failed for ${res.scenarioId}")
       }
@@ -126,7 +137,6 @@ fun runSumoForScenariosParallel(
       pb.render(completed, res.scenarioId)
     }
 
-    pb.finish("done")
     return results
   } finally {
     executor.shutdownNow()

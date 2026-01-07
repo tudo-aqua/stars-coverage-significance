@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
+import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
 import tools.aqua.stars.data.sumo.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dynamicData.Scenario
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
@@ -38,6 +39,7 @@ import tools.aqua.stars.data.sumo.importer.ConnectionRaw
 import tools.aqua.stars.data.sumo.importer.EdgeRaw
 import tools.aqua.stars.data.sumo.importer.JunctionRaw
 import tools.aqua.stars.data.sumo.importer.LaneRaw
+import tools.aqua.stars.data.sumo.importer.VehicleTypesFile
 import tools.aqua.stars.data.sumo.routeData.FlowDefinition
 import tools.aqua.stars.data.sumo.routeData.RouteDefinition
 import tools.aqua.stars.data.sumo.routeData.RoutesFile
@@ -75,6 +77,7 @@ class SumoImporter {
    * @param collisionsFiles List of collision files.
    * @param bufferSize Buffer size for each [TickSequence].
    * @param netFilePath Path to the `.net.xml` file.
+   * @param vehicleTypesAdditionalFilePath Path to the vehicle types additional file.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -84,6 +87,7 @@ class SumoImporter {
       collisionsFiles: List<File>,
       bufferSize: Int = 100,
       netFilePath: Path,
+      vehicleTypesAdditionalFilePath: Path,
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -97,9 +101,9 @@ class SumoImporter {
     check(scenarioFiles.size == exportFiles.size && exportFiles.size == collisionsFiles.size) {
       "The number of scenario files, export files, and collision files must be the same."
     }
-    val scenarioNames = scenarioFiles.map { it.nameWithoutExtension }
-    val exportNames = exportFiles.map { it.nameWithoutExtension }
-    val collisionNames = collisionsFiles.map { it.nameWithoutExtension }
+    val scenarioNames = scenarioFiles.map { it.name.removeSuffix(".$SCENARIO_FILE_EXTENSION") }
+    val exportNames = exportFiles.map { it.name.removeSuffix(".$EXPORT_FILE_EXTENSION") }
+    val collisionNames = collisionsFiles.map { it.name.removeSuffix(".$COLLISION_FILE_EXTENSION") }
 
     for (name in scenarioNames) {
       check(name in exportNames) { "No matching export file found for scenario file: $name" }
@@ -121,6 +125,7 @@ class SumoImporter {
       val scenario =
           importScenario(
               netFilePath = netFilePath,
+              vTypesFilePath = vehicleTypesAdditionalFilePath,
               exportFilePath = exportFilePath,
               routesFilePath = scenarioFilePath,
               collisionFilePath = collisionFilePath)
@@ -148,12 +153,14 @@ class SumoImporter {
       netFilePath: Path,
       exportFilePath: Path,
       routesFilePath: Path,
+      vTypesFilePath: Path,
       collisionFilePath: Path? = null,
   ): Scenario {
     warnings.clear()
 
     val routesFile = parseRoutesFile(routesFilePath)
     val net: RoadNetwork = parseNet(netFilePath)
+    val vTypesFile = parseVehicleTypesAddFile(vTypesFilePath)
 
     val collisionEvents: List<CollisionEventRaw> =
         collisionFilePath?.let { parseCollisionEvents(it) } ?: emptyList()
@@ -161,7 +168,8 @@ class SumoImporter {
     val collisionsByTickMillis: Map<Long, List<CollisionEventRaw>> =
         collisionEvents.groupBy { it.tickMillis }
 
-    val ticks: List<TimeStep> = parseExport(exportFilePath, net, routesFile, collisionsByTickMillis)
+    val ticks: List<TimeStep> =
+        parseExport(exportFilePath, net, routesFile, vTypesFile, collisionsByTickMillis)
 
     linkTicks(ticks)
 
@@ -203,6 +211,26 @@ class SumoImporter {
 
     reader.close()
     return RoutesFile(vehicleTypes = vTypes, routes = routes, vehicles = vehicles, flows = flows)
+  }
+
+  /**
+   * Parses a SUMO vehicle types additional file (`*.add.xml`) into a [VehicleTypesFile].
+   *
+   * @param vTypesFilePath Path to the vehicle types additional file.
+   * @return Parsed [VehicleTypesFile].
+   */
+  private fun parseVehicleTypesAddFile(vTypesFilePath: Path): VehicleTypesFile {
+    val reader = createXmlReader(vTypesFilePath)
+    val vTypes = mutableListOf<VehicleTypeDefinition>()
+
+    while (reader.hasNext()) {
+      val eventType = reader.next()
+      if (eventType != XMLStreamConstants.START_ELEMENT) continue
+      if (reader.localName == "vType") vTypes += parseVType(reader)
+    }
+
+    reader.close()
+    return VehicleTypesFile(vehicleTypes = vTypes)
   }
 
   /**
@@ -755,6 +783,7 @@ class SumoImporter {
       exportFilePath: Path,
       net: RoadNetwork,
       routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
   ): List<TimeStep> {
     val reader = createXmlReader(exportFilePath)
@@ -765,7 +794,7 @@ class SumoImporter {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      ticks += parseTimeStep(reader, net, routesFile, collisionsByTickMillis)
+      ticks += parseTimeStep(reader, net, routesFile, vTypesFile, collisionsByTickMillis)
     }
 
     reader.close()
@@ -845,16 +874,18 @@ class SumoImporter {
       reader: XMLStreamReader,
       net: RoadNetwork,
       routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>
   ): TimeStep {
     val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
     val tickMillis = secondsToMillis(timeSeconds)
     val vehiclesInTick = mutableListOf<Vehicle>()
+    println(timeSeconds)
 
     while (reader.hasNext()) {
       val inner = reader.next()
       if (inner == XMLStreamConstants.START_ELEMENT && reader.localName == "edge") {
-        skipEdgeContainer(reader, net, routesFile, vehiclesInTick, timeSeconds)
+        skipEdgeContainer(reader, net, routesFile, vTypesFile, vehiclesInTick, timeSeconds)
       } else if (inner == XMLStreamConstants.END_ELEMENT && reader.localName == "timestep") {
         break
       }
@@ -887,13 +918,14 @@ class SumoImporter {
       reader: XMLStreamReader,
       net: RoadNetwork,
       routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile,
       vehiclesInTick: MutableList<Vehicle>,
       timeSeconds: Float
   ) {
     while (reader.hasNext()) {
       val edgeInner = reader.next()
       if (edgeInner == XMLStreamConstants.START_ELEMENT && reader.localName == "lane") {
-        parseLaneInExport(reader, net, routesFile, vehiclesInTick, timeSeconds)
+        parseLaneInExport(reader, net, routesFile, vTypesFile, vehiclesInTick, timeSeconds)
       } else if (edgeInner == XMLStreamConstants.END_ELEMENT && reader.localName == "edge") {
         break
       }
@@ -914,6 +946,7 @@ class SumoImporter {
       reader: XMLStreamReader,
       net: RoadNetwork,
       routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile,
       vehiclesInTick: MutableList<Vehicle>,
       timeSeconds: Float
   ) {
@@ -930,7 +963,7 @@ class SumoImporter {
     while (reader.hasNext()) {
       val laneInner = reader.next()
       if (laneInner == XMLStreamConstants.START_ELEMENT && reader.localName == "vehicle") {
-        vehiclesInTick += parseVehicle(reader, routesFile, lane, edge)
+        vehiclesInTick += parseVehicle(reader, routesFile, vTypesFile, lane, edge)
       } else if (laneInner == XMLStreamConstants.END_ELEMENT && reader.localName == "lane") {
         break
       }
@@ -949,6 +982,7 @@ class SumoImporter {
   private fun parseVehicle(
       reader: XMLStreamReader,
       routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile,
       lane: Lane,
       edge: Edge
   ): Vehicle {
@@ -956,7 +990,7 @@ class SumoImporter {
     val pos = reader.attribute("pos")?.toFloatOrNull() ?: 0.0f
     val speed = reader.attribute("speed")?.toFloatOrNull() ?: 0.0f
 
-    val typeDefinition = inferVehicleTypeDefinition(vehicleId, routesFile)
+    val typeDefinition = inferVehicleTypeDefinition(vehicleId, routesFile, vTypesFile)
 
     return Vehicle(
         vehicleId = vehicleId,
@@ -1044,39 +1078,62 @@ class SumoImporter {
       value.trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")) ?: emptyList()
 
   /**
-   * Infers the vehicle type definition for a SUMO vehicle id using the imported routes file.
+   * Infers the vehicle type definition for a SUMO vehicle id.
+   *
+   * Type inference is done using the imported routes file:
+   * 1) If the id matches an explicit `<vehicle id="...">`, use its `type`.
+   * 2) If the id matches the flow pattern `"<flowId>.<n>"`, use the flow's `type`.
+   *
+   * Type resolution is then done by looking up the referenced `vType` in:
+   * - the routes file (if it still contains `vType`s), and
+   * - the additional vTypes file (`vTypes.add.xml`).
    *
    * @param vehicleId Vehicle id from `export.xml`.
-   * @param routesFile Parsed routes file.
+   * @param routesFile Parsed routes file (vehicles/flows).
+   * @param vTypesFile Parsed vTypes file (additional vType definitions).
    * @return The resolved [VehicleTypeDefinition] (never null).
    */
   private fun inferVehicleTypeDefinition(
       vehicleId: String,
-      routesFile: RoutesFile
+      routesFile: RoutesFile,
+      vTypesFile: VehicleTypesFile
   ): VehicleTypeDefinition {
-    // explicit <vehicle id="...">
-    val explicit = routesFile.vehicleById[vehicleId]
-    if (explicit != null) {
-      return routesFile.vehicleTypeById[explicit.vehicleTypeId]
-          ?: run {
-            warnings +=
-                "Vehicle '$vehicleId' references unknown vType '${explicit.vehicleTypeId}' in .rou.xml."
-            Defaults.unknownVehicleTypeDefinition
-          }
+
+    // Helper: resolve a typeId by searching both sources.
+    fun resolveTypeId(typeId: String): VehicleTypeDefinition {
+      // Prefer vTypes defined in routes file (local override semantics), then fall back to
+      // add-file.
+      val fromRoutes = routesFile.vehicleTypeById[typeId]
+      if (fromRoutes != null) return fromRoutes
+
+      val fromAdd = vTypesFile.vehicleTypeById[typeId]
+      if (fromAdd != null) return fromAdd
+
+      warnings += "Referenced vType '$typeId' is not defined in .rou.xml nor in vTypes.add.xml."
+      return Defaults.unknownVehicleTypeDefinition
     }
 
-    // flow vehicles: flowId.N
+    // 1) explicit <vehicle id="...">
+    val explicit = routesFile.vehicleById[vehicleId]
+    if (explicit != null) {
+      if (explicit.vehicleTypeId.isBlank()) {
+        warnings += "Vehicle '$vehicleId' has no 'type' attribute in .rou.xml; using UNKNOWN_TYPE."
+        return Defaults.unknownVehicleTypeDefinition
+      }
+      return resolveTypeId(explicit.vehicleTypeId)
+    }
+
+    // 2) flow vehicles: flowId.N
     val dotIndex = vehicleId.indexOf('.')
     if (dotIndex > 0) {
       val flowId = vehicleId.substring(0, dotIndex)
       val flow = routesFile.flowById[flowId]
       if (flow != null) {
-        return routesFile.vehicleTypeById[flow.vehicleTypeId]
-            ?: run {
-              warnings +=
-                  "Flow '$flowId' references unknown vType '${flow.vehicleTypeId}' in .rou.xml."
-              Defaults.unknownVehicleTypeDefinition
-            }
+        if (flow.vehicleTypeId.isBlank()) {
+          warnings += "Flow '$flowId' has no 'type' attribute in .rou.xml; using UNKNOWN_TYPE."
+          return Defaults.unknownVehicleTypeDefinition
+        }
+        return resolveTypeId(flow.vehicleTypeId)
       }
     }
 
