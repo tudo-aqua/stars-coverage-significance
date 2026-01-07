@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance
 import kotlin.io.path.Path
 import tools.aqua.stars.coverage.significance.fullTrafficGenerator.FullTrafficScenarioGenerator
 import tools.aqua.stars.coverage.significance.fullTrafficGenerator.FullTrafficVehicleType
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator
 import tools.aqua.stars.data.sumo.SumoImporter
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
@@ -38,6 +39,38 @@ fun main() {
   val tsc = staticTsc()
   println("TSC size: ${tsc.possibleTSCInstances.size}")
   TSCTikzRenderer.render(tsc).let { tikzCode -> println(tikzCode) }
+
+  generateGridTrafficScenarios()
+}
+
+/** Function to generate grid traffic scenarios. */
+fun generateGridTrafficScenarios() {
+  val generator =
+      GridTrafficScenarioGenerator(
+          enablePositionVariance = false,
+          positionVariantsPerOccupancy = 3,
+          seed = 1,
+          minForwardGapMeters = 50.0,
+          egoSpeedKmh = 100,
+          calmSpeedKmh = 70,
+          normalSpeedKmh = 100,
+          speedySpeedKmh = 130,
+          i0Start = 0.0,
+          i0End = 100.0,
+          i1Start = 100.0,
+          i1End = 110.0,
+          i2Start = 110.0,
+          i2End = 210.0,
+      )
+
+  val allScenarios = generator.generateAll().toList()
+  val s = ""
+
+  allScenarios.take(100).forEach { scenario ->
+    println(scenario.toASCIIString())
+    println()
+    println()
+  }
 }
 
 /** Function to generate traffic scenarios and print the TikZ code for the first scenario. */
