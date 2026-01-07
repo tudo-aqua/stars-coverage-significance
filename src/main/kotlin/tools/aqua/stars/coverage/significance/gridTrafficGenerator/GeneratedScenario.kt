@@ -17,6 +17,12 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Locale
+import kotlin.math.roundToInt
+
 /**
  * A generated 3x3-grid scenario.
  *
@@ -45,6 +51,58 @@ data class GeneratedScenario(
     require(placements.any { it.type == VehicleType.EGO && it.row == 1 && it.lane == egoLane }) {
       "placements must contain the ego vehicle at row=1, lane=egoLane"
     }
+  }
+
+  /** Human-readable scenario identifier string. */
+  val id: String by lazy { buildHumanReadableId() }
+
+  /**
+   * Builds a human-readable scenario identifier string.
+   *
+   * @param posResolution Resolution for quantizing positions (factor, digits)
+   * @param includeOptionalHashSuffix If true, appends a tiny hash suffix to reduce
+   */
+  fun buildHumanReadableId(
+      posResolution: Pair<Double, Int> = 10.0 to 4,
+      includeOptionalHashSuffix: Boolean = false
+  ): String {
+    fun typeLetter(t: VehicleType): Char {
+      val sid = t.sumoId.lowercase(Locale.ROOT)
+      val nm = t.name.lowercase(Locale.ROOT)
+      return when {
+        sid == "ego" || nm == "ego" -> 'e'
+        "calm" in sid || "calm" in nm -> 'c'
+        "normal" in sid || "normal" in nm -> 'n'
+        "speedy" in sid || "speedy" in nm -> 's'
+        else -> t.name.first().lowercaseChar()
+      }
+    }
+
+    fun quantizePos(pMeters: Double): Int =
+        (pMeters * posResolution.first).roundToInt().coerceAtLeast(0)
+
+    fun pad(num: Int): String = num.toString().padStart(posResolution.second, '0')
+
+    val parts =
+        placements
+            .sortedWith(
+                compareBy<Spawn>(
+                    { it.row }, { it.lane }, { it.type.sumoId }, { it.positionMeters }))
+            .map { s ->
+              val posQ = quantizePos(s.positionMeters)
+              "r${s.row}l${s.lane}${typeLetter(s.type)}${pad(posQ)}"
+            }
+
+    val base = parts.joinToString(separator = "__")
+
+    // Ensure filename-safe charset: [a-z0-9_]
+    val safe = base.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9_]+"), "_")
+
+    if (!includeOptionalHashSuffix) return safe
+
+    // Optional tiny suffix: keeps id human-readable while reducing collision risk.
+    val suffix = safe.hashCode().toUInt().toString(16)
+    return "${safe}__h$suffix"
   }
 
   /** Returns the number of vehicles in the scenario (including ego). */
