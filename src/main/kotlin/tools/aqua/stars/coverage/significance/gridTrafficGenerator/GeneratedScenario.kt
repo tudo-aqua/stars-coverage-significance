@@ -117,6 +117,55 @@ data class GeneratedScenario(
     }
   }
 
+  /**
+   * Builds a SUMO *.rou.xml for this scenario.
+   *
+   * This file references vTypes via vehicle@type="<id>" and does NOT define vTypes itself. Load
+   * vTypes once via --additional-files (recommended) or by listing a types file first in
+   * --route-files.
+   */
+  fun toRouXml(cfg: SumoRouExportConfig = SumoRouExportConfig()): String {
+    require(cfg.routeEdges.isNotEmpty()) { "routeEdges must not be empty" }
+
+    fun esc(s: String): String =
+        s.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
+
+    fun fmtTime(t: Double): String = String.format(Locale.US, "%.2f", t)
+    fun fmtPos(p: Double): String = String.format(Locale.US, "%.2f", p)
+
+    val edgesAttr = esc(cfg.routeEdges.joinToString(" "))
+
+    val sorted =
+        placements.sortedWith(compareBy<Spawn>({ it.row }, { it.lane }, { it.positionMeters }))
+
+    return buildString {
+      appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
+      appendLine("<routes>")
+      appendLine("""  <route id="${esc(id)}" edges="$edgesAttr"/>""")
+
+      for ((k, sp) in sorted.withIndex()) {
+        val vehId = "${cfg.vehicleIdPrefix}_${esc(id)}_r${sp.row}_l${sp.lane}_$k"
+        val typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
+        val departLane = cfg.laneIndexMapper(sp.lane)
+
+        appendLine(
+            """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}" depart="${fmtTime(cfg.departTimeSeconds)}" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}" departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
+      }
+
+      appendLine("</routes>")
+    }
+  }
+
+  /** Convenience: write the per-scenario file to disk. */
+  fun writeRouXml(outFile: Path, cfg: SumoRouExportConfig = SumoRouExportConfig()) {
+    Files.createDirectories(outFile.parent)
+    Files.writeString(outFile, toRouXml(cfg), StandardCharsets.UTF_8)
+  }
+
   /** Returns an ASCII representation of the scenario for debugging purposes. */
   fun toASCIIString(): String {
     val border = "+-----+-----+-----+"
