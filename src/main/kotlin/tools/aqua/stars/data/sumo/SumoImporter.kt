@@ -17,10 +17,16 @@
 
 package tools.aqua.stars.data.sumo
 
+import java.io.File
 import java.nio.file.Path
 import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
 import kotlin.math.round
+import tools.aqua.stars.core.evaluation.TickSequence
+import tools.aqua.stars.coverage.significance.COLLISION_DIR
+import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.EXPORT_DIR
+import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.data.sumo.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dynamicData.Scenario
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
@@ -54,21 +60,80 @@ import tools.aqua.stars.data.sumo.staticData.ProjValue
 import tools.aqua.stars.data.sumo.staticData.Projection
 import tools.aqua.stars.data.sumo.staticData.RoadNetwork
 
-/**
- * Imports SUMO XML outputs into STARS-compatible objects.
- *
- * Inputs:
- * - `.net.xml` : network geometry/topology
- * - `export.xml` : per-timestep vehicle data (id, pos, speed)
- * - `collision.xml` : optional collisions
- *
- * The importer is intentionally resilient and will create placeholders for unknown ids while adding
- * warnings to [warnings].
- */
+/** Importer for SUMO simulation data files. */
 class SumoImporter {
 
   /** Collector for non-fatal import warnings. */
   private val warnings: MutableList<String> = mutableListOf()
+
+  /**
+   * Loads multiple simulation runs from the given files as a sequence of [TickSequence] objects.
+   *
+   * @param scenarioFiles List of scenario files.
+   * @param exportFiles List of export files.
+   * @param collisionsFiles List of collision files.
+   * @param bufferSize Buffer size for each [TickSequence].
+   * @param netFilePath Path to the `.net.xml` file.
+   * @param routesFilePath Path to the `routes.xml` file.
+   * @return Sequence of [TickSequence]s for each scenario.
+   * @throws IllegalArgumentException if input file lists are empty or mismatched.
+   */
+  fun loadTicks(
+      scenarioFiles: List<File>,
+      exportFiles: List<File>,
+      collisionsFiles: List<File>,
+      bufferSize: Int = 100,
+      netFilePath: Path,
+      routesFilePath: Path,
+  ): Sequence<TickSequence<TimeStep>> {
+    check(scenarioFiles.isNotEmpty()) {
+      "The list of scenario files is empty. Cannot load ticks without scenario data."
+    }
+    check(exportFiles.isNotEmpty()) {
+      "The list of export files is empty. Cannot load ticks without simulation runs."
+    }
+    check(collisionsFiles.isNotEmpty()) {
+      "The list of collision files is empty. Cannot load ticks without collision data."
+    }
+    check(scenarioFiles.size == exportFiles.size && exportFiles.size == collisionsFiles.size) {
+      "The number of scenario files, export files, and collision files must be the same."
+    }
+    val scenarioNames = scenarioFiles.map { it.nameWithoutExtension }
+    val exportNames = exportFiles.map { it.nameWithoutExtension }
+    val collisionNames = collisionsFiles.map { it.nameWithoutExtension }
+
+    for (name in scenarioNames) {
+      check(name in exportNames) { "No matching export file found for scenario file: $name" }
+      check(name in collisionNames) { "No matching collision file found for scenario file: $name" }
+    }
+
+    val scenarioNameIterator = scenarioNames.iterator()
+
+    return generateSequence {
+      if (!scenarioNameIterator.hasNext()) return@generateSequence null
+      val currentScenarioName = scenarioNameIterator.next()
+      println("Reading simulation run file: $currentScenarioName")
+      val exportFilePath = Path.of("$EXPORT_DIR/${currentScenarioName}.$EXPORT_FILE_EXTENSION")
+      val collisionFilePath =
+          Path.of("$COLLISION_DIR/${currentScenarioName}.$COLLISION_FILE_EXTENSION")
+
+      // Holds the current simulationRun object
+      val scenario =
+          importScenario(
+              netFilePath = netFilePath,
+              exportFilePath = exportFilePath,
+              routesFilePath = routesFilePath,
+              collisionFilePath = collisionFilePath)
+
+      // Calculate TickData objects from JSON
+      val ticks = scenario.ticks
+
+      val iterator = ticks.iterator()
+      return@generateSequence TickSequence(bufferSize) {
+        if (iterator.hasNext()) iterator.next() else null
+      }
+    }
+  }
 
   /**
    * Imports the given files into a [Scenario].
@@ -77,8 +142,6 @@ class SumoImporter {
    * @param exportFilePath Path to `export.xml`.
    * @param routesFilePath Path to `routes.xml`.
    * @param collisionFilePath Optional path to `collision.xml`.
-   * @param egoVehicleId Optional ego vehicle id. If absent or not present in a tick, the first
-   *   vehicle is used.
    * @return Imported [Scenario].
    */
   fun importScenario(
@@ -86,7 +149,6 @@ class SumoImporter {
       exportFilePath: Path,
       routesFilePath: Path,
       collisionFilePath: Path? = null,
-      egoVehicleId: String = ""
   ): Scenario {
     warnings.clear()
 
@@ -99,8 +161,7 @@ class SumoImporter {
     val collisionsByTickMillis: Map<Long, List<CollisionEventRaw>> =
         collisionEvents.groupBy { it.tickMillis }
 
-    val ticks: List<TimeStep> =
-        parseExport(exportFilePath, net, routesFile, collisionsByTickMillis, egoVehicleId)
+    val ticks: List<TimeStep> = parseExport(exportFilePath, net, routesFile, collisionsByTickMillis)
 
     linkTicks(ticks)
 
@@ -695,7 +756,6 @@ class SumoImporter {
       net: RoadNetwork,
       routesFile: RoutesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
-      egoVehicleId: String
   ): List<TimeStep> {
     val reader = createXmlReader(exportFilePath)
     val ticks = mutableListOf<TimeStep>()
@@ -705,7 +765,7 @@ class SumoImporter {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      ticks += parseTimeStep(reader, net, routesFile, collisionsByTickMillis, egoVehicleId)
+      ticks += parseTimeStep(reader, net, routesFile, collisionsByTickMillis)
     }
 
     reader.close()
@@ -779,15 +839,13 @@ class SumoImporter {
    * @param net Parsed road network for pointer resolution.
    * @param routesFile Parsed routes file for vehicle type inference.
    * @param collisionsByTickMillis Pre-bucketed collisions.
-   * @param egoVehicleId Optional ego vehicle id.
    * @return Parsed [TimeStep].
    */
   private fun parseTimeStep(
       reader: XMLStreamReader,
       net: RoadNetwork,
       routesFile: RoutesFile,
-      collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>,
-      egoVehicleId: String
+      collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>
   ): TimeStep {
     val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
     val tickMillis = secondsToMillis(timeSeconds)
@@ -805,7 +863,7 @@ class SumoImporter {
     val vehiclesById: Map<String, Vehicle> = vehiclesInTick.associateBy { it.vehicleId }
     val collisionsInTick =
         resolveCollisionsForTick(net, tickMillis, collisionsByTickMillis, vehiclesById)
-    val ego = resolveEgoVehicle(vehiclesInTick, egoVehicleId)
+    val ego = resolveEgoVehicle(vehiclesInTick)
 
     return TimeStep(
         identifier = "SUMO_TICK_$tickMillis",
@@ -946,19 +1004,15 @@ class SumoImporter {
    * Resolves the ego vehicle for a tick.
    *
    * @param vehiclesInTick Vehicles present in the tick.
-   * @param egoVehicleId Optional ego id.
    * @return Ego [Vehicle] (placeholder if none exist).
    */
-  private fun resolveEgoVehicle(vehiclesInTick: List<Vehicle>, egoVehicleId: String): Vehicle =
-      if (egoVehicleId.isBlank())
-          placeholderVehicle("EGO_PLACEHOLDER", Defaults.unknownLane, Defaults.unknownEdge)
-      else {
-        val ego = vehiclesInTick.find { it.vehicleId == egoVehicleId }
-        checkNotNull(ego) {
-          "Ego vehicle with id '$egoVehicleId' not found in tick; cannot resolve ego."
-        }
-        ego
-      }
+  private fun resolveEgoVehicle(
+      vehiclesInTick: List<Vehicle>,
+  ): Vehicle {
+    val ego = vehiclesInTick.find { it.vehicleType.typeId == "ego" }
+    checkNotNull(ego) { "Ego vehicle not found in tick; cannot resolve ego." }
+    return ego
+  }
 
   /**
    * Links ticks bidirectionally via [TimeStep.previousTick] and [TimeStep.nextTick].
