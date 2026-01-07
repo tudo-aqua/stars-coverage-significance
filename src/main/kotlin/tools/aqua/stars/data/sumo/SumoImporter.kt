@@ -27,6 +27,7 @@ import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.data.sumo.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dynamicData.Scenario
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
@@ -74,7 +75,6 @@ class SumoImporter {
    * @param collisionsFiles List of collision files.
    * @param bufferSize Buffer size for each [TickSequence].
    * @param netFilePath Path to the `.net.xml` file.
-   * @param routesFilePath Path to the `routes.xml` file.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -84,7 +84,6 @@ class SumoImporter {
       collisionsFiles: List<File>,
       bufferSize: Int = 100,
       netFilePath: Path,
-      routesFilePath: Path,
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -113,6 +112,7 @@ class SumoImporter {
       if (!scenarioNameIterator.hasNext()) return@generateSequence null
       val currentScenarioName = scenarioNameIterator.next()
       println("Reading simulation run file: $currentScenarioName")
+      val scenarioFilePath = Path.of("$SCENARIO_DIR/${currentScenarioName}.rou.xml")
       val exportFilePath = Path.of("$EXPORT_DIR/${currentScenarioName}.$EXPORT_FILE_EXTENSION")
       val collisionFilePath =
           Path.of("$COLLISION_DIR/${currentScenarioName}.$COLLISION_FILE_EXTENSION")
@@ -122,7 +122,7 @@ class SumoImporter {
           importScenario(
               netFilePath = netFilePath,
               exportFilePath = exportFilePath,
-              routesFilePath = routesFilePath,
+              routesFilePath = scenarioFilePath,
               collisionFilePath = collisionFilePath)
 
       // Calculate TickData objects from JSON
