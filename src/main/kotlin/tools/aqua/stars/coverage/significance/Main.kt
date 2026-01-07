@@ -18,8 +18,13 @@
 package tools.aqua.stars.coverage.significance
 
 import kotlin.io.path.Path
+import tools.aqua.stars.core.evaluation.TSCEvaluation
+import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
+import tools.aqua.stars.core.metrics.evaluation.MissedTSCInstancesPerTSCMetric
+import tools.aqua.stars.core.metrics.evaluation.ValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
+import tools.aqua.stars.data.sumo.SumoImporter
 
 /** Directory paths for grid traffic scenarios. */
 const val GRID_TRAFFIC_DIR = "sumo_data/gridTrafficScenarios"
@@ -36,12 +41,33 @@ const val COLLISION_FILE_EXTENSION = "collision.xml"
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
-  generateGridTrafficScenarios()
+  generateGridTrafficScenarios(n = 100)
 
-  val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList() ?: emptyList()
+  val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
 
   runSumoForScenariosParallel(
       scenarioFiles = scenarioFiles,
       parallelism = 12,
   )
+
+  val exportFiles = Path(EXPORT_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
+  val collisionFiles = Path(COLLISION_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
+
+  val importer = SumoImporter()
+  val tickSequence =
+      importer.loadTicks(
+          scenarioFiles = scenarioFiles,
+          exportFiles = exportFiles,
+          collisionsFiles = collisionFiles,
+          bufferSize = 60,
+          netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"))
+
+  val staticTsc = staticTsc()
+  val tscEvaluation = TSCEvaluation(staticTsc)
+  tscEvaluation.registerMetricProviders(
+      InvalidTSCInstancesPerTSCMetric(),
+      ValidTSCInstancesPerTSCMetric(),
+      MissedTSCInstancesPerTSCMetric())
+  tscEvaluation.registerDefaultHooks()
+  tscEvaluation.runEvaluation(tickSequence)
 }
