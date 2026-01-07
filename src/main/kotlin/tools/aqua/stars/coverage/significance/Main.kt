@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.significance
 
 import kotlin.io.path.Path
-import tools.aqua.stars.coverage.significance.fullTrafficGenerator.TrafficScenarioGenerator
-import tools.aqua.stars.coverage.significance.fullTrafficGenerator.VehicleType
+import tools.aqua.stars.coverage.significance.fullTrafficGenerator.FullTrafficScenarioGenerator
+import tools.aqua.stars.coverage.significance.fullTrafficGenerator.FullTrafficVehicleType
 import tools.aqua.stars.data.sumo.SumoImporter
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
@@ -41,21 +41,21 @@ fun main() {
 }
 
 /** Function to generate traffic scenarios and print the TikZ code for the first scenario. */
-fun generateTrafficScenarios() {
+fun generateFullTrafficScenarios() {
   val generator =
-      TrafficScenarioGenerator(
+      FullTrafficScenarioGenerator(
           scenarioCount = 10_000,
           minNumOfVehicles = 200,
           maxNumOfVehicles = 200,
           numberOfLanes = 3,
           numberOfBlocksPerLane = 100,
           distributionOfVehicleTypes = doubleArrayOf(0.2, 0.4, 0.3, 0.1),
-          probabilityOfLaneByVehicleType =
+          probabilityOfLaneByFullTrafficVehicleType =
               mapOf(
-                  VehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
-                  VehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
-                  VehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
-                  VehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
+                  FullTrafficVehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
+                  FullTrafficVehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
+                  FullTrafficVehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
+                  FullTrafficVehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
               ),
           seed = 4)
 

@@ -23,11 +23,11 @@ import kotlin.random.Random
  * Generator for synthetic highway traffic placement scenarios.
  *
  * The fullTrafficGenerator produces *unique* scenarios that place vehicles of different
- * [VehicleType]s on a discretized road:
+ * [FullTrafficVehicleType]s on a discretized road:
  * - the road has [numberOfLanes] lanes
  * - each lane is divided into [numberOfBlocksPerLane] discrete longitudinal "areas" (blocks)
  *
- * Each scenario is represented as a single 1D mask ([GeneratedScenario.mask]) of length
+ * Each scenario is represented as a single 1D mask ([GeneratedScenarioFullTraffic.mask]) of length
  * `[numberOfLanes] * [numberOfBlocksPerLane]`. The index is computed as:
  *
  * `index = lane * [numberOfBlocksPerLane] + area`
@@ -41,31 +41,32 @@ import kotlin.random.Random
  * @property maxNumOfVehicles Maximum number of vehicles placed into a scenario.
  * @property numberOfLanes Number of lanes.
  * @property numberOfBlocksPerLane Number of longitudinal areas (blocks) per lane.
- * @property vehicleTypes Ordered list of vehicle types; this order must match
+ * @property fullTrafficVehicleTypes Ordered list of vehicle types; this order must match
  *   [distributionOfVehicleTypes].
  * @property distributionOfVehicleTypes Relative probabilities of sampling each vehicle type
- *   (categorical distribution). Must have the same length/order as [vehicleTypes]. Values do not
- *   need to sum to 1.0.
- * @property probabilityOfLaneByVehicleType Lane-choice probabilities per type. Each array must have
- *   length [numberOfLanes]. Values do not need to sum to 1.0.
+ *   (categorical distribution). Must have the same length/order as [fullTrafficVehicleTypes].
+ *   Values do not need to sum to 1.0.
+ * @property probabilityOfLaneByFullTrafficVehicleType Lane-choice probabilities per type. Each
+ *   array must have length [numberOfLanes]. Values do not need to sum to 1.0.
  * @property seed Optional RNG seed for reproducible scenario generation.
  */
-data class TrafficScenarioGenerator(
+data class FullTrafficScenarioGenerator(
     val scenarioCount: Int,
     val minNumOfVehicles: Int,
     val maxNumOfVehicles: Int,
     val numberOfLanes: Int = 3,
     val numberOfBlocksPerLane: Int = 100,
-    val vehicleTypes: List<VehicleType> = VehicleType.entries.toList(),
+    val fullTrafficVehicleTypes: List<FullTrafficVehicleType> =
+        FullTrafficVehicleType.entries.toList(),
     val distributionOfVehicleTypes: DoubleArray = doubleArrayOf(0.2, 0.4, 0.3, 0.1),
 
     // p^(t) in lane order: right(0) -> middle(1) -> left(2)
-    val probabilityOfLaneByVehicleType: Map<VehicleType, DoubleArray> =
+    val probabilityOfLaneByFullTrafficVehicleType: Map<FullTrafficVehicleType, DoubleArray> =
         mapOf(
-            VehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
-            VehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
-            VehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
-            VehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
+            FullTrafficVehicleType.TRUCK to doubleArrayOf(0.70, 0.30, 0.00),
+            FullTrafficVehicleType.CAR_CALM to doubleArrayOf(0.33, 0.34, 0.33),
+            FullTrafficVehicleType.CAR_NORMAL to doubleArrayOf(0.33, 0.34, 0.33),
+            FullTrafficVehicleType.CAR_SPORTY to doubleArrayOf(0.00, 0.40, 0.60),
         ),
     val seed: Int? = null
 ) {
@@ -81,16 +82,16 @@ data class TrafficScenarioGenerator(
     require(numberOfLanes > 0 && numberOfBlocksPerLane > 0) {
       "Number of Lanes and number of blocks per lane must be > 0"
     }
-    require(distributionOfVehicleTypes.size == vehicleTypes.size) {
+    require(distributionOfVehicleTypes.size == fullTrafficVehicleTypes.size) {
       "Distribution of vehicle types must match number of types"
     }
     require(
         distributionOfVehicleTypes.all { it >= 0.0 } && distributionOfVehicleTypes.sum() > 0.0) {
           "Distribution of vehicle types per must be non-negative and not all zero"
         }
-    vehicleTypes.forEach { vehicleType ->
+    fullTrafficVehicleTypes.forEach { vehicleType ->
       val probabilitiesForVehicleType =
-          probabilityOfLaneByVehicleType[vehicleType]
+          probabilityOfLaneByFullTrafficVehicleType[vehicleType]
               ?: error("Missing lane probabilities for type $vehicleType")
       require(probabilitiesForVehicleType.size == numberOfLanes) {
         "probabilityOfLaneByVehicleType($vehicleType) must have length numberOfLanes=${numberOfLanes}"
@@ -149,23 +150,23 @@ data class TrafficScenarioGenerator(
   }
 
   /**
-   * Samples a single [GeneratedScenario] by placing up to [desiredNumberOfVehicles] vehicles
-   * (without replacement per lane area).
+   * Samples a single [GeneratedScenarioFullTraffic] by placing up to [desiredNumberOfVehicles]
+   * vehicles (without replacement per lane area).
    *
    * The algorithm:
    * 1) samples a vehicle type according to [distributionOfVehicleTypes]
-   * 2) samples a lane according to [probabilityOfLaneByVehicleType] for that type, restricted to
-   *    lanes with remaining capacity
+   * 2) samples a lane according to [probabilityOfLaneByFullTrafficVehicleType] for that type,
+   *    restricted to lanes with remaining capacity
    * 3) samples a free area uniformly within that lane (without replacement)
    *
    * @param rng Random source.
    * @param desiredNumberOfVehicles Desired number of vehicles to attempt placing.
-   * @return A generated [GeneratedScenario]. May contain fewer than `k` vehicles if lanes run out
-   *   of capacity.
+   * @return A generated [GeneratedScenarioFullTraffic]. May contain fewer than `k` vehicles if
+   *   lanes run out of capacity.
    */
-  fun sampleOne(rng: Random, desiredNumberOfVehicles: Int): GeneratedScenario {
+  fun sampleOne(rng: Random, desiredNumberOfVehicles: Int): GeneratedScenarioFullTraffic {
     val totalBlocks = numberOfLanes * numberOfBlocksPerLane
-    val mask: Array<VehicleType?> = arrayOfNulls(totalBlocks)
+    val mask: Array<FullTrafficVehicleType?> = arrayOfNulls(totalBlocks)
 
     val availableSpawnAreasPerLane: Array<MutableList<Int>> =
         Array(numberOfLanes) { (0 until numberOfBlocksPerLane).toMutableList() }
@@ -175,12 +176,14 @@ data class TrafficScenarioGenerator(
     repeat(numberOfVehicles) {
       // 1) choose vehicle type
       val typeIdx = categoricalIndex(rng, distributionOfVehicleTypes)
-      val type = vehicleTypes[typeIdx]
+      val type = fullTrafficVehicleTypes[typeIdx]
 
       // 2) choose lane allowed for this type and with remaining capacity
       val lanesWithCapacity =
           BooleanArray(numberOfLanes) { l -> availableSpawnAreasPerLane[l].isNotEmpty() }
-      val lane = chooseLane(rng, probabilityOfLaneByVehicleType.getValue(type), lanesWithCapacity)
+      val lane =
+          chooseLane(
+              rng, probabilityOfLaneByFullTrafficVehicleType.getValue(type), lanesWithCapacity)
 
       if (lane < 0) {
         // No allowed lane has capacity (rare unless you get near-full lanes).
@@ -197,58 +200,59 @@ data class TrafficScenarioGenerator(
       mask[idx] = type
     }
 
-    return GeneratedScenario(
+    return GeneratedScenarioFullTraffic(
         mask = mask, numberOfLanes = numberOfLanes, numberOfBlocksPerLane = numberOfBlocksPerLane)
   }
 
   /**
    * Generates [scenarioCount] unique scenarios.
    *
-   * Uniqueness is determined by the full [GeneratedScenario.mask] content. Internally, we store
-   * each generated mask as a `List<VehicleType?>` key in a [HashSet].
+   * Uniqueness is determined by the full [GeneratedScenarioFullTraffic.mask] content. Internally,
+   * we store each generated mask as a `List<VehicleType?>` key in a [HashSet].
    *
    * @return A list of unique scenarios of size [scenarioCount].
    */
-  fun generate(): List<GeneratedScenario> {
+  fun generate(): List<GeneratedScenarioFullTraffic> {
     validate()
     val rng = if (seed != null) Random(seed) else Random.Default
 
-    val generatedScenarios = ArrayList<GeneratedScenario>(scenarioCount)
+    val generatedScenarioFullTraffics = ArrayList<GeneratedScenarioFullTraffic>(scenarioCount)
 
     // Readable uniqueness key: snapshot List<VehicleType?>
-    val seen = HashSet<List<VehicleType?>>(scenarioCount * 2)
+    val seen = HashSet<List<FullTrafficVehicleType?>>(scenarioCount * 2)
 
-    while (generatedScenarios.size < scenarioCount) {
+    while (generatedScenarioFullTraffics.size < scenarioCount) {
       val numberOfVehicles = rng.nextInt(maxNumOfVehicles - minNumOfVehicles + 1) + minNumOfVehicles
       val generatedScenario = sampleOne(rng, numberOfVehicles)
 
-      val scenarioMask: List<VehicleType?> = generatedScenario.mask.toList()
-      if (seen.add(scenarioMask)) generatedScenarios.add(generatedScenario)
+      val scenarioMask: List<FullTrafficVehicleType?> = generatedScenario.mask.toList()
+      if (seen.add(scenarioMask)) generatedScenarioFullTraffics.add(generatedScenario)
     }
 
-    return generatedScenarios
+    return generatedScenarioFullTraffics
   }
 
   /**
-   * Converts a [GeneratedScenario] mask into a list of [Spawn] coordinates.
+   * Converts a [GeneratedScenarioFullTraffic] mask into a list of [SpawnFullTraffic] coordinates.
    *
    * @param scenario Scenario to convert.
    * @return List of placed vehicles with lane/area/index coordinates.
    */
-  fun toCoordinates(scenario: GeneratedScenario): List<Spawn> {
-    val spawnAreas = ArrayList<Spawn>(scenario.vehiclesCount())
+  fun toCoordinates(scenario: GeneratedScenarioFullTraffic): List<SpawnFullTraffic> {
+    val spawnFullTrafficAreas = ArrayList<SpawnFullTraffic>(scenario.vehiclesCount())
     for (index in scenario.mask.indices) {
       val placedVehicle = scenario.mask[index] ?: continue
       val lane = index / scenario.numberOfBlocksPerLane
       val area = index % scenario.numberOfBlocksPerLane
-      spawnAreas.add(Spawn(type = placedVehicle, lane = lane, area = area, index = index))
+      spawnFullTrafficAreas.add(
+          SpawnFullTraffic(type = placedVehicle, lane = lane, area = area, index = index))
     }
-    return spawnAreas
+    return spawnFullTrafficAreas
   }
 
   /**
-   * Renders a [GeneratedScenario] as a TikZ picture (LaTeX) showing the road grid and vehicle
-   * placements.
+   * Renders a [GeneratedScenarioFullTraffic] as a TikZ picture (LaTeX) showing the road grid and
+   * vehicle placements.
    *
    * The result is a standalone `tikzpicture` environment that can be embedded into LaTeX.
    *
@@ -259,15 +263,15 @@ data class TrafficScenarioGenerator(
    * @return TikZ code as a string.
    */
   fun toTikz(
-      scenario: GeneratedScenario,
+      scenario: GeneratedScenarioFullTraffic,
       laneHeightCm: Double = 0.8,
       showLabels: Boolean = true,
-      tikzFillByType: Map<VehicleType, String> =
+      tikzFillByType: Map<FullTrafficVehicleType, String> =
           mapOf(
-              VehicleType.TRUCK to "fill=orange!75,opacity=0.85",
-              VehicleType.CAR_CALM to "fill=blue!60,opacity=0.80",
-              VehicleType.CAR_NORMAL to "fill=green!60,opacity=0.80",
-              VehicleType.CAR_SPORTY to "fill=red!70,opacity=0.85",
+              FullTrafficVehicleType.TRUCK to "fill=orange!75,opacity=0.85",
+              FullTrafficVehicleType.CAR_CALM to "fill=blue!60,opacity=0.80",
+              FullTrafficVehicleType.CAR_NORMAL to "fill=green!60,opacity=0.80",
+              FullTrafficVehicleType.CAR_SPORTY to "fill=red!70,opacity=0.85",
           )
   ): String {
 
@@ -276,7 +280,7 @@ data class TrafficScenarioGenerator(
      *
      * Each item is encoded as `area/lane`, matching the TikZ loop variable names (`\x/\y`).
      */
-    fun listForType(type: VehicleType): String {
+    fun listForType(type: FullTrafficVehicleType): String {
       val items = mutableListOf<String>()
       for (index in scenario.mask.indices) {
         if (scenario.mask[index] == type) {
@@ -290,7 +294,7 @@ data class TrafficScenarioGenerator(
 
     val overlays =
         buildString {
-              for (vehicleType in VehicleType.entries) {
+              for (vehicleType in FullTrafficVehicleType.entries) {
                 val list = listForType(vehicleType)
                 if (list.isBlank()) continue
                 val style = tikzFillByType[vehicleType] ?: "fill=black!60,opacity=0.7"
@@ -351,7 +355,7 @@ $overlays
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as TrafficScenarioGenerator
+    other as FullTrafficScenarioGenerator
 
     if (scenarioCount != other.scenarioCount) return false
     if (minNumOfVehicles != other.minNumOfVehicles) return false
@@ -359,9 +363,11 @@ $overlays
     if (numberOfLanes != other.numberOfLanes) return false
     if (numberOfBlocksPerLane != other.numberOfBlocksPerLane) return false
     if (seed != other.seed) return false
-    if (vehicleTypes != other.vehicleTypes) return false
+    if (fullTrafficVehicleTypes != other.fullTrafficVehicleTypes) return false
     if (!distributionOfVehicleTypes.contentEquals(other.distributionOfVehicleTypes)) return false
-    if (probabilityOfLaneByVehicleType != other.probabilityOfLaneByVehicleType) return false
+    if (probabilityOfLaneByFullTrafficVehicleType !=
+        other.probabilityOfLaneByFullTrafficVehicleType)
+        return false
 
     return true
   }
@@ -373,9 +379,9 @@ $overlays
     result = 31 * result + numberOfLanes
     result = 31 * result + numberOfBlocksPerLane
     result = 31 * result + (seed ?: 0)
-    result = 31 * result + vehicleTypes.hashCode()
+    result = 31 * result + fullTrafficVehicleTypes.hashCode()
     result = 31 * result + distributionOfVehicleTypes.contentHashCode()
-    result = 31 * result + probabilityOfLaneByVehicleType.hashCode()
+    result = 31 * result + probabilityOfLaneByFullTrafficVehicleType.hashCode()
     return result
   }
 }

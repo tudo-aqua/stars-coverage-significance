@@ -22,7 +22,7 @@ package tools.aqua.stars.coverage.significance.fullTrafficGenerator
  *
  * @property sumoId Identifier that can be used in SUMO route/type files.
  */
-enum class VehicleType(val sumoId: String) {
+enum class FullTrafficVehicleType(val sumoId: String) {
   /** Heavy goods vehicle. */
   TRUCK("truck"),
 

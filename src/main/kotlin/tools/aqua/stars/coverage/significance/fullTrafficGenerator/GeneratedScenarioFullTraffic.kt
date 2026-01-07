@@ -22,14 +22,14 @@ package tools.aqua.stars.coverage.significance.fullTrafficGenerator
  *
  * The mask contains either:
  * - `null` (no vehicle)
- * - a [VehicleType] (a vehicle of that type placed at this cell)
+ * - a [FullTrafficVehicleType] (a vehicle of that type placed at this cell)
  *
  * @property mask Placement mask of size `nL * nP` (indexing: `idx = lane * nP + area`).
  * @property numberOfLanes Number of lanes.
  * @property numberOfBlocksPerLane Number of longitudinal areas (blocks) per lane.
  */
-data class GeneratedScenario(
-    val mask: Array<VehicleType?>,
+data class GeneratedScenarioFullTraffic(
+    val mask: Array<FullTrafficVehicleType?>,
     val numberOfLanes: Int,
     val numberOfBlocksPerLane: Int
 ) {
@@ -51,7 +51,7 @@ data class GeneratedScenario(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as GeneratedScenario
+    other as GeneratedScenarioFullTraffic
 
     if (numberOfLanes != other.numberOfLanes) return false
     if (numberOfBlocksPerLane != other.numberOfBlocksPerLane) return false

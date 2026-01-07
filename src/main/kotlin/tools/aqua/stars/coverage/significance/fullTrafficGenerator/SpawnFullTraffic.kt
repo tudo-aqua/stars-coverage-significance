@@ -25,4 +25,9 @@ package tools.aqua.stars.coverage.significance.fullTrafficGenerator
  * @property area Longitudinal area index (0..numberOfBlocksPerLane-1).
  * @property index Flat index in the mask (`lane * numberOfBlocksPerLane + area`).
  */
-data class Spawn(val type: VehicleType, val lane: Int, val area: Int, val index: Int)
+data class SpawnFullTraffic(
+    val type: FullTrafficVehicleType,
+    val lane: Int,
+    val area: Int,
+    val index: Int
+)
