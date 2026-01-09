@@ -892,6 +892,12 @@ class SumoImporter {
     }
 
     val vehiclesById: Map<String, Vehicle> = vehiclesInTick.associateBy { it.vehicleId }
+    if (tickMillis == 0L) {
+      check(routesFile.vehicles.size == vehiclesInTick.size) {
+        "At time=0s, expected ${routesFile.vehicles.size} vehicles from routes.xml, " +
+            "but found ${vehiclesInTick.size} in export.xml."
+      }
+    }
     val collisionsInTick =
         resolveCollisionsForTick(net, tickMillis, collisionsByTickMillis, vehiclesById)
     val ego = resolveEgoVehicle(vehiclesInTick)
