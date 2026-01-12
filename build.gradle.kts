@@ -38,6 +38,7 @@ plugins {
   kotlin("jvm") version "2.2.0"
   application
   id("com.diffplug.spotless") version "7.0.2"
+  id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 repositories {
@@ -54,6 +55,13 @@ dependencies {
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl", version = starsVersion)
   implementation(
       group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")
+  detektPlugins(
+      group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.8")
+}
+
+detekt {
+  basePath = rootProject.projectDir.absolutePath
+  config.setFrom(files(rootProject.file("contrib/detekt-rules.yml")))
 }
 
 spotless {
