@@ -84,6 +84,8 @@ fun runSumoForScenariosParallel(
 
     return buildList {
       add(sumoBinary)
+      add("--insertion-checks")
+      add("none")
       add("--route-steps")
       add("0")
       add("--step-length")
