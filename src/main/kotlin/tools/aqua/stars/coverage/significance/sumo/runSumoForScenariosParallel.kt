@@ -20,7 +20,6 @@ package tools.aqua.stars.coverage.significance.sumo
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
 import kotlin.io.path.Path
@@ -80,7 +79,6 @@ fun runSumoForScenariosParallel(
   fun buildCmd(routeFile: Path, scenarioId: String): List<String> {
     val netstateOut = exportDir.resolve("$scenarioId.export.xml")
     val collisionOut = collisionDir.resolve("$scenarioId.collisions.xml")
-    val tripInfoOut = baseDir.resolve("$scenarioId.tripinfo.xml")
 
     return buildList {
       add(sumoBinary)
@@ -100,8 +98,6 @@ fun runSumoForScenariosParallel(
       add(netstateOut.absolutePathString())
       add("--collision-output")
       add(collisionOut.absolutePathString())
-      add("--tripinfo-output")
-      add(tripInfoOut.absolutePathString())
     }
   }
 
@@ -111,20 +107,18 @@ fun runSumoForScenariosParallel(
   try {
     // Submit all tasks
     for (f in inputs) {
-      cs.submit(
-          Callable {
-            val sid = scenarioIdOf(f)
-            val cmd = buildCmd(f.toPath(), sid)
+      cs.submit {
+        val sid = scenarioIdOf(f)
+        val cmd = buildCmd(f.toPath(), sid)
 
-            val proc =
-                ProcessBuilder(cmd).directory(baseDir.toFile()).redirectErrorStream(true).start()
+        val proc = ProcessBuilder(cmd).directory(baseDir.toFile()).redirectErrorStream(true).start()
 
-            val stdout = proc.inputStream.bufferedReader().readText()
-            val code = proc.waitFor()
+        val stdout = proc.inputStream.bufferedReader().readText()
+        val code = proc.waitFor()
 
-            SumoRunResult(
-                scenarioId = sid, exitCode = code, stdout = stdout, scenarioFilePath = f.toPath())
-          })
+        SumoRunResult(
+            scenarioId = sid, exitCode = code, stdout = stdout, scenarioFilePath = f.toPath())
+      }
     }
 
     // Collect results as they finish (and update progress)
@@ -143,7 +137,7 @@ fun runSumoForScenariosParallel(
         println("Command:")
         println(buildCmd(res.scenarioFilePath, res.scenarioId).joinToString(" "))
 
-        if (failFast) throw IllegalStateException("SUMO failed for ${res.scenarioId}")
+        if (failFast) error("SUMO simulation failed for scenarioId=${res.scenarioId}")
       }
 
       results.add(res)
