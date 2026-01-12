@@ -30,7 +30,18 @@ import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 
-/** Function to run SUMO for a list of scenario files. */
+/**
+ * Function to run SUMO for a list of scenario files.
+ *
+ * @param scenarioFiles List of scenario files to simulate.
+ * @param baseDir Base directory where the net file and vTypes file are located.
+ * @param sumoBinary Path to the SUMO binary.
+ * @param netFileName Name of the network file.
+ * @param vTypesFileName Name of the vehicle types file.
+ * @param parallelism Number of parallel threads to use.
+ * @param requireRouExtension If true, only files with ".rou.xml" extension are considered.
+ * @param failFast If true, the function will throw an exception on the first simulation failure
+ */
 fun runSumoForScenariosParallel(
     scenarioFiles: List<File>,
     baseDir: Path = Path(GRID_TRAFFIC_DIR),
