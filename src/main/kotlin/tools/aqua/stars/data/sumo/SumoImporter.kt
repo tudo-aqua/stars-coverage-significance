@@ -146,6 +146,7 @@ class SumoImporter {
    * @param netFilePath Path to `.net.xml`.
    * @param exportFilePath Path to `export.xml`.
    * @param routesFilePath Path to `routes.xml`.
+   * @param vTypesFilePath Path to `vTypes.add.xml`.
    * @param collisionFilePath Optional path to `collision.xml`.
    * @return Imported [Scenario].
    */
@@ -867,6 +868,7 @@ class SumoImporter {
    * @param reader XML stream reader positioned at `<timestep>`.
    * @param net Parsed road network for pointer resolution.
    * @param routesFile Parsed routes file for vehicle type inference.
+   * @param vTypesFile Parsed vehicle types additional file for vehicle type inference.
    * @param collisionsByTickMillis Pre-bucketed collisions.
    * @return Parsed [TimeStep].
    */
@@ -917,6 +919,7 @@ class SumoImporter {
    * @param reader XML stream reader positioned at `<edge>`.
    * @param net Parsed road network.
    * @param routesFile Parsed routes file for vehicle type inference.
+   * @param vTypesFile Parsed vehicle types additional file for vehicle type inference.
    * @param vehiclesInTick Mutable output list for all vehicles in the current tick.
    * @param timeSeconds Current timestep time in seconds (for warnings).
    */
@@ -945,6 +948,7 @@ class SumoImporter {
    * @param reader XML stream reader positioned at `<lane>`.
    * @param net Parsed road network.
    * @param routesFile Parsed routes file for vehicle type inference.
+   * @param vTypesFile Parsed vehicle types additional file for vehicle type inference.
    * @param vehiclesInTick Mutable output list of vehicles for this tick.
    * @param timeSeconds Current timestep time in seconds (for warnings).
    */
@@ -981,6 +985,7 @@ class SumoImporter {
    *
    * @param reader XML stream reader positioned at `<vehicle>`.
    * @param routesFile Parsed routes file for vehicle type inference.
+   * @param vTypesFile Parsed vehicle types additional file for vehicle type inference.
    * @param lane Resolved lane pointer.
    * @param edge Resolved edge pointer.
    * @return Parsed [Vehicle].
