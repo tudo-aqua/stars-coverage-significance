@@ -78,6 +78,7 @@ class SumoImporter {
    * @param bufferSize Buffer size for each [TickSequence].
    * @param netFilePath Path to the `.net.xml` file.
    * @param vehicleTypesAdditionalFilePath Path to the vehicle types additional file.
+   * @param takeOnlyTicksAtXSeconds Optional filter to only take ticks at every X seconds.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -88,6 +89,7 @@ class SumoImporter {
       bufferSize: Int = 100,
       netFilePath: Path,
       vehicleTypesAdditionalFilePath: Path,
+      takeOnlyTicksAtXSeconds: Double? = null,
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -121,7 +123,7 @@ class SumoImporter {
       val collisionFilePath =
           Path.of("$COLLISION_DIR/${currentScenarioName}.$COLLISION_FILE_EXTENSION")
 
-      // Holds the current simulationRun object
+      // Holds the current scenario object
       val scenario =
           importScenario(
               netFilePath = netFilePath,
@@ -131,7 +133,16 @@ class SumoImporter {
               collisionFilePath = collisionFilePath)
 
       // Calculate TickData objects from JSON
-      val ticks = scenario.ticks
+      var ticks = scenario.ticks
+
+      // Filter ticks by specified take value if provided
+      if (takeOnlyTicksAtXSeconds != null) {
+        ticks =
+            ticks.filter { tick ->
+              val tickTimeSeconds = tick.tickTimeMillis / 1000.0
+              tickTimeSeconds % takeOnlyTicksAtXSeconds == 0.0
+            }
+      }
 
       val iterator = ticks.iterator()
       return@generateSequence TickSequence(bufferSize) {
@@ -795,7 +806,8 @@ class SumoImporter {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      ticks += parseTimeStep(reader, net, routesFile, vTypesFile, collisionsByTickMillis)
+      val parsedTick = parseTimeStep(reader, net, routesFile, vTypesFile, collisionsByTickMillis)
+      if (parsedTick != null) ticks += parsedTick
     }
 
     reader.close()
@@ -878,11 +890,10 @@ class SumoImporter {
       routesFile: RoutesFile,
       vTypesFile: VehicleTypesFile,
       collisionsByTickMillis: Map<Long, List<CollisionEventRaw>>
-  ): TimeStep {
+  ): TimeStep? {
     val timeSeconds = reader.attribute("time")?.toFloatOrNull() ?: 0.0f
     val tickMillis = secondsToMillis(timeSeconds)
     val vehiclesInTick = mutableListOf<Vehicle>()
-    println(timeSeconds)
 
     while (reader.hasNext()) {
       val inner = reader.next()
@@ -903,6 +914,10 @@ class SumoImporter {
     val collisionsInTick =
         resolveCollisionsForTick(net, tickMillis, collisionsByTickMillis, vehiclesById)
     val ego = resolveEgoVehicle(vehiclesInTick)
+
+    if (ego == null) {
+      return null
+    }
 
     return TimeStep(
         identifier = "SUMO_TICK_$tickMillis",
@@ -1053,11 +1068,7 @@ class SumoImporter {
    */
   private fun resolveEgoVehicle(
       vehiclesInTick: List<Vehicle>,
-  ): Vehicle {
-    val ego = vehiclesInTick.find { it.vehicleType.typeId == "ego" }
-    checkNotNull(ego) { "Ego vehicle not found in tick; cannot resolve ego." }
-    return ego
-  }
+  ): Vehicle? = vehiclesInTick.find { it.vehicleType.typeId == "ego" }
 
   /**
    * Links ticks bidirectionally via [TimeStep.previousTick] and [TimeStep.nextTick].
