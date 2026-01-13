@@ -21,8 +21,10 @@ import kotlin.io.path.Path
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.MissedTSCInstancesPerTSCMetric
+import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.core.metrics.evaluation.ValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
+import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
 import tools.aqua.stars.data.sumo.SumoImporter
 
@@ -43,6 +45,8 @@ const val COLLISION_FILE_EXTENSION = "collisions.xml"
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
+  cleanGenerationFiles()
+
   generateGridTrafficScenarios(n = 1, seed = 2)
 
   val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
@@ -63,14 +67,16 @@ fun main() {
           collisionsFiles = collisionFiles,
           bufferSize = 60,
           netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"),
-          vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"))
+          vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"),
+          takeOnlyTicksAtXSeconds = 10.0)
 
   val staticTsc = staticTsc()
   val tscEvaluation = TSCEvaluation(staticTsc)
   tscEvaluation.registerMetricProviders(
       InvalidTSCInstancesPerTSCMetric(),
       ValidTSCInstancesPerTSCMetric(),
-      MissedTSCInstancesPerTSCMetric())
+      MissedTSCInstancesPerTSCMetric(),
+      TickCountMetric())
   tscEvaluation.registerDefaultHooks()
   tscEvaluation.runEvaluation(tickSequence)
 }
