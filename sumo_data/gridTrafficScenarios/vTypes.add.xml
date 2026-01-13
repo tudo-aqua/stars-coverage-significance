@@ -9,7 +9,8 @@
            speedDev="0.0"
            sigma="0.5"
            tau="1.0"
-           minGap="2.5"/>
+           minGap="2.5"
+		   color="1,0,0"/>
 
     <!-- Calm car (70 km/h = 19.44 m/s) -->
     <vType id="car_calm"
