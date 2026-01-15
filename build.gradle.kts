@@ -43,10 +43,11 @@ plugins {
 
 repositories {
   mavenCentral()
+  mavenLocal()
   maven { url = URI("https://central.sonatype.com/repository/maven-snapshots/") }
 }
 
-val starsVersion = "2.0-addValidationClassesToMavenPublish-17-c8ee999-SNAPSHOT"
+val starsVersion = "2.0-addValidationClassesToMavenPublish-9-96be698-SNAPSHOT"
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
@@ -54,7 +55,10 @@ dependencies {
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
   implementation(group = "tools.aqua", name = "stars-core", version = starsVersion)
   testImplementation(
-      group = "tools.aqua", name = "stars-core", version = starsVersion, classifier = "tests")
+      group = "tools.aqua",
+      name = "stars-core",
+      version = starsVersion,
+      classifier = "test-fixtures")
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl", version = starsVersion)
   implementation(
       group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")

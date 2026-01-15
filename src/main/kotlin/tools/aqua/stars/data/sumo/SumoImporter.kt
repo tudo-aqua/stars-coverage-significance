@@ -23,6 +23,7 @@ import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
 import kotlin.math.round
 import tools.aqua.stars.core.evaluation.TickSequence
+import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
@@ -132,7 +133,7 @@ class SumoImporter {
               routesFilePath = scenarioFilePath,
               collisionFilePath = collisionFilePath)
 
-      // Calculate TickData objects from JSON
+      // Calculate TickData objects from XMl
       var ticks = scenario.ticks
 
       // Filter ticks by specified take value if provided
@@ -143,12 +144,66 @@ class SumoImporter {
               tickTimeSeconds % takeOnlyTicksAtXSeconds == 0.0
             }
       }
-
-      val iterator = ticks.iterator()
-      return@generateSequence TickSequence(bufferSize) {
-        if (iterator.hasNext()) iterator.next() else null
-      }
+      return@generateSequence ticks.asTickSequence(bufferSize = bufferSize)
     }
+  }
+
+  /**
+   * Loads a single simulation run from the given files as a list of [TimeStep] objects.
+   *
+   * @param scenarioFile Scenario file.
+   * @param exportFile Export file.
+   * @param collisionFile Collision file.
+   * @param netFilePath Path to the `.net.xml` file.
+   * @param vehicleTypesAdditionalFilePath Path to the vehicle types additional file.
+   * @param takeOnlyTicksAtXSeconds Optional filter to only take ticks at every X seconds.
+   * @return List of [TimeStep]s for the scenario.
+   */
+  fun loadTicks(
+      scenarioFile: File,
+      exportFile: File,
+      collisionFile: File,
+      netFilePath: Path,
+      vehicleTypesAdditionalFilePath: Path,
+      takeOnlyTicksAtXSeconds: Double? = null
+  ): List<TimeStep> {
+    val scenarioName = scenarioFile.name.removeSuffix(".$SCENARIO_FILE_EXTENSION")
+    val exportName = exportFile.name.removeSuffix(".$EXPORT_FILE_EXTENSION")
+    val collisionName = collisionFile.name.removeSuffix(".$COLLISION_FILE_EXTENSION")
+
+    check(scenarioName == exportName) {
+      "No matching export file found for scenario file: $scenarioName"
+    }
+    check(scenarioName == collisionName) {
+      "No matching collision file found for scenario file: $scenarioName"
+    }
+
+    println("Reading simulation run file: $scenarioName")
+    val scenarioFilePath = Path.of("$SCENARIO_DIR/${scenarioName}.rou.xml")
+    val exportFilePath = Path.of("$EXPORT_DIR/${scenarioName}.$EXPORT_FILE_EXTENSION")
+    val collisionFilePath = Path.of("$COLLISION_DIR/${scenarioName}.$COLLISION_FILE_EXTENSION")
+
+    // Holds the current scenario object
+    val scenario =
+        importScenario(
+            netFilePath = netFilePath,
+            vTypesFilePath = vehicleTypesAdditionalFilePath,
+            exportFilePath = exportFilePath,
+            routesFilePath = scenarioFilePath,
+            collisionFilePath = collisionFilePath)
+
+    // Calculate TickData objects from XMl
+    var ticks = scenario.ticks
+
+    // Filter ticks by specified take value if provided
+    if (takeOnlyTicksAtXSeconds != null) {
+      ticks =
+          ticks.filter { tick ->
+            val tickTimeSeconds = tick.tickTimeMillis / 1000.0
+            tickTimeSeconds % takeOnlyTicksAtXSeconds == 0.0
+          }
+    }
+    return ticks
   }
 
   /**

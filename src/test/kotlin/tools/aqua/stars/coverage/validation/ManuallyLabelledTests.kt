@@ -63,15 +63,15 @@ val sumoCollisionFile =
     File(
         "src/test/resources/r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.collisions.xml")
 
-/** Manually labelled tests for SUMO scenario. */
+/** Manually labeled tests for SUMO scenario. */
 val manuallyLabelledTests =
     manuallyLabelledFile(
         ticksToTest =
             SumoImporter()
                 .loadTicks(
-                    scenarioFiles = listOf(sumoScenarioFile),
-                    exportFiles = listOf(sumoExportFile),
-                    collisionsFiles = listOf(sumoCollisionFile),
+                    scenarioFile = sumoScenarioFile,
+                    exportFile = sumoExportFile,
+                    collisionFile = sumoCollisionFile,
                     netFilePath = sumoNetworkFile,
                     vehicleTypesAdditionalFilePath = sumoVTypesFile)) {
           predicateHolds(isOnMiddleLane) {
