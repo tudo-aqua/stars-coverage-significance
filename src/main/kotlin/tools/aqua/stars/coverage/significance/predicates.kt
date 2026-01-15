@@ -25,9 +25,6 @@ import tools.aqua.stars.data.sumo.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dynamicData.Vehicle
 import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 
-/** Logical implication operator for Booleans. */
-infix fun Boolean.implies(other: Boolean): Boolean = !this || other
-
 typealias SumoPredicate =
     Predicate<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>
 
@@ -83,11 +80,11 @@ fun isOnSameLane(otherVehicle: Vehicle, ego: Vehicle): Boolean =
 
 /** Helper function to determine if another vehicle is on the left lane of the ego vehicle. */
 fun isOnLeftLaneOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
-    otherVehicle.currentLane.laneIndex == ego.currentLane.laneIndex - 1
+    otherVehicle.currentLane.laneIndex == ego.currentLane.laneIndex + 1
 
 /** Helper function to determine if another vehicle is on the right lane of the ego vehicle. */
 fun isOnRightLaneOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
-    otherVehicle.currentLane.laneIndex == ego.currentLane.laneIndex + 1
+    otherVehicle.currentLane.laneIndex == ego.currentLane.laneIndex - 1
 
 /** Helper function to determine if there is a vehicle in front of the ego vehicle. */
 fun isInFrontOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
@@ -100,8 +97,8 @@ fun isInFrontOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
 fun isBehindOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
     otherVehicle.positionOnLaneMeters < ego.positionOnLaneMeters &&
         (otherVehicle.positionOnLaneMeters in
-            (ego.positionOnLaneMeters - VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM)..(ego
-                    .positionOnLaneMeters - VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO))
+            ((ego.positionOnLaneMeters - VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO)..ego
+                    .positionOnLaneMeters - VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM))
 
 /** Helper function to determine if there is a vehicle besides the ego vehicle. */
 fun isBesidesOf(otherVehicle: Vehicle, ego: Vehicle): Boolean =
@@ -164,7 +161,7 @@ val hasVehicleInFrontOnSameLane: SumoPredicate =
 val vehiclesOnSameLaneInFrontIsSlower: SumoPredicate =
     Predicate("vehiclesOnSameLaneInFrontIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isInFrontOfSameLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -175,8 +172,7 @@ val vehiclesOnSameLaneInFrontIsSlower: SumoPredicate =
 val vehicleOnSameLaneInFrontSameSpeed: SumoPredicate =
     Predicate("vehicleOnSameLaneInFrontSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isInFrontOfSameLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
@@ -186,7 +182,7 @@ val vehicleOnSameLaneInFrontSameSpeed: SumoPredicate =
 val vehicleOnSameLaneInFrontIsFaster: SumoPredicate =
     Predicate("vehicleOnSameLaneInFrontIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isInFrontOfSameLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -207,7 +203,7 @@ val hasVehicleBehindOnSameLane: SumoPredicate =
 val vehicleOnSameLaneBehindIsSlower: SumoPredicate =
     Predicate("vehicleOnSameLaneBehindIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isBehindOfSameLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -218,19 +214,18 @@ val vehicleOnSameLaneBehindIsSlower: SumoPredicate =
 val vehicleOnSameLaneBehindSameSpeed: SumoPredicate =
     Predicate("vehicleOnSameLaneBehindSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isBehindOfSameLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
 /**
- * Predicate that checks if the vehicle behind on the same lane the ego vehicle is slower than the
+ * Predicate that checks if the vehicle behind on the same lane the ego vehicle is faster than the
  * ego vehicle.
  */
 val vehicleOnSameLaneBehindIsFaster: SumoPredicate =
     Predicate("vehicleOnSameLaneBehindIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isBehindOfSameLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -248,10 +243,10 @@ val hasVehicleBesidesOnLeftLane: SumoPredicate =
  * Predicate that checks if the vehicle besides on the left lane of the ego vehicle is slower than
  * the ego vehicle.
  */
-val vehicleOnLeftLaneBesideIsFaster: SumoPredicate =
-    Predicate("vehicleOnLeftLaneBesideIsFaster") { tick ->
+val vehicleOnLeftLaneBesideIsSlower: SumoPredicate =
+    Predicate("vehicleOnLeftLaneBesideIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnLeftLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isBesidesOnLeftLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -262,8 +257,7 @@ val vehicleOnLeftLaneBesideIsFaster: SumoPredicate =
 val vehicleOnLeftLaneBesideSameSpeed: SumoPredicate =
     Predicate("vehicleOnLeftLaneBesideSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnLeftLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isBesidesOnLeftLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
@@ -271,10 +265,10 @@ val vehicleOnLeftLaneBesideSameSpeed: SumoPredicate =
  * Predicate that checks if the vehicle besides on the left lane of the ego vehicle is faster than
  * the ego vehicle.
  */
-val vehicleOnLeftLaneBesideIsSlower: SumoPredicate =
-    Predicate("vehicleOnLeftLaneBesideIsSlower") { tick ->
+val vehicleOnLeftLaneBesideIsFaster: SumoPredicate =
+    Predicate("vehicleOnLeftLaneBesideIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnLeftLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isBesidesOnLeftLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -292,12 +286,13 @@ val hasVehicleBesidesOnRightLane: SumoPredicate =
  * Predicate that checks if the vehicle besides on the right lane of the ego vehicle is slower than
  * the ego vehicle.
  */
-val vehicleOnRightLaneBesideIsFaster: SumoPredicate =
-    Predicate("vehicleOnRightLaneBesideIsFaster") { tick ->
+val vehicleOnRightLaneBesideIsSlower: SumoPredicate =
+    Predicate("vehicleOnRightLaneBesideIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnRightLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isBesidesOnRightLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
+
 /**
  * Predicate that checks if the vehicle besides on the right lane of the ego vehicle is moving at
  * about the same speed as the ego vehicle.
@@ -305,18 +300,18 @@ val vehicleOnRightLaneBesideIsFaster: SumoPredicate =
 val vehicleOnRightLaneBesideSameSpeed: SumoPredicate =
     Predicate("vehicleOnRightLaneBesideSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnRightLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isBesidesOnRightLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
+
 /**
  * Predicate that checks if the vehicle besides on the right lane of the ego vehicle is faster than
  * the ego vehicle.
  */
-val vehicleOnRightLaneBesideIsSlower: SumoPredicate =
-    Predicate("vehicleOnRightLaneBesideIsSlower") { tick ->
+val vehicleOnRightLaneBesideIsFaster: SumoPredicate =
+    Predicate("vehicleOnRightLaneBesideIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBesidesOnRightLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isBesidesOnRightLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 // endregion
@@ -336,7 +331,7 @@ val hasVehicleInFrontOnLeftLane: SumoPredicate =
 val vehiclesOnLeftLaneInFrontIsSlower: SumoPredicate =
     Predicate("vehicleInFrontOnLeftLaneIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnLeftLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isInFrontOnLeftLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -347,8 +342,7 @@ val vehiclesOnLeftLaneInFrontIsSlower: SumoPredicate =
 val vehicleOnLeftLaneInFrontSameSpeed: SumoPredicate =
     Predicate("vehicleInFrontOnLeftLaneSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnLeftLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isInFrontOnLeftLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
@@ -359,7 +353,7 @@ val vehicleOnLeftLaneInFrontSameSpeed: SumoPredicate =
 val vehicleOnLeftLaneInFrontIsFaster: SumoPredicate =
     Predicate("vehicleInFrontOnLeftLaneIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnLeftLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isInFrontOnLeftLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -380,7 +374,7 @@ val hasVehicleInFrontOnRightLane: SumoPredicate =
 val vehiclesOnRightLaneInFrontIsSlower: SumoPredicate =
     Predicate("vehicleInFrontOnRightLaneIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnRightLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isInFrontOnRightLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -391,8 +385,7 @@ val vehiclesOnRightLaneInFrontIsSlower: SumoPredicate =
 val vehicleOnRightLaneInFrontSameSpeed: SumoPredicate =
     Predicate("vehicleInFrontOnRightLaneSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnRightLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isInFrontOnRightLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
@@ -403,7 +396,7 @@ val vehicleOnRightLaneInFrontSameSpeed: SumoPredicate =
 val vehicleOnRightLaneInFrontIsFaster: SumoPredicate =
     Predicate("vehicleInFrontOnRightLaneIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOnRightLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isInFrontOnRightLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -424,7 +417,7 @@ val hasVehicleInBehindOnLeftLane: SumoPredicate =
 val vehicleOnLeftLaneBehindIsSlower: SumoPredicate =
     Predicate("vehicleOnLeftLaneBehindIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnLeftLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isBehindOnLeftLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 
@@ -435,8 +428,7 @@ val vehicleOnLeftLaneBehindIsSlower: SumoPredicate =
 val vehicleOnLeftLaneBehindSameSpeed: SumoPredicate =
     Predicate("vehicleOnLeftLaneBehindSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnLeftLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isBehindOnLeftLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 
@@ -447,7 +439,7 @@ val vehicleOnLeftLaneBehindSameSpeed: SumoPredicate =
 val vehicleOnLeftLaneBehindIsFaster: SumoPredicate =
     Predicate("vehicleOnLeftLaneBehindIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnLeftLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isBehindOnLeftLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
@@ -467,7 +459,7 @@ val hasVehicleInBehindOnRightLane: SumoPredicate =
 val vehicleOnRightLaneBehindIsSlower: SumoPredicate =
     Predicate("vehicleOnRightLaneBehindIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnRightLane(otherVehicle, tick.ego) implies isDrivingSlower(otherVehicle, tick.ego)
+        isBehindOnRightLane(otherVehicle, tick.ego) && isDrivingSlower(otherVehicle, tick.ego)
       }
     }
 /**
@@ -477,8 +469,7 @@ val vehicleOnRightLaneBehindIsSlower: SumoPredicate =
 val vehicleOnRightLaneBehindSameSpeed: SumoPredicate =
     Predicate("vehicleOnRightLaneBehindSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnRightLane(otherVehicle, tick.ego) implies
-            isDrivingAtSameSpeed(otherVehicle, tick.ego)
+        isBehindOnRightLane(otherVehicle, tick.ego) && isDrivingAtSameSpeed(otherVehicle, tick.ego)
       }
     }
 /**
@@ -488,7 +479,7 @@ val vehicleOnRightLaneBehindSameSpeed: SumoPredicate =
 val vehicleOnRightLaneBehindIsFaster: SumoPredicate =
     Predicate("vehicleOnRightLaneBehindIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOnRightLane(otherVehicle, tick.ego) implies isDrivingFaster(otherVehicle, tick.ego)
+        isBehindOnRightLane(otherVehicle, tick.ego) && isDrivingFaster(otherVehicle, tick.ego)
       }
     }
 
