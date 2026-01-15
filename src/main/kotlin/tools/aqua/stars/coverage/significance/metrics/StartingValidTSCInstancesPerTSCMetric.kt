@@ -137,7 +137,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     val validInstancesCount = uniqueTimedInstances.getOrPut(tsc) { mutableListOf() }
 
     // Check if given tscInstance is valid
-    if (!tsc.possibleTSCInstances.contains(tscInstance.rootNode)) {
+    if (!tsc.possibleTSCInstances.contains(tscInstance)) {
       // Add current count of observed instances to list of timed instance counts
       validInstancesCount.add(validInstances.size)
       return
