@@ -23,6 +23,7 @@ import tools.aqua.stars.core.types.TickDataType
  * One tick (timestep) of simulation data as a STARS [TickDataType].
  *
  * @param identifier The identifier of the [TimeStep].
+ * @property sourceIdentifier Source identifier.
  * @property tickTimeMillis Tick time in milliseconds.
  * @property vehiclesInTick Vehicles present in this tick.
  * @property collisionsInTick Collisions occurring during this tick.
@@ -30,6 +31,7 @@ import tools.aqua.stars.core.types.TickDataType
  */
 class TimeStep(
     identifier: String,
+    val sourceIdentifier: String,
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,
@@ -38,4 +40,6 @@ class TimeStep(
     TickDataType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>(
         currentTickUnit = TickUnitMilliseconds(tickTimeMillis),
         entities = LinkedHashSet(vehiclesInTick),
-        identifier = identifier)
+        identifier = identifier) {
+  override fun toString(): String = sourceIdentifier
+}

@@ -806,7 +806,8 @@ class SumoImporter {
       if (eventType != XMLStreamConstants.START_ELEMENT) continue
       if (reader.localName != "timestep") continue
 
-      val parsedTick = parseTimeStep(reader, net, routesFile, vTypesFile, collisionsByTickMillis)
+      val parsedTick =
+          parseTimeStep(reader, exportFilePath, net, routesFile, vTypesFile, collisionsByTickMillis)
       if (parsedTick != null) ticks += parsedTick
     }
 
@@ -886,6 +887,7 @@ class SumoImporter {
    */
   private fun parseTimeStep(
       reader: XMLStreamReader,
+      exportFilePath: Path,
       net: RoadNetwork,
       routesFile: RoutesFile,
       vTypesFile: VehicleTypesFile,
@@ -921,6 +923,7 @@ class SumoImporter {
 
     return TimeStep(
         identifier = "SUMO_TICK_$tickMillis",
+        sourceIdentifier = exportFilePath.fileName.toString(),
         tickTimeMillis = tickMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
