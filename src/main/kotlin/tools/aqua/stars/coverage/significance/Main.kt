@@ -20,10 +20,9 @@ package tools.aqua.stars.coverage.significance
 import kotlin.io.path.Path
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
-import tools.aqua.stars.core.metrics.evaluation.MissedTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
-import tools.aqua.stars.core.metrics.evaluation.ValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
+import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
 import tools.aqua.stars.data.sumo.SumoImporter
@@ -51,10 +50,7 @@ fun main() {
 
   val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
 
-  runSumoForScenariosParallel(
-      scenarioFiles = scenarioFiles,
-      parallelism = 12,
-  )
+  runSumoForScenariosParallel(scenarioFiles = scenarioFiles, parallelism = 12, writeCfgFiles = true)
 
   val exportFiles = Path(EXPORT_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
   val collisionFiles = Path(COLLISION_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
@@ -73,10 +69,7 @@ fun main() {
   val staticTsc = staticTsc()
   val tscEvaluation = TSCEvaluation(staticTsc)
   tscEvaluation.registerMetricProviders(
-      InvalidTSCInstancesPerTSCMetric(),
-      ValidTSCInstancesPerTSCMetric(),
-      MissedTSCInstancesPerTSCMetric(),
-      TickCountMetric())
+      InvalidTSCInstancesPerTSCMetric(), StartingValidTSCInstancesPerTSCMetric(), TickCountMetric())
   tscEvaluation.registerDefaultHooks()
   tscEvaluation.runEvaluation(tickSequence)
 }
