@@ -34,7 +34,7 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnSameLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle Behind Same Lane") {
               condition { hasVehicleBehindOnSameLane.holds(it) }
@@ -52,7 +52,7 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnRightLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnRightLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle in Behind on Right Lane") {
               condition { hasVehicleInBehindOnRightLane.holds(it) }
@@ -67,7 +67,7 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnSameLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle Behind Same Lane") {
               condition { hasVehicleBehindOnSameLane.holds(it) }
@@ -91,13 +91,13 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnLeftLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnLeftLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle in Front on Right Lane") {
               condition { hasVehicleInFrontOnRightLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnRightLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnRightLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle in Behind on Left Lane") {
               condition { hasVehicleInBehindOnLeftLane.holds(it) }
@@ -118,7 +118,7 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnSameLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnSameLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle Behind Same Lane") {
               condition { hasVehicleBehindOnSameLane.holds(it) }
@@ -136,7 +136,7 @@ fun staticTsc() =
               condition { hasVehicleInFrontOnLeftLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehiclesOnLeftLaneInFrontIsSlower.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneInFrontIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle in Behind on Left Lane") {
               condition { hasVehicleInBehindOnLeftLane.holds(it) }
