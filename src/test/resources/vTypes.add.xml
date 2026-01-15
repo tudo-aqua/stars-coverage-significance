@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+
+    <!-- Ego vehicle -->
+    <vType id="ego"
+           vClass="passenger"
+           maxSpeed="27.78"
+           speedFactor="1.0"
+           speedDev="0.0"
+           sigma="0.5"
+           tau="1.0"
+           minGap="2.5"
+		   color="255,255,255"/>
+
+    <!-- Calm car (70 km/h = 19.44 m/s) -->
+    <vType id="car_calm"
+           vClass="passenger"
+           maxSpeed="19.44"
+           speedFactor="1.0"
+           speedDev="0.0"
+           sigma="0.5"
+           tau="1.0"
+           minGap="2.5"
+		   color="0,255,0"/>
+
+    <!-- Normal car (100 km/h = 27.78 m/s) -->
+    <vType id="car_normal"
+           vClass="passenger"
+           maxSpeed="27.78"
+           speedFactor="1.0"
+           speedDev="0.0"
+           sigma="0.5"
+           tau="1.0"
+           minGap="2.5"
+		   color="255,255,0"/>
+
+    <!-- Speedy car (130 km/h = 36.11 m/s) -->
+    <vType id="car_speedy"
+           vClass="passenger"
+           maxSpeed="36.11"
+           speedFactor="1.0"
+           speedDev="0.0"
+           sigma="0.5"
+           tau="1.0"
+           minGap="2.5"
+		   color="255,0,0"/>
+
+</additional>

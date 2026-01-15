@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" edges="highway"/>
+  <vehicle id="veh_CAR_CALM_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r0_l1_0" type="car_calm" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="1" departPos="15.00" departSpeed="19.444444444444443"/>
+  <vehicle id="veh_CAR_NORMAL_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r0_l2_1" type="car_normal" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="2" departPos="15.00" departSpeed="27.77777777777778"/>
+  <vehicle id="veh_CAR_SPEEDY_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r1_l0_2" type="car_speedy" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="0" departPos="105.00" departSpeed="36.11111111111111"/>
+  <vehicle id="veh_EGO_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r1_l1_3" type="ego" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="1" departPos="105.00" departSpeed="27.77777777777778"/>
+  <vehicle id="veh_CAR_CALM_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r1_l2_4" type="car_calm" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="2" departPos="105.00" departSpeed="19.444444444444443"/>
+  <vehicle id="veh_CAR_CALM_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r2_l1_5" type="car_calm" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="1" departPos="195.00" departSpeed="19.444444444444443"/>
+  <vehicle id="veh_CAR_CALM_r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950_r2_l2_6" type="car_calm" route="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950" depart="0.00" departLane="2" departPos="195.00" departSpeed="19.444444444444443"/>
+</routes>
