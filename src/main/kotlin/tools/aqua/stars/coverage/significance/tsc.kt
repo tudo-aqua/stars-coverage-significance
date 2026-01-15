@@ -103,7 +103,7 @@ fun staticTsc() =
               condition { hasVehicleInBehindOnLeftLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsSlower.holds(it) } }
             }
             exclusive("Has Vehicle in Behind on Right Lane") {
               condition { hasVehicleInBehindOnRightLane.holds(it) }
@@ -142,7 +142,7 @@ fun staticTsc() =
               condition { hasVehicleInBehindOnLeftLane.holds(it) }
               leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
               leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
+              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsSlower.holds(it) } }
             }
           }
         }
