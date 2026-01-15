@@ -26,10 +26,12 @@ import java.nio.file.Path
  * @property exitCode The exit code of the SUMO process.
  * @property stdout The standard output of the SUMO process.
  * @property scenarioFilePath The file path of the scenario.
+ * @property cmd The command used to run SUMO.
  */
 data class SumoRunResult(
     val scenarioId: String,
     val exitCode: Int,
     val stdout: String,
-    val scenarioFilePath: Path
+    val scenarioFilePath: Path,
+    val cmd: List<String>,
 )
