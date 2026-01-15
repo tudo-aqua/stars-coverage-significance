@@ -22,6 +22,7 @@ import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
+import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
@@ -66,10 +67,15 @@ fun main() {
           vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"),
           takeOnlyTicksAtXSeconds = 10.0)
 
+  val ticksInMilliseconds = tickSequence.toList().first().toList().map { it.tickTimeMillis }
+
   val staticTsc = staticTsc()
-  val tscEvaluation = TSCEvaluation(staticTsc)
+  val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true)
   tscEvaluation.registerMetricProviders(
-      InvalidTSCInstancesPerTSCMetric(), StartingValidTSCInstancesPerTSCMetric(), TickCountMetric())
+      InvalidTSCInstancesPerTSCMetric(),
+      StartingValidTSCInstancesPerTSCMetric(),
+      TickCountMetric(),
+      FirstTSCInstanceChangeMetric())
   tscEvaluation.registerDefaultHooks()
   tscEvaluation.runEvaluation(tickSequence)
 }
