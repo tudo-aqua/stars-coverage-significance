@@ -23,7 +23,6 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
 import kotlin.io.path.Path
-import kotlin.io.path.absolutePathString
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
@@ -34,22 +33,24 @@ import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
  *
  * @param scenarioFiles List of scenario files to simulate.
  * @param baseDir Base directory where the net file and vTypes file are located.
- * @param sumoBinary Path to the SUMO binary.
  * @param netFileName Name of the network file.
  * @param vTypesFileName Name of the vehicle types file.
  * @param parallelism Number of parallel threads to use.
  * @param requireRouExtension If true, only files with ".rou.xml" extension are considered.
  * @param failFast If true, the function will throw an exception on the first simulation failure
+ *   instead of continuing. *
+ * @param writeCfgFiles If true, configuration files will be written for testing purposes.
+ * @return List of [SumoRunResult] containing the results of each simulation.
  */
 fun runSumoForScenariosParallel(
     scenarioFiles: List<File>,
     baseDir: Path = Path(GRID_TRAFFIC_DIR),
-    sumoBinary: String = "sumo",
     netFileName: String = "grid_highway.net.xml",
     vTypesFileName: String = "vTypes.add.xml",
     parallelism: Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1),
     requireRouExtension: Boolean = true,
     failFast: Boolean = true,
+    writeCfgFiles: Boolean = false
 ): List<SumoRunResult> {
   val netFile = baseDir.resolve(netFileName)
   val vTypesFile = baseDir.resolve(vTypesFileName)
@@ -61,87 +62,89 @@ fun runSumoForScenariosParallel(
   Files.createDirectories(exportDir)
   Files.createDirectories(collisionDir)
 
-  val inputs =
+  val routeFiles =
       scenarioFiles
           .asSequence()
           .filter { it.isFile }
           .filter { !requireRouExtension || it.name.endsWith(".rou.xml") }
           .toList()
 
-  if (inputs.isEmpty()) return emptyList()
+  if (routeFiles.isEmpty()) return emptyList()
 
-  println("Simulate ${inputs.size} scenarios with SUMO using $parallelism threads...")
-  val pb = ConsoleProgress(inputs.size, label = "SUMO", barWidth = 30)
-  pb.render(0, "starting")
+  println("Simulate ${routeFiles.size} scenarios with SUMO using $parallelism threads...")
+  val consoleProgress = ConsoleProgress(routeFiles.size, label = "SUMO", barWidth = 30)
+  consoleProgress.render(0, "starting")
 
   fun scenarioIdOf(f: File): String = f.name.removeSuffix(".rou.xml")
 
-  fun buildCmd(routeFile: Path, scenarioId: String): List<String> {
-    val netstateOut = exportDir.resolve("$scenarioId.export.xml")
-    val collisionOut = collisionDir.resolve("$scenarioId.collisions.xml")
-
-    return buildList {
-      add(sumoBinary)
-      add("--insertion-checks")
-      add("none")
-      add("--route-steps")
-      add("0")
-      add("--step-length")
-      add("0.1")
-      add("--net-file")
-      add(netFile.absolutePathString())
-      add("--additional-files")
-      add(vTypesFile.absolutePathString())
-      add("--route-files")
-      add(routeFile.absolutePathString())
-      add("--netstate-dump")
-      add(netstateOut.absolutePathString())
-      add("--collision-output")
-      add(collisionOut.absolutePathString())
-    }
-  }
-
   val executor = Executors.newFixedThreadPool(parallelism.coerceAtLeast(1))
-  val cs = ExecutorCompletionService<SumoRunResult>(executor)
+  val executorCompletionService = ExecutorCompletionService<SumoRunResult>(executor)
 
   try {
     // Submit all tasks
-    for (f in inputs) {
-      cs.submit {
-        val sid = scenarioIdOf(f)
-        val cmd = buildCmd(f.toPath(), sid)
+    for (routeFile in routeFiles) {
+      executorCompletionService.submit {
+        val scenarioId = scenarioIdOf(routeFile)
 
-        val proc = ProcessBuilder(cmd).directory(baseDir.toFile()).redirectErrorStream(true).start()
+        val sumoScenarioRunSpecification =
+            SumoScenarioRunSpecification(
+                sumoBinary = "sumo",
+                netFile = netFile,
+                routeFile = routeFile.toPath(),
+                additionalFiles = listOf(vTypesFile),
+                insertionChecks = "none",
+                routeSteps = 0,
+                stepLength = 0.1,
+                netstateDump = exportDir.resolve("$scenarioId.export.xml"),
+                collisionOutput = collisionDir.resolve("$scenarioId.collisions.xml"),
+            )
 
-        val stdout = proc.inputStream.bufferedReader().readText()
-        val code = proc.waitFor()
+        // First, optionally write the configuration file. Then run SUMO normally, as the
+        // `--save-configuration` parameter is preventing SUMO from actually simulating
+        if (writeCfgFiles) {
+          val cmd = sumoScenarioRunSpecification.toCmd(writeCfgFile = true)
+          val process =
+              ProcessBuilder(cmd).directory(baseDir.toFile()).redirectErrorStream(true).start()
+          process.waitFor()
+        }
+        val cmd = sumoScenarioRunSpecification.toCmd(writeCfgFile = false)
+        val process =
+            ProcessBuilder(cmd).directory(baseDir.toFile()).redirectErrorStream(true).start()
+
+        val stdout = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
 
         SumoRunResult(
-            scenarioId = sid, exitCode = code, stdout = stdout, scenarioFilePath = f.toPath())
+            scenarioId = scenarioId,
+            exitCode = exitCode,
+            stdout = stdout,
+            scenarioFilePath = routeFile.toPath(),
+            cmd = cmd)
       }
     }
 
     // Collect results as they finish (and update progress)
-    val results = ArrayList<SumoRunResult>(inputs.size)
+    val results = ArrayList<SumoRunResult>(routeFiles.size)
     var completed = 0
 
-    while (completed < inputs.size) {
-      val res = cs.take().get()
+    while (completed < routeFiles.size) {
+      val sumoRunResult = executorCompletionService.take().get()
       completed++
 
-      if (res.exitCode != 0) {
+      if (sumoRunResult.exitCode != 0) {
         // Print failure context
         println()
-        println("SUMO failed for scenarioId=${res.scenarioId} (exit=${res.exitCode})")
-        println("Output:\n${res.stdout}")
+        println(
+            "SUMO failed for scenarioId=${sumoRunResult.scenarioId} (exit=${sumoRunResult.exitCode})")
+        println("Output:\n${sumoRunResult.stdout}")
         println("Command:")
-        println(buildCmd(res.scenarioFilePath, res.scenarioId).joinToString(" "))
+        println(sumoRunResult.cmd.joinToString(" "))
 
-        if (failFast) error("SUMO simulation failed for scenarioId=${res.scenarioId}")
+        if (failFast) error("SUMO simulation failed for scenarioId=${sumoRunResult.scenarioId}")
       }
 
-      results.add(res)
-      pb.render(completed, res.scenarioId)
+      results.add(sumoRunResult)
+      consoleProgress.render(completed, sumoRunResult.scenarioId)
     }
 
     return results
