@@ -79,7 +79,7 @@ class SumoImporter {
    * @param bufferSize Buffer size for each [TickSequence].
    * @param netFilePath Path to the `.net.xml` file.
    * @param vehicleTypesAdditionalFilePath Path to the vehicle types additional file.
-   * @param takeOnlyTicksAtXSeconds Optional filter to only take ticks at every X seconds.
+   * @param takeOnlyTicksAtXMillis Optional filter to only take ticks at every X seconds.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -90,7 +90,7 @@ class SumoImporter {
       bufferSize: Int = 100,
       netFilePath: Path,
       vehicleTypesAdditionalFilePath: Path,
-      takeOnlyTicksAtXSeconds: Double? = null,
+      takeOnlyTicksAtXMillis: Int? = null,
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -137,12 +137,8 @@ class SumoImporter {
       var ticks = scenario.ticks
 
       // Filter ticks by specified take value if provided
-      if (takeOnlyTicksAtXSeconds != null) {
-        ticks =
-            ticks.filter { tick ->
-              val tickTimeSeconds = tick.tickTimeMillis / 1000.0
-              tickTimeSeconds % takeOnlyTicksAtXSeconds == 0.0
-            }
+      if (takeOnlyTicksAtXMillis != null) {
+        ticks = ticks.filter { tick -> tick.tickTimeMillis % takeOnlyTicksAtXMillis == 0L }
       }
       return@generateSequence ticks.asTickSequence(bufferSize = bufferSize)
     }
@@ -237,8 +233,6 @@ class SumoImporter {
 
     val ticks: List<TimeStep> =
         parseExport(exportFilePath, net, routesFile, vTypesFile, collisionsByTickMillis)
-
-    linkTicks(ticks)
 
     return Scenario(net = net, routes = routesFile, ticks = ticks, warnings = warnings.toList())
   }
@@ -1127,18 +1121,6 @@ class SumoImporter {
   private fun resolveEgoVehicle(
       vehiclesInTick: List<Vehicle>,
   ): Vehicle? = vehiclesInTick.find { it.vehicleType.typeId == "ego" }
-
-  /**
-   * Links ticks bidirectionally via [TimeStep.previousTick] and [TimeStep.nextTick].
-   *
-   * @param ticks Ordered tick list.
-   */
-  private fun linkTicks(ticks: List<TimeStep>) {
-    for (i in ticks.indices) {
-      ticks[i].previousTick = ticks.getOrNull(i - 1)
-      ticks[i].nextTick = ticks.getOrNull(i + 1)
-    }
-  }
 
   /**
    * Converts SUMO seconds into milliseconds using rounding.

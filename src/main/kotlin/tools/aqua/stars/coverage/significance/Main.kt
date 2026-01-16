@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance
 
 import kotlin.io.path.Path
 import tools.aqua.stars.core.evaluation.TSCEvaluation
+import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
@@ -56,21 +57,24 @@ fun main() {
   val exportFiles = Path(EXPORT_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
   val collisionFiles = Path(COLLISION_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
 
+  val bufferSizeInSeconds = 10.0
+  val takeOnlyTicksAtXMillis = 100
+  val bufferSize = ((bufferSizeInSeconds * 1000) / takeOnlyTicksAtXMillis).toInt()
+
   val importer = SumoImporter()
   val tickSequence =
       importer.loadTicks(
           scenarioFiles = scenarioFiles,
           exportFiles = exportFiles,
           collisionsFiles = collisionFiles,
-          bufferSize = 60,
+          bufferSize = bufferSize,
           netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"),
           vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"),
-          takeOnlyTicksAtXSeconds = 10.0)
-
-  val ticksInMilliseconds = tickSequence.toList().first().toList().map { it.tickTimeMillis }
+          takeOnlyTicksAtXMillis = takeOnlyTicksAtXMillis)
 
   val staticTsc = staticTsc()
   val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true)
+  tscEvaluation.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(bufferSize))
   tscEvaluation.registerMetricProviders(
       InvalidTSCInstancesPerTSCMetric(),
       StartingValidTSCInstancesPerTSCMetric(),
