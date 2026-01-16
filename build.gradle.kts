@@ -43,11 +43,10 @@ plugins {
 
 repositories {
   mavenCentral()
-  mavenLocal()
   maven { url = URI("https://central.sonatype.com/repository/maven-snapshots/") }
 }
 
-val starsVersion = "2.0-addValidationClassesToMavenPublish-10-7a3a1f1-SNAPSHOT"
+val starsVersion = "2.0-12-a508953-SNAPSHOT"
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
