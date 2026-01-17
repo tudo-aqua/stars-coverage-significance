@@ -74,7 +74,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     U : TickUnit<U, D>,
     D : TickDifference<D>,
 >(
-    override val loggerIdentifier: String = "valid-tsc-instances-per-tsc",
+    override val loggerIdentifier: String = "starting-valid-tsc-instances-per-tsc",
     override val logger: Logger = Loggable.getLogger(loggerIdentifier),
 ) :
     TSCAndTSCInstanceMetricProvider<E, T, U, D>,
