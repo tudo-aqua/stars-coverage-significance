@@ -29,7 +29,6 @@ class ConsoleProgress(
     private val total: Int,
     private val label: String = "",
     private val barWidth: Int = 30,
-    private val maxMsgLen: Int = 60,
 ) {
   private val startNanos: Long = System.nanoTime()
   private var done: Int = 0
