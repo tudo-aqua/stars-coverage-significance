@@ -26,6 +26,7 @@ import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
@@ -115,10 +116,13 @@ class SumoImporter {
 
     val scenarioNameIterator = scenarioNames.iterator()
 
+    val consoleProgress =
+        ConsoleProgress(total = scenarioNames.size, label = "Loading simulation runs")
+
     return generateSequence {
       if (!scenarioNameIterator.hasNext()) return@generateSequence null
       val currentScenarioName = scenarioNameIterator.next()
-      println("Reading simulation run file: $currentScenarioName")
+      consoleProgress.step(currentScenarioName)
       val scenarioFilePath = Path.of("$SCENARIO_DIR/${currentScenarioName}.rou.xml")
       val exportFilePath = Path.of("$EXPORT_DIR/${currentScenarioName}.$EXPORT_FILE_EXTENSION")
       val collisionFilePath =
