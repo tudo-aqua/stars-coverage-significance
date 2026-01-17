@@ -48,7 +48,7 @@ const val COLLISION_FILE_EXTENSION = "collisions.xml"
 fun main() {
   cleanGenerationFiles()
 
-  generateGridTrafficScenarios(n = 1, seed = 2)
+  generateGridTrafficScenarios(n = 10, seed = 2)
 
   val scenarioFiles = Path(SCENARIO_DIR).toFile().listFiles()?.toList()?.sorted() ?: emptyList()
 
@@ -73,13 +73,12 @@ fun main() {
           takeOnlyTicksAtXMillis = takeOnlyTicksAtXMillis)
 
   val staticTsc = staticTsc()
-  val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true)
+  val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true, writePlotDataCSV = true)
   tscEvaluation.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(bufferSize))
   tscEvaluation.registerMetricProviders(
       InvalidTSCInstancesPerTSCMetric(),
       StartingValidTSCInstancesPerTSCMetric(),
       TickCountMetric(),
       FirstTSCInstanceChangeMetric())
-  tscEvaluation.registerDefaultHooks()
   tscEvaluation.runEvaluation(tickSequence)
 }
