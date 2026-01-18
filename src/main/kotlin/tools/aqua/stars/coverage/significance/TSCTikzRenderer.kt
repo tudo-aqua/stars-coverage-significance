@@ -216,8 +216,6 @@ object TSCTikzRenderer {
                 l == 0 && u == n -> "O" // optional
                 else -> "$l..$u"
               }
-
-          else -> ""
         }
 
     return if (marker.isBlank()) base else "$base ($marker)"
