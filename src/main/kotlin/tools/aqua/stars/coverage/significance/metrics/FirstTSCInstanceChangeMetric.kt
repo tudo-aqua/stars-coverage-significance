@@ -187,25 +187,9 @@ class FirstTSCInstanceChangeMetric(
     return sortedTimes[lo] * (1.0 - w) + sortedTimes[hi] * w
   }
 
-  /** Mean time to first change in milliseconds. */
-  private fun getMeanTimeToFirstChange(): Double {
-    val times = recordedTimesMillis()
-    return if (times.isNotEmpty()) times.average() else 0.0
-  }
-
   /**
-   * Standard deviation across observed first-change times. If you prefer population SD, divide by n
-   * instead of (n - 1).
+   * Writes a bar plot showing the histogram of first TSC instance change times in 1000ms buckets.
    */
-  private fun getStandardDeviationTimeToFirstChange(mean: Double): Double {
-    val times = recordedTimesMillis()
-    val n = times.size
-    if (n <= 1) return 0.0
-
-    val variance = times.sumOf { (it - mean) * (it - mean) } / (n - 1) // sample variance
-    return kotlin.math.sqrt(variance)
-  }
-
   override fun writePlots() {
     val barPlotName = "firstTSCInstanceChangeHistogram_1000ms"
     val bucketSizeMs = 1000L
@@ -238,15 +222,19 @@ class FirstTSCInstanceChangeMetric(
    *
    * @property bucketStartMs The start of the bucket in milliseconds.
    * @property bucketEndMsInclusive The end of the bucket in milliseconds (inclusive).
+   * @property bucketCenterMs The center of the bucket in milliseconds.
    * @property count The count of occurrences in the bucket.
-   * @property min The minimum value in the bucket.
-   * @property max The maximum value in the bucket.
-   * @property median The median value in the bucket.
+   * @property mean The mean value in the bucket.
+   * @property stdDevSample The standard deviation of the values in the bucket (dividing by n-1).
+   * @property p10 The 10th percentile value in the bucket.
    * @property p25 The 25th percentile value in the bucket.
+   * @property median The median value in the bucket.
    * @property p75 The 75th percentile value in the bucket.
-   * @property iqr The interquartile range (IQR) value in the bucket.
    * @property p90 The 90th percentile value in the bucket.
    * @property p95 The 95th percentile value in the bucket.
+   * @property iqr The interquartile range (IQR) value in the bucket.
+   * @property min The minimum value in the bucket.
+   * @property max The maximum value in the bucket.
    */
   private data class BucketStats(
       val bucketStartMs: Long,
@@ -266,6 +254,14 @@ class FirstTSCInstanceChangeMetric(
       val max: Double? = null,
   )
 
+  /**
+   * Computes statistics for each bucket of first TSC instance change times.
+   *
+   * @param bucketSizeMs The size of each bucket in milliseconds.
+   * @param includeMinMax Whether to include min and max values in the statistics.
+   * @param normalizeToBucket Whether to normalize values to the bucket's local coordinate system.
+   * @return A list of [BucketStats] for each bucket.
+   */
   private fun computeBucketStats(
       bucketSizeMs: Long = 1000L,
       includeMinMax: Boolean = true,
@@ -350,6 +346,22 @@ class FirstTSCInstanceChangeMetric(
     }
   }
 
+  /**
+   * Data class representing global statistics for first TSC instance change times.
+   *
+   * @property nObserved The number of observed first change times.
+   * @property mean The mean of the first change times.
+   * @property stdDevSample The sample standard deviation of the first change times.
+   * @property min The minimum of the first change times.
+   * @property p10 The 10th percentile of the first change times.
+   * @property p25 The 25th percentile of the first change times.
+   * @property median The median of the first change times.
+   * @property p75 The 75th percentile of the first change times.
+   * @property p90 The 90th percentile of the first change times.
+   * @property p95 The 95th percentile of the first change times.
+   * @property max The maximum of the first change times.
+   * @property iqr The interquartile range (IQR) of the first change times.
+   */
   private data class GlobalStats(
       val nObserved: Int,
       val mean: Double,
@@ -365,6 +377,11 @@ class FirstTSCInstanceChangeMetric(
       val iqr: Double,
   )
 
+  /**
+   * Computes global statistics for first TSC instance change times.
+   *
+   * @return [GlobalStats] or null if no times are recorded.
+   */
   private fun computeGlobalStats(): GlobalStats? {
     val times = recordedTimesMillis()
     if (times.isEmpty()) return null
@@ -399,6 +416,10 @@ class FirstTSCInstanceChangeMetric(
     )
   }
 
+  /**
+   * Writes CSV files containing bucket statistics and global statistics for first TSC instance
+   * change times.
+   */
   override fun writePlotDataCSV() {
     val bucketSizeMs = 1000L
 

@@ -26,36 +26,59 @@ import tools.aqua.stars.core.types.TickDataType
 import tools.aqua.stars.core.types.TickDifference
 import tools.aqua.stars.core.types.TickUnit
 
+/** Renderer for TSCs using LaTeX TikZ/forest package. */
 object TSCTikzRenderer {
 
+  /** Style for displaying bounds in node labels. */
   enum class BoundsStyle {
+    /** No bounds shown. */
     NONE,
-    LETTER_WHEN_POSSIBLE, // A / X / O, else l..u
-    RANGE_ALWAYS, // always l..u
+    /** Show letter markers when possible: A / X / O, else l..u. */
+    LETTER_WHEN_POSSIBLE,
+    /** Always show l..u. */
+    RANGE_ALWAYS,
   }
 
+  /**
+   * Options for the [TSCTikzRenderer].
+   *
+   * @property font Font to use for node labels.
+   * @property levelSep Forest level separation.
+   * @property siblingSep Forest sibling separation.
+   * @property textWidth Width of node labels, or null to disable wrapping.
+   * @property boundsStyle Style for displaying bounds in node labels.
+   * @property escapeNodeLabels Whether to escape node labels for LaTeX.
+   * @property dashedEdgesFromAllToNonLeafBounded Whether to draw dashed edges from all to non-leaf
+   *   bounded nodes.
+   * @property edgeLabels Optional edge labels (e.g., \ref{...}).
+   * @property edgeLabelNodeOptions Options for edge label nodes.
+   * @property includeLibraryHintComment Whether to include a comment about the forest library
+   *   version.
+   */
   data class Options(
-      // Global styling
       val font: String = "\\small",
-
-      // Forest layout controls (these are the important ones for overlap)
-      val levelSep: String = "25mm", // forest: l sep
-      val siblingSep: String = "6mm", // forest: s sep
-      val textWidth: String? = "55mm", // wrap long labels; set null to disable
-
-      // Node label formatting
+      val levelSep: String = "25mm",
+      val siblingSep: String = "6mm",
+      val textWidth: String? = "55mm",
       val boundsStyle: BoundsStyle = BoundsStyle.LETTER_WHEN_POSSIBLE,
       val escapeNodeLabels: Boolean = true,
-
-      // Edge styling
       val dashedEdgesFromAllToNonLeafBounded: Boolean = true,
-
-      // Optional edge labels (e.g., \ref{...})
       val edgeLabels: Map<Pair<String, String>, String> = emptyMap(),
       val edgeLabelNodeOptions: String = "midway,above",
       val includeLibraryHintComment: Boolean = true,
   )
 
+  /**
+   * Renders the given [TSC] to a LaTeX TikZ/forest document.
+   *
+   * @param E - EntityType.
+   * @param T - TickDataType.
+   * @param U - TickUnit.
+   * @param D - TickDifference.
+   * @param tsc TSC to render.
+   * @param options Rendering options.
+   * @return LaTeX TikZ/forest document as a [String].
+   */
   fun <
       E : EntityType<E, T, U, D>,
       T : TickDataType<E, T, U, D>,
@@ -95,6 +118,15 @@ object TSCTikzRenderer {
     return sb.toString()
   }
 
+  /**
+   * Emits a forest node recursively.
+   *
+   * @param sb StringBuilder to append to.
+   * @param node Current node.
+   * @param parent Parent node, or null if root.
+   * @param options Rendering options.
+   * @param indent Current indentation.
+   */
   private fun emitForestNode(
       sb: StringBuilder,
       node: TSCNode<*, *, *, *>,
@@ -144,6 +176,13 @@ object TSCTikzRenderer {
     }
   }
 
+  /**
+   * Determines whether the edge from [parent] to [child] should be dashed.
+   *
+   * @param parent Parent node.
+   * @param child Child node.
+   * @return True if the edge should be dashed.
+   */
   private fun shouldDashedEdge(parent: TSCNode<*, *, *, *>, child: TSCNode<*, *, *, *>): Boolean {
     val parentAll =
         parent is TSCBoundedNode<*, *, *, *> &&
@@ -177,34 +216,39 @@ object TSCTikzRenderer {
                 l == 0 && u == n -> "O" // optional
                 else -> "$l..$u"
               }
-          BoundsStyle.NONE -> ""
+
+          else -> ""
         }
 
     return if (marker.isBlank()) base else "$base ($marker)"
   }
 
-  private fun escapeLatex(s: String): String {
-    // Practical escaping for node text in forest/TikZ
-    return buildString(s.length) {
-      for (ch in s) {
-        append(
-            when (ch) {
-              '\\' -> "\\textbackslash{}"
-              '{' -> "\\{"
-              '}' -> "\\}"
-              '$' -> "\\$"
-              '&' -> "\\&"
-              '%' -> "\\%"
-              '#' -> "\\#"
-              '_' -> "\\_"
-              '~' -> "\\textasciitilde{}"
-              '^' -> "\\textasciicircum{}"
-              '[' -> "{[}" // forest uses [] for structure; keep labels safe
-              ']' -> "{]}"
-              '\n' -> " \\\\ "
-              else -> ch
-            })
+  /**
+   * Escapes special characters in a string for use in LaTeX.
+   *
+   * @param s String to escape.
+   * @return Escaped string.
+   */
+  private fun escapeLatex(s: String): String =
+      buildString(s.length) {
+        for (ch in s) {
+          append(
+              when (ch) {
+                '\\' -> "\\textbackslash{}"
+                '{' -> "\\{"
+                '}' -> "\\}"
+                '$' -> "\\$"
+                '&' -> "\\&"
+                '%' -> "\\%"
+                '#' -> "\\#"
+                '_' -> "\\_"
+                '~' -> "\\textasciitilde{}"
+                '^' -> "\\textasciicircum{}"
+                '[' -> "{[}" // forest uses [] for structure; keep labels safe
+                ']' -> "{]}"
+                '\n' -> " \\\\ "
+                else -> ch
+              })
+        }
       }
-    }
-  }
 }

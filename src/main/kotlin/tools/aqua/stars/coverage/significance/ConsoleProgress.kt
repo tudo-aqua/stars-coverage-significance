@@ -20,10 +20,11 @@ package tools.aqua.stars.coverage.significance
 import java.util.concurrent.TimeUnit
 
 /**
- * Small, dependency-free console progress bar with elapsed time + ETA.
+ * Simple console progress bar for tracking progress of long-running tasks.
  *
- * Usage: val pb = ConsoleProgress(total, label = "Running SUMO") pb.render(0, "starting") ...
- * pb.step("scenarioId") ... pb.finish("done")
+ * @param total Total number of steps.
+ * @param label Optional label to prepend to the progress bar.
+ * @param barWidth Width of the progress bar in characters.
  */
 class ConsoleProgress(
     private val total: Int,
@@ -38,6 +39,12 @@ class ConsoleProgress(
     require(barWidth > 0) { "barWidth must be > 0" }
   }
 
+  /**
+   * Renders the progress bar.
+   *
+   * @param doneOverride Override the current progress.
+   * @param message Optional message to append to the progress bar.
+   */
   fun render(doneOverride: Int = done, message: String = "") {
     val d = doneOverride.coerceIn(0, total)
     val ratio = d.toDouble() / total.toDouble()
@@ -62,11 +69,21 @@ class ConsoleProgress(
     if (d == total) println()
   }
 
+  /**
+   * Advances the progress bar by one step.
+   *
+   * @param message Optional message to append to the progress bar.
+   */
   fun step(message: String = "") {
     done++
     render(done, message)
   }
 
+  /**
+   * Finishes the progress bar and renders the final message.
+   *
+   * @param message Optional message to append to the progress bar.
+   */
   fun finish(message: String = "") {
     done = total
     render(done, message)
@@ -74,6 +91,11 @@ class ConsoleProgress(
 
   /** Static helper to format seconds as H:MM:SS. */
   companion object {
+    /**
+     * Formats seconds as H:MM:SS.
+     *
+     * @param seconds Seconds to format.
+     */
     fun formatHms(seconds: Double): String {
       val s = seconds.toLong().coerceAtLeast(0L)
       val h = TimeUnit.SECONDS.toHours(s)

@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.util.Locale
 import kotlin.math.roundToInt
 
+@SuppressWarnings("StringLiteralDuplication")
 /**
  * A generated 3x3-grid scenario.
  *

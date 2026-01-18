@@ -65,6 +65,7 @@ import tools.aqua.stars.data.sumo.staticData.ProjValue
 import tools.aqua.stars.data.sumo.staticData.Projection
 import tools.aqua.stars.data.sumo.staticData.RoadNetwork
 
+@SuppressWarnings("StringLiteralDuplication")
 /** Importer for SUMO simulation data files. */
 class SumoImporter {
 
@@ -941,6 +942,7 @@ class SumoImporter {
    * The reader must be positioned at the `<timestep>` start element when calling this function.
    *
    * @param reader XML stream reader positioned at `<timestep>`.
+   * @param exportFilePath Path to the `export.xml` file (for sourceIdentifier).
    * @param net Parsed road network for pointer resolution.
    * @param routesFile Parsed routes file for vehicle type inference.
    * @param vTypesFile Parsed vehicle types additional file for vehicle type inference.

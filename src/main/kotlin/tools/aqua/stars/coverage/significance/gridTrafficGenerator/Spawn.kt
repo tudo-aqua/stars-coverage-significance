@@ -18,21 +18,16 @@
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
 /**
- * A single placed vehicle in the 3x3 grid road prefix.
+ * Coordinate form of a placed vehicle.
  *
- * This corresponds to a tuple $(r,\ell,p,t)$ in the paper's algorithm:
- * - [row] is the longitudinal row index (0=rear, 1=middle, 2=front)
- * - [lane] is the lane index (0..2)
- * - [positionMeters] is the continuous longitudinal position sampled within the interval of the
- *   corresponding grid cell
- * - [type] is the abstract vehicle type (including [VehicleType.EGO])
+ * @property row Row index (0..2).
+ * @property lane Lane index (0..2).
+ * @property positionMeters Position in meters along the lane.
+ * @property type Vehicle type.
  */
 data class Spawn(
     val row: Int,
     val lane: Int,
     val positionMeters: Double,
     val type: VehicleType,
-) {
-  val cellIndex: Int
-    get() = row * 3 + lane
-}
+)

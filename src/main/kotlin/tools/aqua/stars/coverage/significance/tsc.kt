@@ -23,6 +23,7 @@ import tools.aqua.stars.data.sumo.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dynamicData.Vehicle
 
+@SuppressWarnings("StringLiteralDuplication")
 /** TSC for static starting configurations. */
 fun staticTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Static TSC") {
