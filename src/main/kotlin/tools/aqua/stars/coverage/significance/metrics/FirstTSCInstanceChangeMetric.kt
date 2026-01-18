@@ -17,11 +17,16 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
+import java.util.UUID
 import java.util.logging.Logger
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.sqrt
 import tools.aqua.stars.core.metrics.providers.Loggable
 import tools.aqua.stars.core.metrics.providers.Plottable
+import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.Stateful
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricProvider
 import tools.aqua.stars.core.tsc.TSC
@@ -31,6 +36,9 @@ import tools.aqua.stars.core.utils.ApplicationConstantsHolder.CONSOLE_SEPARATOR
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
+import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFirstTSCInstanceChangeEntry
+import tools.aqua.stars.coverage.significance.db.repositories.MetricFirstTSCInstanceChangeRepository
+import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.data.sumo.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dynamicData.TimeStep
@@ -39,10 +47,16 @@ import tools.aqua.stars.data.sumo.dynamicData.Vehicle
 /**
  * Metric evaluating the first change in a TSC instance over time.
  *
+ * @property evaluationRunEntryId [UUID] of the evaluation run.
+ * @property tscEntryId [UUID] of the TSC being evaluated.
+ * @property dependsOn [Any]? object that this metric depends on.
  * @property loggerIdentifier identifier (name) for the logger.
  * @property logger [Logger] instance.
  */
 class FirstTSCInstanceChangeMetric(
+    val evaluationRunEntryId: UUID,
+    val tscEntryId: UUID,
+    override val dependsOn: Any? = null,
     override val loggerIdentifier: String = "first-tsc-instance-change",
     override val logger: Logger = Loggable.getLogger(loggerIdentifier),
 ) :
@@ -50,7 +64,9 @@ class FirstTSCInstanceChangeMetric(
         Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
     Stateful,
     Loggable,
-    Plottable {
+    Plottable,
+    PostEvaluationMetricProvider<
+        Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> {
 
   /**
    * Data class representing the first change in a TSC instance.
@@ -79,7 +95,7 @@ class FirstTSCInstanceChangeMetric(
       tscInstance: TSCInstance<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
       tick: TimeStep
   ) {
-    val sourceIdentifier = tscInstance.sourceIdentifier
+    val sourceIdentifier = tscInstance.sourceIdentifier.replace(".export.xml", "")
     val existingChange =
         instanceChangeMap.getOrPut(sourceIdentifier) { FirstChangeData(changedFrom = tscInstance) }
     // If there is already a change recorded, do nothing
@@ -162,7 +178,7 @@ class FirstTSCInstanceChangeMetric(
     val n = times.size
     if (n <= 1) return 0.0
     val variance = times.sumOf { (it - mean) * (it - mean) } / (n - 1)
-    return kotlin.math.sqrt(variance)
+    return sqrt(variance)
   }
 
   /**
@@ -179,8 +195,8 @@ class FirstTSCInstanceChangeMetric(
 
     val n = sortedTimes.size
     val rank = (p / 100.0) * (n - 1) // 0..(n-1)
-    val lo = kotlin.math.floor(rank).toInt()
-    val hi = kotlin.math.ceil(rank).toInt()
+    val lo = floor(rank).toInt()
+    val hi = ceil(rank).toInt()
     if (lo == hi) return sortedTimes[lo]
 
     val w = rank - lo
@@ -506,4 +522,26 @@ class FirstTSCInstanceChangeMetric(
         folder = loggerIdentifier,
     )
   }
+
+  override fun postEvaluate() {
+    val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
+    instanceChangeMap.forEach { (sourceIdentifier, firstChange) ->
+      val scenarioStartingConfigurationEntryId =
+          ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)?.id
+
+      checkNotNull(scenarioStartingConfigurationEntryId) {
+        "Scenario starting configuration not found for $sourceIdentifier"
+      }
+      val changeEntry =
+          MetricFirstTSCInstanceChangeEntry(
+              runId = evaluationRunEntryId,
+              tscId = tscEntryId,
+              scenarioConfigId = scenarioStartingConfigurationEntryId,
+              firstChangeMillis = firstChange.firstChangeAfterXUnits?.tickMillis)
+      entries.add(changeEntry)
+    }
+    MetricFirstTSCInstanceChangeRepository.batchInsert(entries)
+  }
+
+  override fun printPostEvaluationResult() {}
 }

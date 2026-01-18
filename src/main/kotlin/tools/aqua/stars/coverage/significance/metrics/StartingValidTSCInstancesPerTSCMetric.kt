@@ -19,6 +19,7 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
+import java.util.UUID
 import java.util.logging.Logger
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -42,6 +43,12 @@ import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
+import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
+import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
+import tools.aqua.stars.coverage.significance.getJsonString
 
 /**
  * This class implements the [TSCAndTSCInstanceMetricProvider] and tracks the occurred valid
@@ -65,6 +72,7 @@ import tools.aqua.stars.core.utils.saveAsCSVFile
  * @param T [TickDataType].
  * @param U [TickUnit].
  * @param D [TickDifference].
+ * @property evaluationRunEntryId [UUID] of the evaluation run.
  * @property loggerIdentifier identifier (name) for the logger.
  * @property logger [Logger] instance.
  */
@@ -74,6 +82,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     U : TickUnit<U, D>,
     D : TickDifference<D>,
 >(
+    val evaluationRunEntryId: UUID,
     override val loggerIdentifier: String = "starting-valid-tsc-instances-per-tsc",
     override val logger: Logger = Loggable.getLogger(loggerIdentifier),
 ) :
@@ -130,6 +139,8 @@ class StartingValidTSCInstancesPerTSCMetric<
    * @param tscInstance The current [TSCInstance] which is checked for validity.
    */
   override fun evaluate(tsc: TSC<E, T, U, D>, tscInstance: TSCInstance<E, T, U, D>) {
+    val sourceIdentifier = tscInstance.sourceIdentifier.replace(".export.xml", "")
+
     // Get current count of unique and valid TSC instance for the current TSC
     val validInstances = startingValidInstancesMap.getOrPut(tsc) { mutableMapOf() }
 
@@ -144,7 +155,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     }
 
     // Source was already evaluated
-    if (validInstances.values.any { it.contains(tscInstance.sourceIdentifier) }) {
+    if (validInstances.values.any { it.contains(sourceIdentifier) }) {
       return
     }
 
@@ -152,7 +163,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     val validInstanceList = validInstances.getOrPut(tscInstance) { mutableListOf() }
 
     // Add current instance to list of observed instances
-    validInstanceList.add(tscInstance.sourceIdentifier)
+    validInstanceList.add(sourceIdentifier)
 
     // Add current count of observed instances to list of timed instance counts
     validInstancesCount.add(validInstances.size)
@@ -200,6 +211,44 @@ class StartingValidTSCInstancesPerTSCMetric<
    * calculated beforehand.
    */
   override fun postEvaluate() {
+    // Code for database insertion
+    val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
+    startingValidInstancesMap.forEach { (tsc, map) ->
+      val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
+      val tscEntryId = tscEntry?.id
+      checkNotNull(tscEntryId) { "TSC entry not found in database" }
+
+      map.forEach { (tscInstance, sourceIdentifiers) ->
+        val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
+        val tscInstanceEntry =
+            TSCInstancesRepository.upsert(
+                tscId = tscEntryId,
+                instanceJson = tscInstanceJsonString,
+                instanceHash = tscInstance.hashCode().toString())
+        val tscInstanceEntryId = tscInstanceEntry.id
+        checkNotNull(tscInstanceEntryId) { "TSC instance entry not found in database" }
+
+        sourceIdentifiers.forEach { sourceIdentifier ->
+          val scenarioStartingConfigurationEntry =
+              ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)
+          val scenarioStartingConfigurationEntryId = scenarioStartingConfigurationEntry?.id
+          checkNotNull(scenarioStartingConfigurationEntryId) {
+            "Scenario starting configuration entry not found in database"
+          }
+
+          val entry =
+              MetricStartingValidTSCInstancesEntry(
+                  runId = evaluationRunEntryId,
+                  tscId = tscEntryId,
+                  tscInstanceId = tscInstanceEntryId,
+                  scenarioConfigId = scenarioStartingConfigurationEntryId)
+          entries.add(entry)
+        }
+      }
+    }
+    MetricStartingValidTSCInstancesRepository.batchInsert(entries)
+
+    // Code for old calculation
     uniqueTimedInstances.forEach { (tsc, instances) ->
       // Get the count of all possible TSC instances for the current tsc
       val possibleTscInstancesForTSC = tsc.possibleTSCInstances.size

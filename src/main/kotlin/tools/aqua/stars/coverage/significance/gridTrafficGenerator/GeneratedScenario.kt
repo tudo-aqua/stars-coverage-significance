@@ -22,6 +22,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
 import kotlin.math.roundToInt
+import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
+import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
 
 @SuppressWarnings("StringLiteralDuplication")
 /**
@@ -210,6 +213,67 @@ data class GeneratedScenario(
       appendLine(rowLine(0))
       append(border)
     }
+  }
+
+  /**
+   * Returns the index in the occupancy array for the given row and lane.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Index in the occupancy array.
+   */
+  fun idx(row: Int, lane: Int): Int = row * 3 + lane
+
+  /**
+   * Maps a [VehicleType] to a [ScenarioStartingConfigurationVehicleState].
+   *
+   * @param t Vehicle type.
+   * @return Corresponding vehicle state.
+   */
+  fun vehicleTypeToState(t: VehicleType): ScenarioStartingConfigurationVehicleState =
+      when (t) {
+        VehicleType.EGO -> ScenarioStartingConfigurationVehicleState.EGO
+        VehicleType.CAR_NORMAL -> ScenarioStartingConfigurationVehicleState.SAME_SPEED
+        VehicleType.CAR_SPEEDY -> ScenarioStartingConfigurationVehicleState.FASTER
+        VehicleType.CAR_CALM -> ScenarioStartingConfigurationVehicleState.SLOWER
+      }
+
+  /**
+   * Returns the [ScenarioStartingConfigurationVehicleState] for the given cell.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Vehicle state in the cell.
+   */
+  fun cellState(row: Int, lane: Int): ScenarioStartingConfigurationVehicleState {
+    // Ego is not stored in occupancy; it is represented in placements and excluded from M.
+    if (row == 1 && lane == egoLane) return ScenarioStartingConfigurationVehicleState.EGO
+    val t = occupancy[idx(row, lane)] ?: return ScenarioStartingConfigurationVehicleState.NONE
+    return vehicleTypeToState(t)
+  }
+
+  /**
+   * Converts this [GeneratedScenario] to a [ScenarioStartingConfigurationEntry] for database
+   * storage.
+   *
+   * @return [ScenarioStartingConfigurationEntry] for this scenario.
+   */
+  fun toScenarioStartingConfigurationEntry(): ScenarioStartingConfigurationEntry {
+    val scenarioFileName = "${id}.$SCENARIO_FILE_EXTENSION"
+
+    return ScenarioStartingConfigurationEntry(
+        id = null,
+        hash = buildHumanReadableId(),
+        topLeft = cellState(row = 2, lane = 2),
+        topCenter = cellState(row = 2, lane = 1),
+        topRight = cellState(row = 2, lane = 0),
+        middleLeft = cellState(row = 1, lane = 2),
+        middleCenter = cellState(row = 1, lane = 1),
+        middleRight = cellState(row = 1, lane = 0),
+        bottomLeft = cellState(row = 0, lane = 2),
+        bottomCenter = cellState(row = 0, lane = 1),
+        bottomRight = cellState(row = 0, lane = 0),
+        scenarioFileName = scenarioFileName)
   }
 
   override fun equals(other: Any?): Boolean {

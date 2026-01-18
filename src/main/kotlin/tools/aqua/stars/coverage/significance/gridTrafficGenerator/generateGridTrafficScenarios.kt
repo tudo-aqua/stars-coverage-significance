@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 import kotlin.io.path.Path
 import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.ConsoleProgress
+import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 
 /**
  * Function to generate grid traffic scenarios.
@@ -68,6 +69,7 @@ fun generateGridTrafficScenarios(n: Int? = null, seed: Int = 1) {
   pb.render(0, "starting")
   allScenarios.forEach { scenario ->
     scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/${scenario.id}.rou.xml"))
+    ScenarioStartingConfigurationRepository.upsert(scenario.toScenarioStartingConfigurationEntry())
     done++
     pb.step(scenario.id)
   }

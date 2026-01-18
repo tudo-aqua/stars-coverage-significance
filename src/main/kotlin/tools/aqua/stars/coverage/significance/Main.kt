@@ -22,6 +22,10 @@ import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
+import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
+import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
@@ -46,6 +50,12 @@ const val COLLISION_FILE_EXTENSION = "collisions.xml"
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
+  DbBootstrap.connectAndCreateSchema()
+
+  val evaluationRunEntry = EvaluationRunsRepository.insert(EvaluationRunEntry())
+  val evaluationRunEntryId = evaluationRunEntry.id
+  checkNotNull(evaluationRunEntryId) { "Could not insert evaluation run entry." }
+
   cleanGenerationFiles()
 
   generateGridTrafficScenarios(n = 10, seed = 2)
@@ -74,12 +84,18 @@ fun main() {
           maxLengthOfScenarioInSeconds = 30.0)
 
   val staticTsc = staticTsc()
+
+  val tscEntry = TSCsRepository.upsert(entry = staticTsc.toTSCEntry())
+  val tscEntryId = tscEntry.id
+  checkNotNull(tscEntryId) { "Could not insert TSC entry." }
+
   val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true, writePlotDataCSV = true)
   tscEvaluation.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(bufferSize))
   tscEvaluation.registerMetricProviders(
       InvalidTSCInstancesPerTSCMetric(),
-      StartingValidTSCInstancesPerTSCMetric(),
+      StartingValidTSCInstancesPerTSCMetric(evaluationRunEntryId = evaluationRunEntryId),
       TickCountMetric(),
-      FirstTSCInstanceChangeMetric())
+      FirstTSCInstanceChangeMetric(
+          evaluationRunEntryId = evaluationRunEntryId, tscEntryId = tscEntryId))
   tscEvaluation.runEvaluation(tickSequence)
 }
