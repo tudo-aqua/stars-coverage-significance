@@ -189,9 +189,9 @@ class SumoImporter {
     }
 
     println("Reading simulation run file: $scenarioName")
-    val scenarioFilePath = Path.of("$SCENARIO_DIR/${scenarioName}.rou.xml")
-    val exportFilePath = Path.of("$EXPORT_DIR/${scenarioName}.$EXPORT_FILE_EXTENSION")
-    val collisionFilePath = Path.of("$COLLISION_DIR/${scenarioName}.$COLLISION_FILE_EXTENSION")
+    val scenarioFilePath = scenarioFile.toPath()
+    val exportFilePath = exportFile.toPath()
+    val collisionFilePath = collisionFile.toPath()
 
     // Holds the current scenario object
     val scenario =
