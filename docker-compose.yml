@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16
+    container_name: stars_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: stars
+      POSTGRES_USER: stars
+      POSTGRES_PASSWORD: stars
+    ports:
+      - "5432:5432"
+    volumes:
+      - stars_pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: stars_pgadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: till.schallau@tu-dortmund.de
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - stars_pgadmin:/var/lib/pgadmin
+
+volumes:
+  stars_pgdata:
+  stars_pgadmin:
