@@ -70,7 +70,8 @@ fun main() {
           bufferSize = bufferSize,
           netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"),
           vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"),
-          takeOnlyTicksAtXMillis = takeOnlyTicksAtXMillis)
+          takeOnlyTicksAtXMillis = takeOnlyTicksAtXMillis,
+          maxLengthOfScenarioInSeconds = 30.0)
 
   val staticTsc = staticTsc()
   val tscEvaluation = TSCEvaluation(staticTsc, writePlots = true, writePlotDataCSV = true)

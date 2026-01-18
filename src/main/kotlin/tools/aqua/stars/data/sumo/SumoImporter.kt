@@ -81,6 +81,8 @@ class SumoImporter {
    * @param netFilePath Path to the `.net.xml` file.
    * @param vehicleTypesAdditionalFilePath Path to the vehicle types additional file.
    * @param takeOnlyTicksAtXMillis Optional filter to only take ticks at every X seconds.
+   * @param maxLengthOfScenarioInSeconds Optional filter to only take scenarios with a maximum
+   *   length of X s.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -92,6 +94,7 @@ class SumoImporter {
       netFilePath: Path,
       vehicleTypesAdditionalFilePath: Path,
       takeOnlyTicksAtXMillis: Int? = null,
+      maxLengthOfScenarioInSeconds: Double? = null
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -143,6 +146,12 @@ class SumoImporter {
       // Filter ticks by specified take value if provided
       if (takeOnlyTicksAtXMillis != null) {
         ticks = ticks.filter { tick -> tick.tickTimeMillis % takeOnlyTicksAtXMillis == 0L }
+      }
+      if (maxLengthOfScenarioInSeconds != null) {
+        ticks =
+            ticks.takeWhile { tick ->
+              tick.tickTimeMillis < (maxLengthOfScenarioInSeconds * 1_000L)
+            }
       }
       return@generateSequence ticks.asTickSequence(bufferSize = bufferSize)
     }
