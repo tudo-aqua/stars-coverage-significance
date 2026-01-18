@@ -39,6 +39,7 @@ plugins {
   application
   id("com.diffplug.spotless") version "7.0.2"
   id("io.gitlab.arturbosch.detekt") version "1.23.8"
+  kotlin("plugin.serialization") version "2.3.0"
 }
 
 repositories {
@@ -63,6 +64,14 @@ dependencies {
       group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")
   detektPlugins(
       group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.8")
+
+  implementation("org.jetbrains.exposed:exposed-core:0.53.0")
+  implementation("org.jetbrains.exposed:exposed-jdbc:0.53.0")
+  implementation("org.jetbrains.exposed:exposed-java-time:0.53.0")
+
+  runtimeOnly("org.postgresql:postgresql:42.7.3")
+  implementation(
+      group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.9.0")
 }
 
 detekt {
