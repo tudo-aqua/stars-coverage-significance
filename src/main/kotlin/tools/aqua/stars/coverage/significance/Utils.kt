@@ -35,6 +35,11 @@ val jsonConfiguration: Json = Json {
  */
 fun SerializableTSCNode.getJsonString(): String = jsonConfiguration.encodeToString(this)
 
+/**
+ * Converts a [TSC] to a [TSCEntry].
+ *
+ * @return Converted [TSCEntry].
+ */
 fun TSC<
     *,
     *,

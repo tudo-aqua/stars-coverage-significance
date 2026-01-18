@@ -29,8 +29,18 @@ import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigur
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 import tools.aqua.stars.coverage.significance.db.tables.TSCsTable
 
+/** Database bootstrap utility to connect to the PostgreSQL database and create necessary tables. */
 object DbBootstrap {
 
+  /**
+   * Database configuration.
+   *
+   * @property host Database host.
+   * @property port Database port.
+   * @property database Database name.
+   * @property user Database user.
+   * @property password Database password.
+   */
   data class DbConfig(
       val host: String = System.getenv("DB_HOST") ?: "localhost",
       val port: Int = (System.getenv("DB_PORT") ?: "5432").toInt(),
@@ -39,6 +49,11 @@ object DbBootstrap {
       val password: String = System.getenv("DB_PASSWORD") ?: "stars",
   )
 
+  /**
+   * Connects to the PostgreSQL database and creates necessary tables.
+   *
+   * @param cfg Database configuration.
+   */
   fun connectAndCreateSchema(cfg: DbConfig = DbConfig()) {
     val jdbcUrl = "jdbc:postgresql://${cfg.host}:${cfg.port}/${cfg.database}"
 

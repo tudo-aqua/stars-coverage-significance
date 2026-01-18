@@ -23,16 +23,16 @@ import org.jetbrains.exposed.dao.id.UUIDTable
  * Table for storing scenario starting configurations.
  *
  * @property hash Unique hash of the scenario.
- * @property topLeft The [ScenarioStartingConfigurationVehicleState] in the top left corner of the
- *   grid.
- * @property topCenter The [ScenarioStartingConfigurationVehicleState] in the top center of the
- *   grid.
- * @property topRight The [ScenarioStartingConfigurationVehicleState] in the top right corner of the
- *   grid.
- * @property middleLeft The [ScenarioStartingConfigurationVehicleState] in the middle left corner of
- *   the grid.
- * @property middleCenter The [ScenarioStartingConfigurationVehicleState] in the middle center of
- *   the grid.
+ * @property topLeft Vehicle state in the top left corner of the grid.
+ * @property topCenter Vehicle state in the top center of the grid.
+ * @property topRight Vehicle state in the top right corner of the grid.
+ * @property middleLeft Vehicle state in the middle left corner of the grid.
+ * @property middleCenter Vehicle state in the middle center of the grid.
+ * @property middleRight Vehicle state in the middle right corner of the grid.
+ * @property bottomLeft Vehicle state in the bottom left corner of the grid.
+ * @property bottomCenter Vehicle state in the bottom center of the grid.
+ * @property bottomRight Vehicle state in the bottom right corner of the grid.
+ * @property scenarioFileName Name of the scenario file.
  */
 object ScenarioStartingConfigurationTable : UUIDTable("scenario_starting_configurations") {
   val hash = varchar("hash", 256).uniqueIndex()
