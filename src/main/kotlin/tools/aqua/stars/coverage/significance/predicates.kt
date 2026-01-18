@@ -45,7 +45,7 @@ const val VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM = VEHICLE_BESIDES_MAX_DISTA
 /** Maximum distance in meters to consider a vehicle as being "in behind" of the ego vehicle. */
 const val VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO = VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
 /** Speed threshold in km/h to consider a vehicle as slower/same/faster. */
-const val SPEED_THRESHOLD_KMH = 15.0f
+const val SPEED_THRESHOLD_KMH: Double = 15.0
 
 /** Predicate to check if the ego vehicle is on the left lane. */
 val isOnLeftLane: SumoPredicate =
@@ -60,19 +60,25 @@ val isOnRightLane: SumoPredicate =
     Predicate("isOnRightLane") { tick -> tick.ego.currentLane.laneIndex == LANE_INDEX_RIGHT }
 
 /** Helper function to determine if another vehicle is slower than the ego vehicle. */
-fun isDrivingFaster(otherVehicle: Vehicle, ego: Vehicle): Boolean =
-    otherVehicle.speedKmPerHour > ego.speedKmPerHour + SPEED_THRESHOLD_KMH
+fun isDrivingFaster(other: Vehicle, ego: Vehicle): Boolean {
+  val diff = other.speedKmPerHour.toDouble() - ego.speedKmPerHour.toDouble()
+  return diff > SPEED_THRESHOLD_KMH
+}
 
 /**
  * Helper function to determine if another vehicle is driving at about the same speed as the ego
  * vehicle.
  */
-fun isDrivingAtSameSpeed(otherVehicle: Vehicle, ego: Vehicle): Boolean =
-    abs(otherVehicle.speedKmPerHour - ego.speedKmPerHour) <= SPEED_THRESHOLD_KMH
+fun isDrivingAtSameSpeed(other: Vehicle, ego: Vehicle): Boolean {
+  val diff = abs(other.speedKmPerHour.toDouble() - ego.speedKmPerHour.toDouble())
+  return diff <= SPEED_THRESHOLD_KMH
+}
 
 /** Helper function to determine if another vehicle is slower than the ego vehicle. */
-fun isDrivingSlower(otherVehicle: Vehicle, ego: Vehicle): Boolean =
-    otherVehicle.speedKmPerHour < ego.speedKmPerHour - SPEED_THRESHOLD_KMH
+fun isDrivingSlower(other: Vehicle, ego: Vehicle): Boolean {
+  val diff = other.speedKmPerHour.toDouble() - ego.speedKmPerHour.toDouble()
+  return diff < -SPEED_THRESHOLD_KMH
+}
 
 /** Helper function to determine if two vehicles are on the same lane. */
 fun isOnSameLane(otherVehicle: Vehicle, ego: Vehicle): Boolean =
