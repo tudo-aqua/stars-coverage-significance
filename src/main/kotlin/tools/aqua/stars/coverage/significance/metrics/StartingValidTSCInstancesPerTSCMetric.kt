@@ -44,6 +44,7 @@ import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
@@ -181,9 +182,9 @@ class StartingValidTSCInstancesPerTSCMetric<
           MutableMap<TSCInstance<E, T, U, D>, MutableList<String>>,
       > = startingValidInstancesMap
 
-  /** Prints the number of valid [TSCInstance] for each [TSC] using [println]. */
+  /** Prints the number of valid [TSCInstance] for each [TSC] using [logInfo]. */
   override fun printState() {
-    println(
+    logInfo(
         "\n$CONSOLE_SEPARATOR\n$CONSOLE_INDENT Starting Valid TSC Instances Per TSC \n$CONSOLE_SEPARATOR")
     startingValidInstancesMap.forEach { (tsc, startingValidInstancesMap) ->
       logInfo(
@@ -212,41 +213,43 @@ class StartingValidTSCInstancesPerTSCMetric<
    */
   override fun postEvaluate() {
     // Code for database insertion
-    val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
-    startingValidInstancesMap.forEach { (tsc, map) ->
-      val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
-      val tscEntryId = tscEntry?.id
-      checkNotNull(tscEntryId) { "TSC entry not found in database" }
+    db {
+      val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
+      startingValidInstancesMap.forEach { (tsc, map) ->
+        val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
+        val tscEntryId = tscEntry?.id
+        checkNotNull(tscEntryId) { "TSC entry not found in database" }
 
-      map.forEach { (tscInstance, sourceIdentifiers) ->
-        val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
-        val tscInstanceEntry =
-            TSCInstancesRepository.upsert(
-                tscId = tscEntryId,
-                instanceJson = tscInstanceJsonString,
-                instanceHash = tscInstance.hashCode().toString())
-        val tscInstanceEntryId = tscInstanceEntry.id
-        checkNotNull(tscInstanceEntryId) { "TSC instance entry not found in database" }
-
-        sourceIdentifiers.forEach { sourceIdentifier ->
-          val scenarioStartingConfigurationEntry =
-              ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)
-          val scenarioStartingConfigurationEntryId = scenarioStartingConfigurationEntry?.id
-          checkNotNull(scenarioStartingConfigurationEntryId) {
-            "Scenario starting configuration entry not found in database"
-          }
-
-          val entry =
-              MetricStartingValidTSCInstancesEntry(
-                  runId = evaluationRunEntryId,
+        map.forEach { (tscInstance, sourceIdentifiers) ->
+          val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
+          val tscInstanceEntry =
+              TSCInstancesRepository.upsert(
                   tscId = tscEntryId,
-                  tscInstanceId = tscInstanceEntryId,
-                  scenarioConfigId = scenarioStartingConfigurationEntryId)
-          entries.add(entry)
+                  instanceJson = tscInstanceJsonString,
+                  instanceHash = tscInstance.hashCode().toString())
+          val tscInstanceEntryId = tscInstanceEntry.id
+          checkNotNull(tscInstanceEntryId) { "TSC instance entry not found in database" }
+
+          sourceIdentifiers.forEach { sourceIdentifier ->
+            val scenarioStartingConfigurationEntry =
+                ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)
+            val scenarioStartingConfigurationEntryId = scenarioStartingConfigurationEntry?.id
+            checkNotNull(scenarioStartingConfigurationEntryId) {
+              "Scenario starting configuration entry not found in database"
+            }
+
+            val entry =
+                MetricStartingValidTSCInstancesEntry(
+                    runId = evaluationRunEntryId,
+                    tscId = tscEntryId,
+                    tscInstanceId = tscInstanceEntryId,
+                    scenarioConfigId = scenarioStartingConfigurationEntryId)
+            entries.add(entry)
+          }
         }
       }
+      MetricStartingValidTSCInstancesRepository.batchUpsert(entries)
     }
-    MetricStartingValidTSCInstancesRepository.batchInsert(entries)
 
     // Code for old calculation
     uniqueTimedInstances.forEach { (tsc, instances) ->

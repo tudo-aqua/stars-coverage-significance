@@ -37,6 +37,7 @@ import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFirstTSCInstanceChangeEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFirstTSCInstanceChangeRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.data.sumo.dynamicData.TickDifferenceMilliseconds
@@ -120,7 +121,7 @@ class FirstTSCInstanceChangeMetric(
 
   /** Prints descriptive statistics for the time it took for the first TSC instance change. */
   override fun printState() {
-    println(
+    logInfo(
         "\n$CONSOLE_SEPARATOR\n$CONSOLE_INDENT TSC Instance Change in Milliseconds \n$CONSOLE_SEPARATOR")
 
     val times = recordedTimesMillis()
@@ -524,23 +525,25 @@ class FirstTSCInstanceChangeMetric(
   }
 
   override fun postEvaluate() {
-    val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
-    instanceChangeMap.forEach { (sourceIdentifier, firstChange) ->
-      val scenarioStartingConfigurationEntryId =
-          ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)?.id
+    db {
+      val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
+      instanceChangeMap.forEach { (sourceIdentifier, firstChange) ->
+        val scenarioStartingConfigurationEntryId =
+            ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)?.id
 
-      checkNotNull(scenarioStartingConfigurationEntryId) {
-        "Scenario starting configuration not found for $sourceIdentifier"
+        checkNotNull(scenarioStartingConfigurationEntryId) {
+          "Scenario starting configuration not found for $sourceIdentifier"
+        }
+        val changeEntry =
+            MetricFirstTSCInstanceChangeEntry(
+                runId = evaluationRunEntryId,
+                tscId = tscEntryId,
+                scenarioConfigId = scenarioStartingConfigurationEntryId,
+                firstChangeMillis = firstChange.firstChangeAfterXUnits?.tickMillis)
+        entries.add(changeEntry)
       }
-      val changeEntry =
-          MetricFirstTSCInstanceChangeEntry(
-              runId = evaluationRunEntryId,
-              tscId = tscEntryId,
-              scenarioConfigId = scenarioStartingConfigurationEntryId,
-              firstChangeMillis = firstChange.firstChangeAfterXUnits?.tickMillis)
-      entries.add(changeEntry)
+      MetricFirstTSCInstanceChangeRepository.batchUpsert(entries)
     }
-    MetricFirstTSCInstanceChangeRepository.batchInsert(entries)
   }
 
   override fun printPostEvaluationResult() {}
