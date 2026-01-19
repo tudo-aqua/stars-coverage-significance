@@ -20,7 +20,7 @@ package tools.aqua.stars.coverage.significance.db.repositories
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.batchUpsert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -59,10 +59,10 @@ object MetricStartingValidTSCInstancesRepository {
    *
    * @param entries Entries to insert.
    */
-  fun batchInsert(entries: List<MetricStartingValidTSCInstancesEntry>) = transaction {
+  fun batchUpsert(entries: List<MetricStartingValidTSCInstancesEntry>) = transaction {
     if (entries.isEmpty()) return@transaction
 
-    MetricStartingValidTSCInstancesTable.batchInsert(entries) { e ->
+    MetricStartingValidTSCInstancesTable.batchUpsert(entries) { e ->
       this[MetricStartingValidTSCInstancesTable.run] = e.runId
       this[MetricStartingValidTSCInstancesTable.tsc] = e.tscId
       this[MetricStartingValidTSCInstancesTable.tscInstance] = e.tscInstanceId

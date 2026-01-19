@@ -58,7 +58,7 @@ object MetricStartingValidTSCInstancesTable : UUIDTable("metric_starting_valid_t
   val createdAt = timestamp("created_at")
 
   init {
-    index(true, run, tsc, scenarioConfig)
+    index(true, run, tsc, tscInstance, scenarioConfig)
 
     index(false, run)
     index(false, tsc)

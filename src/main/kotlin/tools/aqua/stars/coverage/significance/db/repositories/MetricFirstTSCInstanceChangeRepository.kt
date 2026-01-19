@@ -20,7 +20,7 @@ package tools.aqua.stars.coverage.significance.db.repositories
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.batchUpsert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -58,12 +58,10 @@ object MetricFirstTSCInstanceChangeRepository {
    *
    * @param entries Entries to insert.
    */
-  fun batchInsert(entries: List<MetricFirstTSCInstanceChangeEntry>) = transaction {
+  fun batchUpsert(entries: List<MetricFirstTSCInstanceChangeEntry>) = transaction {
     if (entries.isEmpty()) return@transaction
 
-    // Insert-only; will throw if your "no duplicates" assumption is violated (good for catching
-    // bugs early).
-    MetricFirstTSCInstanceChangeTable.batchInsert(entries) { e ->
+    MetricFirstTSCInstanceChangeTable.batchUpsert(entries) { e ->
       this[MetricFirstTSCInstanceChangeTable.run] = e.runId
       this[MetricFirstTSCInstanceChangeTable.tsc] = e.tscId
       this[MetricFirstTSCInstanceChangeTable.scenarioConfig] = e.scenarioConfigId
