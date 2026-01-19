@@ -71,6 +71,6 @@ fun generateGridTrafficScenarios(n: Int? = null, seed: Int = 1) {
     scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/${scenario.id}.rou.xml"))
     ScenarioStartingConfigurationRepository.upsert(scenario.toScenarioStartingConfigurationEntry())
     done++
-    pb.step(scenario.id)
+    pb.step()
   }
 }

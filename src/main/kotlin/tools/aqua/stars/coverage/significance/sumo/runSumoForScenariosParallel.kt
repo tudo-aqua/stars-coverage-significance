@@ -144,7 +144,7 @@ fun runSumoForScenariosParallel(
       }
 
       results.add(sumoRunResult)
-      consoleProgress.render(completed, sumoRunResult.scenarioId)
+      consoleProgress.step()
     }
 
     return results

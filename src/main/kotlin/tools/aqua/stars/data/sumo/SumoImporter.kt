@@ -84,6 +84,7 @@ class SumoImporter {
    * @param takeOnlyTicksAtXMillis Optional filter to only take ticks at every X seconds.
    * @param maxLengthOfScenarioInSeconds Optional filter to only take scenarios with a maximum
    *   length of X s.
+   * @param consoleProgress Console progress reporter.
    * @return Sequence of [TickSequence]s for each scenario.
    * @throws IllegalArgumentException if input file lists are empty or mismatched.
    */
@@ -95,7 +96,8 @@ class SumoImporter {
       netFilePath: Path,
       vehicleTypesAdditionalFilePath: Path,
       takeOnlyTicksAtXMillis: Int? = null,
-      maxLengthOfScenarioInSeconds: Double? = null
+      maxLengthOfScenarioInSeconds: Double? = null,
+      consoleProgress: ConsoleProgress
   ): Sequence<TickSequence<TimeStep>> {
     check(scenarioFiles.isNotEmpty()) {
       "The list of scenario files is empty. Cannot load ticks without scenario data."
@@ -120,13 +122,10 @@ class SumoImporter {
 
     val scenarioNameIterator = scenarioNames.iterator()
 
-    val consoleProgress =
-        ConsoleProgress(total = scenarioNames.size, label = "Loading simulation runs")
-
     return generateSequence {
       if (!scenarioNameIterator.hasNext()) return@generateSequence null
       val currentScenarioName = scenarioNameIterator.next()
-      consoleProgress.step(currentScenarioName)
+      consoleProgress.step("")
       val scenarioFilePath = Path.of("$SCENARIO_DIR/${currentScenarioName}.rou.xml")
       val exportFilePath = Path.of("$EXPORT_DIR/${currentScenarioName}.$EXPORT_FILE_EXTENSION")
       val collisionFilePath =
