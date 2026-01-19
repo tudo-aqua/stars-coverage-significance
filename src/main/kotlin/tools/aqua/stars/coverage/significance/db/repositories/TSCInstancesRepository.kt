@@ -17,13 +17,11 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.time.Instant
 import java.util.UUID
-import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 
@@ -66,26 +64,17 @@ object TSCInstancesRepository {
    * path will correctly handle concurrent inserts.
    */
   fun upsert(entry: TSCInstanceEntry): TSCInstanceEntry = transaction {
-    require(entry.id == null) { "insertIfMissingByInstanceJson() expects entry.id == null." }
+    require(entry.id == null) { "upsertByInstanceJson() expects entry.id == null." }
 
-    // Fast-path check
-    val existing = getByInstanceJson(entry.instanceJson)
-    if (existing != null) return@transaction existing
+    val row =
+        TSCInstancesTable.upsertReturning(keys = arrayOf(TSCInstancesTable.instanceJson)) { st ->
+              st[TSCInstancesTable.tsc] = entry.tscId
+              st[TSCInstancesTable.createdAt] = entry.createdAt
+              st[TSCInstancesTable.instanceJson] = entry.instanceJson
+            }
+            .single()
 
-    try {
-      val newId =
-          TSCInstancesTable.insertAndGetId { row ->
-                row[tsc] = entry.tscId
-                row[createdAt] = entry.createdAt
-                row[instanceHash] = entry.instanceHash
-                row[instanceJson] = entry.instanceJson
-              }
-              .value
-
-      getById(newId) ?: error("Inserted TSCInstance not found (id=$newId).")
-    } catch (e: ExposedSQLException) {
-      getByInstanceJson(entry.instanceJson) ?: throw e
-    }
+    row.toEntry()
   }
 
   /**
@@ -95,22 +84,19 @@ object TSCInstancesRepository {
    * @param tscId The TSC ID.
    * @param instanceHash The instance hash.
    * @param instanceJson The instance JSON.
-   * @param createdAt The creation timestamp.
    * @return The existing or newly inserted entry.
    */
   fun upsert(
       tscId: UUID,
       instanceHash: String,
       instanceJson: String,
-      createdAt: Instant = Instant.now(),
   ): TSCInstanceEntry =
       upsert(
           TSCInstanceEntry(
               id = null,
               tscId = tscId,
-              createdAt = createdAt,
-              instanceHash = instanceHash,
-              instanceJson = instanceJson))
+              instanceJson = instanceJson,
+          ))
 
   /**
    * Converts a [ResultRow] to a [TSCInstanceEntry].
@@ -122,7 +108,6 @@ object TSCInstancesRepository {
           id = this[TSCInstancesTable.id].value,
           tscId = this[TSCInstancesTable.tsc].value,
           createdAt = this[TSCInstancesTable.createdAt],
-          instanceHash = this[TSCInstancesTable.instanceHash],
           instanceJson = this[TSCInstancesTable.instanceJson],
       )
 }

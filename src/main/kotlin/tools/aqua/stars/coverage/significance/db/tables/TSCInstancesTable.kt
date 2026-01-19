@@ -26,7 +26,6 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  *
  * @property tsc TSC.
  * @property createdAt Timestamp of the TSC instance.
- * @property instanceHash Hash of the TSC instance.
  * @property instanceJson JSON representation of the TSC instance.
  */
 object TSCInstancesTable : UUIDTable("tsc_instances") {
@@ -37,12 +36,10 @@ object TSCInstancesTable : UUIDTable("tsc_instances") {
           onDelete = ReferenceOption.CASCADE,
           onUpdate = ReferenceOption.CASCADE)
   val createdAt = timestamp("created_at")
-  val instanceHash = varchar("instance_hash", 64)
   val instanceJson = text("instance_json")
 
   init {
     index(true, instanceJson)
-    index(false, tsc)
-    index(true, tsc, instanceHash)
+    index(true, tsc, instanceJson)
   }
 }
