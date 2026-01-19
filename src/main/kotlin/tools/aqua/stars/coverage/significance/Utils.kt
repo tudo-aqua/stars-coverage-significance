@@ -35,6 +35,23 @@ val jsonConfiguration: Json = Json {
  */
 fun SerializableTSCNode.getJsonString(): String = jsonConfiguration.encodeToString(this)
 
+fun <T> List<T>.buckets(bucketCount: Int): List<List<T>> = run {
+  val total = this.size
+  val base = total / bucketCount
+  val rem = total % bucketCount
+
+  var start = 0
+  (0 until bucketCount)
+      .map { i ->
+        val size = base + if (i < rem) 1 else 0
+        val end = start + size
+        val bucket = this.subList(start, end)
+        start = end
+        bucket
+      }
+      .filter { it.isNotEmpty() }
+}
+
 /**
  * Converts a [TSC] to a [TSCEntry].
  *
