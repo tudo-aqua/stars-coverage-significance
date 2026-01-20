@@ -67,13 +67,12 @@ val sumoCollisionFile =
 val manuallyLabelledTests =
     manuallyLabelledFile(
         ticksToTest =
-            SumoImporter()
-                .loadTicks(
-                    scenarioFile = sumoScenarioFile,
-                    exportFile = sumoExportFile,
-                    collisionFile = sumoCollisionFile,
-                    netFilePath = sumoNetworkFile,
-                    vehicleTypesAdditionalFilePath = sumoVTypesFile)) {
+            SumoImporter.loadTicksAsList(
+                scenarioFile = sumoScenarioFile,
+                exportFile = sumoExportFile,
+                collisionFile = sumoCollisionFile,
+                netFilePath = sumoNetworkFile,
+                vehicleTypesAdditionalFilePath = sumoVTypesFile)) {
           predicateHolds(isOnMiddleLane) {
             interval(TickUnitMilliseconds(0), TickUnitMilliseconds(100))
           }

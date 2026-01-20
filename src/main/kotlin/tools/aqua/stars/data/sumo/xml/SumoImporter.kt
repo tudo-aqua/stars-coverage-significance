@@ -67,7 +67,7 @@ import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
 
 @SuppressWarnings("StringLiteralDuplication")
 /** Importer for SUMO simulation data files. */
-class SumoImporter {
+object SumoImporter {
 
   /** Collector for non-fatal import warnings. */
   private val warnings: MutableList<String> = mutableListOf()
@@ -168,7 +168,7 @@ class SumoImporter {
    * @param takeOnlyTicksAtXSeconds Optional filter to only take ticks at every X seconds.
    * @return List of [TimeStep]s for the scenario.
    */
-  fun loadTicks(
+  fun loadTicksAsList(
       scenarioFile: File,
       exportFile: File,
       collisionFile: File,
@@ -235,7 +235,7 @@ class SumoImporter {
     warnings.clear()
 
     val routesFile = parseRoutesFile(routesFilePath)
-    val net: RoadNetwork = parseNet(netFilePath)
+    val net: RoadNetwork = loadRoadNetwork(netFilePath)
     val vTypesFile = parseVehicleTypesAddFile(vTypesFilePath)
 
     val collisionEvents: List<CollisionEventRaw> =
@@ -293,7 +293,7 @@ class SumoImporter {
    * @param vTypesFilePath Path to the vehicle types additional file.
    * @return Parsed [VehicleTypesFile].
    */
-  private fun parseVehicleTypesAddFile(vTypesFilePath: Path): VehicleTypesFile {
+  fun parseVehicleTypesAddFile(vTypesFilePath: Path): VehicleTypesFile {
     val reader = createXmlReader(vTypesFilePath)
     val vTypes = mutableListOf<VehicleTypeDefinition>()
 
@@ -447,8 +447,11 @@ class SumoImporter {
    *
    * Important: SUMO often lists `<edge>` elements before `<junction>` elements. Therefore edges are
    * parsed as [EdgeRaw] first and only resolved to [Edge] after all junctions are known.
+   *
+   * @param netFilePath Path to the `.net.xml` file.
+   * @return Parsed [RoadNetwork].
    */
-  private fun parseNet(netFilePath: Path): RoadNetwork {
+  fun loadRoadNetwork(netFilePath: Path): RoadNetwork {
     val reader = createXmlReader(netFilePath)
 
     var location: Location? = null
