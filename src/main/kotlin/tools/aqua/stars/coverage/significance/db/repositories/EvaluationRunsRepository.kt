@@ -32,6 +32,21 @@ object EvaluationRunsRepository {
    * Inserts a new [EvaluationRunEntry] into the database.
    *
    * @param entry Entry to insert.
+   * @return ID of inserted entry.
+   */
+  fun insertAndGetId(entry: EvaluationRunEntry): UUID = transaction {
+    require(entry.id == null) { "insert() expects entry.id == null." }
+
+    val newId = EvaluationRunsTable.insertAndGetId { row -> row[createdAt] = entry.createdAt }.value
+
+    getById(newId) ?: error("Inserted EvaluationRun not found (id=$newId).")
+    newId
+  }
+
+  /**
+   * Inserts a new [EvaluationRunEntry] into the database.
+   *
+   * @param entry Entry to insert.
    * @return Inserted entry.
    */
   fun insert(entry: EvaluationRunEntry): EvaluationRunEntry = transaction {
