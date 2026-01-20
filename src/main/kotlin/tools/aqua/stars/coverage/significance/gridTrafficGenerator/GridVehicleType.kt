@@ -23,7 +23,7 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
  * @property sumoId Must match the SUMO vType id.
  * @property departSpeedKmh Initial departure speed in km/h (converted to m/s for SUMO exports).
  */
-enum class VehicleType(val sumoId: String, val departSpeedKmh: Int) {
+enum class GridVehicleType(val sumoId: String, val departSpeedKmh: Int) {
   /** The ego vehicle (AUT). */
   EGO("ego", 100),
 

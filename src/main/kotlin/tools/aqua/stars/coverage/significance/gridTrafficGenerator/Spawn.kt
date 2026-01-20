@@ -29,5 +29,5 @@ data class Spawn(
     val row: Int,
     val lane: Int,
     val positionMeters: Double,
-    val type: VehicleType,
+    val type: GridVehicleType,
 )

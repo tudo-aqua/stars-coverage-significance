@@ -42,7 +42,7 @@ import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigur
 data class GeneratedScenario(
     val egoLane: Int,
     val placements: List<Spawn>,
-    val occupancy: Array<VehicleType?>,
+    val occupancy: Array<GridVehicleType?>,
 ) {
 
   init {
@@ -52,9 +52,10 @@ data class GeneratedScenario(
     require(occupancy[egoCellIndex] == null) {
       "occupancy must be null for the ego cell; ego is represented in placements"
     }
-    require(placements.any { it.type == VehicleType.EGO && it.row == 1 && it.lane == egoLane }) {
-      "placements must contain the ego vehicle at row=1, lane=egoLane"
-    }
+    require(
+        placements.any { it.type == GridVehicleType.EGO && it.row == 1 && it.lane == egoLane }) {
+          "placements must contain the ego vehicle at row=1, lane=egoLane"
+        }
   }
 
   /** Human-readable scenario identifier string. */
@@ -70,7 +71,7 @@ data class GeneratedScenario(
       posResolution: Pair<Double, Int> = 10.0 to 4,
       includeOptionalHashSuffix: Boolean = false
   ): String {
-    fun typeLetter(t: VehicleType): Char {
+    fun typeLetter(t: GridVehicleType): Char {
       val sid = t.sumoId.lowercase(Locale.ROOT)
       val nm = t.name.lowercase(Locale.ROOT)
       return when {
@@ -179,7 +180,7 @@ data class GeneratedScenario(
 
     fun idx(r: Int, l: Int): Int = r * 3 + l
 
-    fun typeToChar(t: VehicleType?): Char {
+    fun typeToChar(t: GridVehicleType?): Char {
       if (t == null) return ' '
       val sid = t.sumoId.lowercase()
       val nm = t.name.lowercase()
@@ -225,17 +226,17 @@ data class GeneratedScenario(
   fun idx(row: Int, lane: Int): Int = row * 3 + lane
 
   /**
-   * Maps a [VehicleType] to a [ScenarioStartingConfigurationVehicleState].
+   * Maps a [GridVehicleType] to a [ScenarioStartingConfigurationVehicleState].
    *
    * @param t Vehicle type.
    * @return Corresponding vehicle state.
    */
-  fun vehicleTypeToState(t: VehicleType): ScenarioStartingConfigurationVehicleState =
+  fun vehicleTypeToState(t: GridVehicleType): ScenarioStartingConfigurationVehicleState =
       when (t) {
-        VehicleType.EGO -> ScenarioStartingConfigurationVehicleState.EGO
-        VehicleType.CAR_NORMAL -> ScenarioStartingConfigurationVehicleState.SAME_SPEED
-        VehicleType.CAR_SPEEDY -> ScenarioStartingConfigurationVehicleState.FASTER
-        VehicleType.CAR_CALM -> ScenarioStartingConfigurationVehicleState.SLOWER
+        GridVehicleType.EGO -> ScenarioStartingConfigurationVehicleState.EGO
+        GridVehicleType.CAR_NORMAL -> ScenarioStartingConfigurationVehicleState.SAME_SPEED
+        GridVehicleType.CAR_SPEEDY -> ScenarioStartingConfigurationVehicleState.FASTER
+        GridVehicleType.CAR_CALM -> ScenarioStartingConfigurationVehicleState.SLOWER
       }
 
   /**
