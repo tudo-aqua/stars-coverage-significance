@@ -35,7 +35,7 @@ import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetr
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
-import tools.aqua.stars.data.sumo.SumoImporter
+import tools.aqua.stars.data.sumo.xml.SumoImporter
 
 /** Directory paths for grid traffic scenarios. */
 const val GRID_TRAFFIC_DIR = "sumo_data/gridTrafficScenarios"
@@ -54,6 +54,7 @@ const val COLLISION_FILE_EXTENSION = "collisions.xml"
 
 /** Generation of scenarios and printing of the TikZ code for the first scenario. */
 fun main() {
+  cleanGenerationFiles()
   DbBootstrap.connectAndCreateSchema()
   sleep(2000) // wait for DB to be ready
 
@@ -63,8 +64,7 @@ fun main() {
 
   val parallelism = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
-  cleanGenerationFiles()
-  generateGridTrafficScenarios(n = 10_000, seed = 2)
+  generateGridTrafficScenarios(seed = 2)
 
   val scenarioFiles = listSortedFiles(SCENARIO_DIR)
   runSumoForScenariosParallel(

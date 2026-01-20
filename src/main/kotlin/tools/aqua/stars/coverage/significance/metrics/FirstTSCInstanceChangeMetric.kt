@@ -40,10 +40,10 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFirstTSCInsta
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFirstTSCInstanceChangeRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.data.sumo.dynamicData.TickDifferenceMilliseconds
-import tools.aqua.stars.data.sumo.dynamicData.TickUnitMilliseconds
-import tools.aqua.stars.data.sumo.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.dynamicData.Vehicle
+import tools.aqua.stars.data.sumo.xml.dynamicData.TickDifferenceMilliseconds
+import tools.aqua.stars.data.sumo.xml.dynamicData.TickUnitMilliseconds
+import tools.aqua.stars.data.sumo.xml.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.xml.dynamicData.Vehicle
 
 /**
  * Metric evaluating the first change in a TSC instance over time.

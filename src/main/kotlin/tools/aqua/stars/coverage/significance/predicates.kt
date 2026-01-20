@@ -19,10 +19,10 @@ package tools.aqua.stars.coverage.significance
 
 import kotlin.math.abs
 import tools.aqua.stars.core.evaluation.Predicate
-import tools.aqua.stars.data.sumo.dynamicData.TickDifferenceMilliseconds
-import tools.aqua.stars.data.sumo.dynamicData.TickUnitMilliseconds
-import tools.aqua.stars.data.sumo.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.dynamicData.Vehicle
+import tools.aqua.stars.data.sumo.xml.dynamicData.TickDifferenceMilliseconds
+import tools.aqua.stars.data.sumo.xml.dynamicData.TickUnitMilliseconds
+import tools.aqua.stars.data.sumo.xml.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.xml.dynamicData.Vehicle
 import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 
 typealias SumoPredicate =
