@@ -21,21 +21,74 @@ import kotlin.io.path.Path
 import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
+
+/**
+ * Function to get grid traffic scenarios.
+ *
+ * @param n Optional number of scenarios to generate; if null, generates all scenarios.
+ * @param seed Seed for random number generation.
+ * @param enablePositionVariance Whether to enable position variance sampling.
+ * @param insertIntoDatabase Whether to insert the scenarios into the database.
+ * @return List of generated scenarios.
+ */
+fun getGridTrafficScenarios(
+    n: Int? = null,
+    seed: Int = 1,
+    enablePositionVariance: Boolean = false,
+    insertIntoDatabase: Boolean = true
+): List<GeneratedScenario> {
+  val rng = Random(seed)
+  val generator =
+      GridTrafficScenarioGenerator(
+          enablePositionVariance = enablePositionVariance,
+          positionVariantsPerOccupancy = 3,
+          seed = seed,
+          minForwardGapMeters = 50.0,
+          i0Start = 0.0,
+          i0End = 100.0,
+          i1Start = 100.0,
+          i1End = 110.0,
+          i2Start = 110.0,
+          i2End = 210.0,
+      )
+
+  var allScenarios = generator.generateAll().toList()
+  if (n != null && n < allScenarios.size) {
+    allScenarios = allScenarios.shuffled(rng).take(n)
+  }
+  if (insertIntoDatabase) {
+    allScenarios.forEach {
+      ScenarioStartingConfigurationRepository.upsert(it.toScenarioStartingConfigurationEntry())
+    }
+  }
+  return allScenarios
+}
 
 /**
  * Function to generate grid traffic scenarios.
  *
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
+ * @param cleanGenerationFiles Whether to clean the generation files directory before generating.
  */
-fun generateGridTrafficScenarios(n: Int? = null, seed: Int = 1) {
+fun generateGridTrafficScenarios(
+    n: Int? = null,
+    seed: Int = 1,
+    enablePositionVariance: Boolean = false,
+    insertIntoDatabase: Boolean = true,
+    cleanGenerationFiles: Boolean = true
+) {
+  if (cleanGenerationFiles) {
+    cleanGenerationFiles()
+  }
   val rng = Random(seed)
   val generator =
       GridTrafficScenarioGenerator(
-          enablePositionVariance = false,
+          enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 3,
           seed = seed,
-          minForwardGapMeters = 75.0,
+          minForwardGapMeters = 50.0,
           i0Start = 0.0,
           i0End = 100.0,
           i1Start = 100.0,
@@ -69,7 +122,10 @@ fun generateGridTrafficScenarios(n: Int? = null, seed: Int = 1) {
   pb.render(0, "starting")
   allScenarios.forEach { scenario ->
     scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/${scenario.id}.rou.xml"))
-    ScenarioStartingConfigurationRepository.upsert(scenario.toScenarioStartingConfigurationEntry())
+    if (insertIntoDatabase) {
+      ScenarioStartingConfigurationRepository.upsert(
+          scenario.toScenarioStartingConfigurationEntry())
+    }
     done++
     pb.step()
   }
