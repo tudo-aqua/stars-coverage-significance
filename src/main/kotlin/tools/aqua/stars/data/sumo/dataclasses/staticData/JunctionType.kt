@@ -23,9 +23,8 @@ package tools.aqua.stars.data.sumo.dataclasses.staticData
  * The values are based on SUMO documentation (node types) and commonly observed `.net.xml` output:
  * - Documented node types include: priority, traffic_light, right_before_left, left_before_right,
  *   unregulated, priority_stop, traffic_light_unregulated, allway_stop, rail_signal, zipper,
- *   traffic_light_right_on_red, rail_crossing. :contentReference[oaicite:2]{index=2}
+ *   traffic_light_right_on_red, rail_crossing.
  * - `.net.xml` also contains `dead_end` and `internal` junctions.
- *   :contentReference[oaicite:3]{index=3}
  */
 enum class JunctionType {
   /** Priority junction (right-of-way is determined by edge priorities). */

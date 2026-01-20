@@ -103,7 +103,7 @@ data class GridTrafficScenarioGenerator(
 
         val totalTypedOccupancies = intPow(4, otherCells.size) // 4^8
         for (pattern in 0 until totalTypedOccupancies) {
-          val occupancy: Array<VehicleType?> = arrayOfNulls(9)
+          val occupancy: Array<GridVehicleType?> = arrayOfNulls(9)
 
           var tmp = pattern
           for (idx in otherCells.indices) {
@@ -125,7 +125,7 @@ data class GridTrafficScenarioGenerator(
   private fun buildScenarioForOccupancy(
       rng: Random,
       egoLane: Int,
-      occupancy: Array<VehicleType?>,
+      occupancy: Array<GridVehicleType?>,
   ): GeneratedScenario {
     val placements = mutableListOf<Spawn>()
     val egoCell = Pair(1, egoLane)
@@ -133,7 +133,7 @@ data class GridTrafficScenarioGenerator(
     // --- Step 1: place all middle-row vehicles first (including ego) ---
     val egoMiddlePos = placeMiddleFeasible(rng, lane = egoLane, occupancy = occupancy)
     placements +=
-        Spawn(row = 1, lane = egoLane, positionMeters = egoMiddlePos, type = VehicleType.EGO)
+        Spawn(row = 1, lane = egoLane, positionMeters = egoMiddlePos, type = GridVehicleType.EGO)
 
     for (lane in 0..2) {
       if (lane == egoLane) continue
@@ -171,7 +171,7 @@ data class GridTrafficScenarioGenerator(
   private fun placeMiddleFeasible(
       rng: Random,
       lane: Int,
-      occupancy: Array<VehicleType?>,
+      occupancy: Array<GridVehicleType?>,
   ): Double {
     val row0Occupied = occupancy[0 * 3 + lane] != null
     val row2Occupied = occupancy[2 * 3 + lane] != null
@@ -203,7 +203,7 @@ data class GridTrafficScenarioGenerator(
       rng: Random,
       row: Int,
       lane: Int,
-      occupancy: Array<VehicleType?>,
+      occupancy: Array<GridVehicleType?>,
       egoCell: Pair<Int, Int>,
       placementsSoFar: List<Spawn>,
   ): Spawn? {
@@ -252,12 +252,12 @@ data class GridTrafficScenarioGenerator(
     return Spawn(row = row, lane = lane, positionMeters = pos, type = t)
   }
 
-  private fun digitToBackgroundTypeOrNull(digit: Int): VehicleType? =
+  private fun digitToBackgroundTypeOrNull(digit: Int): GridVehicleType? =
       when (digit) {
         0 -> null
-        1 -> VehicleType.CAR_CALM
-        2 -> VehicleType.CAR_NORMAL
-        3 -> VehicleType.CAR_SPEEDY
+        1 -> GridVehicleType.CAR_CALM
+        2 -> GridVehicleType.CAR_NORMAL
+        3 -> GridVehicleType.CAR_SPEEDY
         else -> error("invalid digit $digit")
       }
 
