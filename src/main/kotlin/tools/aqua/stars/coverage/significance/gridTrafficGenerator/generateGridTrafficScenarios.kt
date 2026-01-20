@@ -70,6 +70,8 @@ fun getGridTrafficScenarios(
  *
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
+ * @param enablePositionVariance Whether to enable position variance sampling.
+ * @param insertIntoDatabase Whether to insert the scenarios into the database.
  * @param cleanGenerationFiles Whether to clean the generation files directory before generating.
  */
 fun generateGridTrafficScenarios(

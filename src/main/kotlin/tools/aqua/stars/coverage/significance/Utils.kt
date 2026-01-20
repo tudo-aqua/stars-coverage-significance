@@ -35,6 +35,13 @@ val jsonConfiguration: Json = Json {
  */
 fun SerializableTSCNode.getJsonString(): String = jsonConfiguration.encodeToString(this)
 
+/**
+ * Splits the list into a specified number of buckets.
+ *
+ * @param T Type of the list elements.
+ * @param bucketCount Number of buckets to split the list into.
+ * @return List of buckets.
+ */
 fun <T> List<T>.buckets(bucketCount: Int): List<List<T>> = run {
   val total = this.size
   val base = total / bucketCount

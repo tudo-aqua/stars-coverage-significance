@@ -30,6 +30,17 @@ import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigur
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 import tools.aqua.stars.coverage.significance.db.tables.TSCsTable
 
+/** Default database connection parameters. */
+const val DB_NAME = "stars"
+/** Default database credentials. */
+const val DB_USER = DB_NAME
+/** Default database credentials. */
+const val DB_PASSWORD = DB_NAME
+/** Default database connection parameters. */
+const val DB_HOST = "localhost"
+/** Default database connection parameters. */
+const val DB_PORT = 5432
+
 /** Database bootstrap utility to connect to the PostgreSQL database and create necessary tables. */
 object DbBootstrap {
 
@@ -43,11 +54,11 @@ object DbBootstrap {
    * @property password Database password.
    */
   data class DbConfig(
-      val host: String = System.getenv("DB_HOST") ?: "localhost",
-      val port: Int = (System.getenv("DB_PORT") ?: "5432").toInt(),
-      val database: String = System.getenv("DB_NAME") ?: "stars",
-      val user: String = System.getenv("DB_USER") ?: "stars",
-      val password: String = System.getenv("DB_PASSWORD") ?: "stars",
+      val host: String = System.getenv("DB_HOST") ?: DB_HOST,
+      val port: Int = System.getenv("DB_PORT")?.toInt() ?: DB_PORT,
+      val database: String = System.getenv("DB_NAME") ?: DB_NAME,
+      val user: String = System.getenv("DB_USER") ?: DB_USER,
+      val password: String = System.getenv("DB_PASSWORD") ?: DB_PASSWORD,
   )
 
   /**
