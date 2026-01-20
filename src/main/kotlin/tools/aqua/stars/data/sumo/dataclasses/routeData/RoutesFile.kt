@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.routeData
+package tools.aqua.stars.data.sumo.dataclasses.routeData
 
 /**
  * In-memory representation of a SUMO routes file (`*.rou.xml`).

@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.dynamicData
+package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
-import tools.aqua.stars.data.sumo.xml.staticData.Edge
-import tools.aqua.stars.data.sumo.xml.staticData.Lane
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Edge
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 
 /**
  * Collision event occurring in a tick.

@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
-import tools.aqua.stars.data.sumo.xml.staticData.Point
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Point
 
 /**
  * Creates a streaming XML reader for [xmlFilePath].

@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 The STARS Coverage Significance Authors
+ * Copyright 2025-2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.routeData
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
- * SUMO route definition (`<route ...>`).
+ * A 2D point in SUMO's coordinate system.
  *
- * @property routeId Route id.
- * @property edgeIds Ordered list of edge ids (as given by `edges="e1 e2 ..."`).
+ * @property x X coordinate.
+ * @property y Y coordinate.
  */
-data class RouteDefinition(val routeId: String, val edgeIds: List<String>)
+data class Point(val x: Float, val y: Float)

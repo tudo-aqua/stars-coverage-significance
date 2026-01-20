@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.staticData
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
  * In-memory representation of a SUMO `.net.xml` file.

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.staticData
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
  * Direction code of a SUMO `<connection>` (attribute `dir`).

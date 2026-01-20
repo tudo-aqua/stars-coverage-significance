@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.staticData
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
  * Projection definition as encoded by SUMO in `<location projParameter="...">`.

@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.staticData
+package tools.aqua.stars.data.sumo.dataclasses.dynamicData
+
+import tools.aqua.stars.data.sumo.dataclasses.routeData.VehicleTypeDefinition
 
 /**
- * Axis-aligned bounding box represented by min/max coordinates.
+ * Vehicle type reference used by vehicles in ticks.
  *
- * Parsed from SUMO boundary attributes like: `minX,minY,maxX,maxY`
- *
- * @property minX Minimum x coordinate.
- * @property minY Minimum y coordinate.
- * @property maxX Maximum x coordinate.
- * @property maxY Maximum y coordinate.
+ * @property definition The referenced vehicle type definition from the `.rou.xml`.
  */
-data class BoundaryBox(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)
+data class VehicleType(val definition: VehicleTypeDefinition) {
+  /** Convenience id accessor. */
+  val typeId: String = definition.typeId
+}

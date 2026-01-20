@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.data.sumo.xml.importer
 
-import tools.aqua.stars.data.sumo.xml.routeData.VehicleTypeDefinition
+import tools.aqua.stars.data.sumo.dataclasses.routeData.VehicleTypeDefinition
 
 /**
  * In-memory representation of a SUMO additional file that only contains `<vType ...>` entries.

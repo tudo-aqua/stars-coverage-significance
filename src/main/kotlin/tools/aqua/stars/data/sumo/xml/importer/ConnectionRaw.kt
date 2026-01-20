@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.data.sumo.xml.importer
 
-import tools.aqua.stars.data.sumo.xml.staticData.Connection
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Connection
 
 /**
  * Raw connection record that is later resolved to a [Connection] once all lanes are known.

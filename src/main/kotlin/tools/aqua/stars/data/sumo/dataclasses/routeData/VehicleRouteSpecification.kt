@@ -15,12 +15,22 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.routeData
+package tools.aqua.stars.data.sumo.dataclasses.routeData
 
-/**
- * Custom parameter entry within `<vType>`.
- *
- * @property key Parameter key.
- * @property value Parameter value.
- */
-data class TypeParameter(val key: String, val value: String)
+/** Route specification used by `<vehicle>` and `<flow>`. */
+sealed interface VehicleRouteSpecification {
+
+  /**
+   * Inline route defined by a list of edge ids (`<route edges="..."/>`).
+   *
+   * @property edgeIds Ordered list of edge ids.
+   */
+  data class InlineEdges(val edgeIds: List<String>) : VehicleRouteSpecification
+
+  /**
+   * Reference to a named route (`route="..."`).
+   *
+   * @property routeId Route id reference.
+   */
+  data class RouteReference(val routeId: String) : VehicleRouteSpecification
+}

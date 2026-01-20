@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.staticData
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
  * SUMO junction type as used in `.net.xml` for `<junction type="...">`.

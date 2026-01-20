@@ -17,16 +17,16 @@
 
 package tools.aqua.stars.data.sumo.xml
 
-import tools.aqua.stars.data.sumo.xml.dynamicData.VehicleType
-import tools.aqua.stars.data.sumo.xml.routeData.VehicleTypeDefinition
-import tools.aqua.stars.data.sumo.xml.staticData.BoundaryBox
-import tools.aqua.stars.data.sumo.xml.staticData.Edge
-import tools.aqua.stars.data.sumo.xml.staticData.Junction
-import tools.aqua.stars.data.sumo.xml.staticData.JunctionType
-import tools.aqua.stars.data.sumo.xml.staticData.Lane
-import tools.aqua.stars.data.sumo.xml.staticData.Location
-import tools.aqua.stars.data.sumo.xml.staticData.Point
-import tools.aqua.stars.data.sumo.xml.staticData.Projection
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
+import tools.aqua.stars.data.sumo.dataclasses.routeData.VehicleTypeDefinition
+import tools.aqua.stars.data.sumo.dataclasses.staticData.BoundaryBox
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Edge
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Junction
+import tools.aqua.stars.data.sumo.dataclasses.staticData.JunctionType
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Location
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Point
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Projection
 
 /** Non-null placeholder objects used when SUMO output omits or references unknown ids. */
 object Defaults {

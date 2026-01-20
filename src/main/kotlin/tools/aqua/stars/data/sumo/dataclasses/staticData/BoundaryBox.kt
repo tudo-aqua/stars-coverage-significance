@@ -15,19 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.importer
-
-import tools.aqua.stars.data.sumo.dataclasses.staticData.Junction
+package tools.aqua.stars.data.sumo.dataclasses.staticData
 
 /**
- * Raw junction record used to postpone lane pointer resolution.
+ * Axis-aligned bounding box represented by min/max coordinates.
  *
- * @property junction Parsed junction object (without incoming/internal lanes filled yet).
- * @property incomingLaneIds Lane ids referenced in `incLanes`.
- * @property internalLaneIds Lane ids referenced in `intLanes`.
+ * Parsed from SUMO boundary attributes like: `minX,minY,maxX,maxY`
+ *
+ * @property minX Minimum x coordinate.
+ * @property minY Minimum y coordinate.
+ * @property maxX Maximum x coordinate.
+ * @property maxY Maximum y coordinate.
  */
-data class JunctionRaw(
-    val junction: Junction,
-    val incomingLaneIds: List<String>,
-    val internalLaneIds: List<String>
-)
+data class BoundaryBox(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.dynamicData
+package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
 import tools.aqua.stars.core.types.TickDataType
 

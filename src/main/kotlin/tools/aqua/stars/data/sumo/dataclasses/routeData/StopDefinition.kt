@@ -15,16 +15,19 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.dynamicData
-
-import tools.aqua.stars.data.sumo.xml.routeData.VehicleTypeDefinition
+package tools.aqua.stars.data.sumo.dataclasses.routeData
 
 /**
- * Vehicle type reference used by vehicles in ticks.
+ * SUMO stop definition (`<stop .../>`) inside a vehicle.
  *
- * @property definition The referenced vehicle type definition from the `.rou.xml`.
+ * @property laneId Lane id.
+ * @property endPosMeters End position on lane.
+ * @property untilTimeSeconds End time of the stop in seconds.
+ * @property rawAttributes All original attributes preserved.
  */
-data class VehicleType(val definition: VehicleTypeDefinition) {
-  /** Convenience id accessor. */
-  val typeId: String = definition.typeId
-}
+data class StopDefinition(
+    val laneId: String,
+    val endPosMeters: Double,
+    val untilTimeSeconds: Double,
+    val rawAttributes: Map<String, String>
+)

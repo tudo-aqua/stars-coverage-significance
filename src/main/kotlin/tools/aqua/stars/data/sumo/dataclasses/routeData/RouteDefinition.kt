@@ -15,19 +15,12 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.routeData
+package tools.aqua.stars.data.sumo.dataclasses.routeData
 
 /**
- * SUMO stop definition (`<stop .../>`) inside a vehicle.
+ * SUMO route definition (`<route ...>`).
  *
- * @property laneId Lane id.
- * @property endPosMeters End position on lane.
- * @property untilTimeSeconds End time of the stop in seconds.
- * @property rawAttributes All original attributes preserved.
+ * @property routeId Route id.
+ * @property edgeIds Ordered list of edge ids (as given by `edges="e1 e2 ..."`).
  */
-data class StopDefinition(
-    val laneId: String,
-    val endPosMeters: Double,
-    val untilTimeSeconds: Double,
-    val rawAttributes: Map<String, String>
-)
+data class RouteDefinition(val routeId: String, val edgeIds: List<String>)

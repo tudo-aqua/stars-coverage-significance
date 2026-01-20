@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.xml.routeData
+package tools.aqua.stars.data.sumo.dataclasses.routeData
 
 /**
  * SUMO vehicle definition (`<vehicle ...>`).

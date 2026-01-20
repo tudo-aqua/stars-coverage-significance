@@ -34,11 +34,11 @@ import tools.aqua.stars.coverage.significance.vehicleOnLeftLaneInFrontIsSlower
 import tools.aqua.stars.coverage.significance.vehicleOnRightLaneBesideIsFaster
 import tools.aqua.stars.coverage.significance.vehicleOnSameLaneBehindIsSlower
 import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsSlower
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.xml.SumoImporter
-import tools.aqua.stars.data.sumo.xml.dynamicData.TickDifferenceMilliseconds
-import tools.aqua.stars.data.sumo.xml.dynamicData.TickUnitMilliseconds
-import tools.aqua.stars.data.sumo.xml.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.xml.dynamicData.Vehicle
 
 /** Test class for manually labelled tests for one specific SUMO scenario. */
 class ManuallyLabelledTests :
