@@ -26,11 +26,5 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
  * @property net Parsed SUMO network.
  * @property routes Parsed SUMO routes file.
  * @property ticks Ordered ticks; they are linked via [TimeStep.previousTick] / [TimeStep.nextTick].
- * @property warnings Non-fatal issues encountered during import (e.g., missing attributes).
  */
-data class Scenario(
-    val net: RoadNetwork,
-    val routes: RoutesFile,
-    val ticks: List<TimeStep>,
-    val warnings: List<String>
-)
+data class Scenario(val net: RoadNetwork, val routes: RoutesFile, val ticks: List<TimeStep>)

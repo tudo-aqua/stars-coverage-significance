@@ -247,7 +247,7 @@ class SumoImporter {
     val ticks: List<TimeStep> =
         parseExport(exportFilePath, net, routesFile, vTypesFile, collisionsByTickMillis)
 
-    return Scenario(net = net, routes = routesFile, ticks = ticks, warnings = warnings.toList())
+    return Scenario(net = net, routes = routesFile, ticks = ticks)
   }
 
   /**
