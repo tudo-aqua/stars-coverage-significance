@@ -17,6 +17,8 @@
 
 package tools.aqua.stars.coverage.significance
 
+import java.io.File
+import kotlin.io.path.Path
 import kotlinx.serialization.json.Json
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
@@ -75,3 +77,27 @@ fun TSC<
         hash = this.hashCode().toString(),
         tscJson = SerializableTSCNode(this.rootNode).getJsonString(),
         possibleTSCInstancesCount = this.instanceCount.toInt())
+
+/**
+ * Lists all files in a directory, sorted by name.
+ *
+ * @param dir Directory path.
+ * @return List of files sorted by name.
+ */
+fun listSortedFiles(dir: String): List<File> =
+    Path(dir).toFile().listFiles()?.toList()?.sortedBy { it.name } ?: emptyList()
+
+/**
+ * Computes a stable key shared across scenario/export/collision files. Adjust suffix stripping here
+ * if your file naming differs.
+ */
+fun File.baseKey(): String {
+  val n = name
+  return when {
+    n.endsWith(SCENARIO_FILE_EXTENSION) -> n.removeSuffix(SCENARIO_FILE_EXTENSION)
+    n.endsWith(EXPORT_FILE_EXTENSION) -> n.removeSuffix(EXPORT_FILE_EXTENSION)
+    n.endsWith(COLLISION_FILE_EXTENSION) -> n.removeSuffix(COLLISION_FILE_EXTENSION)
+    n.endsWith(".xml") -> n.removeSuffix(".xml")
+    else -> n
+  }
+}
