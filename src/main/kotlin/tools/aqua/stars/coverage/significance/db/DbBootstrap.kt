@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db
 
+import java.lang.Thread.sleep
 import java.sql.Connection
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
@@ -71,5 +72,6 @@ object DbBootstrap {
           MetricFirstTSCInstanceChangeTable,
           MetricStartingValidTSCInstancesTable)
     }
+    sleep(2000)
   }
 }
