@@ -27,6 +27,7 @@ plugins {
 
 repositories {
   mavenCentral()
+  maven { url = URI("https://repo.eclipse.org/content/repositories/sumo-releases/") }
   maven { url = URI("https://central.sonatype.com/repository/maven-snapshots/") }
 }
 
@@ -55,6 +56,7 @@ dependencies {
   runtimeOnly("org.postgresql:postgresql:42.7.3")
   implementation(
       group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.9.0")
+  implementation(group = "org.eclipse.sumo", name = "libsumo", version = "1.25.0")
 }
 
 detekt {
