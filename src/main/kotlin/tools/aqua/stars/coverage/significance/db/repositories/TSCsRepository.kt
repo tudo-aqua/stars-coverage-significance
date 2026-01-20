@@ -49,6 +49,25 @@ object TSCsRepository {
   }
 
   /**
+   * Upsert by unique hash. If an entry with the same hash exists, returns the existing id. If it
+   * does not exist, inserts and returns the new id.
+   *
+   * @param entry Entry to upsert.
+   * @return Upserted entry id.
+   */
+  fun upsertAndGetId(entry: TSCEntry): UUID = transaction {
+    val existing = getByJson(entry.tscJson)
+    if (existing != null) return@transaction existing.id ?: error("No id for existing entry.")
+
+    try {
+      insertAndGetId(entry)
+    } catch (e: ExposedSQLException) {
+      // Likely unique hash violation due to concurrent insert
+      getByJson(entry.tscJson)?.id ?: throw e
+    }
+  }
+
+  /**
    * Inserts a new [TSCEntry] into the database.
    *
    * @param entry Entry to insert.
@@ -67,6 +86,28 @@ object TSCsRepository {
             .value
 
     getById(newId) ?: error("Inserted TSC not found (id=$newId).")
+  }
+
+  /**
+   * Inserts a new [TSCEntry] into the database and returns its id.
+   *
+   * @param entry Entry to insert.
+   * @return Inserted entry id.
+   */
+  fun insertAndGetId(entry: TSCEntry): UUID = transaction {
+    require(entry.id == null) { "insert() expects entry.id == null." }
+
+    val newId =
+        TSCsTable.insertAndGetId { row ->
+              row[createdAt] = entry.createdAt
+              row[hash] = entry.hash
+              row[tscJson] = entry.tscJson
+              row[possibleTSCInstancesCount] = entry.possibleTSCInstancesCount
+            }
+            .value
+
+    getById(newId) ?: error("Inserted TSC not found (id=$newId).")
+    newId
   }
 
   /**
