@@ -29,6 +29,21 @@ import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigur
 object ScenarioStartingConfigurationRepository {
 
   /**
+   * Returns the [ScenarioStartingConfigurationEntry] with the given [sequenceNumber] or null if not
+   * found.
+   *
+   * @param sequenceNumber The sequence number of the entry to retrieve.
+   * @return The entry with the given sequence number or null if not found.
+   */
+  fun getBySequenceNumber(sequenceNumber: Long): ScenarioStartingConfigurationEntry? = transaction {
+    ScenarioStartingConfigurationTable.selectAll()
+        .where { ScenarioStartingConfigurationTable.sequenceNumber eq sequenceNumber }
+        .limit(1)
+        .firstOrNull()
+        ?.toEntry()
+  }
+
+  /**
    * Returns the [ScenarioStartingConfigurationEntry] with the given [id] or null if not found.
    *
    * @param id The id of the entry to retrieve.
@@ -43,30 +58,18 @@ object ScenarioStartingConfigurationRepository {
   }
 
   /**
-   * Returns the [ScenarioStartingConfigurationEntry] with the given [scenarioFileName] or null if
-   * not found.
+   * Returns the [ScenarioStartingConfigurationEntry] with the given [humanReadableScenarioId] or
+   * null if not found.
    *
-   * @param scenarioFileName The scenario file name of the entry to retrieve.
-   * @return The entry with the given scenario file name or null if not found.
+   * @param humanReadableScenarioId The human readable scenario id of the entry to retrieve.
    */
-  fun getByScenarioFileName(scenarioFileName: String): ScenarioStartingConfigurationEntry? =
-      transaction {
-        ScenarioStartingConfigurationTable.selectAll()
-            .where { ScenarioStartingConfigurationTable.scenarioFileName eq scenarioFileName }
-            .limit(1)
-            .firstOrNull()
-            ?.toEntry()
-      }
-
-  /**
-   * Returns the [ScenarioStartingConfigurationEntry] with the given [hash] or null if not found.
-   *
-   * @param hash The hash of the entry to retrieve.
-   * @return The entry with the given hash or null if not found.
-   */
-  fun getByHash(hash: String): ScenarioStartingConfigurationEntry? = transaction {
+  fun getByScenarioByHumanReadableScenarioId(
+      humanReadableScenarioId: String
+  ): ScenarioStartingConfigurationEntry? = transaction {
     ScenarioStartingConfigurationTable.selectAll()
-        .where { ScenarioStartingConfigurationTable.hash eq hash }
+        .where {
+          ScenarioStartingConfigurationTable.humanReadableScenarioId eq humanReadableScenarioId
+        }
         .limit(1)
         .firstOrNull()
         ?.toEntry()
@@ -83,17 +86,16 @@ object ScenarioStartingConfigurationRepository {
 
         val newId =
             ScenarioStartingConfigurationTable.insertAndGetId { row ->
-                  row[hash] = entry.hash
-                  row[topLeft] = entry.topLeft
-                  row[topCenter] = entry.topCenter
-                  row[topRight] = entry.topRight
-                  row[middleLeft] = entry.middleLeft
-                  row[middleCenter] = entry.middleCenter
-                  row[middleRight] = entry.middleRight
-                  row[bottomLeft] = entry.bottomLeft
-                  row[bottomCenter] = entry.bottomCenter
-                  row[bottomRight] = entry.bottomRight
-                  row[scenarioFileName] = entry.scenarioFileName
+                  row[humanReadableScenarioId] = entry.humanReadableScenarioId
+                  row[topLeft] = entry.topLeftVehicleState
+                  row[topCenter] = entry.topCenterVehicleState
+                  row[topRight] = entry.topRightVehicleState
+                  row[middleLeft] = entry.middleLeftVehicleState
+                  row[middleCenter] = entry.middleCenterVehicleState
+                  row[middleRight] = entry.middleRightVehicleState
+                  row[bottomLeft] = entry.bottomLeftVehicleState
+                  row[bottomCenter] = entry.bottomCenterVehicleState
+                  row[bottomRight] = entry.bottomRightVehicleState
                 }
                 .value
 
@@ -117,30 +119,59 @@ object ScenarioStartingConfigurationRepository {
         }
 
         // Fast-path: already present by hash
-        val existing = getByHash(entry.hash)
+        val existing = getByScenarioByHumanReadableScenarioId(entry.humanReadableScenarioId)
         if (existing != null) return@transaction existing
 
         try {
           insert(entry)
         } catch (e: ExposedSQLException) {
           // Most likely: unique constraint on hash due to concurrent insert
-          getByHash(entry.hash) ?: throw e
+          getByScenarioByHumanReadableScenarioId(entry.humanReadableScenarioId) ?: throw e
         }
       }
+
+  /**
+   * Loads scenario IDs from the database whose sequence numbers are within the given range
+   * [seqFrom] to [seqTo], inclusive. The IDs are returned in ascending order of their sequence
+   * numbers.
+   *
+   * @param seqFrom The starting sequence number (inclusive).
+   * @param seqTo The ending sequence number (inclusive).
+   * @return A list of scenario IDs within the specified sequence number range.
+   */
+  fun loadScenarioIds(seqFrom: Long, seqTo: Long): List<UUID> = transaction {
+    ScenarioStartingConfigurationTable.select(ScenarioStartingConfigurationTable.id)
+        .where {
+          (ScenarioStartingConfigurationTable.sequenceNumber greaterEq seqFrom) and
+              (ScenarioStartingConfigurationTable.sequenceNumber lessEq seqTo)
+        }
+        .orderBy(ScenarioStartingConfigurationTable.sequenceNumber to SortOrder.ASC)
+        .map { it[ScenarioStartingConfigurationTable.id].value }
+  }
 
   private fun ResultRow.toEntry(): ScenarioStartingConfigurationEntry =
       ScenarioStartingConfigurationEntry(
           id = this[ScenarioStartingConfigurationTable.id].value,
-          hash = this[ScenarioStartingConfigurationTable.hash],
-          topLeft = this[ScenarioStartingConfigurationTable.topLeft],
-          topCenter = this[ScenarioStartingConfigurationTable.topCenter],
-          topRight = this[ScenarioStartingConfigurationTable.topRight],
-          middleLeft = this[ScenarioStartingConfigurationTable.middleLeft],
-          middleCenter = this[ScenarioStartingConfigurationTable.middleCenter],
-          middleRight = this[ScenarioStartingConfigurationTable.middleRight],
-          bottomLeft = this[ScenarioStartingConfigurationTable.bottomLeft],
-          bottomCenter = this[ScenarioStartingConfigurationTable.bottomCenter],
-          bottomRight = this[ScenarioStartingConfigurationTable.bottomRight],
-          scenarioFileName = this[ScenarioStartingConfigurationTable.scenarioFileName],
+          sequenceNumber = this[ScenarioStartingConfigurationTable.sequenceNumber],
+          humanReadableScenarioId =
+              this[ScenarioStartingConfigurationTable.humanReadableScenarioId],
+          topLeftVehicleState = this[ScenarioStartingConfigurationTable.topLeft],
+          topLeftPosition = this[ScenarioStartingConfigurationTable.topLeftPosition],
+          topCenterVehicleState = this[ScenarioStartingConfigurationTable.topCenter],
+          topCenterPosition = this[ScenarioStartingConfigurationTable.topCenterPosition],
+          topRightVehicleState = this[ScenarioStartingConfigurationTable.topRight],
+          topRightPosition = this[ScenarioStartingConfigurationTable.topRightPosition],
+          middleLeftVehicleState = this[ScenarioStartingConfigurationTable.middleLeft],
+          middleLeftPosition = this[ScenarioStartingConfigurationTable.middleLeftPosition],
+          middleCenterVehicleState = this[ScenarioStartingConfigurationTable.middleCenter],
+          middleCenterPosition = this[ScenarioStartingConfigurationTable.middleCenterPosition],
+          middleRightVehicleState = this[ScenarioStartingConfigurationTable.middleRight],
+          middleRightPosition = this[ScenarioStartingConfigurationTable.middleRightPosition],
+          bottomLeftVehicleState = this[ScenarioStartingConfigurationTable.bottomLeft],
+          bottomLeftPosition = this[ScenarioStartingConfigurationTable.bottomLeftPosition],
+          bottomCenterVehicleState = this[ScenarioStartingConfigurationTable.bottomCenter],
+          bottomCenterPosition = this[ScenarioStartingConfigurationTable.bottomCenterPosition],
+          bottomRightVehicleState = this[ScenarioStartingConfigurationTable.bottomRight],
+          bottomRightPosition = this[ScenarioStartingConfigurationTable.bottomRightPosition],
       )
 }
