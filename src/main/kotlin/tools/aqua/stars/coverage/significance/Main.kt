@@ -29,10 +29,10 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
 import tools.aqua.stars.coverage.significance.db.repositories.ChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.ChunkJobSeeder
+import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.getGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
@@ -66,6 +66,7 @@ const val TAKE_ONLY_TICKS_AT_X_MILLIS = 100
 /** Size of the buffer (in number of ticks) to use when importing tick sequences. */
 const val BUFFER_SIZE = ((BUFFER_SIZE_IN_SECONDS * 1000) / TAKE_ONLY_TICKS_AT_X_MILLIS).toInt()
 
+/** Main entry point for the coverage significance evaluation tool. */
 fun main(args: Array<String>) {
   when (args.firstOrNull()) {
     "worker" -> runWorker(args.drop(1))
@@ -73,6 +74,11 @@ fun main(args: Array<String>) {
   }
 }
 
+/**
+ * Runs the controller process which sets up the evaluation run and starts worker processes.
+ *
+ * @param debugSingleWorker If true, runs a single worker in the same process for debugging.
+ */
 private fun runController(debugSingleWorker: Boolean = true) {
   DbBootstrap.connectAndCreateSchema()
 
@@ -82,7 +88,7 @@ private fun runController(debugSingleWorker: Boolean = true) {
   // Database seeding phase
   val scenarios =
       getGridTrafficScenarios(n = NUMBER_OF_SCENARIOS, seed = SEED, insertIntoDatabase = true)
-  val mutantIds = MutantsRepository.ensureMutants(1) // TODO correct number of mutants
+  val mutantIds = MutantGenerator.seedIfEmpty()
   ChunkJobSeeder.seedChunks(runId = evaluationRunEntryId, mutantIds = mutantIds, chunkSize = 1000L)
 
   if (debugSingleWorker) {
@@ -107,6 +113,11 @@ private fun runController(debugSingleWorker: Boolean = true) {
   check(ok) { "At least one worker failed." }
 }
 
+/**
+ * Runs a worker process which claims and processes chunk jobs from the database.
+ *
+ * @param args Command-line arguments containing workerId and runId.
+ */
 private fun runWorker(args: List<String>) {
   val workerId = args.first { it.startsWith("--workerId=") }.substringAfter("=")
   val runId = args.first { it.startsWith("--runId=") }.substringAfter("=")
@@ -166,6 +177,13 @@ private fun runWorker(args: List<String>) {
   println("[$workerId] finished")
 }
 
+/**
+ * Starts a new worker process with the given [workerId] and [evaluationRunId].
+ *
+ * @param workerId Unique identifier for the worker.
+ * @param evaluationRunId Identifier for the evaluation run.
+ * @return The started [Process].
+ */
 private fun startWorkerProcess(workerId: String, evaluationRunId: String): Process {
   val javaBin = java.nio.file.Paths.get(System.getProperty("java.home"), "bin", "java").toString()
   val classpath = System.getProperty("java.class.path")
@@ -193,6 +211,7 @@ private fun startWorkerProcess(workerId: String, evaluationRunId: String): Proce
   return ProcessBuilder(cmd).inheritIO().start()
 }
 
+/** Old main function for single-process execution (for testing purposes). */
 fun oldMain() {
   DbBootstrap.connectAndCreateSchema()
   val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
