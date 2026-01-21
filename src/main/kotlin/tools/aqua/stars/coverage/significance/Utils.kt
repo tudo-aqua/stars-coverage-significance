@@ -65,6 +65,7 @@ fun <T> List<T>.buckets(bucketCount: Int): List<List<T>> = run {
  * Converts a [TSC] to a [TSCEntry].
  *
  * @return Converted [TSCEntry].
+ * @receiver TSC The [TSC] to convert.
  */
 fun TSC<
     *,
@@ -88,8 +89,10 @@ fun listSortedFiles(dir: String): List<File> =
     Path(dir).toFile().listFiles()?.toList()?.sortedBy { it.name } ?: emptyList()
 
 /**
- * Computes a stable key shared across scenario/export/collision files. Adjust suffix stripping here
- * if your file naming differs.
+ * Retrieves the base key of a file by removing known extensions.
+ *
+ * @return String The base key of the file.
+ * @receiver File The file from which to extract the base key.
  */
 fun File.baseKey(): String {
   val n = name

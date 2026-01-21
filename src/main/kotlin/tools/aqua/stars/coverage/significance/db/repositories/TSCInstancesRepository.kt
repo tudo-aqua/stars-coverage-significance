@@ -60,8 +60,8 @@ object TSCInstancesRepository {
    * Insert only if there is no row with the same instanceJson. If such a row exists, returns that
    * existing entry.
    *
-   * Concurrency: If you add a UNIQUE index/constraint on instance_json (recommended), the try/catch
-   * path will correctly handle concurrent inserts.
+   * @param entry The entry to upsert. Its id must be null.
+   * @return The existing or newly inserted entry.
    */
   fun upsert(entry: TSCInstanceEntry): TSCInstanceEntry = transaction {
     require(entry.id == null) { "upsertByInstanceJson() expects entry.id == null." }
@@ -82,13 +82,11 @@ object TSCInstancesRepository {
    * existing entry.
    *
    * @param tscId The TSC ID.
-   * @param instanceHash The instance hash.
    * @param instanceJson The instance JSON.
    * @return The existing or newly inserted entry.
    */
   fun upsert(
       tscId: UUID,
-      instanceHash: String,
       instanceJson: String,
   ): TSCInstanceEntry =
       upsert(

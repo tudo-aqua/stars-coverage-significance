@@ -142,7 +142,7 @@ object TSCTikzRenderer {
     sb.append(label)
     sb.append("}")
 
-    // If this node has a parent, we can attach per-edge attributes on *this* bracket.
+    // If this node has a parent, attach per-edge attributes on *this* bracket.
     if (parent != null) {
       val dashed = options.dashedEdgesFromAllToNonLeafBounded && shouldDashedEdge(parent, node)
 
@@ -195,6 +195,13 @@ object TSCTikzRenderer {
     return parentAll && childIsNonLeafBounded
   }
 
+  /**
+   * Formats the label of a node, including bounds if applicable.
+   *
+   * @param node Node to format.
+   * @param options Rendering options.
+   * @return Formatted label.
+   */
   private fun formatNodeLabel(node: TSCNode<*, *, *, *>, options: Options): String {
     val baseRaw = node.label
     val base = if (options.escapeNodeLabels) escapeLatex(baseRaw) else baseRaw

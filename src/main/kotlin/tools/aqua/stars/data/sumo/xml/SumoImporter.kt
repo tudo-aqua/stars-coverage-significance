@@ -408,7 +408,7 @@ object SumoImporter {
     val number = reader.attribute("number")?.toIntOrNull() ?: 0
     val departSpeed = reader.attribute("departSpeed") ?: ""
 
-    // consume until </flow> (flows can contain children, but your file has none)
+    // consume until </flow>
     while (reader.hasNext()) {
       val ev = reader.next()
       if (ev == XMLStreamConstants.END_ELEMENT && reader.localName == "flow") break

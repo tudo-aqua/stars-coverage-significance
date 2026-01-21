@@ -224,9 +224,7 @@ class StartingValidTSCInstancesPerTSCMetric<
           val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
           val tscInstanceEntry =
               TSCInstancesRepository.upsert(
-                  tscId = tscEntryId,
-                  instanceJson = tscInstanceJsonString,
-                  instanceHash = tscInstance.hashCode().toString())
+                  tscId = tscEntryId, instanceJson = tscInstanceJsonString)
           val tscInstanceEntryId = tscInstanceEntry.id
           checkNotNull(tscInstanceEntryId) { "TSC instance entry not found in database" }
 
@@ -282,6 +280,13 @@ class StartingValidTSCInstancesPerTSCMetric<
         "Combined TSCs to occurred instances in percentages: $combinedTSCToOccurredInstancesPercentagesMap")
   }
 
+  /**
+   * Serializes the collected valid [TSCInstance]s for each [TSC] in the
+   * [startingValidInstancesMap].
+   *
+   * @return A [List] of [SerializableTSCOccurrenceResult]s containing the valid [TSCInstance]s for
+   *   each [TSC].
+   */
   override fun getSerializableResults(): List<SerializableTSCOccurrenceResult> =
       startingValidInstancesMap.map { (tsc, validInstances) ->
         val resultList =

@@ -91,6 +91,13 @@ class FirstTSCInstanceChangeMetric(
    */
   val instanceChangeMap: MutableMap<String, FirstChangeData> = mutableMapOf()
 
+  /**
+   * Evaluates the metric for the given TSC, TSC instance, and tick.
+   *
+   * @param tsc The TSC being evaluated.
+   * @param tscInstance The current TSC instance.
+   * @param tick The current time step.
+   */
   override fun evaluate(
       tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
       tscInstance: TSCInstance<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
@@ -168,13 +175,23 @@ class FirstTSCInstanceChangeMetric(
     logInfo()
   }
 
-  /** All recorded first-change times in milliseconds for which a change was observed. */
+  /**
+   * All recorded first-change times in milliseconds for which a change was observed.
+   *
+   * @return List of first-change times in milliseconds.
+   */
   private fun recordedTimesMillis(): List<Double> =
       instanceChangeMap.values
           .mapNotNull { it.firstChangeAfterXUnits }
           .map { it.tickMillis.toDouble() }
 
-  /** Sample standard deviation (dividing by n-1). Returns 0.0 for n <= 1. */
+  /**
+   * Sample standard deviation (dividing by n-1). Returns 0.0 for n <= 1.
+   *
+   * @param times List of times.
+   * @param mean Mean of the times.
+   * @return Sample standard deviation.
+   */
   private fun standardDeviationSample(times: List<Double>, mean: Double): Double {
     val n = times.size
     if (n <= 1) return 0.0
@@ -187,6 +204,7 @@ class FirstTSCInstanceChangeMetric(
    *
    * @param sortedTimes ascending sorted list.
    * @param p percentile in [0, 100].
+   * @return percentile value.
    */
   private fun percentile(sortedTimes: List<Double>, p: Double): Double {
     if (sortedTimes.isEmpty()) return 0.0
@@ -440,10 +458,6 @@ class FirstTSCInstanceChangeMetric(
   override fun writePlotDataCSV() {
     val bucketSizeMs = 1000L
 
-    // 1) Per-bucket stats for histogram + per-bucket boxplots
-    // For per-bucket boxplots, we want the distribution *within* each bucket.
-    // Therefore we normalize values by subtracting the bucket start so that all
-    // descriptive values are in [0, bucketSizeMs).
     val bucketStats =
         computeBucketStats(
             bucketSizeMs = bucketSizeMs,
@@ -524,6 +538,7 @@ class FirstTSCInstanceChangeMetric(
     )
   }
 
+  /** Persists the first TSC instance change data into the database. */
   override fun postEvaluate() {
     db {
       val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
@@ -548,5 +563,6 @@ class FirstTSCInstanceChangeMetric(
     }
   }
 
+  /** No-op for this metric as results are already printed in [printState]. */
   override fun printPostEvaluationResult() {}
 }

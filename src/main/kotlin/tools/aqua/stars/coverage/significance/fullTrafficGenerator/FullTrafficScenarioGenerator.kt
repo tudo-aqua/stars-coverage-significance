@@ -186,8 +186,7 @@ data class FullTrafficScenarioGenerator(
               rng, probabilityOfLaneByFullTrafficVehicleType.getValue(type), lanesWithCapacity)
 
       if (lane < 0) {
-        // No allowed lane has capacity (rare unless you get near-full lanes).
-        // For readability, we just skip this placement attempt.
+        // No allowed lane has capacity.
         return@repeat
       }
 
@@ -206,9 +205,6 @@ data class FullTrafficScenarioGenerator(
 
   /**
    * Generates [scenarioCount] unique scenarios.
-   *
-   * Uniqueness is determined by the full [GeneratedScenarioFullTraffic.mask] content. Internally,
-   * we store each generated mask as a `List<VehicleType?>` key in a [HashSet].
    *
    * @return A list of unique scenarios of size [scenarioCount].
    */

@@ -99,7 +99,7 @@ object ScenarioStartingConfigurationRepository {
                 }
                 .value
 
-        // Read-back to ensure we return canonical DB state
+        // Read-back to ensure to return canonical DB state
         getById(newId) ?: error("Inserted ScenarioStartingConfiguration not found (id=$newId).")
       }
 

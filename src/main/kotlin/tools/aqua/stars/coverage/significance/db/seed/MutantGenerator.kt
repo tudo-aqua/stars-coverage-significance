@@ -157,7 +157,11 @@ object MutantGenerator {
     return mutantEntries
   }
 
-  /** Seeds the database with mutant entries if it is currently empty. */
+  /**
+   * Seeds the database with mutant entries if it is currently empty.
+   *
+   * @return List of inserted mutant entry IDs, or an empty list if the database was not empty.
+   */
   fun seedIfEmpty(): List<UUID> {
     val existing = MutantsRepository.count()
     if (existing > 0) return emptyList()

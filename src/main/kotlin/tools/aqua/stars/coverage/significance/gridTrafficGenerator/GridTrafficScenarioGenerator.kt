@@ -53,23 +53,11 @@ data class GridTrafficScenarioGenerator(
     val minForwardGapMeters: Float = 50.0f,
 ) {
 
-  private data class Interval(val start: Float, val end: Float) {
-    init {
-      require(end >= start) { "Interval end must be >= start" }
-    }
-
-    fun center(): Float = (start + end) / 2.0f
-
-    fun pick(rng: Random, variance: Boolean): Float =
-        if (!variance) center() else start + rng.nextFloat() * (end - start)
-
-    fun isNonEmpty(): Boolean = end + 1e-12 >= start
-  }
-
   private val interval0 = Interval(i0Start, i0End)
   private val interval1 = Interval(i1Start, i1End)
   private val interval2 = Interval(i2Start, i2End)
 
+  /** Validates the configuration parameters. */
   private fun validate() {
     require(positionVariantsPerOccupancy > 0) { "positionVariantsPerOccupancy must be > 0" }
     require(minForwardGapMeters >= 0.0) { "minForwardGapMeters must be >= 0" }
@@ -78,7 +66,6 @@ data class GridTrafficScenarioGenerator(
     require(interval2.end > interval2.start) { "I2 must have positive length" }
 
     // Ensure constructive placement is always possible for the chosen intervals and min gap.
-    // These are sufficient conditions for the default 3x3 layout used in the paper.
     require(interval1.end >= interval0.start + minForwardGapMeters) {
       "I1 must allow a middle-row position that is at least d_min ahead of I0.start"
     }
@@ -90,7 +77,11 @@ data class GridTrafficScenarioGenerator(
     }
   }
 
-  /** Generates all possible scenarios based on the configured parameters. */
+  /**
+   * Generates all possible scenarios based on the configured parameters.
+   *
+   * @return Sequence of generated scenarios.
+   */
   fun generateAll(): Sequence<GeneratedScenario> {
     validate()
     val rng = if (seed != null) Random(seed) else Random.Default
@@ -122,6 +113,14 @@ data class GridTrafficScenarioGenerator(
     }
   }
 
+  /**
+   * Builds a scenario for the given [occupancy] and [egoLane].
+   *
+   * @param rng Random number generator.
+   * @param egoLane Lane index (0 to 2) for the ego vehicle.
+   * @param occupancy Occupancy array representing vehicle types in the grid.
+   * @return Generated scenario.
+   */
   private fun buildScenarioForOccupancy(
       rng: Random,
       egoLane: Int,
@@ -166,10 +165,12 @@ data class GridTrafficScenarioGenerator(
   }
 
   /**
-   * Places a middle-row vehicle on [lane].
+   * Places a middle-row vehicle in the specified [lane], ensuring feasibility given the occupancy.
    *
-   * To guarantee feasibility for the subsequent row-0/row-2 placements, the sampled middle position
-   * is restricted based on whether row 0 and/or row 2 are occupied on the same lane.
+   * @param rng Random number generator.
+   * @param lane Lane index (0 to 2).
+   * @param occupancy Occupancy array representing vehicle types in the grid.
+   * @return Position (meters) for the middle-row vehicle.
    */
   private fun placeMiddleFeasible(
       rng: Random,
@@ -196,11 +197,15 @@ data class GridTrafficScenarioGenerator(
   }
 
   /**
-   * Implements \textsc{PlaceCell}(r,\ell,...) from the paper pseudocode.
+   * Places a vehicle in the specified [row] and [lane].
    *
-   * Returns `null` if the cell is empty or corresponds to the ego cell. Otherwise returns exactly
-   * one [Spawn] whose position is sampled from a gap-constrained sub-interval, guaranteeing
-   * [minForwardGapMeters] by construction.
+   * @param rng Random number generator.
+   * @param row Row index (0 or 2).
+   * @param lane Lane index (0 to 2).
+   * @param occupancy Occupancy array representing vehicle types in the grid.
+   * @param egoCell Pair representing the ego vehicle's cell (row, lane).
+   * @param placementsSoFar List of already placed vehicles.
+   * @return Spawn object if placement is successful, null otherwise.
    */
   private fun placeCell(
       rng: Random,

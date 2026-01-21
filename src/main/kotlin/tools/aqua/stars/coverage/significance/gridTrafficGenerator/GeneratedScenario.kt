@@ -58,13 +58,13 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
   /** Human-readable scenario identifier string. */
   val id: String by lazy { buildHumanReadableId() }
 
-  /** Flattened list of all non-empty spawns (derived). */
+  /** Flattened list of all non-empty spawns . */
   val placements: List<Spawn>
     get() = buildList {
       for (r in BOTTOM_ROW..TOP_ROW) for (l in RIGHT_LANE..LEFT_LANE) grid[r][l]?.let { add(it) }
     }
 
-  /** Ego lane is derived by finding the EGO spawn in the middle row. */
+  /** Lane index (0..2) where the ego vehicle is located. */
   val egoLane: Int
     get() {
       val ego =
@@ -75,10 +75,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       return ego
     }
 
-  /**
-   * Occupancy array (derived) in the same 1D layout your generator already uses: index = row*3 +
-   * lane, and the ego cell is always null.
-   */
+  /** Occupancy array representing the vehicle types in the 3x3 grid, excluding the ego vehicle. */
   val occupancy: Array<GridVehicleType?>
     get() {
       val occ: Array<GridVehicleType?> = arrayOfNulls(9)
@@ -97,7 +94,13 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       return occ
     }
 
-  /** Convenience accessor. */
+  /**
+   * Returns the spawn at the given row and lane.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Spawn at the given position, or null if empty.
+   */
   fun spawnAt(row: Int, lane: Int): Spawn? = grid[row][lane]
 
   /** Builds a human-readable scenario identifier string. */
@@ -114,10 +117,18 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     return base
   }
 
-  /** Returns the number of vehicles in the scenario (including ego). */
+  /**
+   * Returns the count of non-empty vehicles in the grid.
+   *
+   * @return Number of vehicles in the grid.
+   */
   fun vehiclesCount(): Int = grid.flatten().count { it != null }
 
-  /** Returns a stable key that identifies the typed occupancy (ignoring continuous positions). */
+  /**
+   * Returns a unique occupancy key string representing the scenario's occupancy state.
+   *
+   * @return Occupancy key string.
+   */
   fun occupancyKey(): String = buildString {
     append("egoLane=").append(egoLane).append('|')
     for (i in 0 until 9) {
@@ -207,7 +218,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
   /**
    * Builds a SUMO *.rou.xml for this scenario.
    *
-   * This file references vTypes via vehicle@type="<id>" and does NOT define vTypes itself. Load
+   * This file references vTypes via vehicleType="<id>" and does NOT define vTypes itself. Load
    * vTypes once via --additional-files (recommended) or by listing a types file first in
    * --route-files.
    */
@@ -247,13 +258,26 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     }
   }
 
-  /** Convenience: write the per-scenario file to disk. */
+  /**
+   * Writes a SUMO *.rou.xml file for this scenario.
+   *
+   * This file references vTypes via vehicleType="<id>" and does NOT define vTypes itself. Load
+   * vTypes once via --additional-files (recommended) or by listing a types file first in
+   * --route-files.
+   *
+   * @param outFile Output file path.
+   * @param cfg Configuration for the export.
+   */
   fun writeRouXml(outFile: Path, cfg: SumoRouExportConfig = SumoRouExportConfig()) {
     Files.createDirectories(outFile.parent)
     Files.writeString(outFile, toRouXml(cfg), StandardCharsets.UTF_8)
   }
 
-  /** Returns an ASCII representation of the scenario for debugging purposes. */
+  /**
+   * Returns an ASCII representation of the scenario for debugging purposes.
+   *
+   * @return ASCII string representation of the scenario.
+   */
   fun toASCIIString(): String {
     val border = "+-----+-----+-----+"
 
@@ -278,7 +302,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
 
     fun cell(r: Int, l: Int): String {
       val ch = cellChar(r, l)
-      return if (ch == ' ') "     " else "  $ch  " // 5-wide inner cell like your example
+      return if (ch == ' ') "     " else "  $ch  "
     }
 
     fun rowLine(r: Int): String = "|" + cell(r, 0) + "|" + cell(r, 1) + "|" + cell(r, 2) + "|"

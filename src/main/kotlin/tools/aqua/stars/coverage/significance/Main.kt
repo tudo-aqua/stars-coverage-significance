@@ -128,7 +128,6 @@ private fun runWorker(args: List<String>) {
   val staticTsc = staticTsc()
   val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
 
-  // Create per-worker evaluator + metrics once (as you already do in the bucket callable)
   val tscEvaluation =
       TSCEvaluation(
           staticTsc,
@@ -140,21 +139,16 @@ private fun runWorker(args: List<String>) {
   tscEvaluation.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
   tscEvaluation.registerMetricProviders(
       InvalidTSCInstancesPerTSCMetric(),
-      StartingValidTSCInstancesPerTSCMetric(
-          evaluationRunEntryId = java.util.UUID.fromString(runId)),
+      StartingValidTSCInstancesPerTSCMetric(evaluationRunEntryId = UUID.fromString(runId)),
       TickCountMetric(),
       FirstTSCInstanceChangeMetric(
-          evaluationRunEntryId = java.util.UUID.fromString(runId), tscEntryId = tscEntryId))
+          evaluationRunEntryId = UUID.fromString(runId), tscEntryId = tscEntryId))
 
   // libsumo collector is per-process; never shared across JVMs
   val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
 
   // Main queue loop: claim work until empty
   while (true) {
-    // Claim one chunk job (recommended) or one scenario job (if you keep 95M jobs).
-    // val job = JobQueueRepository.claimNextChunk(runId, workerId) ?: break
-    // job contains scenario IDs/range + mutantId
-
     val job =
         ChunkJobsRepository.claimNextChunkJob(runId = UUID.fromString(runId), workerId = workerId)
             ?: break

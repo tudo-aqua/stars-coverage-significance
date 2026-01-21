@@ -20,9 +20,6 @@ package tools.aqua.stars.data.sumo.dataclasses.staticData
 /**
  * A directed connection between lanes in a SUMO network (`<connection>` in *.net.xml).
  *
- * In your model, `fromEdgeId`, `toEdgeId`, and `viaLaneId` are represented as direct references to
- * [Lane] instances.
- *
  * @property incomingLane The lane the connection starts from (derived from `from` + `fromLane`).
  * @property outgoingLane The lane the connection leads to (derived from `to` + `toLane`).
  * @property viaLane Optional internal lane (attribute `via`). This is `null` when the network does

@@ -17,14 +17,16 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
-/** Configuration for SUMO .rou.xml export of generated scenarios. */
+/**
+ * Configuration for SUMO .rou.xml export of generated scenarios.
+ *
+ * @property routeEdges List of edge types to use for routing vehicles. Default is `["highway"]`.
+ * @property departTimeSeconds Departure time in seconds for vehicles. Default is `0.0`.
+ * @property vehicleIdPrefix Prefix for vehicle IDs in the exported .rou.xml file. Default is
+ *   `"veh"`.
+ */
 data class SumoRouExportConfig(
-    /** Route edges for the scenario. Must match your SUMO network. */
     val routeEdges: List<String> = listOf("highway"),
-
-    /** Depart time for all vehicles (seconds). */
     val departTimeSeconds: Double = 0.0,
-
-    /** Vehicle id prefix; exporter will append scenario index / row / lane. */
     val vehicleIdPrefix: String = "veh",
 )

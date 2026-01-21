@@ -23,6 +23,10 @@ import org.jetbrains.exposed.sql.transactions.transaction
 /**
  * Executes the given [block] within a database transaction. If a transaction is already active, it
  * reuses that transaction; otherwise, it starts a new one.
+ *
+ * @param T The return type of the block.
+ * @param block The block of code to execute within the transaction.
+ * @return The result of the block execution.
  */
 fun <T> db(block: () -> T): T {
   val current = TransactionManager.currentOrNull()

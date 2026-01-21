@@ -20,9 +20,6 @@ package tools.aqua.stars.data.sumo.dataclasses.routeData
 /**
  * Definition of a SUMO vehicle type (`<vType ...>`).
  *
- * Only a subset of attributes may be present in a file; for non-nullability we use sensible
- * defaults (0.0 / empty string / empty list).
- *
  * @property typeId Vehicle type id.
  * @property vehicleClass SUMO vClass (e.g., "passenger", "truck").
  * @property minGapMeters Minimum gap (m).

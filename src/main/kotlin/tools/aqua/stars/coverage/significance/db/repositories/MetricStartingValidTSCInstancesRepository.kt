@@ -85,24 +85,20 @@ object MetricStartingValidTSCInstancesRepository {
   /**
    * Retrieves a [MetricStartingValidTSCInstancesEntry] by its primary key.
    *
-   * @param runId ID of the evaluation run.
    * @param tscId ID of the TSC.
    * @param scenarioConfigId ID of the scenario starting configuration.
    */
-  fun getByKey(
-      runId: UUID,
-      tscId: UUID,
-      scenarioConfigId: UUID
-  ): MetricStartingValidTSCInstancesEntry? = transaction {
-    MetricStartingValidTSCInstancesTable.selectAll()
-        .where {
-          (MetricStartingValidTSCInstancesTable.tsc eq tscId) and
-              (MetricStartingValidTSCInstancesTable.scenarioConfig eq scenarioConfigId)
-        }
-        .limit(1)
-        .firstOrNull()
-        ?.toEntry()
-  }
+  fun getByKey(tscId: UUID, scenarioConfigId: UUID): MetricStartingValidTSCInstancesEntry? =
+      transaction {
+        MetricStartingValidTSCInstancesTable.selectAll()
+            .where {
+              (MetricStartingValidTSCInstancesTable.tsc eq tscId) and
+                  (MetricStartingValidTSCInstancesTable.scenarioConfig eq scenarioConfigId)
+            }
+            .limit(1)
+            .firstOrNull()
+            ?.toEntry()
+      }
 
   /**
    * Retrieves all [MetricStartingValidTSCInstancesEntry]s for a given evaluation run and TSC.
