@@ -87,6 +87,11 @@ data class ScenarioStartingConfigurationEntry(
     val bottomRightVehicleState: ScenarioStartingConfigurationVehicleState,
     val bottomRightPosition: Float?,
 ) {
+  /**
+   * Converts this [ScenarioStartingConfigurationEntry] to a [GeneratedScenario].
+   *
+   * @return The corresponding [GeneratedScenario].
+   */
   fun toGeneratedScenario(): GeneratedScenario {
     val spawns: Array<Array<Spawn?>> = Array(3) { arrayOfNulls<Spawn>(3) }
     if (topLeftVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {

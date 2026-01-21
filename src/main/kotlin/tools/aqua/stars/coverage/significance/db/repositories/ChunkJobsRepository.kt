@@ -29,8 +29,16 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJob
 import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
 
+/** Repository for managing chunk jobs related to mutant scenario runs. */
 object ChunkJobsRepository {
 
+  /**
+   * Claims the next available chunk job for processing by a worker.
+   *
+   * @param runId The ID of the mutant scenario run.
+   * @param workerId The ID of the worker claiming the job.
+   * @return The claimed [ChunkJob] or null if no pending jobs are available.
+   */
   fun claimNextChunkJob(runId: UUID, workerId: String): ChunkJob? = transaction {
     // Pick one PENDING row, lock it with SKIP LOCKED
     val row =
@@ -67,6 +75,11 @@ object ChunkJobsRepository {
         seqTo = row[MutantScenarioChunkJobsTable.seqTo])
   }
 
+  /**
+   * Marks the specified chunk job as done.
+   *
+   * @param jobId The ID of the chunk job to mark as done.
+   */
   fun markDone(jobId: Long) = transaction {
     MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
       it[status] = JobStatus.DONE
@@ -76,6 +89,13 @@ object ChunkJobsRepository {
     }
   }
 
+  /**
+   * Marks the specified chunk job as failed or requeues it based on the number of attempts.
+   *
+   * @param jobId The ID of the chunk job to mark as failed or requeue.
+   * @param error The error message associated with the failure.
+   * @param maxAttempts The maximum number of attempts allowed before marking as failed.
+   */
   fun markFailedOrRequeue(jobId: Long, error: String, maxAttempts: Int) = transaction {
     val attempts =
         MutantScenarioChunkJobsTable.select(MutantScenarioChunkJobsTable.attempts)

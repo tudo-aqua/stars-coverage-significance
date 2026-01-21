@@ -107,7 +107,6 @@ object MetricStartingValidTSCInstancesRepository {
   /**
    * Retrieves all [MetricStartingValidTSCInstancesEntry]s for a given evaluation run and TSC.
    *
-   * @param runId ID of the evaluation run.
    * @param tscId ID of the TSC.
    * @return All entries for the given evaluation run and TSC.
    */
