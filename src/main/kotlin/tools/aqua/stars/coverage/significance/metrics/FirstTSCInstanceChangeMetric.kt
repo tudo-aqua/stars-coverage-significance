@@ -529,7 +529,9 @@ class FirstTSCInstanceChangeMetric(
       val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
       instanceChangeMap.forEach { (sourceIdentifier, firstChange) ->
         val scenarioStartingConfigurationEntryId =
-            ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)?.id
+            ScenarioStartingConfigurationRepository.getByScenarioByHumanReadableScenarioId(
+                    sourceIdentifier)
+                ?.id
 
         checkNotNull(scenarioStartingConfigurationEntryId) {
           "Scenario starting configuration not found for $sourceIdentifier"

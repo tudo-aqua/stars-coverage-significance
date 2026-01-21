@@ -232,7 +232,8 @@ class StartingValidTSCInstancesPerTSCMetric<
 
           sourceIdentifiers.forEach { sourceIdentifier ->
             val scenarioStartingConfigurationEntry =
-                ScenarioStartingConfigurationRepository.getByHash(sourceIdentifier)
+                ScenarioStartingConfigurationRepository.getByScenarioByHumanReadableScenarioId(
+                    sourceIdentifier)
             val scenarioStartingConfigurationEntryId = scenarioStartingConfigurationEntry?.id
             checkNotNull(scenarioStartingConfigurationEntryId) {
               "Scenario starting configuration entry not found in database"
