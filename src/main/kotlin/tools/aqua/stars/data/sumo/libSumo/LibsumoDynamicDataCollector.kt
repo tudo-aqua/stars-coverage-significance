@@ -96,8 +96,9 @@ class LibsumoDynamicDataCollector(
 
     var egoVehicleId: String? = null
 
-    for ((k, sp) in sortedPlacements.withIndex()) {
-      val vehId = "${vehicleIdPrefix}_${sp.type}_${scenario.id}_r${sp.row}_l${sp.lane}_$k"
+    for (sp in sortedPlacements) {
+      val vehId =
+          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
       val typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()

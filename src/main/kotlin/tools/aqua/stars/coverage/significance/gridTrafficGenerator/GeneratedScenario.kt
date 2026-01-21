@@ -152,8 +152,8 @@ data class GeneratedScenario(
       appendLine("<routes>")
       appendLine("""  <route id="${esc(id)}" edges="$edgesAttr"/>""")
 
-      for ((k, sp) in sorted.withIndex()) {
-        val vehId = "${cfg.vehicleIdPrefix}_${sp.type}_${esc(id)}_r${sp.row}_l${sp.lane}_$k"
+      for (sp in sorted) {
+        val vehId = getVehicleId(sp.type.toString(), sp.row, sp.lane, id)
         val typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
         val departLane = sp.lane
 

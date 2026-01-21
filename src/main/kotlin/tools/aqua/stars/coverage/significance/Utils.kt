@@ -101,3 +101,21 @@ fun File.baseKey(): String {
     else -> n
   }
 }
+
+/**
+ * Generates a unique vehicle ID based on the provided parameters.
+ *
+ * @param vehicleType Type of the vehicle.
+ * @param row Row number.
+ * @param lane Lane number.
+ * @param scenarioId Identifier for the scenario.
+ * @param vehiclePrefix Prefix for the vehicle ID (default is "veh").
+ * @return Generated unique vehicle ID.
+ */
+fun getVehicleId(
+    vehicleType: String,
+    row: Int,
+    lane: Int,
+    scenarioId: String,
+    vehiclePrefix: String = "veh",
+): String = "${vehiclePrefix}_${vehicleType}_[${row}][${lane}]_in_${scenarioId}"
