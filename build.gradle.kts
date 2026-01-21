@@ -35,8 +35,8 @@ val starsVersion = "2.0-coverage-significance-15-59d7704-SNAPSHOT"
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:6.0.2")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.0.2")
   implementation(group = "tools.aqua", name = "stars-core", version = starsVersion)
   testImplementation(
       group = "tools.aqua",
