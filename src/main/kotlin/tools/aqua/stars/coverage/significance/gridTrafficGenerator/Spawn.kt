@@ -17,6 +17,8 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
+import kotlin.math.roundToInt
+
 /**
  * Coordinate form of a placed vehicle.
  *
@@ -28,6 +30,30 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 data class Spawn(
     val row: Int,
     val lane: Int,
-    val positionMeters: Double,
+    val positionMeters: Float,
     val type: GridVehicleType,
-)
+) {
+  /**
+   * Returns a human-readable string representation of the spawn.
+   *
+   * @return Human-readable string.
+   */
+  fun getHumanReadableString(): String =
+      "[${row}][${lane}]${type.toString().first()}@${pad(quantizePos(positionMeters))}"
+
+  /**
+   * Quantizes a position in meters to an integer representation (0.1 meter resolution).
+   *
+   * @param pMeters Position in meters.
+   * @return Quantized position as an integer.
+   */
+  fun quantizePos(pMeters: Float): Int = (pMeters * 10).roundToInt().coerceAtLeast(0)
+
+  /**
+   * Pads a number to 4 digits with leading zeros.
+   *
+   * @param num Number to pad.
+   * @return Padded string.
+   */
+  fun pad(num: Int): String = num.toString().padStart(4, '0')
+}

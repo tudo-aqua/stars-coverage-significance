@@ -17,6 +17,9 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
+import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
+import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState.*
+
 /**
  * Vehicle categories used by the 3x3-grid scenario generator.
  *
@@ -28,15 +31,34 @@ enum class GridVehicleType(val sumoId: String, val departSpeedKmh: Int) {
   EGO("ego", 100),
 
   /** Passenger car with calm driving style (70 km/h at initialization). */
-  CAR_CALM("car_calm", 70),
+  CALM("car_calm", 70),
 
   /** Passenger car with normal driving style (100 km/h at initialization). */
-  CAR_NORMAL("car_normal", 100),
+  NORMAL("car_normal", 100),
 
   /** Passenger car with fast driving style (130 km/h at initialization). */
-  CAR_SPEEDY("car_speedy", 130);
+  SPEEDY("car_speedy", 130);
 
   /** Initial departure speed in m/s (converted from km/h). */
   val departSpeedMs: Double
     get() = departSpeedKmh / 3.6
+
+  /** Static utility methods. */
+  companion object {
+
+    /**
+     * Maps a [ScenarioStartingConfigurationVehicleState] to a [GridVehicleType], or `null` if the
+     * state is [NONE].
+     */
+    fun fromScenarioStartingConfigurationVehicleState(
+        state: ScenarioStartingConfigurationVehicleState
+    ): GridVehicleType? =
+        when (state) {
+          SLOWER -> CALM
+          SAME_SPEED -> NORMAL
+          FASTER -> SPEEDY
+          ScenarioStartingConfigurationVehicleState.EGO -> EGO
+          NONE -> null
+        }
+  }
 }

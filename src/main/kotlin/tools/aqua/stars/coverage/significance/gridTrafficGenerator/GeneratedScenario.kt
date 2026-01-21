@@ -21,97 +21,101 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
-import kotlin.math.roundToInt
-import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
+import tools.aqua.stars.coverage.significance.getVehicleId
 
 @SuppressWarnings("StringLiteralDuplication")
+/** Index for the top row. */
+const val TOP_ROW = 2
+
+/** Index for the middle row. */
+const val MIDDLE_ROW = 1
+
+/** Index for the bottom row. */
+const val BOTTOM_ROW = 0
+
+/** Index for the left lane. */
+const val LEFT_LANE = 2
+
+/** Index for the center lane. */
+const val CENTER_LANE = 1
+/** Index for the right lane. */
+const val RIGHT_LANE = 0
+
 /**
- * A generated 3x3-grid scenario.
+ * Represents a generated scenario.
  *
- * In the paper, a scenario is represented by its placement set $P$. This class keeps that set as
- * [placements] and additionally stores metadata that is useful in the implementation.
- *
- * @property egoLane Lane index (0..2) on which the ego vehicle is spawned.
- * @property placements Set/list of all vehicle placements (including ego) as [Spawn] tuples.
- * @property occupancy Typed occupancy over the 3x3 grid in row-major order (length 9).
- *     - `null` means the cell is empty
- *     - the ego cell (row=1, lane=egoLane) is always `null` here because it is excluded from $M$
+ * @property grid 3x3 grid of spawns.
  */
-data class GeneratedScenario(
-    val egoLane: Int,
-    val placements: List<Spawn>,
-    val occupancy: Array<GridVehicleType?>,
-) {
+data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
 
   init {
-    require(egoLane in 0..2) { "egoLane must be in 0..2" }
-    require(occupancy.size == 9) { "occupancy must have length 9 (3x3 grid)" }
-    val egoCellIndex = 1 * 3 + egoLane
-    require(occupancy[egoCellIndex] == null) {
-      "occupancy must be null for the ego cell; ego is represented in placements"
-    }
-    require(
-        placements.any { it.type == GridVehicleType.EGO && it.row == 1 && it.lane == egoLane }) {
-          "placements must contain the ego vehicle at row=1, lane=egoLane"
-        }
+    require(grid.size == 3) { "Grid must have 3 rows" }
+    require(grid.all { it.size == 3 }) { "Grid must have 3 lanes per row" }
   }
 
   /** Human-readable scenario identifier string. */
   val id: String by lazy { buildHumanReadableId() }
 
-  /**
-   * Builds a human-readable scenario identifier string.
-   *
-   * @param posResolution Resolution for quantizing positions (factor, digits)
-   * @param includeOptionalHashSuffix If true, appends a tiny hash suffix to reduce
-   */
-  fun buildHumanReadableId(
-      posResolution: Pair<Double, Int> = 10.0 to 4,
-      includeOptionalHashSuffix: Boolean = false
-  ): String {
-    fun typeLetter(t: GridVehicleType): Char {
-      val sid = t.sumoId.lowercase(Locale.ROOT)
-      val nm = t.name.lowercase(Locale.ROOT)
-      return when {
-        sid == "ego" || nm == "ego" -> 'e'
-        "calm" in sid || "calm" in nm -> 'c'
-        "normal" in sid || "normal" in nm -> 'n'
-        "speedy" in sid || "speedy" in nm -> 's'
-        else -> t.name.first().lowercaseChar()
-      }
+  /** Flattened list of all non-empty spawns (derived). */
+  val placements: List<Spawn>
+    get() = buildList {
+      for (r in BOTTOM_ROW..TOP_ROW) for (l in RIGHT_LANE..LEFT_LANE) grid[r][l]?.let { add(it) }
     }
 
-    fun quantizePos(pMeters: Double): Int =
-        (pMeters * posResolution.first).roundToInt().coerceAtLeast(0)
+  /** Ego lane is derived by finding the EGO spawn in the middle row. */
+  val egoLane: Int
+    get() {
+      val ego =
+          (RIGHT_LANE..LEFT_LANE).firstOrNull { lane ->
+            grid[MIDDLE_ROW][lane]?.type == GridVehicleType.EGO
+          }
+      require(ego != null) { "Scenario has no EGO spawn in middle row" }
+      return ego
+    }
 
-    fun pad(num: Int): String = num.toString().padStart(posResolution.second, '0')
+  /**
+   * Occupancy array (derived) in the same 1D layout your generator already uses: index = row*3 +
+   * lane, and the ego cell is always null.
+   */
+  val occupancy: Array<GridVehicleType?>
+    get() {
+      val occ: Array<GridVehicleType?> = arrayOfNulls(9)
+      val egoCellIndex = 1 * 3 + egoLane
 
+      for (r in BOTTOM_ROW..TOP_ROW) {
+        for (l in RIGHT_LANE..LEFT_LANE) {
+          val idx = r * 3 + l
+          if (idx == egoCellIndex) {
+            occ[idx] = null
+          } else {
+            occ[idx] = grid[r][l]?.type
+          }
+        }
+      }
+      return occ
+    }
+
+  /** Convenience accessor. */
+  fun spawnAt(row: Int, lane: Int): Spawn? = grid[row][lane]
+
+  /** Builds a human-readable scenario identifier string. */
+  fun buildHumanReadableId(): String {
     val parts =
         placements
             .sortedWith(
                 compareBy<Spawn>(
                     { it.row }, { it.lane }, { it.type.sumoId }, { it.positionMeters }))
-            .map { s ->
-              val posQ = quantizePos(s.positionMeters)
-              "r${s.row}l${s.lane}${typeLetter(s.type)}${pad(posQ)}"
-            }
+            .map { it.getHumanReadableString() }
 
     val base = parts.joinToString(separator = "__")
 
-    // Ensure filename-safe charset: [a-z0-9_]
-    val safe = base.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9_]+"), "_")
-
-    if (!includeOptionalHashSuffix) return safe
-
-    // Optional tiny suffix: keeps id human-readable while reducing collision risk.
-    val suffix = safe.hashCode().toUInt().toString(16)
-    return "${safe}__h$suffix"
+    return base
   }
 
   /** Returns the number of vehicles in the scenario (including ego). */
-  fun vehiclesCount(): Int = placements.size
+  fun vehiclesCount(): Int = grid.flatten().count { it != null }
 
   /** Returns a stable key that identifies the typed occupancy (ignoring continuous positions). */
   fun occupancyKey(): String = buildString {
@@ -121,6 +125,84 @@ data class GeneratedScenario(
       if (i != 8) append(',')
     }
   }
+
+  /**
+   * Returns the index in the occupancy array for the given row and lane.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Index in the occupancy array.
+   */
+  fun idx(row: Int, lane: Int): Int = row * 3 + lane
+
+  /**
+   * Maps a [GridVehicleType] to a [ScenarioStartingConfigurationVehicleState].
+   *
+   * @param t Vehicle type.
+   * @return Corresponding vehicle state.
+   */
+  fun vehicleTypeToState(t: GridVehicleType): ScenarioStartingConfigurationVehicleState =
+      when (t) {
+        GridVehicleType.EGO -> ScenarioStartingConfigurationVehicleState.EGO
+        GridVehicleType.NORMAL -> ScenarioStartingConfigurationVehicleState.SAME_SPEED
+        GridVehicleType.SPEEDY -> ScenarioStartingConfigurationVehicleState.FASTER
+        GridVehicleType.CALM -> ScenarioStartingConfigurationVehicleState.SLOWER
+      }
+
+  /**
+   * Returns the [ScenarioStartingConfigurationVehicleState] for the given cell.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Vehicle state in the cell.
+   */
+  fun cellState(row: Int, lane: Int): ScenarioStartingConfigurationVehicleState {
+    // Ego is not stored in occupancy; it is represented in placements and excluded from M.
+    if (row == 1 && lane == egoLane) return ScenarioStartingConfigurationVehicleState.EGO
+    val t = occupancy[idx(row, lane)] ?: return ScenarioStartingConfigurationVehicleState.NONE
+    return vehicleTypeToState(t)
+  }
+
+  /**
+   * Returns the position (in meters) for the given cell.
+   *
+   * @param row Row index (0..2).
+   * @param lane Lane index (0..2).
+   * @return Position in meters, or null if the cell is empty.
+   */
+  fun position(row: Int, lane: Int): Float? =
+      placements.firstOrNull { it.row == row && it.lane == lane }?.positionMeters
+
+  /**
+   * Converts this [GeneratedScenario] to a [ScenarioStartingConfigurationEntry] for database
+   * storage.
+   *
+   * @return [ScenarioStartingConfigurationEntry] for this scenario.
+   */
+  fun toScenarioStartingConfigurationEntry(): ScenarioStartingConfigurationEntry =
+      ScenarioStartingConfigurationEntry(
+          id = null,
+          sequenceNumber = null,
+          humanReadableScenarioId = buildHumanReadableId(),
+          topLeftVehicleState = cellState(TOP_ROW, LEFT_LANE),
+          topLeftPosition = position(TOP_ROW, LEFT_LANE),
+          topCenterVehicleState = cellState(TOP_ROW, CENTER_LANE),
+          topCenterPosition = position(TOP_ROW, CENTER_LANE),
+          topRightVehicleState = cellState(TOP_ROW, RIGHT_LANE),
+          topRightPosition = position(TOP_ROW, RIGHT_LANE),
+          middleLeftVehicleState = cellState(MIDDLE_ROW, LEFT_LANE),
+          middleLeftPosition = position(MIDDLE_ROW, LEFT_LANE),
+          middleCenterVehicleState = cellState(MIDDLE_ROW, CENTER_LANE),
+          middleCenterPosition = position(MIDDLE_ROW, CENTER_LANE),
+          middleRightVehicleState = cellState(MIDDLE_ROW, RIGHT_LANE),
+          middleRightPosition = position(MIDDLE_ROW, RIGHT_LANE),
+          bottomLeftVehicleState = cellState(BOTTOM_ROW, LEFT_LANE),
+          bottomLeftPosition = position(BOTTOM_ROW, LEFT_LANE),
+          bottomCenterVehicleState = cellState(BOTTOM_ROW, CENTER_LANE),
+          bottomCenterPosition = position(BOTTOM_ROW, CENTER_LANE),
+          bottomRightVehicleState = cellState(BOTTOM_ROW, RIGHT_LANE),
+          bottomRightPosition = position(BOTTOM_ROW, RIGHT_LANE),
+      )
 
   /**
    * Builds a SUMO *.rou.xml for this scenario.
@@ -140,7 +222,7 @@ data class GeneratedScenario(
             .replace("'", "&apos;")
 
     fun fmtTime(t: Double): String = String.format(Locale.US, "%.2f", t)
-    fun fmtPos(p: Double): String = String.format(Locale.US, "%.2f", p)
+    fun fmtPos(p: Float): String = String.format(Locale.US, "%.2f", p)
 
     val edgesAttr = esc(cfg.routeEdges.joinToString(" "))
 
@@ -158,9 +240,6 @@ data class GeneratedScenario(
         val departLane = sp.lane
 
         appendLine(
-            //            """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}"
-            // depart="begin" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}"
-            // departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
             """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}" depart="${fmtTime(cfg.departTimeSeconds)}" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}" departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
       }
 
@@ -214,67 +293,6 @@ data class GeneratedScenario(
       appendLine(rowLine(0))
       append(border)
     }
-  }
-
-  /**
-   * Returns the index in the occupancy array for the given row and lane.
-   *
-   * @param row Row index (0..2).
-   * @param lane Lane index (0..2).
-   * @return Index in the occupancy array.
-   */
-  fun idx(row: Int, lane: Int): Int = row * 3 + lane
-
-  /**
-   * Maps a [GridVehicleType] to a [ScenarioStartingConfigurationVehicleState].
-   *
-   * @param t Vehicle type.
-   * @return Corresponding vehicle state.
-   */
-  fun vehicleTypeToState(t: GridVehicleType): ScenarioStartingConfigurationVehicleState =
-      when (t) {
-        GridVehicleType.EGO -> ScenarioStartingConfigurationVehicleState.EGO
-        GridVehicleType.CAR_NORMAL -> ScenarioStartingConfigurationVehicleState.SAME_SPEED
-        GridVehicleType.CAR_SPEEDY -> ScenarioStartingConfigurationVehicleState.FASTER
-        GridVehicleType.CAR_CALM -> ScenarioStartingConfigurationVehicleState.SLOWER
-      }
-
-  /**
-   * Returns the [ScenarioStartingConfigurationVehicleState] for the given cell.
-   *
-   * @param row Row index (0..2).
-   * @param lane Lane index (0..2).
-   * @return Vehicle state in the cell.
-   */
-  fun cellState(row: Int, lane: Int): ScenarioStartingConfigurationVehicleState {
-    // Ego is not stored in occupancy; it is represented in placements and excluded from M.
-    if (row == 1 && lane == egoLane) return ScenarioStartingConfigurationVehicleState.EGO
-    val t = occupancy[idx(row, lane)] ?: return ScenarioStartingConfigurationVehicleState.NONE
-    return vehicleTypeToState(t)
-  }
-
-  /**
-   * Converts this [GeneratedScenario] to a [ScenarioStartingConfigurationEntry] for database
-   * storage.
-   *
-   * @return [ScenarioStartingConfigurationEntry] for this scenario.
-   */
-  fun toScenarioStartingConfigurationEntry(): ScenarioStartingConfigurationEntry {
-    val scenarioFileName = "${id}.$SCENARIO_FILE_EXTENSION"
-
-    return ScenarioStartingConfigurationEntry(
-        id = null,
-        hash = buildHumanReadableId(),
-        topLeft = cellState(row = 2, lane = 2),
-        topCenter = cellState(row = 2, lane = 1),
-        topRight = cellState(row = 2, lane = 0),
-        middleLeft = cellState(row = 1, lane = 2),
-        middleCenter = cellState(row = 1, lane = 1),
-        middleRight = cellState(row = 1, lane = 0),
-        bottomLeft = cellState(row = 0, lane = 2),
-        bottomCenter = cellState(row = 0, lane = 1),
-        bottomRight = cellState(row = 0, lane = 0),
-        scenarioFileName = scenarioFileName)
   }
 
   override fun equals(other: Any?): Boolean {
