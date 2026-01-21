@@ -31,12 +31,6 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property createdAt Timestamp of when the entry was created.
  */
 object MetricStartingValidTSCInstancesTable : UUIDTable("metric_starting_valid_tsc_instances") {
-  val run =
-      reference(
-          name = "run_id",
-          foreign = EvaluationRunsTable,
-          onDelete = ReferenceOption.CASCADE,
-          onUpdate = ReferenceOption.CASCADE)
   val tsc =
       reference(
           name = "tsc_id",
@@ -58,9 +52,8 @@ object MetricStartingValidTSCInstancesTable : UUIDTable("metric_starting_valid_t
   val createdAt = timestamp("created_at")
 
   init {
-    index(true, run, tsc, tscInstance, scenarioConfig)
+    index(true, tsc, tscInstance, scenarioConfig)
 
-    index(false, run)
     index(false, tsc)
     index(false, tscInstance)
     index(false, scenarioConfig)

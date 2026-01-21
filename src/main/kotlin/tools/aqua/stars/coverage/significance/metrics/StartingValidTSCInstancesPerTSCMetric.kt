@@ -241,7 +241,6 @@ class StartingValidTSCInstancesPerTSCMetric<
 
             val entry =
                 MetricStartingValidTSCInstancesEntry(
-                    runId = evaluationRunEntryId,
                     tscId = tscEntryId,
                     tscInstanceId = tscInstanceEntryId,
                     scenarioConfigId = scenarioStartingConfigurationEntryId)

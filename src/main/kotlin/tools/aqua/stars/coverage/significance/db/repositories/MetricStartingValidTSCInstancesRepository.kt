@@ -42,7 +42,6 @@ object MetricStartingValidTSCInstancesRepository {
 
         val newId =
             MetricStartingValidTSCInstancesTable.insertAndGetId { row ->
-                  row[run] = entry.runId
                   row[tsc] = entry.tscId
                   row[tscInstance] = entry.tscInstanceId
                   row[scenarioConfig] = entry.scenarioConfigId
@@ -63,7 +62,6 @@ object MetricStartingValidTSCInstancesRepository {
     if (entries.isEmpty()) return@transaction
 
     MetricStartingValidTSCInstancesTable.batchUpsert(entries) { e ->
-      this[MetricStartingValidTSCInstancesTable.run] = e.runId
       this[MetricStartingValidTSCInstancesTable.tsc] = e.tscId
       this[MetricStartingValidTSCInstancesTable.tscInstance] = e.tscInstanceId
       this[MetricStartingValidTSCInstancesTable.scenarioConfig] = e.scenarioConfigId
@@ -98,25 +96,12 @@ object MetricStartingValidTSCInstancesRepository {
   ): MetricStartingValidTSCInstancesEntry? = transaction {
     MetricStartingValidTSCInstancesTable.selectAll()
         .where {
-          (MetricStartingValidTSCInstancesTable.run eq runId) and
-              (MetricStartingValidTSCInstancesTable.tsc eq tscId) and
+          (MetricStartingValidTSCInstancesTable.tsc eq tscId) and
               (MetricStartingValidTSCInstancesTable.scenarioConfig eq scenarioConfigId)
         }
         .limit(1)
         .firstOrNull()
         ?.toEntry()
-  }
-
-  /**
-   * Retrieves all [MetricStartingValidTSCInstancesEntry]s for a given evaluation run.
-   *
-   * @param runId ID of the evaluation run.
-   * @return All entries for the given evaluation run.
-   */
-  fun getAllForRun(runId: UUID): List<MetricStartingValidTSCInstancesEntry> = transaction {
-    MetricStartingValidTSCInstancesTable.selectAll()
-        .where { MetricStartingValidTSCInstancesTable.run eq runId }
-        .map { it.toEntry() }
   }
 
   /**
@@ -126,15 +111,11 @@ object MetricStartingValidTSCInstancesRepository {
    * @param tscId ID of the TSC.
    * @return All entries for the given evaluation run and TSC.
    */
-  fun getAllForRunAndTsc(runId: UUID, tscId: UUID): List<MetricStartingValidTSCInstancesEntry> =
-      transaction {
-        MetricStartingValidTSCInstancesTable.selectAll()
-            .where {
-              (MetricStartingValidTSCInstancesTable.run eq runId) and
-                  (MetricStartingValidTSCInstancesTable.tsc eq tscId)
-            }
-            .map { it.toEntry() }
-      }
+  fun getAllForTsc(tscId: UUID): List<MetricStartingValidTSCInstancesEntry> = transaction {
+    MetricStartingValidTSCInstancesTable.selectAll()
+        .where { (MetricStartingValidTSCInstancesTable.tsc eq tscId) }
+        .map { it.toEntry() }
+  }
 
   /**
    * Converts a [ResultRow] to a [MetricStartingValidTSCInstancesEntry].
@@ -144,7 +125,6 @@ object MetricStartingValidTSCInstancesRepository {
   private fun ResultRow.toEntry(): MetricStartingValidTSCInstancesEntry =
       MetricStartingValidTSCInstancesEntry(
           id = this[MetricStartingValidTSCInstancesTable.id].value,
-          runId = this[MetricStartingValidTSCInstancesTable.run].value,
           tscId = this[MetricStartingValidTSCInstancesTable.tsc].value,
           tscInstanceId = this[MetricStartingValidTSCInstancesTable.tscInstance].value,
           scenarioConfigId = this[MetricStartingValidTSCInstancesTable.scenarioConfig].value,

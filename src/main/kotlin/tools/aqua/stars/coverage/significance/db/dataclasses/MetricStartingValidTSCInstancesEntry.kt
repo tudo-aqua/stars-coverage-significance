@@ -25,7 +25,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCIn
  * Data class representing a row in the [MetricStartingValidTSCInstancesTable].
  *
  * @property id Unique identifier of the metric entry.
- * @property runId Unique identifier of the evaluation run.
  * @property tscId Unique identifier of the TSC.
  * @property tscInstanceId Unique identifier of the TSC instance.
  * @property scenarioConfigId Unique identifier of the scenario starting configuration.
@@ -33,7 +32,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCIn
  */
 data class MetricStartingValidTSCInstancesEntry(
     val id: UUID? = null,
-    val runId: UUID,
     val tscId: UUID,
     val tscInstanceId: UUID,
     val scenarioConfigId: UUID,
