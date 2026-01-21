@@ -44,13 +44,13 @@ fun getGridTrafficScenarios(
           enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 3,
           seed = seed,
-          minForwardGapMeters = 50.0,
-          i0Start = 0.0,
-          i0End = 100.0,
-          i1Start = 100.0,
-          i1End = 110.0,
-          i2Start = 110.0,
-          i2End = 210.0,
+          minForwardGapMeters = 50.0f,
+          i0Start = 0.0f,
+          i0End = 100.0f,
+          i1Start = 100.0f,
+          i1End = 110.0f,
+          i2Start = 110.0f,
+          i2End = 210.0f,
       )
 
   var allScenarios = generator.generateAll().toList()
@@ -90,13 +90,13 @@ fun generateGridTrafficScenarios(
           enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 3,
           seed = seed,
-          minForwardGapMeters = 50.0,
-          i0Start = 0.0,
-          i0End = 100.0,
-          i1Start = 100.0,
-          i1End = 110.0,
-          i2Start = 110.0,
-          i2End = 210.0,
+          minForwardGapMeters = 50.0f,
+          i0Start = 0.0f,
+          i0End = 100.0f,
+          i1Start = 100.0f,
+          i1End = 110.0f,
+          i2Start = 110.0f,
+          i2End = 210.0f,
       )
 
   val existingFiles =

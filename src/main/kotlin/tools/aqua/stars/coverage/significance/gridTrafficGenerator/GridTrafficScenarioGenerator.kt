@@ -42,26 +42,26 @@ data class GridTrafficScenarioGenerator(
     val seed: Int? = null,
 
     // Intervals (meters)
-    val i0Start: Double = 0.0,
-    val i0End: Double = 100.0,
-    val i1Start: Double = 100.0,
-    val i1End: Double = 110.0,
-    val i2Start: Double = 110.0,
-    val i2End: Double = 210.0,
+    val i0Start: Float = 0.0f,
+    val i0End: Float = 100.0f,
+    val i1Start: Float = 100.0f,
+    val i1End: Float = 110.0f,
+    val i2Start: Float = 110.0f,
+    val i2End: Float = 210.0f,
 
     // Constraint (meters)
-    val minForwardGapMeters: Double = 50.0,
+    val minForwardGapMeters: Float = 50.0f,
 ) {
 
-  private data class Interval(val start: Double, val end: Double) {
+  private data class Interval(val start: Float, val end: Float) {
     init {
       require(end >= start) { "Interval end must be >= start" }
     }
 
-    fun center(): Double = (start + end) / 2.0
+    fun center(): Float = (start + end) / 2.0f
 
-    fun pick(rng: Random, variance: Boolean): Double =
-        if (!variance) center() else start + rng.nextDouble() * (end - start)
+    fun pick(rng: Random, variance: Boolean): Float =
+        if (!variance) center() else start + rng.nextFloat() * (end - start)
 
     fun isNonEmpty(): Boolean = end + 1e-12 >= start
   }
@@ -152,14 +152,17 @@ data class GridTrafficScenarioGenerator(
       }
     }
 
-    // Stable order is useful for debugging and testing.
     placements.sortWith(compareBy<Spawn> { it.row }.thenBy { it.lane }.thenBy { it.positionMeters })
 
-    return GeneratedScenario(
-        egoLane = egoLane,
-        placements = placements,
-        occupancy = occupancy.copyOf(),
-    )
+    val grid: Array<Array<Spawn?>> =
+        Array(3) { Array<Spawn?>(3) { null } }
+            .also { g ->
+              for (s in placements) {
+                g[s.row][s.lane] = s
+              }
+            }
+
+    return GeneratedScenario(grid = grid)
   }
 
   /**
@@ -172,7 +175,7 @@ data class GridTrafficScenarioGenerator(
       rng: Random,
       lane: Int,
       occupancy: Array<GridVehicleType?>,
-  ): Double {
+  ): Float {
     val row0Occupied = occupancy[0 * 3 + lane] != null
     val row2Occupied = occupancy[2 * 3 + lane] != null
 
@@ -255,9 +258,9 @@ data class GridTrafficScenarioGenerator(
   private fun digitToBackgroundTypeOrNull(digit: Int): GridVehicleType? =
       when (digit) {
         0 -> null
-        1 -> GridVehicleType.CAR_CALM
-        2 -> GridVehicleType.CAR_NORMAL
-        3 -> GridVehicleType.CAR_SPEEDY
+        1 -> GridVehicleType.CALM
+        2 -> GridVehicleType.NORMAL
+        3 -> GridVehicleType.SPEEDY
         else -> error("invalid digit $digit")
       }
 
