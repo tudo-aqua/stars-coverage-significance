@@ -18,12 +18,15 @@
 package tools.aqua.stars.data.sumo.libSumo
 
 import java.nio.file.Path
+import kotlin.comparisons.compareBy
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
+import tools.aqua.stars.coverage.significance.getVehicleId
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.*
@@ -66,7 +69,16 @@ class LibsumoDynamicDataCollector(
    * @param scenario Generated scenario to run.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
-  fun runGeneratedScenario(scenario: GeneratedScenario): List<TimeStep> {
+  fun runGeneratedScenario(scenario: GeneratedScenario): List<TimeStep> =
+      runGeneratedScenario(scenario.toScenarioStartingConfigurationEntry())
+
+  /**
+   * Run a generated scenario in libsumo and collect dynamic data.
+   *
+   * @param scenario Database entry of the scenario to run.
+   * @return Collected dynamic data as list of [TimeStep]s.
+   */
+  fun runGeneratedScenario(scenario: ScenarioStartingConfigurationEntry): List<TimeStep> {
     Simulation.preloadLibraries()
 
     // Reload simulation
@@ -92,7 +104,10 @@ class LibsumoDynamicDataCollector(
 
     // Spawn vehicles from placements
     val sortedPlacements =
-        scenario.placements.sortedWith(compareBy({ it.row }, { it.lane }, { it.positionMeters }))
+        scenario
+            .toGeneratedScenario()
+            .placements
+            .sortedWith(compareBy({ it.row }, { it.lane }, { it.positionMeters }))
 
     var egoVehicleId: String? = null
 
@@ -187,7 +202,7 @@ class LibsumoDynamicDataCollector(
       ticks +=
           TimeStep(
               identifier = "${scenario.id}#${ticks.size}",
-              sourceIdentifier = scenario.id,
+              sourceIdentifier = scenario.humanReadableScenarioId,
               tickTimeMillis = tickTimeMillis,
               vehiclesInTick = vehiclesInTick,
               collisionsInTick = collisionsInTick,
