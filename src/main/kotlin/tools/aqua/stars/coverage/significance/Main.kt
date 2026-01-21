@@ -73,7 +73,7 @@ fun main(args: Array<String>) {
   }
 }
 
-private fun runController() {
+private fun runController(debugSingleWorker: Boolean = true) {
   DbBootstrap.connectAndCreateSchema()
 
   val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
@@ -82,8 +82,13 @@ private fun runController() {
   // Database seeding phase
   val scenarios =
       getGridTrafficScenarios(n = NUMBER_OF_SCENARIOS, seed = SEED, insertIntoDatabase = true)
-  val mutantIds = MutantsRepository.ensureMutants(500) // TODO correct number of mutants
+  val mutantIds = MutantsRepository.ensureMutants(1) // TODO correct number of mutants
   ChunkJobSeeder.seedChunks(runId = evaluationRunEntryId, mutantIds = mutantIds, chunkSize = 1000L)
+
+  if (debugSingleWorker) {
+    runWorker(listOf("--workerId=debug", "--runId=$evaluationRunEntryId"))
+    return
+  }
 
   val processes =
       (0 until parallelism).map { workerIndex ->
