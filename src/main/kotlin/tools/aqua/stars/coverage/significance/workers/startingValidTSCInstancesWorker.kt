@@ -82,10 +82,7 @@ fun main(args: Array<String>) {
     tickSequences.add(runResult.asTickSequence())
   }
 
-  println("[$workerId] simulated all runs")
   eval.runEvaluation(tickSequences.asSequence())
-
-  println("[$workerId] premetric finished")
 }
 
 /**
