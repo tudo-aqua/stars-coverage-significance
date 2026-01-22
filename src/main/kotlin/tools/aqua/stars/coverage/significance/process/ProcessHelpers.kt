@@ -48,7 +48,6 @@ object ProcessHelpers {
       addAll(args)
     }
 
-    println("Starting $mainClass ${args.joinToString(" ")}")
     return ProcessBuilder(cmd).inheritIO().start()
   }
 

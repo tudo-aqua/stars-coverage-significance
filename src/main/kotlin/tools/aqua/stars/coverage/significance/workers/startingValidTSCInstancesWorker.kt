@@ -47,7 +47,6 @@ fun main(args: Array<String>) {
   val seqTo = CliArgs.requireLong(args, "seqTo")
 
   DbBootstrap.connectAndCreateSchema()
-  println("[$workerId] startingValidTSCInstancesWorker started (seq=$seqFrom..$seqTo)")
 
   val staticTsc = staticTsc()
 
