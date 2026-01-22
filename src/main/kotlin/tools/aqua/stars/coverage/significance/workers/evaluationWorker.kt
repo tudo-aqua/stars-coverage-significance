@@ -24,8 +24,6 @@ import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
-import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
-import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
@@ -52,7 +50,6 @@ fun main(args: Array<String>) {
   val tscEntryId = CliArgs.requireUuid(args, "tscEntryId")
 
   DbBootstrap.connectAndCreateSchema()
-  println("[$workerId] worker started (runId=$runId)")
 
   val staticTsc = staticTsc()
 
@@ -66,8 +63,6 @@ fun main(args: Array<String>) {
 
   eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
   eval.registerMetricProviders(
-      InvalidTSCInstancesPerTSCMetric(),
-      TickCountMetric(),
       FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
   )
 
@@ -81,7 +76,6 @@ fun main(args: Array<String>) {
     checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
 
     try {
-      val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
       val scenarios = db {
         (job.seqFrom..job.seqTo).map {
@@ -105,8 +99,6 @@ fun main(args: Array<String>) {
       System.err.println("[$workerId] job failed: ${exception.message}")
     }
   }
-
-  println("[$workerId] worker finished")
 }
 
 /**
