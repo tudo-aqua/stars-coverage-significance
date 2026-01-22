@@ -125,7 +125,6 @@ class StartingValidTSCInstancesPerTSCMetric<
    */
   override fun postEvaluate() {
     // Code for database insertion
-    println("Done. Now Inserting into DB.")
     db {
       val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
       startingValidInstancesMap.forEach { (tsc, map) ->
