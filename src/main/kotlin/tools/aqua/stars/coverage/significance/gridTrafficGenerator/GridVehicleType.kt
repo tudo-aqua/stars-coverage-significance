@@ -17,8 +17,8 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState.*
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState.*
 
 /**
  * Vehicle categories used by the 3x3-grid scenario generator.

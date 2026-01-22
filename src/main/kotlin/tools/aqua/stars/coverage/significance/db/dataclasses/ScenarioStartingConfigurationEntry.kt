@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.BOTTOM_ROW
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
@@ -95,7 +94,7 @@ data class ScenarioStartingConfigurationEntry(
   fun toGeneratedScenario(): GeneratedScenario {
     val spawns: Array<Array<Spawn?>> = Array(3) { arrayOfNulls<Spawn>(3) }
     if (topLeftVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(topLeftPosition)
+      checkNotNull(topLeftPosition) { "topLeftPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(topLeftVehicleState))
@@ -103,7 +102,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(TOP_ROW, LEFT_LANE, positionMeters = topLeftPosition, type = vehicleType)
     }
     if (topCenterVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(topCenterPosition)
+      checkNotNull(topCenterPosition) { "topCenterPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(topCenterVehicleState))
@@ -111,7 +110,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(TOP_ROW, CENTER_LANE, positionMeters = topCenterPosition, type = vehicleType)
     }
     if (topRightVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(topRightPosition)
+      checkNotNull(topRightPosition) { "topRightPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(topRightVehicleState))
@@ -119,7 +118,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(TOP_ROW, RIGHT_LANE, positionMeters = topRightPosition, type = vehicleType)
     }
     if (middleLeftVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(middleLeftPosition)
+      checkNotNull(middleLeftPosition) { "middleLeftPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(middleLeftVehicleState))
@@ -127,7 +126,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(MIDDLE_ROW, LEFT_LANE, positionMeters = middleLeftPosition, type = vehicleType)
     }
     if (middleCenterVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(middleCenterPosition)
+      checkNotNull(middleCenterPosition) { "middleCenterPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(
@@ -136,7 +135,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(MIDDLE_ROW, CENTER_LANE, positionMeters = middleCenterPosition, type = vehicleType)
     }
     if (middleRightVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(middleRightPosition)
+      checkNotNull(middleRightPosition) { "middleRightPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(
@@ -145,7 +144,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(MIDDLE_ROW, RIGHT_LANE, positionMeters = middleRightPosition, type = vehicleType)
     }
     if (bottomLeftVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(bottomLeftPosition)
+      checkNotNull(bottomLeftPosition) { "bottomLeftPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(bottomLeftVehicleState))
@@ -153,7 +152,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(BOTTOM_ROW, LEFT_LANE, positionMeters = bottomLeftPosition, type = vehicleType)
     }
     if (bottomCenterVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(bottomCenterPosition)
+      checkNotNull(bottomCenterPosition) { "bottomCenterPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(
@@ -162,7 +161,7 @@ data class ScenarioStartingConfigurationEntry(
           Spawn(BOTTOM_ROW, CENTER_LANE, positionMeters = bottomCenterPosition, type = vehicleType)
     }
     if (bottomRightVehicleState != ScenarioStartingConfigurationVehicleState.NONE) {
-      checkNotNull(bottomRightPosition)
+      checkNotNull(bottomRightPosition) { "bottomRightPosition must not be null" }
       val vehicleType =
           checkNotNull(
               GridVehicleType.fromScenarioStartingConfigurationVehicleState(
