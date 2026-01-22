@@ -24,7 +24,6 @@ import kotlin.test.assertNotNull
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
-import tools.aqua.stars.coverage.significance.NUMBER_OF_SCENARIOS
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
@@ -49,10 +48,7 @@ class TestSameResultsFromInProcessAndFile {
     val numberOfScenarios = 1
     for (i in 0..50) {
       generateGridTrafficScenarios(
-          n = numberOfScenarios,
-          seed = i,
-          insertIntoDatabase = false,
-          cleanGenerationFiles = true)
+          n = numberOfScenarios, seed = i, insertIntoDatabase = false, cleanGenerationFiles = true)
 
       val scenarioFiles = listSortedFiles(SCENARIO_DIR)
       runSumoForScenariosParallel(

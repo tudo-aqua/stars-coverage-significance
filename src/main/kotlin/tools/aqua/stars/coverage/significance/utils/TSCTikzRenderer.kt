@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.utils
 
+import kotlin.text.iterator
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.node.TSCBoundedNode
 import tools.aqua.stars.core.tsc.node.TSCLeafNode

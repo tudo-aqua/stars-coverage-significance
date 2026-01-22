@@ -24,9 +24,9 @@ import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
 import kotlin.io.path.Path
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
-import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
 /**
  * Function to run SUMO for a list of scenario files.

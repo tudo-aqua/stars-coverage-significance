@@ -26,24 +26,24 @@ import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
-import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
-import tools.aqua.stars.coverage.significance.baseKey
-import tools.aqua.stars.coverage.significance.buckets
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
-import tools.aqua.stars.coverage.significance.listSortedFiles
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.parallelism
 import tools.aqua.stars.coverage.significance.staticTsc
-import tools.aqua.stars.coverage.significance.toTSCEntry
+import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
+import tools.aqua.stars.coverage.significance.utils.baseKey
+import tools.aqua.stars.coverage.significance.utils.buckets
+import tools.aqua.stars.coverage.significance.utils.listSortedFiles
+import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 
 /**

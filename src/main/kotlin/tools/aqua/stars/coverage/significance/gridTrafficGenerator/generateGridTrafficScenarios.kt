@@ -19,9 +19,9 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
 import kotlin.io.path.Path
 import kotlin.random.Random
-import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.sumo.cleanGenerationFiles
+import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
 /**
  * Function to get grid traffic scenarios.

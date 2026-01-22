@@ -26,11 +26,11 @@ import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
-import tools.aqua.stars.coverage.significance.ConsoleProgress
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Scenario
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep

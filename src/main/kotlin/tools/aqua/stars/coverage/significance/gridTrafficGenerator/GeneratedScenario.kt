@@ -22,8 +22,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationVehicleState
-import tools.aqua.stars.coverage.significance.getVehicleId
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
+import tools.aqua.stars.coverage.significance.utils.getVehicleId
 
 @SuppressWarnings("StringLiteralDuplication")
 /** Index for the top row. */

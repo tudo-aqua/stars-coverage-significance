@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.utils
 
 import java.io.File
 import kotlin.io.path.Path
 import kotlinx.serialization.json.Json
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
+import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCEntry
 
 /** JSON configuration for serialization and deserialization. */

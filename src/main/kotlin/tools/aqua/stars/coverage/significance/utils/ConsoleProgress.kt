@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.utils
 
 import java.util.concurrent.TimeUnit
 
