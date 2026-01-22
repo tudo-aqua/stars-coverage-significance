@@ -26,9 +26,9 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
-import tools.aqua.stars.coverage.significance.getVehicleId
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
+import tools.aqua.stars.coverage.significance.utils.getVehicleId
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.*
 import tools.aqua.stars.data.sumo.dataclasses.staticData.*
 import tools.aqua.stars.data.sumo.xml.SumoImporter
@@ -76,9 +76,13 @@ class LibsumoDynamicDataCollector(
    * Run a generated scenario in libsumo and collect dynamic data.
    *
    * @param scenario Database entry of the scenario to run.
+   * @param onlyFirstTick Whether to only run the first tick.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
-  fun runGeneratedScenario(scenario: ScenarioStartingConfigurationEntry): List<TimeStep> {
+  fun runGeneratedScenario(
+      scenario: ScenarioStartingConfigurationEntry,
+      onlyFirstTick: Boolean = false
+  ): List<TimeStep> {
     Simulation.preloadLibraries()
 
     // Reload simulation
@@ -138,77 +142,86 @@ class LibsumoDynamicDataCollector(
     // Step until done
     val ticks = ArrayList<TimeStep>()
 
+    if (onlyFirstTick) return listOfNotNull(getCurrentTimeStep(egoId, scenario, ticks))
+
     // Run until finished
     while (Simulation.getMinExpectedNumber() > 0) {
-      Simulation.step()
-
-      val simTimeSeconds = Simulation.getTime()
-      val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
-
-      val vehIds = SumoVehicle.getIDList()
-      val vehiclesInTick = ArrayList<Vehicle>(vehIds.size)
-
-      for (vehId in vehIds) {
-        val laneId = SumoVehicle.getLaneID(vehId)
-        val lane = laneById[laneId] ?: error("Unknown lane $laneId")
-        val typeId = SumoVehicle.getTypeID(vehId)
-        val vType = vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
-
-        vehiclesInTick +=
-            Vehicle(
-                vehicleId = vehId,
-                vehicleType = VehicleType(vType),
-                currentLane = lane,
-                currentEdge = lane.parentEdge,
-                positionOnLaneMeters = SumoVehicle.getLanePosition(vehId).toFloat(),
-                speedMetersPerSecond = SumoVehicle.getSpeed(vehId).toFloat())
-      }
-
-      val ego = vehiclesInTick.firstOrNull { it.vehicleId == egoId }
-      if (simTimeSeconds == 0.1 && ego == null) {
-        error("Ego did not spawn at first tick")
-      }
-      if (ego == null) {
-        // Early return: Ego left the simulation
-        return ticks
-      }
-
-      val collisionsInTick = ArrayList<CollisionEvent>()
-      for (collision in Simulation.getCollisions()) {
-        val laneId = collision.lane ?: ""
-        val lane = laneById[laneId] ?: error("Unknown lane $laneId")
-        val colliderId = collision.collider ?: ""
-        val victimId = collision.victim ?: ""
-
-        val collider =
-            vehiclesInTick.firstOrNull { it.vehicleId == colliderId }
-                ?: error("Unknown collider $colliderId")
-        val victim =
-            vehiclesInTick.firstOrNull { it.vehicleId == victimId }
-                ?: error("Unknown victim $victimId")
-
-        collisionsInTick +=
-            CollisionEvent(
-                collisionTimeSeconds = simTimeSeconds.toFloat(),
-                lane = lane,
-                edge = lane.parentEdge,
-                positionOnLaneMeters = collision.pos.toFloat(),
-                colliderVehicle = collider,
-                victimVehicle = victim,
-                collisionType = collision.type ?: "",
-                rawAttributes = emptyMap())
-      }
-
-      ticks +=
-          TimeStep(
-              identifier = "${scenario.id}#${ticks.size}",
-              sourceIdentifier = scenario.humanReadableScenarioId,
-              tickTimeMillis = tickTimeMillis,
-              vehiclesInTick = vehiclesInTick,
-              collisionsInTick = collisionsInTick,
-              ego = ego)
+      getCurrentTimeStep(egoId, scenario, ticks)
     }
 
     return ticks
+  }
+
+  private fun getCurrentTimeStep(
+      egoId: String,
+      scenario: ScenarioStartingConfigurationEntry,
+      ticks: List<TimeStep> = emptyList()
+  ): TimeStep? {
+    Simulation.step()
+
+    val simTimeSeconds = Simulation.getTime()
+    val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
+
+    val vehIds = SumoVehicle.getIDList()
+    val vehiclesInTick = ArrayList<Vehicle>(vehIds.size)
+
+    for (vehId in vehIds) {
+      val laneId = SumoVehicle.getLaneID(vehId)
+      val lane = laneById[laneId] ?: error("Unknown lane $laneId")
+      val typeId = SumoVehicle.getTypeID(vehId)
+      val vType = vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+
+      vehiclesInTick +=
+          Vehicle(
+              vehicleId = vehId,
+              vehicleType = VehicleType(vType),
+              currentLane = lane,
+              currentEdge = lane.parentEdge,
+              positionOnLaneMeters = SumoVehicle.getLanePosition(vehId).toFloat(),
+              speedMetersPerSecond = SumoVehicle.getSpeed(vehId).toFloat())
+    }
+
+    val ego = vehiclesInTick.firstOrNull { it.vehicleId == egoId }
+    if (simTimeSeconds == 0.1 && ego == null) {
+      error("Ego did not spawn at first tick")
+    }
+    if (ego == null) {
+      // Early return: Ego left the simulation
+      return null
+    }
+
+    val collisionsInTick = ArrayList<CollisionEvent>()
+    for (collision in Simulation.getCollisions()) {
+      val laneId = collision.lane ?: ""
+      val lane = laneById[laneId] ?: error("Unknown lane $laneId")
+      val colliderId = collision.collider ?: ""
+      val victimId = collision.victim ?: ""
+
+      val collider =
+          vehiclesInTick.firstOrNull { it.vehicleId == colliderId }
+              ?: error("Unknown collider $colliderId")
+      val victim =
+          vehiclesInTick.firstOrNull { it.vehicleId == victimId }
+              ?: error("Unknown victim $victimId")
+
+      collisionsInTick +=
+          CollisionEvent(
+              collisionTimeSeconds = simTimeSeconds.toFloat(),
+              lane = lane,
+              edge = lane.parentEdge,
+              positionOnLaneMeters = collision.pos.toFloat(),
+              colliderVehicle = collider,
+              victimVehicle = victim,
+              collisionType = collision.type ?: "",
+              rawAttributes = emptyMap())
+    }
+
+    return TimeStep(
+        identifier = "${scenario.id}#${ticks.size}",
+        sourceIdentifier = scenario.humanReadableScenarioId,
+        tickTimeMillis = tickTimeMillis,
+        vehiclesInTick = vehiclesInTick,
+        collisionsInTick = collisionsInTick,
+        ego = ego)
   }
 }
