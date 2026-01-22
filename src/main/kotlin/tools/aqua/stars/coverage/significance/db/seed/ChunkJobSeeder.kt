@@ -18,14 +18,10 @@
 package tools.aqua.stars.coverage.significance.db.seed
 
 import java.util.UUID
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.max
 import org.jetbrains.exposed.sql.transactions.transaction
-import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
-import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
-import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
+import tools.aqua.stars.coverage.significance.db.dataclasses.MutantScenarioChunkJob
+import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
 
 /** Seeds chunk jobs into the database. */
@@ -63,26 +59,19 @@ object ChunkJobSeeder {
       }
     }
 
-    val runEid = EntityID(runId, EvaluationRunsTable)
+    println("Split scenarios into ${ranges.size} chunks.")
 
-    mutantIds.forEach { mid ->
-      val mutantEid = EntityID(mid, MutantsTable)
+    val mutantScenarioChunkJobs = mutableListOf<MutantScenarioChunkJob>()
 
+    mutantIds.forEach { mutantId ->
       ranges.forEach { (from, to) ->
-        MutantScenarioChunkJobsTable.insertIgnore {
-          it[run] = runEid
-          it[mutant] = mutantEid
-          it[seqFrom] = from
-          it[seqTo] = to
-          it[status] = JobStatus.PENDING
-          it[attempts] = 0
-          it[lockedBy] = null
-          it[lockedAt] = null
-          it[startedAt] = null
-          it[finishedAt] = null
-          it[errorText] = null
-        }
+        mutantScenarioChunkJobs.add(
+            MutantScenarioChunkJob(runId = runId, mutantId = mutantId, seqFrom = from, seqTo = to))
       }
     }
+
+    println("Write ${mutantScenarioChunkJobs.size} chunk jobs to DB.")
+    MutantScenarioChunkJobsRepository.batchInsert(mutantScenarioChunkJobs)
+    println("Finished writing chunk jobs to DB.")
   }
 }

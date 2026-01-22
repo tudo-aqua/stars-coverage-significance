@@ -21,17 +21,49 @@ import java.time.Instant
 import java.util.UUID
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.vendors.ForUpdateOption
-import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJob
 import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJobsProgress
 import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
+import tools.aqua.stars.coverage.significance.db.dataclasses.MutantScenarioChunkJob
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.attempts
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.errorText
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.finishedAt
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.lockedAt
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.lockedBy
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.mutant
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqFrom
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqTo
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.startedAt
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.status
 
 /** Repository for managing chunk jobs related to mutant scenario runs. */
 object MutantScenarioChunkJobsRepository {
+
+  /** Removes all entries from the database. */
+  fun clearTable() = transaction { MutantScenarioChunkJobsTable.deleteAll() }
+
+  /**
+   * Inserts a list of chunk jobs into the database.
+   *
+   * @param mutantScenarioChunkJobs List of chunk jobs to insert.
+   */
+  fun batchInsert(mutantScenarioChunkJobs: List<MutantScenarioChunkJob>) = transaction {
+    MutantScenarioChunkJobsTable.batchInsert(mutantScenarioChunkJobs) { chunkJob ->
+      this[MutantScenarioChunkJobsTable.run] = chunkJob.runId
+      this[mutant] = chunkJob.mutantId
+      this[seqFrom] = chunkJob.seqFrom
+      this[seqTo] = chunkJob.seqTo
+      this[status] = chunkJob.status
+      this[attempts] = chunkJob.attempts
+    }
+  }
+
   /**
    * Retrieves the progress of chunk jobs for a given mutant scenario run.
    *
@@ -71,9 +103,9 @@ object MutantScenarioChunkJobsRepository {
    *
    * @param runId The ID of the mutant scenario run.
    * @param workerId The ID of the worker claiming the job.
-   * @return The claimed [ChunkJob] or null if no pending jobs are available.
+   * @return The claimed [MutantScenarioChunkJob] or null if no pending jobs are available.
    */
-  fun claimNextChunkJob(runId: UUID, workerId: String): ChunkJob? = transaction {
+  fun claimNextChunkJob(runId: UUID, workerId: String): MutantScenarioChunkJob? = transaction {
     // Pick one PENDING row, lock it with SKIP LOCKED
     val row =
         MutantScenarioChunkJobsTable.selectAll()
@@ -101,7 +133,7 @@ object MutantScenarioChunkJobsRepository {
       it[errorText] = null
     }
 
-    ChunkJob(
+    MutantScenarioChunkJob(
         jobId = jobId,
         runId = row[MutantScenarioChunkJobsTable.run].value,
         mutantId = row[MutantScenarioChunkJobsTable.mutant].value,
@@ -132,9 +164,9 @@ object MutantScenarioChunkJobsRepository {
    */
   fun markFailedOrRequeue(jobId: Long, error: String, maxAttempts: Int) = transaction {
     val attempts =
-        MutantScenarioChunkJobsTable.select(MutantScenarioChunkJobsTable.attempts)
+        MutantScenarioChunkJobsTable.select(attempts)
             .where { MutantScenarioChunkJobsTable.id eq jobId }
-            .first()[MutantScenarioChunkJobsTable.attempts]
+            .first()[attempts]
 
     val retry = attempts < maxAttempts
 

@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -28,11 +29,25 @@ import java.util.UUID
  * @property mutantId Unique identifier for the mutant.
  * @property seqFrom Starting sequence number (inclusive).
  * @property seqTo Ending sequence number (inclusive).
+ * @property status Status of the chunk job.
+ * @property attempts Number of attempts to execute the chunk job.
+ * @property lockedBy Identifier of the worker that currently holds the lock on the chunk job.
+ * @property lockedAt Timestamp of when the chunk job was locked.
+ * @property startedAt Timestamp of when the chunk job was started.
+ * @property finishedAt Timestamp of when the chunk job was finished.
+ * @property errorText Error message if the chunk job failed.
  */
-data class ChunkJob(
-    val jobId: Long,
+data class MutantScenarioChunkJob(
+    val jobId: Long? = null,
     val runId: UUID,
     val mutantId: UUID,
     val seqFrom: Long,
-    val seqTo: Long
+    val seqTo: Long,
+    val status: JobStatus = JobStatus.PENDING,
+    val attempts: Int = 0,
+    val lockedBy: String? = null,
+    val lockedAt: Instant? = null,
+    val startedAt: Instant? = null,
+    val finishedAt: Instant? = null,
+    val errorText: String? = null
 )

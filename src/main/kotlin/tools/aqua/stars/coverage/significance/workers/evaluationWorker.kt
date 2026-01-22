@@ -73,6 +73,8 @@ fun main(args: Array<String>) {
         MutantScenarioChunkJobsRepository.claimNextChunkJob(runId = runId, workerId = workerId)
             ?: break
 
+    checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
+
     try {
       for (sequenceNumber in job.seqFrom..job.seqTo) {
         val scenario = ScenarioStartingConfigurationRepository.getBySequenceNumber(sequenceNumber)
