@@ -39,7 +39,6 @@ object TSCInstancesTable : UUIDTable("tsc_instances") {
   val instanceJson = text("instance_json")
 
   init {
-    index(true, instanceJson)
     index(true, tsc, instanceJson)
   }
 }

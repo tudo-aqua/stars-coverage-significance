@@ -31,7 +31,6 @@ import tools.aqua.stars.core.metrics.providers.Stateful
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceMetricProvider
 import tools.aqua.stars.core.serialization.SerializableTSCOccurrenceResult
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
-import tools.aqua.stars.core.serialization.tsc.SerializableTSCOccurrence
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
@@ -213,6 +212,7 @@ class StartingValidTSCInstancesPerTSCMetric<
    */
   override fun postEvaluate() {
     // Code for database insertion
+    println("Done. Now Inserting into DB.")
     db {
       val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
       startingValidInstancesMap.forEach { (tsc, map) ->
@@ -222,11 +222,9 @@ class StartingValidTSCInstancesPerTSCMetric<
 
         map.forEach { (tscInstance, sourceIdentifiers) ->
           val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
-          val tscInstanceEntry =
-              TSCInstancesRepository.upsert(
-                  tscId = tscEntryId, instanceJson = tscInstanceJsonString)
-          val tscInstanceEntryId = tscInstanceEntry.id
-          checkNotNull(tscInstanceEntryId) { "TSC instance entry not found in database" }
+          val tscInstanceEntryId =
+              TSCInstancesRepository.insertIfAbsentReturnId(
+                  TSCInstanceEntry(tscId = tscEntryId, instanceJson = tscInstanceJsonString))
 
           sourceIdentifiers.forEach { sourceIdentifier ->
             val scenarioStartingConfigurationEntry =

@@ -19,9 +19,11 @@ package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.insertIgnore
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 
@@ -29,14 +31,17 @@ import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 object TSCInstancesRepository {
 
   /**
-   * Returns the existing row with the same instanceJson, or null if none exists.
+   * Returns the existing row with the same [instanceJson], or null if none exists.
    *
    * @param instanceJson The instance JSON to look up.
+   * @param tscEntryId The ID of the TSC entry.
    * @return The matching row, or null if none exists.
    */
-  fun getByInstanceJson(instanceJson: String): TSCInstanceEntry? = transaction {
+  fun getByInstanceJson(instanceJson: String, tscEntryId: UUID): TSCInstanceEntry? = transaction {
     TSCInstancesTable.selectAll()
-        .where { TSCInstancesTable.instanceJson eq instanceJson }
+        .where {
+          (TSCInstancesTable.tsc eq tscEntryId) and (TSCInstancesTable.instanceJson eq instanceJson)
+        }
         .limit(1)
         .firstOrNull()
         ?.toEntry()
@@ -57,44 +62,29 @@ object TSCInstancesRepository {
   }
 
   /**
-   * Insert only if there is no row with the same instanceJson. If such a row exists, returns that
-   * existing entry.
+   * Inserts a new [entry] into the database if it does not already exist.
    *
-   * @param entry The entry to upsert. Its id must be null.
-   * @return The existing or newly inserted entry.
+   * @param entry Entry to insert.
+   * @return The ID of the inserted entry.
    */
-  fun upsert(entry: TSCInstanceEntry): TSCInstanceEntry = transaction {
-    require(entry.id == null) { "upsertByInstanceJson() expects entry.id == null." }
+  fun insertIfAbsentReturnId(entry: TSCInstanceEntry): UUID = transaction {
+    require(entry.id == null) { "insertIfAbsentReturnId() expects entry.id == null." }
 
-    val row =
-        TSCInstancesTable.upsertReturning(keys = arrayOf(TSCInstancesTable.instanceJson)) { st ->
-              st[TSCInstancesTable.tsc] = entry.tscId
-              st[TSCInstancesTable.createdAt] = entry.createdAt
-              st[TSCInstancesTable.instanceJson] = entry.instanceJson
-            }
-            .single()
+    TSCInstancesTable.insertIgnore { st ->
+      st[TSCInstancesTable.tsc] = entry.tscId
+      st[TSCInstancesTable.createdAt] = entry.createdAt
+      st[TSCInstancesTable.instanceJson] = entry.instanceJson
+    }
 
-    row.toEntry()
+    TSCInstancesTable.select(TSCInstancesTable.id)
+        .where {
+          (TSCInstancesTable.tsc eq entry.tscId) and
+              (TSCInstancesTable.instanceJson eq entry.instanceJson)
+        }
+        .limit(1)
+        .single()[TSCInstancesTable.id]
+        .value
   }
-
-  /**
-   * Insert only if there is no row with the same instanceJson. If such a row exists, returns that
-   * existing entry.
-   *
-   * @param tscId The TSC ID.
-   * @param instanceJson The instance JSON.
-   * @return The existing or newly inserted entry.
-   */
-  fun upsert(
-      tscId: UUID,
-      instanceJson: String,
-  ): TSCInstanceEntry =
-      upsert(
-          TSCInstanceEntry(
-              id = null,
-              tscId = tscId,
-              instanceJson = instanceJson,
-          ))
 
   /**
    * Converts a [ResultRow] to a [TSCInstanceEntry].
