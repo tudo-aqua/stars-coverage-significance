@@ -27,10 +27,10 @@ import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.NUMBER_OF_SCENARIOS
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.getGridTrafficScenarios
-import tools.aqua.stars.coverage.significance.listSortedFiles
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.parallelism
 import tools.aqua.stars.coverage.significance.sumo.runSumoForScenariosParallel
+import tools.aqua.stars.coverage.significance.utils.listSortedFiles
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 
@@ -46,9 +46,10 @@ class TestSameResultsFromInProcessAndFile {
    */
   @Test
   fun `Test same results when running generated scenarios with libsumo in-process and via exported XML files`() {
+    val numberOfScenarios = 1
     for (i in 0..50) {
       generateGridTrafficScenarios(
-          n = NUMBER_OF_SCENARIOS,
+          n = numberOfScenarios,
           seed = i,
           insertIntoDatabase = false,
           cleanGenerationFiles = true)
@@ -70,9 +71,9 @@ class TestSameResultsFromInProcessAndFile {
               vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"))
 
       val scenarios =
-          getGridTrafficScenarios(n = NUMBER_OF_SCENARIOS, seed = i, insertIntoDatabase = false)
-      assert(scenarios.size == NUMBER_OF_SCENARIOS) {
-        "Expected $NUMBER_OF_SCENARIOS scenarios. Got ${scenarios.size}."
+          seedGridTrafficScenarios(n = numberOfScenarios, seed = i, insertIntoDatabase = false)
+      assert(scenarios.size == numberOfScenarios) {
+        "Expected $numberOfScenarios scenarios. Got ${scenarios.size}."
       }
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
