@@ -18,26 +18,24 @@
 package tools.aqua.stars.coverage.significance
 
 import java.util.UUID
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import tools.aqua.stars.core.evaluation.TSCEvaluation
-import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
-import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
-import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
-import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
+import kotlin.math.roundToInt
+import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
-import tools.aqua.stars.coverage.significance.db.repositories.ChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.ChunkJobSeeder
 import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.getGridTrafficScenarios
-import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
-import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
+import tools.aqua.stars.coverage.significance.process.NamedProcess
+import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
+import tools.aqua.stars.coverage.significance.utils.CliArgs
+import tools.aqua.stars.coverage.significance.utils.toTSCEntry
+import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
+import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
 
 /** Directory paths for grid traffic scenarios. */
 const val GRID_TRAFFIC_DIR = "sumo_data/gridTrafficScenarios"
@@ -66,206 +64,162 @@ const val TAKE_ONLY_TICKS_AT_X_MILLIS = 100
 /** Size of the buffer (in number of ticks) to use when importing tick sequences. */
 const val BUFFER_SIZE = ((BUFFER_SIZE_IN_SECONDS * 1000) / TAKE_ONLY_TICKS_AT_X_MILLIS).toInt()
 
-/** Main entry point for the coverage significance evaluation tool. */
+/** List of processes started during the experiment. */
+val workProcesses = mutableListOf<NamedProcess>()
+
+/** Main entry point for the experiment. */
 fun main(args: Array<String>) {
-  when (args.firstOrNull()) {
-    "worker" -> runWorker(args.drop(1))
-    else -> runController()
+  Runtime.getRuntime()
+      .addShutdownHook(
+          Thread {
+            // Kill all workers on JVM shutdown
+            // Iterate copy to avoid concurrent modification
+            workProcesses.toList().forEach { p -> p.killProcessTree() }
+          })
+  val debugSingleWorker = CliArgs.optionalBoolean(args, "debugSingleWorker", default = true)
+  DbBootstrap.connectAndCreateSchema()
+
+  val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
+  println("Created evaluation run: $evaluationRunId")
+
+  // Add TSC to db
+  val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc().toTSCEntry())
+
+  // Seed scenarios
+  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
+
+  //  calculateMetric()
+  // Precompute scenario-only metric once
+  runStartingValidTSCInstancesEvaluation(parallelism = parallelism)
+
+  //  // Run evaluation
+  //  runEvaluation(
+  //      evaluationRunId = evaluationRunId,
+  //      debugSingleWorker = debugSingleWorker,
+  //      tscEntryId = tscEntryId)
+}
+
+/**
+ * Runs the main evaluation process.
+ *
+ * @param evaluationRunId ID of the evaluation run.
+ * @param tscEntryId ID of the TSC to evaluate.
+ * @param debugSingleWorker If true, runs only a single worker for debugging purposes.
+ */
+private fun runEvaluation(evaluationRunId: UUID, tscEntryId: UUID, debugSingleWorker: Boolean) {
+  // Seed mutants + chunk jobs
+  val mutantIds = MutantGenerator.seedIfEmpty()
+  ChunkJobSeeder.seedChunks(runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L)
+
+  val processes: List<NamedProcess> =
+      if (debugSingleWorker) {
+        listOf(
+            NamedProcess(
+                name = "worker-debug",
+                process =
+                    startEvaluationWorkerProcess(
+                        workerId = "worker-debug",
+                        evaluationRunId = evaluationRunId,
+                        tscEntryId = tscEntryId)))
+      } else {
+        (0 until parallelism).map { idx ->
+          NamedProcess(
+              name = "worker-$idx",
+              process =
+                  startEvaluationWorkerProcess(
+                      workerId = "worker-$idx",
+                      evaluationRunId = evaluationRunId,
+                      tscEntryId = tscEntryId))
+        }
+      }
+  workProcesses += processes
+
+  try {
+    ProcessGroupRunner.awaitAll(groupLabel = "evaluation worker", processes = processes)
+  } catch (e: InterruptedException) {
+    Thread.currentThread().interrupt()
+    processes.toList().forEach { it.killProcessTree() }
+    throw e
   }
 }
 
 /**
- * Runs the controller process which sets up the evaluation run and starts worker processes.
+ * Runs the evaluation of starting valid TSC instances in parallel.
  *
- * @param debugSingleWorker If true, runs a single worker in the same process for debugging.
+ * @param parallelism Number of parallel workers to use.
  */
-private fun runController(debugSingleWorker: Boolean = true) {
-  DbBootstrap.connectAndCreateSchema()
-
-  val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
-  println("Created evaluation run: $evaluationRunEntryId")
-
-  // Database seeding phase
-  val scenarios =
-      getGridTrafficScenarios(n = NUMBER_OF_SCENARIOS, seed = SEED, insertIntoDatabase = true)
-  val mutantIds = MutantGenerator.seedIfEmpty()
-  ChunkJobSeeder.seedChunks(runId = evaluationRunEntryId, mutantIds = mutantIds, chunkSize = 1000L)
-
-  if (debugSingleWorker) {
-    runWorker(listOf("--workerId=debug", "--runId=$evaluationRunEntryId"))
+private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
+  val maxSeq = ScenarioStartingConfigurationRepository.getMaxSequenceNumber()
+  if (maxSeq <= 0L) {
+    println("No scenarios found; skipping premetric phase.")
     return
   }
 
-  val processes =
-      (0 until parallelism).map { workerIndex ->
-        startWorkerProcess(
-            workerId = "worker-$workerIndex", evaluationRunId = evaluationRunEntryId.toString())
+  val existingStartingValidTSCInstances: Long = MetricStartingValidTSCInstancesRepository.count()
+
+  if (existingStartingValidTSCInstances != maxSeq) {
+    MetricStartingValidTSCInstancesRepository.clearTable()
+  }
+
+  val workerCount = minOf(parallelism.coerceAtLeast(1), maxSeq.toInt().coerceAtLeast(1))
+  val chunkSize = ((maxSeq + workerCount - 1) / workerCount).coerceAtLeast(1L)
+
+  val processes: List<NamedProcess> =
+      (0 until workerCount).map { i ->
+        val from = i * chunkSize + 1
+        val to = minOf((i + 1) * chunkSize, maxSeq)
+
+        val name = "ValidStartingTSCInstancesWorker-$i"
+        NamedProcess(
+            name = name,
+            process =
+                startStartingValidTSCInstancesWorkerProcess(
+                    workerId = name, seqFrom = from, seqTo = to))
       }
-
-  var ok = true
-  processes.forEachIndexed { i, p ->
-    val code = p.waitFor()
-    if (code != 0) {
-      ok = false
-      System.err.println("Worker $i exited with code=$code")
-    }
-  }
-  check(ok) { "At least one worker failed." }
-}
-
-/**
- * Runs a worker process which claims and processes chunk jobs from the database.
- *
- * @param args Command-line arguments containing workerId and runId.
- */
-private fun runWorker(args: List<String>) {
-  val workerId = args.first { it.startsWith("--workerId=") }.substringAfter("=")
-  val runId = args.first { it.startsWith("--runId=") }.substringAfter("=")
-
-  DbBootstrap.connectAndCreateSchema() // safe if it is createMissingTables...
-  println("[$workerId] started (runId=$runId)")
-
-  val staticTsc = staticTsc()
-  val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
-
-  val tscEvaluation =
-      TSCEvaluation(
-          staticTsc,
-          writePlots = false,
-          writePlotDataCSV = false,
-          writeSerializedResults = false,
-          compareToPreviousRun = false)
-
-  tscEvaluation.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
-  tscEvaluation.registerMetricProviders(
-      InvalidTSCInstancesPerTSCMetric(),
-      StartingValidTSCInstancesPerTSCMetric(evaluationRunEntryId = UUID.fromString(runId)),
-      TickCountMetric(),
-      FirstTSCInstanceChangeMetric(
-          evaluationRunEntryId = UUID.fromString(runId), tscEntryId = tscEntryId))
-
-  // libsumo collector is per-process; never shared across JVMs
-  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
-
-  // Main queue loop: claim work until empty
-  while (true) {
-    val job =
-        ChunkJobsRepository.claimNextChunkJob(runId = UUID.fromString(runId), workerId = workerId)
-            ?: break
-
-    try {
-      for (sequenceNumber in job.seqFrom..job.seqTo) {
-        val scenario = ScenarioStartingConfigurationRepository.getBySequenceNumber(sequenceNumber)
-        checkNotNull(scenario) { "Scenario not found in database" }
-        val runResult = libsumoDynamicDataCollector.runGeneratedScenario(scenario)
-        tscEvaluation.runEvaluation(sequenceOf(runResult.asTickSequence()))
-      }
-      //       Mark job done
-      ChunkJobsRepository.markDone(job.jobId)
-    } catch (t: Throwable) {
-      // JobQueueRepository.markFailed(job.id, t.stackTraceToString(), retry = job.attempts < 3)
-      System.err.println("[$workerId] job failed: ${t.message}")
-    }
-  }
-
-  println("[$workerId] finished")
-}
-
-/**
- * Starts a new worker process with the given [workerId] and [evaluationRunId].
- *
- * @param workerId Unique identifier for the worker.
- * @param evaluationRunId Identifier for the evaluation run.
- * @return The started [Process].
- */
-private fun startWorkerProcess(workerId: String, evaluationRunId: String): Process {
-  val javaBin = java.nio.file.Paths.get(System.getProperty("java.home"), "bin", "java").toString()
-  val classpath = System.getProperty("java.class.path")
-  val mainClass = "tools.aqua.stars.coverage.significance.MainKt"
-
-  val sumoHome = System.getenv("SUMO_HOME") ?: ""
-  val javaLibraryPathArg = if (sumoHome.isNotBlank()) "-Djava.library.path=$sumoHome/bin" else null
-
-  val cmd = buildList {
-    add(javaBin)
-    if (javaLibraryPathArg != null) add(javaLibraryPathArg)
-
-    // optional: per-worker heap tuning
-    add("-Xmx6g")
-
-    add("-cp")
-    add(classpath)
-    add(mainClass)
-    add("worker")
-    add("--workerId=$workerId")
-    add("--runId=$evaluationRunId")
-  }
-
-  println("Starting $workerId: ${cmd.joinToString(" ")}")
-  return ProcessBuilder(cmd).inheritIO().start()
-}
-
-/** Old main function for single-process execution (for testing purposes). */
-fun oldMain() {
-  DbBootstrap.connectAndCreateSchema()
-  val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
-
-  val scenarios =
-      getGridTrafficScenarios(n = NUMBER_OF_SCENARIOS, seed = SEED, insertIntoDatabase = false)
-  check(scenarios.size == NUMBER_OF_SCENARIOS) {
-    "Expected $NUMBER_OF_SCENARIOS scenarios. Got ${scenarios.size}."
-  }
-
-  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
-
-  val staticTsc = staticTsc()
-  val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
-
-  val bucketCount = minOf(parallelism, scenarios.size.coerceAtLeast(1))
-  val buckets = scenarios.buckets(bucketCount)
-
-  println(
-      "Split ${scenarios.size} scenarios into ${buckets.size} buckets (parallelism=$parallelism)")
-
-  val pool = Executors.newFixedThreadPool(minOf(parallelism, buckets.size))
-
+  workProcesses += processes
   try {
-    val futures =
-        buckets.mapIndexed { _, bucketScenarioFiles ->
-          pool.submit(
-              Callable {
-                val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
-
-                val scenarioRunResult =
-                    libsumoDynamicDataCollector.runGeneratedScenario(bucketScenarioFiles.first())
-
-                // Important: each bucket gets its own evaluator + metric instances
-                val tscEvaluation =
-                    TSCEvaluation(
-                        staticTsc,
-                        writePlots = false,
-                        writePlotDataCSV = false,
-                        writeSerializedResults = false,
-                        compareToPreviousRun = false)
-
-                tscEvaluation.registerPreTickEvaluationHooks(
-                    MinTicksPerTickSequenceHook(BUFFER_SIZE))
-                tscEvaluation.registerMetricProviders(
-                    InvalidTSCInstancesPerTSCMetric(),
-                    StartingValidTSCInstancesPerTSCMetric(
-                        evaluationRunEntryId = evaluationRunEntryId),
-                    TickCountMetric(),
-                    FirstTSCInstanceChangeMetric(
-                        evaluationRunEntryId = evaluationRunEntryId, tscEntryId = tscEntryId))
-
-                tscEvaluation.runEvaluation(
-                    listOf(listOf<TimeStep>().asTickSequence()).asSequence())
-              })
-        }
-
-    // Propagate failures
-    futures.forEach { it.get() }
-  } finally {
-    pool.shutdown()
+    ProcessGroupRunner.awaitAll(
+        groupLabel = "ValidStartingTSCInstancesWorker", processes = processes)
+  } catch (e: InterruptedException) {
+    Thread.currentThread().interrupt()
+    processes.toList().forEach { it.killProcessTree() }
+    throw e
   }
+}
+
+/**
+ * Starts a progress monitor thread that periodically fetches and displays the progress of chunk
+ * jobs.
+ *
+ * @param runId The ID of the mutant scenario run.
+ * @return The started [Thread] monitoring the progress.
+ */
+fun startProgressMonitor(runId: UUID): Thread {
+  val t = Thread {
+    var last = ""
+    while (!Thread.currentThread().isInterrupted) {
+      val p = transaction { MutantScenarioChunkJobsRepository.getProgress(runId) }
+      val completed = p.done + p.failed
+      val pct = if (p.total == 0L) 1.0 else completed.toDouble() / p.total.toDouble()
+
+      val barWidth = 40
+      val filled = (pct * barWidth).roundToInt().coerceIn(0, barWidth)
+      val bar = "[" + "#".repeat(filled) + "-".repeat(barWidth - filled) + "]"
+
+      val line =
+          "\r$bar ${(pct * 100).toInt()}%  " +
+              "done=${p.done} failed=${p.failed} running=${p.running} pending=${p.pending} total=${p.total}"
+
+      if (line != last) {
+        print(line)
+        last = line
+      }
+
+      Thread.sleep(1000)
+    }
+  }
+  t.name = "progress-monitor"
+  t.isDaemon = true
+  t.start()
+  return t
 }
