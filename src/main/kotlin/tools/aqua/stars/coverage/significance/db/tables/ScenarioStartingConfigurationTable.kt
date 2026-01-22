@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.UUIDTable
+import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
 
 /**
  * Table for storing scenario starting configurations.

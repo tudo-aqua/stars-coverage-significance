@@ -32,7 +32,7 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
  * @param insertIntoDatabase Whether to insert the scenarios into the database.
  * @return List of generated scenarios.
  */
-fun getGridTrafficScenarios(
+fun seedGridTrafficScenarios(
     n: Int? = null,
     seed: Int = 1,
     enablePositionVariance: Boolean = false,
@@ -57,10 +57,18 @@ fun getGridTrafficScenarios(
   if (n != null && n < allScenarios.size) {
     allScenarios = allScenarios.shuffled(rng).take(n)
   }
+
+  val countOfScenarios = ScenarioStartingConfigurationRepository.getCount()
+
+  // Table is already populated.
+  if (countOfScenarios == allScenarios.size.toLong()) {
+    return allScenarios
+  }
+
+  ScenarioStartingConfigurationRepository.clearTable()
   if (insertIntoDatabase) {
-    allScenarios.forEach {
-      ScenarioStartingConfigurationRepository.upsert(it.toScenarioStartingConfigurationEntry())
-    }
+    ScenarioStartingConfigurationRepository.batchInsert(
+        allScenarios.map { it.toScenarioStartingConfigurationEntry() })
   }
   return allScenarios
 }
@@ -125,7 +133,7 @@ fun generateGridTrafficScenarios(
   allScenarios.forEach { scenario ->
     scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/${scenario.id}.rou.xml"))
     if (insertIntoDatabase) {
-      ScenarioStartingConfigurationRepository.upsert(
+      ScenarioStartingConfigurationRepository.insertIfMissing(
           scenario.toScenarioStartingConfigurationEntry())
     }
     done++
