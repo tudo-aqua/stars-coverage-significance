@@ -62,6 +62,7 @@ fun seedGridTrafficScenarios(
 
   // Table is already populated.
   if (countOfScenarios == allScenarios.size.toLong()) {
+    println("All scenarios already exist; skipping generation.")
     return allScenarios
   }
 

@@ -157,9 +157,12 @@ private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
 
   val existingStartingValidTSCInstances: Long = MetricStartingValidTSCInstancesRepository.count()
 
-  if (existingStartingValidTSCInstances != maxSeq) {
-    MetricStartingValidTSCInstancesRepository.clearTable()
+  if (existingStartingValidTSCInstances == maxSeq) {
+    println("All starting valid TSC instances already exist; skipping calculation.")
+    return
   }
+
+  MetricStartingValidTSCInstancesRepository.clearTable()
 
   val workerCount = minOf(parallelism.coerceAtLeast(1), maxSeq.toInt().coerceAtLeast(1))
   val chunkSize = ((maxSeq + workerCount - 1) / workerCount).coerceAtLeast(1L)
