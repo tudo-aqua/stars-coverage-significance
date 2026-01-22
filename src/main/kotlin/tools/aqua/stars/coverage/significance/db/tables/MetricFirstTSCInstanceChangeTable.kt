@@ -47,7 +47,7 @@ object MetricFirstTSCInstanceChangeTable : UUIDTable("metric_first_tsc_instance_
       reference(
           name = "scenario_config_id",
           foreign = ScenarioStartingConfigurationTable,
-          onDelete = ReferenceOption.RESTRICT,
+          onDelete = ReferenceOption.CASCADE,
           onUpdate = ReferenceOption.CASCADE)
   val firstChangeMillis = long("first_change_millis").nullable()
   val createdAt = timestamp("created_at")
