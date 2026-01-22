@@ -26,11 +26,45 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.vendors.ForUpdateOption
 import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJob
+import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJobsProgress
 import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
 
 /** Repository for managing chunk jobs related to mutant scenario runs. */
-object ChunkJobsRepository {
+object MutantScenarioChunkJobsRepository {
+  /**
+   * Retrieves the progress of chunk jobs for a given mutant scenario run.
+   *
+   * @param runId The ID of the mutant scenario run.
+   * @return The [ChunkJobsProgress] representing the progress of chunk jobs.
+   */
+  fun getProgress(runId: UUID): ChunkJobsProgress = transaction {
+    val total =
+        MutantScenarioChunkJobsTable.selectAll()
+            .where { MutantScenarioChunkJobsTable.run eq runId }
+            .count()
+
+    if (total == 0L) {
+      return@transaction ChunkJobsProgress(
+          total = 0, pending = 0, running = 0, done = 0, failed = 0)
+    }
+
+    fun countStatus(status: JobStatus): Long =
+        MutantScenarioChunkJobsTable.selectAll()
+            .where {
+              (MutantScenarioChunkJobsTable.run eq runId) and
+                  (MutantScenarioChunkJobsTable.status eq status)
+            }
+            .count()
+
+    ChunkJobsProgress(
+        total = total,
+        pending = countStatus(JobStatus.PENDING),
+        running = countStatus(JobStatus.RUNNING),
+        done = countStatus(JobStatus.DONE),
+        failed = countStatus(JobStatus.FAILED),
+    )
+  }
 
   /**
    * Claims the next available chunk job for processing by a worker.
