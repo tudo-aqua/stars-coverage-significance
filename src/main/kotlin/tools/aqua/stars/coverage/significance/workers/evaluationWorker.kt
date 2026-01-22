@@ -19,20 +19,25 @@ package tools.aqua.stars.coverage.significance.workers
 
 import java.sql.SQLException
 import java.util.UUID
+import kotlin.collections.map
 import tools.aqua.stars.core.evaluation.TSCEvaluation
+import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqFrom
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.staticTsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /**
@@ -66,7 +71,7 @@ fun main(args: Array<String>) {
       FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
   )
 
-  val collector = LibsumoDynamicDataCollector()
+  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
 
   while (true) {
     val job =
@@ -76,14 +81,23 @@ fun main(args: Array<String>) {
     checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
 
     try {
-      for (sequenceNumber in job.seqFrom..job.seqTo) {
-        val scenario = ScenarioStartingConfigurationRepository.getBySequenceNumber(sequenceNumber)
-        checkNotNull(scenario) { "Scenario not found for sequenceNumber=$sequenceNumber" }
-
-        val runResult = collector.runGeneratedScenario(scenario)
-        eval.runEvaluation(sequenceOf(runResult.asTickSequence()))
+      val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
+      val tickSequences = mutableListOf<TickSequence<TimeStep>>()
+      val scenarios = db {
+        (job.seqFrom..job.seqTo).map {
+          ScenarioStartingConfigurationRepository.getBySequenceNumber(it)
+        }
       }
-
+      scenarios.forEachIndexed { index, scenario ->
+        if (scenario == null) {
+          System.err.println("scenario missing for index=$index")
+          return@forEachIndexed
+        }
+        val runResult =
+            libsumoDynamicDataCollector.runGeneratedScenario(scenario, onlyFirstTick = false)
+        tickSequences.add(runResult.asTickSequence())
+      }
+      eval.runEvaluation(tickSequences.asSequence())
       MutantScenarioChunkJobsRepository.markDone(job.jobId)
     } catch (exception: SQLException) {
       MutantScenarioChunkJobsRepository.markFailedOrRequeue(
