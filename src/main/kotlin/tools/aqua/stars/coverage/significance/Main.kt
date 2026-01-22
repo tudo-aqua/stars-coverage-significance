@@ -88,9 +88,11 @@ fun main(args: Array<String>) {
   // Seed scenarios
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
 
-  //  calculateMetric()
   // Precompute scenario-only metric once
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism)
+
+  // Seed mutants
+  MutantGenerator.seed()
 
   //  // Run evaluation
   //  runEvaluation(
@@ -108,7 +110,7 @@ fun main(args: Array<String>) {
  */
 private fun runEvaluation(evaluationRunId: UUID, tscEntryId: UUID, debugSingleWorker: Boolean) {
   // Seed mutants + chunk jobs
-  val mutantIds = MutantGenerator.seedIfEmpty()
+  val mutantIds = MutantGenerator.seed()
   ChunkJobSeeder.seedChunks(runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L)
 
   val processes: List<NamedProcess> =

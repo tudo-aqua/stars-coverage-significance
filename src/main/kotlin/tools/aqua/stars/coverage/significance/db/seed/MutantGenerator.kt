@@ -163,9 +163,16 @@ object MutantGenerator {
    * @param numberOfMutants Number of mutants to seed.
    * @return List of inserted mutant entry IDs, or an empty list if the database was not empty.
    */
-  fun seedIfEmpty(numberOfMutants: Int? = null): List<UUID> {
+  fun seed(numberOfMutants: Int? = null): List<UUID> {
     val existing = MutantsRepository.getAllIds()
-    if (existing.isNotEmpty()) return existing
+    // When all 576 mutants exist and the number of mutants to seed is not specified, return early.
+    if (numberOfMutants == null && existing.isNotEmpty() && existing.size == 576) {
+      println("Database already seeded with 576 mutants.")
+      return existing
+    }
+
+    // A new number of mutants was specified. Therefore, clean previously generated mutants.
+    MutantsRepository.cleanTable()
 
     var mutants = generateAll()
     if (numberOfMutants != null) {
