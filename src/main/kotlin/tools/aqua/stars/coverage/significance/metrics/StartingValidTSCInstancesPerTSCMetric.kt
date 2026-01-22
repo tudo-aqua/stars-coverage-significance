@@ -246,7 +246,7 @@ class StartingValidTSCInstancesPerTSCMetric<
           }
         }
       }
-      MetricStartingValidTSCInstancesRepository.batchUpsert(entries)
+      MetricStartingValidTSCInstancesRepository.batchInsert(entries)
     }
 
     // Code for old calculation

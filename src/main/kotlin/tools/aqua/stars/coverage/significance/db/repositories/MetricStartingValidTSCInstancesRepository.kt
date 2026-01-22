@@ -20,53 +20,71 @@ package tools.aqua.stars.coverage.significance.db.repositories
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchUpsert
-import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.createdAt
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.scenarioConfig
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.tsc
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.tscInstance
 
 /** Repository for [MetricStartingValidTSCInstancesEntry]s. */
 object MetricStartingValidTSCInstancesRepository {
 
   /**
-   * Inserts a new [MetricStartingValidTSCInstancesEntry] into the database.
+   * Returns the number of entries in the table.
    *
-   * @param entry Entry to insert.
-   * @return Inserted entry.
+   * @return The number of entries in the table.
    */
-  fun insert(entry: MetricStartingValidTSCInstancesEntry): MetricStartingValidTSCInstancesEntry =
-      transaction {
-        require(entry.id == null) { "insert() expects entry.id == null." }
+  fun count(): Long = transaction { MetricStartingValidTSCInstancesTable.selectAll().count() }
 
-        val newId =
-            MetricStartingValidTSCInstancesTable.insertAndGetId { row ->
-                  row[tsc] = entry.tscId
-                  row[tscInstance] = entry.tscInstanceId
-                  row[scenarioConfig] = entry.scenarioConfigId
-                  row[createdAt] = entry.createdAt
-                }
-                .value
-
-        getById(newId)
-            ?: error("Inserted MetricStartingValidTSCInstancesEntry not found (id=$newId).")
-      }
+  /** Clears the table. */
+  fun clearTable() = transaction { MetricStartingValidTSCInstancesTable.deleteAll() }
 
   /**
-   * Batch inserts multiple [MetricStartingValidTSCInstancesEntry]s into the database.
+   * Inserts a list of [MetricStartingValidTSCInstancesEntry]s in a single batch.
    *
-   * @param entries Entries to insert.
+   * @param entries The entries to insert.
    */
-  fun batchUpsert(entries: List<MetricStartingValidTSCInstancesEntry>) = transaction {
-    if (entries.isEmpty()) return@transaction
-
-    MetricStartingValidTSCInstancesTable.batchUpsert(entries) { e ->
-      this[MetricStartingValidTSCInstancesTable.tsc] = e.tscId
-      this[MetricStartingValidTSCInstancesTable.tscInstance] = e.tscInstanceId
-      this[MetricStartingValidTSCInstancesTable.scenarioConfig] = e.scenarioConfigId
-      this[MetricStartingValidTSCInstancesTable.createdAt] = e.createdAt
+  fun batchInsert(entries: List<MetricStartingValidTSCInstancesEntry>) {
+    MetricStartingValidTSCInstancesTable.batchInsert(entries) { entry ->
+      this[tsc] = entry.tscId
+      this[tscInstance] = entry.tscInstanceId
+      this[scenarioConfig] = entry.scenarioConfigId
+      this[createdAt] = entry.createdAt
     }
+  }
+
+  /**
+   * Inserts a new [MetricStartingValidTSCInstancesEntry] if it does not already exist, and returns
+   * its ID.
+   *
+   * @param entry The entry to insert.
+   * @return The ID of the inserted or existing entry.
+   */
+  fun insertIfMissingAndReturnId(entry: MetricStartingValidTSCInstancesEntry): UUID = transaction {
+    require(entry.id == null) { "insert() expects entry.id == null." }
+
+    MetricStartingValidTSCInstancesTable.insertIgnore { row ->
+      row[tsc] = entry.tscId
+      row[tscInstance] = entry.tscInstanceId
+      row[scenarioConfig] = entry.scenarioConfigId
+      row[createdAt] = entry.createdAt
+    }
+
+    MetricStartingValidTSCInstancesTable.select(MetricStartingValidTSCInstancesTable.id)
+        .where {
+          (MetricStartingValidTSCInstancesTable.tsc eq entry.tscId) and
+              (MetricStartingValidTSCInstancesTable.tscInstance eq entry.tscInstanceId) and
+              (MetricStartingValidTSCInstancesTable.scenarioConfig eq entry.scenarioConfigId)
+        }
+        .limit(1)
+        .single()[MetricStartingValidTSCInstancesTable.id]
+        .value
   }
 
   /**
