@@ -32,7 +32,6 @@ import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
-import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
@@ -76,11 +75,7 @@ fun main(args: Array<String>) {
             // Iterate copy to avoid concurrent modification
             workProcesses.toList().forEach { p -> p.killProcessTree() }
           })
-  val debugSingleWorker = CliArgs.optionalBoolean(args, "debugSingleWorker", default = true)
   DbBootstrap.connectAndCreateSchema()
-
-  val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
-  println("Created evaluation run: $evaluationRunId")
 
   // Add TSC to db
   val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc().toTSCEntry())
@@ -92,47 +87,33 @@ fun main(args: Array<String>) {
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism)
 
   // Seed mutants
-  MutantGenerator.seed()
+  val mutantIds = MutantGenerator.seed()
 
-  //  // Run evaluation
-  //  runEvaluation(
-  //      evaluationRunId = evaluationRunId,
-  //      debugSingleWorker = debugSingleWorker,
-  //      tscEntryId = tscEntryId)
+  // Run evaluation
+  runEvaluation(tscEntryId = tscEntryId, mutantIds = mutantIds)
 }
 
 /**
  * Runs the main evaluation process.
  *
- * @param evaluationRunId ID of the evaluation run.
  * @param tscEntryId ID of the TSC to evaluate.
- * @param debugSingleWorker If true, runs only a single worker for debugging purposes.
+ * @param mutantIds IDs of the mutants to evaluate.
  */
-private fun runEvaluation(evaluationRunId: UUID, tscEntryId: UUID, debugSingleWorker: Boolean) {
-  // Seed mutants + chunk jobs
-  val mutantIds = MutantGenerator.seed()
+private fun runEvaluation(tscEntryId: UUID, mutantIds: List<UUID>) {
+  val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
+  println("Created evaluation run: $evaluationRunId")
+
   ChunkJobSeeder.seedChunks(runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L)
 
   val processes: List<NamedProcess> =
-      if (debugSingleWorker) {
-        listOf(
-            NamedProcess(
-                name = "worker-debug",
-                process =
-                    startEvaluationWorkerProcess(
-                        workerId = "worker-debug",
-                        evaluationRunId = evaluationRunId,
-                        tscEntryId = tscEntryId)))
-      } else {
-        (0 until parallelism).map { idx ->
-          NamedProcess(
-              name = "worker-$idx",
-              process =
-                  startEvaluationWorkerProcess(
-                      workerId = "worker-$idx",
-                      evaluationRunId = evaluationRunId,
-                      tscEntryId = tscEntryId))
-        }
+      (0 until parallelism).map { idx ->
+        NamedProcess(
+            name = "worker-$idx",
+            process =
+                startEvaluationWorkerProcess(
+                    workerId = "worker-$idx",
+                    evaluationRunId = evaluationRunId,
+                    tscEntryId = tscEntryId))
       }
   workProcesses += processes
 
