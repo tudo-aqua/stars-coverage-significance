@@ -41,13 +41,13 @@ object MetricStartingValidTSCInstancesTable : UUIDTable("metric_starting_valid_t
       reference(
           name = "tsc_instance_id",
           foreign = TSCInstancesTable,
-          onDelete = ReferenceOption.RESTRICT,
+          onDelete = ReferenceOption.CASCADE,
           onUpdate = ReferenceOption.CASCADE)
   val scenarioConfig =
       reference(
           name = "scenario_config_id",
           foreign = ScenarioStartingConfigurationTable,
-          onDelete = ReferenceOption.RESTRICT,
+          onDelete = ReferenceOption.CASCADE,
           onUpdate = ReferenceOption.CASCADE)
   val createdAt = timestamp("created_at")
 
