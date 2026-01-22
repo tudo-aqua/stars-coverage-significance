@@ -122,8 +122,7 @@ fun generationWorkflowWithFiles() {
                     MinTicksPerTickSequenceHook(BUFFER_SIZE))
                 tscEvaluation.registerMetricProviders(
                     InvalidTSCInstancesPerTSCMetric(),
-                    StartingValidTSCInstancesPerTSCMetric(
-                        evaluationRunEntryId = evaluationRunEntryId),
+                    StartingValidTSCInstancesPerTSCMetric(),
                     TickCountMetric(),
                     FirstTSCInstanceChangeMetric(
                         evaluationRunEntryId = evaluationRunEntryId, tscEntryId = tscEntryId))

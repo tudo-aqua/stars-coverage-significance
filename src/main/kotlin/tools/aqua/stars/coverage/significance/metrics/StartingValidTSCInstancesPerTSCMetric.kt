@@ -19,7 +19,6 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
-import java.util.UUID
 import java.util.logging.Logger
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -29,26 +28,19 @@ import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.SerializableMetric
 import tools.aqua.stars.core.metrics.providers.Stateful
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceMetricProvider
-import tools.aqua.stars.core.serialization.SerializableTSCOccurrenceResult
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
 import tools.aqua.stars.core.types.*
-import tools.aqua.stars.core.utils.ApplicationConstantsHolder.CONSOLE_INDENT
-import tools.aqua.stars.core.utils.ApplicationConstantsHolder.CONSOLE_SEPARATOR
-import tools.aqua.stars.core.utils.getCSVString
-import tools.aqua.stars.core.utils.getPlot
-import tools.aqua.stars.core.utils.plotDataAsBarChart
-import tools.aqua.stars.core.utils.plotDataAsLineChart
-import tools.aqua.stars.core.utils.saveAsCSVFile
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
-import tools.aqua.stars.coverage.significance.getJsonString
+import tools.aqua.stars.coverage.significance.utils.getJsonString
 
 /**
  * This class implements the [TSCAndTSCInstanceMetricProvider] and tracks the occurred valid
@@ -72,7 +64,6 @@ import tools.aqua.stars.coverage.significance.getJsonString
  * @param T [TickDataType].
  * @param U [TickUnit].
  * @param D [TickDifference].
- * @property evaluationRunEntryId [UUID] of the evaluation run.
  * @property loggerIdentifier identifier (name) for the logger.
  * @property logger [Logger] instance.
  */
@@ -82,16 +73,12 @@ class StartingValidTSCInstancesPerTSCMetric<
     U : TickUnit<U, D>,
     D : TickDifference<D>,
 >(
-    val evaluationRunEntryId: UUID,
     override val loggerIdentifier: String = "starting-valid-tsc-instances-per-tsc",
     override val logger: Logger = Loggable.getLogger(loggerIdentifier),
 ) :
     TSCAndTSCInstanceMetricProvider<E, T, U, D>,
     PostEvaluationMetricProvider<E, T, U, D>,
-    Stateful,
-    SerializableMetric,
-    Loggable,
-    Plottable {
+    Loggable {
   /**
    * Map a [TSC] to a map in which the occurrences of valid [TSCInstanceNode]s at the beginning of
    * the scenario are stored:
@@ -104,32 +91,8 @@ class StartingValidTSCInstancesPerTSCMetric<
       > =
       mutableMapOf()
 
-  /**
-   * Maps [TSC] to a list of increasing counts of occurrences of valid [TSCInstanceNode]s:
-   * - Map<tsc,List<increasing count>>.
-   */
-  private val uniqueTimedInstances: MutableMap<TSC<E, T, U, D>, MutableList<Int>> = mutableMapOf()
-
-  /** Maps the name of a [TSC] the a list of timed [TSCInstance] occurrences. */
-  private val combinedTSCToOccurredInstancesMap = mutableMapOf<String, Pair<List<Int>, List<Int>>>()
-
-  /**
-   * Maps the name of a [TSC] the a list of timed [TSCInstance] occurrences in relation to the count
-   * of possible [TSCInstance]s.
-   */
-  private val combinedTSCToOccurredInstancesPercentagesMap =
-      mutableMapOf<String, Pair<List<Int>, List<Float>>>()
-
   /** This metric does not depend on another metric. */
   override val dependsOn: Any? = null
-
-  private val xAxisName = "unique and valid TSC instances at the start of the scenario"
-  private val yAxisName = "instance count"
-  private val yAxisNamePercentage = "$yAxisName (in %)"
-  private val legendHeader = "TSC"
-  private val plotFileName = "startingValidTSCInstancesProgressPerTSC"
-  private val plotFileNameCombined = "${plotFileName}_combined"
-  private val plotFileNameCombinedPercentage = "${plotFileNameCombined}_percentage"
 
   /**
    * Track the valid [TSCInstance]s for each [TSC] in the [startingValidInstancesMap]. If the
@@ -144,16 +107,6 @@ class StartingValidTSCInstancesPerTSCMetric<
     // Get current count of unique and valid TSC instance for the current TSC
     val validInstances = startingValidInstancesMap.getOrPut(tsc) { mutableMapOf() }
 
-    // Track current TSC
-    val validInstancesCount = uniqueTimedInstances.getOrPut(tsc) { mutableListOf() }
-
-    // Check if given tscInstance is valid
-    if (!tsc.possibleTSCInstances.contains(tscInstance)) {
-      // Add current count of observed instances to list of timed instance counts
-      validInstancesCount.add(validInstances.size)
-      return
-    }
-
     // Source was already evaluated
     if (validInstances.values.any { it.contains(sourceIdentifier) }) {
       return
@@ -164,51 +117,11 @@ class StartingValidTSCInstancesPerTSCMetric<
 
     // Add current instance to list of observed instances
     validInstanceList.add(sourceIdentifier)
-
-    // Add current count of observed instances to list of timed instance counts
-    validInstancesCount.add(validInstances.size)
-  }
-
-  /**
-   * Returns the full [startingValidInstancesMap] containing the [List] of valid [TSCInstance]s for
-   * each [TSC].
-   *
-   * @return A [Map] containing the [List] of valid [TSCInstance]s for each [TSC].
-   */
-  override fun getState():
-      MutableMap<
-          TSC<E, T, U, D>,
-          MutableMap<TSCInstance<E, T, U, D>, MutableList<String>>,
-      > = startingValidInstancesMap
-
-  /** Prints the number of valid [TSCInstance] for each [TSC] using [logInfo]. */
-  override fun printState() {
-    logInfo(
-        "\n$CONSOLE_SEPARATOR\n$CONSOLE_INDENT Starting Valid TSC Instances Per TSC \n$CONSOLE_SEPARATOR")
-    startingValidInstancesMap.forEach { (tsc, startingValidInstancesMap) ->
-      logInfo(
-          "Count of unique starting valid instances for tsc '${tsc.identifier}' is: ${startingValidInstancesMap.size} (of " +
-              "${tsc.possibleTSCInstances.size} possible instances)")
-
-      logFine("Count of starting valid instances per instance: " + startingValidInstancesMap.size)
-      logFine()
-      logFine("Starting valid instances:")
-      startingValidInstancesMap.forEach { (key, values) ->
-        logFine("The following instance occurred ${values.size} times:")
-        logFine(key.rootNode)
-        logFiner("Occurred in:")
-        values.forEach { logFiner(it) }
-        logFine("----------------")
-      }
-    }
   }
 
   /**
    * Calculates the combined [Map]s that contain the occurrences and their percentages combined for
    * all TSCs.
-   *
-   * As these maps are required for both [writePlots] and [writePlotDataCSV] they have to be
-   * calculated beforehand.
    */
   override fun postEvaluate() {
     // Code for database insertion
@@ -246,377 +159,7 @@ class StartingValidTSCInstancesPerTSCMetric<
       }
       MetricStartingValidTSCInstancesRepository.batchInsert(entries)
     }
-
-    // Code for old calculation
-    uniqueTimedInstances.forEach { (tsc, instances) ->
-      // Get the count of all possible TSC instances for the current tsc
-      val possibleTscInstancesForTSC = tsc.possibleTSCInstances.size
-
-      // Get the count of occurred TSC instances
-      val lastYValue = instances.last()
-
-      val legendEntry = "${tsc.identifier} ($lastYValue/$possibleTscInstancesForTSC)"
-
-      // Calculate the percentage of the occurred instances against the count of possible instances
-      val yValuesPercentage: List<Float> =
-          instances.map { (it.toFloat() / possibleTscInstancesForTSC) * 100 }
-
-      // Save values of current tsc to combined map
-      combinedTSCToOccurredInstancesMap[legendEntry] = List(instances.size) { it } to instances
-      combinedTSCToOccurredInstancesPercentagesMap[legendEntry] =
-          List(yValuesPercentage.size) { it } to yValuesPercentage
-    }
   }
 
-  /**
-   * Prints the collected data in the [combinedTSCToOccurredInstancesMap] and
-   * [combinedTSCToOccurredInstancesPercentagesMap].
-   */
-  override fun printPostEvaluationResult() {
-    logFine("Combined TSCs to occurred instances: $combinedTSCToOccurredInstancesMap")
-    logFine(
-        "Combined TSCs to occurred instances in percentages: $combinedTSCToOccurredInstancesPercentagesMap")
-  }
-
-  /**
-   * Serializes the collected valid [TSCInstance]s for each [TSC] in the
-   * [startingValidInstancesMap].
-   *
-   * @return A [List] of [SerializableTSCOccurrenceResult]s containing the valid [TSCInstance]s for
-   *   each [TSC].
-   */
-  override fun getSerializableResults(): List<SerializableTSCOccurrenceResult> =
-      startingValidInstancesMap.map { (tsc, validInstances) ->
-        val resultList =
-            validInstances.map { (tscInstanceNode, sourceIdentifiers) ->
-              SerializableTSCOccurrence(
-                  tscInstance = SerializableTSCNode(tscInstanceNode.rootNode),
-                  identifiers = sourceIdentifiers,
-              )
-            }
-        SerializableTSCOccurrenceResult(
-            identifier = tsc.identifier,
-            source = this@StartingValidTSCInstancesPerTSCMetric.loggerIdentifier,
-            count = resultList.size,
-            value = resultList,
-        )
-      }
-
-  // region Plot
-
-  /**
-   * Plot the data collected with this metric.
-   *
-   * For each analyzed [TSC] there will be two plots that are generated.
-   * 1. A progress graph which shows the count of unique [TSCInstance]s depicted as a line chart.
-   * 2. A bar chart showing the distribution of occurrences of the [TSCInstance]s.
-   *
-   * A combined line chart is generated that depicts the combined [TSCInstance] progress for all
-   * TSCs in one chart.
-   *
-   * For each generated chart a CSV file with the same data and additional sliced values are
-   * exported as well.
-   */
-  override fun writePlots() {
-    plotOccurrencesProgressionPerTSC()
-    plotOccurrencesPerTSC()
-    plotCombinedOccurrencesProgression()
-  }
-
-  /** Plots the occurrence progression of [TSCInstance]s for each [TSC]. */
-  private fun plotOccurrencesProgressionPerTSC() {
-    uniqueTimedInstances.forEach { (tsc, instances) ->
-      // Get the count of all possible TSC instances for the current tsc
-      val possibleTscInstancesForTSC = tsc.possibleTSCInstances.size
-
-      // Get the count of occurred TSC instances
-      val lastYValue = instances.last()
-
-      val legendEntry = "${tsc.identifier} ($lastYValue/$possibleTscInstancesForTSC)"
-
-      // Build the plot with the values for the current tsc
-      val uniqueInstancesPlot =
-          getPlot(
-              legendEntry = legendEntry,
-              yValues = instances,
-              xAxisName,
-              yAxisName,
-              legendHeader,
-          )
-
-      val fileName = "${plotFileName}_${tsc.identifier}"
-      val fileNamePercentage = "${fileName}_percentage"
-
-      // Plot the timed absolute count of unique TSC instances for the current tsc, where the
-      // y-axis is scaled to the possible instances
-      plotDataAsLineChart(
-          plot = uniqueInstancesPlot,
-          yAxisScaleMaxValue = possibleTscInstancesForTSC,
-          folder = loggerIdentifier,
-          fileName = "${fileName}_scaled",
-          subFolder = tsc.identifier,
-      )
-
-      // Plot the timed absolute count of unique TSC instances for the current tsc, where the
-      // y-axis is scaled to the occurred instances
-      plotDataAsLineChart(
-          plot = uniqueInstancesPlot,
-          folder = loggerIdentifier,
-          fileName = fileName,
-          subFolder = tsc.identifier,
-      )
-
-      // Calculate the percentage of the occurred instances against the count of possible instances
-      val yValuesPercentage: List<Float> =
-          instances.map { (it.toFloat() / possibleTscInstancesForTSC) * 100 }
-
-      val percentagePlot =
-          getPlot(
-              legendEntry = legendEntry,
-              yValues = yValuesPercentage,
-              xAxisName = xAxisName,
-              yAxisName = yAxisNamePercentage,
-              legendHeader = legendHeader,
-          )
-
-      // Plot the timed percentage count of unique TSC instances for the current tsc
-      plotDataAsLineChart(
-          plot = percentagePlot,
-          folder = loggerIdentifier,
-          fileName = fileNamePercentage,
-          subFolder = tsc.identifier,
-      )
-
-      // Plot the timed percentage count of unique TSC instances for the current tsc
-      plotDataAsLineChart(
-          plot = percentagePlot,
-          folder = loggerIdentifier,
-          fileName = "${fileNamePercentage}_scaled",
-          yAxisScaleMaxValue = 100,
-          subFolder = tsc.identifier,
-      )
-    }
-  }
-
-  /** Plots the occurrence counts of [TSCInstance]s for each [TSC]. */
-  private fun plotOccurrencesPerTSC() {
-    startingValidInstancesMap.forEach { (tsc, instances) ->
-      // Get the count of instances for the current tsc ordered by occurrence
-      val instanceCounts = instances.values.map { it.size }.sortedDescending()
-
-      val barPlotName = "validTSCInstanceOccurrencesPerTSC"
-
-      // Get the count of occurred TSC instances
-      val lastYValue = instanceCounts.size
-
-      val legendEntry = "${tsc.identifier} ($lastYValue/${tsc.possibleTSCInstances.size})"
-
-      val plot =
-          getPlot(
-              legendEntry = legendEntry,
-              yValues = instanceCounts,
-              xAxisName = "instance index",
-              yAxisName = "instance count",
-              legendHeader = legendHeader,
-          )
-
-      val fileName = "${barPlotName}_${tsc.identifier}"
-
-      // Plot the occurrences of unique TSC instances for the current tsc
-      plotDataAsBarChart(
-          plot = plot,
-          fileName = fileName,
-          folder = "$loggerIdentifier-occurrences",
-          subFolder = tsc.identifier,
-      )
-
-      // Plot the occurrences of unique TSC instances for the current tsc in which the x-axis
-      // is scale to the amount of all possible TSC instances
-      plotDataAsBarChart(
-          plot = plot,
-          fileName = "${fileName}_scaled",
-          folder = "$loggerIdentifier-occurrences",
-          xAxisScaleMaxValue = tsc.possibleTSCInstances.size,
-          subFolder = tsc.identifier,
-      )
-    }
-  }
-
-  /** Plots the combined occurrence progression of [TSCInstance]s of all [TSC]s. */
-  private fun plotCombinedOccurrencesProgression() {
-    val combinedTotalPlot =
-        getPlot(
-            nameToValuesMap = combinedTSCToOccurredInstancesMap,
-            xAxisName = xAxisName,
-            yAxisName = yAxisName,
-            legendHeader = legendHeader,
-        )
-
-    val combinedPercentagePlot =
-        getPlot(
-            nameToValuesMap = combinedTSCToOccurredInstancesPercentagesMap,
-            xAxisName = xAxisName,
-            yAxisName = yAxisNamePercentage,
-            legendHeader = legendHeader,
-        )
-
-    // Plot the timed total count of unique TSC instances for all TSCs combined
-    plotDataAsLineChart(
-        plot = combinedTotalPlot,
-        folder = loggerIdentifier,
-        fileName = plotFileNameCombined,
-    )
-
-    // Plot the timed percentage count of unique TSC instances for all TSCs combined
-    plotDataAsLineChart(
-        plot = combinedPercentagePlot,
-        folder = loggerIdentifier,
-        fileName = plotFileNameCombinedPercentage,
-    )
-
-    // Plot the timed percentage count of unique TSC instances for all TSCs combined and a
-    // y-axis scaled to 100%
-    plotDataAsLineChart(
-        plot = combinedPercentagePlot,
-        folder = loggerIdentifier,
-        yAxisScaleMaxValue = 100,
-        fileName = "${plotFileNameCombinedPercentage}_scaled",
-    )
-  }
-
-  // endregion
-
-  // region CSV files
-
-  /**
-   * Save the data collected with this metric.
-   *
-   * For each analyzed [TSC] there will be two files that are generated.
-   * 1. A progress file which contains the count of unique [TSCInstance]s.
-   * 2. A file containing the distribution of occurrences of the [TSCInstance]s.
-   *
-   * A combined file is generated that contains the combined [TSCInstance] progress for all TSCs in
-   * one file.
-   *
-   * For each generated file additional sliced values are exported as well.
-   */
-  override fun writePlotDataCSV() {
-    saveOccurrencesProgressionPerTSC()
-    saveOccurrencesPerTSC()
-    saveCombinedOccurrencesProgression()
-  }
-
-  /** Saves CSV files for the occurrence progression of [TSCInstance]s for each [TSC]. */
-  private fun saveOccurrencesProgressionPerTSC() {
-    uniqueTimedInstances.forEach { (tsc, instances) ->
-      // Get the count of all possible TSC instances for the current tsc
-      val possibleTscInstancesForTSC = tsc.possibleTSCInstances.size
-
-      // Get the count of occurred TSC instances
-      val lastYValue = instances.last()
-
-      val legendEntry = "${tsc.identifier} ($lastYValue/$possibleTscInstancesForTSC)"
-
-      val fileName = "${plotFileName}_${tsc.identifier}"
-      val fileNamePercentage = "${fileName}_percentage"
-
-      // Save the timed absolute count of unique TSC instances data as CSV file
-      saveAsCSVFile(
-          csvString = getCSVString(legendEntry, instances),
-          fileName = fileName,
-          folder = loggerIdentifier,
-          subFolder = tsc.identifier,
-      )
-
-      // Save the timed absolute count of unique TSC instances data as CSV file, but only every
-      // 100th entry is taken
-      saveAsCSVFile(
-          csvString = getCSVString(legendEntry, instances, 100),
-          fileName = "${fileName}_slice100",
-          folder = loggerIdentifier,
-          subFolder = tsc.identifier,
-      )
-
-      // Calculate the percentage of the occurred instances against the count of possible instances
-      val yValuesPercentage: List<Float> =
-          instances.map { (it.toFloat() / possibleTscInstancesForTSC) * 100 }
-
-      // Save the timed percentage count of unique TSC instances data as CSV file
-      saveAsCSVFile(
-          csvString = getCSVString(legendEntry, yValuesPercentage),
-          fileName = fileNamePercentage,
-          folder = loggerIdentifier,
-          subFolder = tsc.identifier,
-      )
-
-      // Save the timed percentage count of unique TSC instances data as CSV file but only take
-      // every 100th entry
-      saveAsCSVFile(
-          csvString = getCSVString(legendEntry, yValuesPercentage, 100),
-          fileName = "${fileNamePercentage}_slice100",
-          folder = loggerIdentifier,
-          subFolder = tsc.identifier,
-      )
-    }
-  }
-
-  /** Saves CSV files for the occurrence counts of [TSCInstance]s for each [TSC]. */
-  private fun saveOccurrencesPerTSC() {
-    startingValidInstancesMap.forEach { (tsc, instances) ->
-      // Get the count of instances for the current tsc ordered by occurrence
-      val instanceCounts = instances.values.map { it.size }.sortedDescending()
-
-      val barPlotName = "validTSCInstanceOccurrencesPerTSC"
-
-      // Get the count of occurred TSC instances
-      val lastYValue = instanceCounts.size
-
-      val legendEntry = "${tsc.identifier} ($lastYValue/${tsc.possibleTSCInstances.size})"
-
-      val fileName = "${barPlotName}_${tsc.identifier}"
-
-      // Save the occurrences of unique TSC instances data as CSV file
-      saveAsCSVFile(
-          csvString = getCSVString(legendEntry, instanceCounts),
-          fileName = fileName,
-          folder = "$loggerIdentifier-occurrences",
-          subFolder = tsc.identifier,
-      )
-    }
-  }
-
-  /** Saves CSV files for the combined occurrence progression of [TSCInstance]s of all [TSC]s. */
-  private fun saveCombinedOccurrencesProgression() {
-    // Save the timed total count of unique TSC instances for all TSCs combined as a CSV file
-    saveAsCSVFile(
-        csvString = getCSVString(combinedTSCToOccurredInstancesMap),
-        fileName = plotFileNameCombined,
-        folder = loggerIdentifier,
-    )
-
-    // Save the timed total count of unique TSC instances for all TSCs combined as a CSV file
-    // but only take every 100th entry
-    saveAsCSVFile(
-        csvString = getCSVString(combinedTSCToOccurredInstancesMap, sliceValue = 100),
-        fileName = "${plotFileNameCombined}_slice100",
-        folder = loggerIdentifier,
-    )
-
-    // Save the timed percentage count of unique TSC instances for all TSCs combined as a CSV
-    // file
-    saveAsCSVFile(
-        csvString = getCSVString(combinedTSCToOccurredInstancesPercentagesMap),
-        fileName = plotFileNameCombinedPercentage,
-        folder = loggerIdentifier,
-    )
-
-    // Save the timed percentage count of unique TSC instances for all TSCs combined as a CSV
-    // file but only take every 100th entry
-    saveAsCSVFile(
-        csvString = getCSVString(combinedTSCToOccurredInstancesPercentagesMap, sliceValue = 100),
-        fileName = "${plotFileNameCombinedPercentage}_slice100",
-        folder = loggerIdentifier,
-    )
-  }
-  // endregion
+  override fun printPostEvaluationResult() {}
 }
