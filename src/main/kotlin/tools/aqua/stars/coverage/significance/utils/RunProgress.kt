@@ -15,18 +15,21 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.db.tables
+package tools.aqua.stars.coverage.significance.utils
 
-/** Enum representing the possible vehicle states in a scenario starting configuration. */
-enum class ScenarioStartingConfigurationVehicleState {
-  /** No vehicle. */
-  NONE,
-  /** Ego vehicle. */
-  EGO,
-  /** Vehicle that is faster than the ego vehicle. */
-  FASTER,
-  /** Vehicle that is slower than the ego vehicle. */
-  SLOWER,
-  /** Vehicle that drives at about the same speed as the ego vehicle. */
-  SAME_SPEED
-}
+/**
+ * Data class representing the progress of a run.
+ *
+ * @property total Total number of tasks.
+ * @property pending Number of pending tasks.
+ * @property running Number of running tasks.
+ * @property done Number of completed tasks.
+ * @property failed Number of failed tasks.
+ */
+data class RunProgress(
+    val total: Long,
+    val pending: Long,
+    val running: Long,
+    val done: Long,
+    val failed: Long,
+)
