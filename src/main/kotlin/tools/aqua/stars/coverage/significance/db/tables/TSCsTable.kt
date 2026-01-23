@@ -24,13 +24,11 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * Table for storing TSCs.
  *
  * @property createdAt Timestamp of when the TSC was created.
- * @property hash Hash of the TSC.
  * @property tscJson JSON representation of the TSC.
  * @property possibleTSCInstancesCount Number of possible TSC instances.
  */
 object TSCsTable : UUIDTable("tscs") {
   val createdAt = timestamp("created_at")
-  val hash = varchar("hash", 64)
   val tscJson = text("tsc_json")
   val possibleTSCInstancesCount = integer("possible_tsc_instances_count")
 

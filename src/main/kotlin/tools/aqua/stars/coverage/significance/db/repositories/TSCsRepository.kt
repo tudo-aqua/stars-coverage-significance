@@ -79,7 +79,6 @@ object TSCsRepository {
     val newId =
         TSCsTable.insertAndGetId { row ->
               row[createdAt] = entry.createdAt
-              row[hash] = entry.hash
               row[tscJson] = entry.tscJson
               row[possibleTSCInstancesCount] = entry.possibleTSCInstancesCount
             }
@@ -100,7 +99,6 @@ object TSCsRepository {
     val newId =
         TSCsTable.insertAndGetId { row ->
               row[createdAt] = entry.createdAt
-              row[hash] = entry.hash
               row[tscJson] = entry.tscJson
               row[possibleTSCInstancesCount] = entry.possibleTSCInstancesCount
             }
@@ -150,7 +148,6 @@ object TSCsRepository {
       TSCEntry(
           id = this[TSCsTable.id].value,
           createdAt = this[TSCsTable.createdAt],
-          hash = this[TSCsTable.hash],
           tscJson = this[TSCsTable.tscJson],
           possibleTSCInstancesCount = this[TSCsTable.possibleTSCInstancesCount],
       )

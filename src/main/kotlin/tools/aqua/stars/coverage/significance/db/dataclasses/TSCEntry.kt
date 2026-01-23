@@ -25,14 +25,12 @@ import java.util.UUID
  *
  * @property id Unique identifier of the TSC entry.
  * @property createdAt Timestamp of when the TSC entry was created.
- * @property hash Hash of the TSC.
  * @property tscJson JSON representation of the TSC.
  * @property possibleTSCInstancesCount Number of possible TSC instances.
  */
 data class TSCEntry(
     val id: UUID? = null,
     val createdAt: Instant = Instant.now(),
-    val hash: String,
     val tscJson: String,
     val possibleTSCInstancesCount: Int
 )
