@@ -34,44 +34,48 @@ object ChunkJobSeeder {
    * @param mutantIds Mutant IDs to evaluate.
    * @param chunkSize Number of scenarios per chunk (e.g., 500, 1000, 2000).
    */
-  fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long) = transaction {
-    require(chunkSize > 0) { "chunkSize must be > 0" }
-    require(mutantIds.isNotEmpty()) { "mutantIds must not be empty" }
+  fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long, scenarioCount: Int) =
+      transaction {
+        require(chunkSize > 0) { "chunkSize must be > 0" }
+        require(mutantIds.isNotEmpty()) { "mutantIds must not be empty" }
 
-    // Find max sequence number
-    val maxSeq =
-        ScenarioStartingConfigurationTable.select(
-                ScenarioStartingConfigurationTable.sequenceNumber.max())
-            .firstOrNull()
-            ?.get(ScenarioStartingConfigurationTable.sequenceNumber.max()) ?: 0L
+        // Find max sequence number
+        var maxSeq =
+            ScenarioStartingConfigurationTable.select(
+                    ScenarioStartingConfigurationTable.sequenceNumber.max())
+                .firstOrNull()
+                ?.get(ScenarioStartingConfigurationTable.sequenceNumber.max()) ?: 0L
 
-    if (maxSeq <= 0L) {
-      // Nothing to seed (no scenarios in DB)
-      return@transaction
-    }
+        if (maxSeq <= 0L) {
+          // Nothing to seed (no scenarios in DB)
+          return@transaction
+        }
 
-    val ranges = buildList {
-      var from = 1L
-      while (from <= maxSeq) {
-        val to = minOf(from + chunkSize - 1, maxSeq)
-        add(from to to)
-        from = to + 1
+        maxSeq = minOf(maxSeq, scenarioCount.toLong())
+
+        val ranges = buildList {
+          var from = 1L
+          while (from <= maxSeq) {
+            val to = minOf(from + chunkSize - 1, maxSeq)
+            add(from to to)
+            from = to + 1
+          }
+        }
+
+        println("Split scenarios into ${ranges.size} chunks.")
+
+        val mutantScenarioChunkJobs = mutableListOf<MutantScenarioChunkJob>()
+
+        mutantIds.forEach { mutantId ->
+          ranges.forEach { (from, to) ->
+            mutantScenarioChunkJobs.add(
+                MutantScenarioChunkJob(
+                    runId = runId, mutantId = mutantId, seqFrom = from, seqTo = to))
+          }
+        }
+
+        println("Write ${mutantScenarioChunkJobs.size} chunk jobs to DB.")
+        MutantScenarioChunkJobsRepository.batchInsert(mutantScenarioChunkJobs)
+        println("Finished writing chunk jobs to DB.")
       }
-    }
-
-    println("Split scenarios into ${ranges.size} chunks.")
-
-    val mutantScenarioChunkJobs = mutableListOf<MutantScenarioChunkJob>()
-
-    mutantIds.forEach { mutantId ->
-      ranges.forEach { (from, to) ->
-        mutantScenarioChunkJobs.add(
-            MutantScenarioChunkJob(runId = runId, mutantId = mutantId, seqFrom = from, seqTo = to))
-      }
-    }
-
-    println("Write ${mutantScenarioChunkJobs.size} chunk jobs to DB.")
-    MutantScenarioChunkJobsRepository.batchInsert(mutantScenarioChunkJobs)
-    println("Finished writing chunk jobs to DB.")
-  }
 }
