@@ -28,9 +28,7 @@ import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCEntry
 
 /** JSON configuration for serialization and deserialization. */
-val jsonConfiguration: Json = Json {
-  isLenient = true
-}
+val jsonConfiguration: Json = Json { isLenient = true }
 
 /**
  * Extension function to convert a [SerializableTSCNode] to its JSON string representation.
