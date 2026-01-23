@@ -137,8 +137,8 @@ class RightLanePredicateTest {
   @Test
   fun `Test vehicle behind on right lane`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
-    val frontVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.rightLane, 50.0f)
-    val behindVehicle = PredicateTestHelper.getTestVehicle("v2", roadNetwork.middleLane, 20.0f)
+    val frontVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.middleLane, 50.0f)
+    val behindVehicle = PredicateTestHelper.getTestVehicle("v2", roadNetwork.rightLane, 20.0f)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
     assert(isBehindOnRightLane.holds(tick, behindVehicle to frontVehicle))

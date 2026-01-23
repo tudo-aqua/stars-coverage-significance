@@ -61,7 +61,7 @@ class LeftLanePredicateTest {
   fun `Test vehicle in front on left lane`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
     val frontVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.middleLane, 50.0f)
-    val behindVehicle = PredicateTestHelper.getTestVehicle("v2", roadNetwork.middleLane, 20.0f)
+    val behindVehicle = PredicateTestHelper.getTestVehicle("v2", roadNetwork.rightLane, 20.0f)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
     assert(isInFrontOnLeftLane.holds(tick, frontVehicle to behindVehicle))
@@ -137,7 +137,7 @@ class LeftLanePredicateTest {
   @Test
   fun `Test vehicle behind on left lane`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
-    val frontVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.middleLane, 50.0f)
+    val frontVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.rightLane, 50.0f)
     val behindVehicle = PredicateTestHelper.getTestVehicle("v2", roadNetwork.middleLane, 20.0f)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
