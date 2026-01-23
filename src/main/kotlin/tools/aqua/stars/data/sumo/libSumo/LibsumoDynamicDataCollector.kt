@@ -68,6 +68,7 @@ class LibsumoDynamicDataCollector(
    * Run a generated scenario in libsumo and collect dynamic data.
    *
    * @param scenario Generated scenario to run.
+   * @param mutantId Id of the mutant which should be simulated.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(scenario: GeneratedScenario, mutantId: UUID?): List<TimeStep> =
@@ -77,6 +78,7 @@ class LibsumoDynamicDataCollector(
    * Run a generated scenario in libsumo and collect dynamic data.
    *
    * @param scenario Database entry of the scenario to run.
+   * @param mutantId Id of the mutant which should be simulated.
    * @param onlyFirstTick Whether to only run the first tick.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
