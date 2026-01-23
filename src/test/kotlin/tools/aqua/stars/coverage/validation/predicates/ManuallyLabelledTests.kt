@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.validation
+package tools.aqua.stars.coverage.validation.predicates
 
 import java.io.File
 import kotlin.io.path.Path
