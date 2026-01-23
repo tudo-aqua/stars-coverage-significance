@@ -29,7 +29,6 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.TSCEntry
 
 /** JSON configuration for serialization and deserialization. */
 val jsonConfiguration: Json = Json {
-  prettyPrint = true
   isLenient = true
 }
 
@@ -78,7 +77,6 @@ fun TSC<
 >
     .toTSCEntry() =
     TSCEntry(
-        hash = this.hashCode().toString(),
         tscJson = SerializableTSCNode(this.rootNode).getJsonString(),
         possibleTSCInstancesCount = this.instanceCount.toInt())
 
