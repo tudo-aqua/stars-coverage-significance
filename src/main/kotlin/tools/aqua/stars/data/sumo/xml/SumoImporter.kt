@@ -993,6 +993,7 @@ object SumoImporter {
         tickTimeMillis = tickMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
+        mutantId = null,
         ego = ego)
   }
 

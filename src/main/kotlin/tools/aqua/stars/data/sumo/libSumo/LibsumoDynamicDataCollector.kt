@@ -18,6 +18,7 @@
 package tools.aqua.stars.data.sumo.libSumo
 
 import java.nio.file.Path
+import java.util.UUID
 import kotlin.comparisons.compareBy
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
@@ -69,8 +70,8 @@ class LibsumoDynamicDataCollector(
    * @param scenario Generated scenario to run.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
-  fun runGeneratedScenario(scenario: GeneratedScenario): List<TimeStep> =
-      runGeneratedScenario(scenario.toScenarioStartingConfigurationEntry())
+  fun runGeneratedScenario(scenario: GeneratedScenario, mutantId: UUID?): List<TimeStep> =
+      runGeneratedScenario(scenario.toScenarioStartingConfigurationEntry(), mutantId)
 
   /**
    * Run a generated scenario in libsumo and collect dynamic data.
@@ -81,6 +82,7 @@ class LibsumoDynamicDataCollector(
    */
   fun runGeneratedScenario(
       scenario: ScenarioStartingConfigurationEntry,
+      mutantId: UUID?,
       onlyFirstTick: Boolean = false
   ): List<TimeStep> {
     Simulation.preloadLibraries()
@@ -142,11 +144,12 @@ class LibsumoDynamicDataCollector(
     // Step until done
     val ticks = ArrayList<TimeStep>()
 
-    if (onlyFirstTick) return listOfNotNull(getCurrentTimeStep(egoId, scenario, ticks))
+    if (onlyFirstTick) return listOfNotNull(getCurrentTimeStep(egoId, mutantId, scenario, ticks))
 
     // Run until finished
     while (Simulation.getMinExpectedNumber() > 0) {
-      getCurrentTimeStep(egoId, scenario, ticks)
+      val timeStep = getCurrentTimeStep(egoId, mutantId, scenario, ticks) ?: break
+      ticks += timeStep
     }
 
     return ticks
@@ -154,6 +157,7 @@ class LibsumoDynamicDataCollector(
 
   private fun getCurrentTimeStep(
       egoId: String,
+      mutantId: UUID?,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList()
   ): TimeStep? {
@@ -222,6 +226,7 @@ class LibsumoDynamicDataCollector(
         tickTimeMillis = tickTimeMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
+        mutantId = mutantId,
         ego = ego)
   }
 }
