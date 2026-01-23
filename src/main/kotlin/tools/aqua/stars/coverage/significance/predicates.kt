@@ -64,11 +64,56 @@ val isOnRightLane =
       tick.ego.currentLane.laneIndex == LANE_INDEX_RIGHT
     }
 
-/** Helper function to determine if another vehicle is slower than the ego vehicle. */
+/** Predicate to determine if another vehicle is slower than the ego vehicle. */
 val isDrivingFaster =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Driving Faster") { _, (other, ego) ->
       val diff = other.speedKmPerHour.toDouble() - ego.speedKmPerHour.toDouble()
       diff > SPEED_THRESHOLD_KMH
+    }
+
+/** Predicate to determine if there is no vehicle between the ego vehicle and another vehicle. */
+val noVehicleBetweenOnSameLane =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("No Vehicle Between On Same Lane") {
+        tick,
+        (ego, other) ->
+      tick.vehiclesInTick.none { betweenVehicle ->
+        betweenVehicle != ego &&
+            betweenVehicle != other &&
+            isInFrontOnSameLane.holds(tick, betweenVehicle to ego) &&
+            isBehindOnSameLane.holds(tick, betweenVehicle to other)
+      }
+    }
+
+/**
+ * Predicate to determine if there is no vehicle between the ego vehicle and another vehicle on the
+ * left lane.
+ */
+val noVehicleBetweenOnLeftLane =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("No Vehicle Between On Left Lane") {
+        tick,
+        (ego, other) ->
+      tick.vehiclesInTick.none { betweenVehicle ->
+        betweenVehicle != ego &&
+            betweenVehicle != other &&
+            isInFrontOnLeftLane.holds(tick, betweenVehicle to ego) &&
+            isBehindOnLeftLane.holds(tick, betweenVehicle to other)
+      }
+    }
+
+/**
+ * Predicate to determine if there is no vehicle between the ego vehicle and another vehicle on the
+ * right lane.
+ */
+val noVehicleBetweenOnRightLane =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("No Vehicle Between On Right Lane") {
+        tick,
+        (ego, other) ->
+      tick.vehiclesInTick.none { betweenVehicle ->
+        betweenVehicle != ego &&
+            betweenVehicle != other &&
+            isInFrontOnRightLane.holds(tick, betweenVehicle to ego) &&
+            isBehindOnRightLane.holds(tick, betweenVehicle to other)
+      }
     }
 
 /**
@@ -135,7 +180,7 @@ val isBesidesOf =
 /**
  * Helper predicate to determine if another vehicle is in front of the ego vehicle on the same lane.
  */
-val isInFrontOfSameLane =
+val isInFrontOnSameLane =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is In Front Of Same Lane") {
         tick,
         (otherVehicle, ego) ->
@@ -143,7 +188,7 @@ val isInFrontOfSameLane =
     }
 
 /** Helper predicate to determine if another vehicle is behind the ego vehicle on the same lane. */
-val isBehindOfSameLane =
+val isBehindOnSameLane =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Behind Of Same Lane") {
         tick,
         (otherVehicle, ego) ->
@@ -219,7 +264,7 @@ val isBehindOnRightLane =
 val hasVehicleInFrontOnSameLane =
     predicate<TimeStep>("hasVehicleInFrontOnSameLane") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane.holds(tick, otherVehicle to tick.ego)
+        isInFrontOnSameLane.holds(tick, otherVehicle to tick.ego)
       }
     }
 
@@ -229,7 +274,8 @@ val hasVehicleInFrontOnSameLane =
 val vehicleOnSameLaneInFrontIsSlower =
     predicate<TimeStep>("vehicleOnSameLaneInFrontIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isInFrontOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, tick.ego to otherVehicle) &&
             isDrivingSlower.holds(tick, otherVehicle to tick.ego)
       }
     }
@@ -241,7 +287,8 @@ val vehicleOnSameLaneInFrontIsSlower =
 val vehicleOnSameLaneInFrontSameSpeed =
     predicate<TimeStep>("vehicleOnSameLaneInFrontSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isInFrontOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, tick.ego to otherVehicle) &&
             isDrivingAtSameSpeed.holds(tick, otherVehicle to tick.ego)
       }
     }
@@ -252,7 +299,8 @@ val vehicleOnSameLaneInFrontSameSpeed =
 val vehicleOnSameLaneInFrontIsFaster =
     predicate<TimeStep>("vehicleOnSameLaneInFrontIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isInFrontOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isInFrontOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, tick.ego to otherVehicle) &&
             isDrivingFaster.holds(tick, otherVehicle to tick.ego)
       }
     }
@@ -265,7 +313,7 @@ val vehicleOnSameLaneInFrontIsFaster =
 val hasVehicleBehindOnSameLane =
     predicate<TimeStep>("hasVehicleBehindOnSameLane") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane.holds(tick, otherVehicle to tick.ego)
+        isBehindOnSameLane.holds(tick, otherVehicle to tick.ego)
       }
     }
 
@@ -276,7 +324,8 @@ val hasVehicleBehindOnSameLane =
 val vehicleOnSameLaneBehindIsSlower =
     predicate<TimeStep>("vehicleOnSameLaneBehindIsSlower") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isBehindOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, otherVehicle to tick.ego) &&
             isDrivingSlower.holds(tick, otherVehicle to tick.ego)
       }
     }
@@ -288,7 +337,8 @@ val vehicleOnSameLaneBehindIsSlower =
 val vehicleOnSameLaneBehindSameSpeed =
     predicate<TimeStep>("vehicleOnSameLaneBehindSameSpeed") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isBehindOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, otherVehicle to tick.ego) &&
             isDrivingAtSameSpeed.holds(tick, otherVehicle to tick.ego)
       }
     }
@@ -300,7 +350,8 @@ val vehicleOnSameLaneBehindSameSpeed =
 val vehicleOnSameLaneBehindIsFaster =
     predicate<TimeStep>("vehicleOnSameLaneBehindIsFaster") { tick ->
       exists(tick.vehiclesInTick) { otherVehicle ->
-        isBehindOfSameLane.holds(tick, otherVehicle to tick.ego) &&
+        isBehindOnSameLane.holds(tick, otherVehicle to tick.ego) &&
+            noVehicleBetweenOnSameLane.holds(tick, otherVehicle to tick.ego) &&
             isDrivingFaster.holds(tick, otherVehicle to tick.ego)
       }
     }
