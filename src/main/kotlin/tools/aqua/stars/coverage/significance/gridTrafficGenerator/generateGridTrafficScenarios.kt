@@ -58,7 +58,8 @@ fun seedGridTrafficScenarios(
     allScenarios = allScenarios.shuffled(rng).take(n)
   }
 
-  val countOfScenarios = ScenarioStartingConfigurationRepository.getCount()
+  val countOfScenarios =
+      if (insertIntoDatabase) ScenarioStartingConfigurationRepository.getCount() else 0
 
   // Table is already populated.
   if (countOfScenarios == allScenarios.size.toLong()) {
@@ -66,8 +67,8 @@ fun seedGridTrafficScenarios(
     return allScenarios
   }
 
-  ScenarioStartingConfigurationRepository.clearTable()
   if (insertIntoDatabase) {
+    ScenarioStartingConfigurationRepository.clearTable()
     ScenarioStartingConfigurationRepository.batchInsert(
         allScenarios.map { it.toScenarioStartingConfigurationEntry() })
   }
