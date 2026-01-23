@@ -118,6 +118,7 @@ object MetricFirstTSCInstanceChangeRepository {
           runId = this[MetricFirstTSCInstanceChangeTable.run].value,
           tscId = this[MetricFirstTSCInstanceChangeTable.tsc].value,
           scenarioConfigId = this[MetricFirstTSCInstanceChangeTable.scenarioConfig].value,
+          mutantId = this[MetricFirstTSCInstanceChangeTable.mutant].value,
           firstChangeMillis = this[MetricFirstTSCInstanceChangeTable.firstChangeMillis],
           createdAt = this[MetricFirstTSCInstanceChangeTable.createdAt],
       )

@@ -27,6 +27,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property run Evaluation run.
  * @property tsc TSC.
  * @property scenarioConfig Scenario starting configuration.
+ * @property mutant Mutant.
  * @property firstChangeMillis Milliseconds since the epoch of the first change in the TSC instance.
  * @property createdAt Timestamp of when the entry was created.
  */
@@ -49,11 +50,12 @@ object MetricFirstTSCInstanceChangeTable : UUIDTable("metric_first_tsc_instance_
           foreign = ScenarioStartingConfigurationTable,
           onDelete = ReferenceOption.CASCADE,
           onUpdate = ReferenceOption.CASCADE)
+  val mutant = reference("mutant_id", MutantsTable, onDelete = ReferenceOption.CASCADE)
   val firstChangeMillis = long("first_change_millis").nullable()
   val createdAt = timestamp("created_at")
 
   init {
-    index(true, run, tsc, scenarioConfig)
+    index(true, run, tsc, scenarioConfig, mutant)
 
     index(false, run)
     index(false, tsc)

@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
+import java.util.UUID
 import tools.aqua.stars.core.types.TickDataType
 
 /**
@@ -24,6 +25,7 @@ import tools.aqua.stars.core.types.TickDataType
  *
  * @param identifier The identifier of the [TimeStep].
  * @property sourceIdentifier Source identifier.
+ * @property mutantId Mutant identifier.
  * @property tickTimeMillis Tick time in milliseconds.
  * @property vehiclesInTick Vehicles present in this tick.
  * @property collisionsInTick Collisions occurring during this tick.
@@ -32,6 +34,7 @@ import tools.aqua.stars.core.types.TickDataType
 class TimeStep(
     identifier: String,
     val sourceIdentifier: String,
+    val mutantId: UUID?,
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,

@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceCh
  * @property runId Unique identifier of the evaluation run.
  * @property tscId Unique identifier of the TSC.
  * @property scenarioConfigId Unique identifier of the scenario starting configuration.
+ * @property mutantId Unique identifier of the mutant.
  * @property firstChangeMillis The time in milliseconds after which the first change occurred.
  * @property createdAt Timestamp of when the metric entry was created.
  */
@@ -36,6 +37,7 @@ data class MetricFirstTSCInstanceChangeEntry(
     val runId: UUID,
     val tscId: UUID,
     val scenarioConfigId: UUID,
+    val mutantId: UUID,
     val firstChangeMillis: Long?,
     val createdAt: Instant = Instant.now(),
 )
