@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance
 import tools.aqua.stars.core.evaluation.VariablePredicate.Companion.predicate
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
+import tools.aqua.stars.logic.kcmftbl.future.globally
 
 /** Predicate for checking whether two vehicles collide with each other. */
 val collidesWith =
@@ -32,8 +33,13 @@ val collidesWith =
 
 /** General Traffic Rules: G_0 Accidents - Predicate implementation. */
 val g0Accidents =
-    SumoPredicate("G_0 Accidents") { tick ->
-      tick.vehiclesInTick.all { otherVehicle ->
-        otherVehicle != tick.ego && !collidesWith.holds(tick, tick.ego to otherVehicle)
+    SumoPredicate("G_0 Accidents") {
+      globally(it) { tick ->
+        tick.otherVehicles.all { otherVehicle ->
+          !tick.collisionsInTick.any { collision ->
+            (collision.colliderVehicle == tick.ego && collision.victimVehicle == otherVehicle) ||
+                (collision.colliderVehicle == otherVehicle && collision.victimVehicle == tick.ego)
+          }
+        }
       }
     }

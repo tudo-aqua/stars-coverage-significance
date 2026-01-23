@@ -26,6 +26,7 @@ import tools.aqua.stars.coverage.significance.isOnSameLane
 import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsFaster
 import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsSlower
 import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontSameSpeed
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
@@ -55,15 +56,28 @@ object PredicateTestHelper {
 
   fun getTestTimeStep(
       vehicles: List<Vehicle> = listOf(getTestVehicle()),
-      ego: Vehicle = vehicles.first()
+      tickTimeMillis: Long = 100L,
+      ego: Vehicle = vehicles.first(),
+      collisions: List<Pair<Long, Pair<Vehicle, Vehicle>>> = emptyList()
   ): TimeStep =
       TimeStep(
           identifier = "tick-0",
           sourceIdentifier = "Test",
           mutantId = null,
-          tickTimeMillis = 100,
+          tickTimeMillis = tickTimeMillis,
           vehiclesInTick = vehicles,
-          collisionsInTick = emptyList(),
+          collisionsInTick =
+              collisions.map { (timeMillis, it) ->
+                CollisionEvent(
+                    timeMillis.toFloat(),
+                    lane = it.first.currentLane,
+                    edge = it.first.currentEdge,
+                    positionOnLaneMeters = it.first.positionOnLaneMeters,
+                    colliderVehicle = it.first,
+                    victimVehicle = it.second,
+                    collisionType = "",
+                    rawAttributes = emptyMap())
+              },
           ego = ego)
 
   fun getTestVehicle(

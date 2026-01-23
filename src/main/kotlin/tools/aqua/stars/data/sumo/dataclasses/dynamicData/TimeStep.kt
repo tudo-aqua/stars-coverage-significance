@@ -44,5 +44,9 @@ class TimeStep(
         currentTickUnit = TickUnitMilliseconds(tickTimeMillis),
         entities = LinkedHashSet(vehiclesInTick),
         identifier = identifier) {
+
+  /** Holds a list of all vehicles except the ego vehicle. */
+  val otherVehicles: List<Vehicle> = vehiclesInTick.filter { it != ego }
+
   override fun toString(): String = sourceIdentifier
 }
