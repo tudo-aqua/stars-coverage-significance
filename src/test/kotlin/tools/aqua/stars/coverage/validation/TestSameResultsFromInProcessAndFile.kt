@@ -74,7 +74,9 @@ class TestSameResultsFromInProcessAndFile {
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
 
-      val libSumoTicks = libsumoDynamicDataCollector.runGeneratedScenario(scenarios.first())
+      val libSumoTicks =
+          libsumoDynamicDataCollector.runGeneratedScenario(
+              scenario = scenarios.first(), mutantId = null)
 
       assert(libSumoTicks.size == xmlSumoTicks.size) { "Size of the generated scenarios differ." }
 

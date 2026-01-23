@@ -37,12 +37,11 @@ import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsSlower
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 
 /** Test class for manually labelled tests for one specific SUMO scenario. */
 class ManuallyLabelledTests :
-    ManualLabelTests<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>() {
+    ManualLabelTests<TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>() {
   override val manualLabelTestFiles = listOf(manuallyLabelledTests)
 }
 

@@ -7,13 +7,13 @@
 
     <input>
         <net-file value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\grid_highway.net.xml"/>
-        <route-files value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\scenarios\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.rou.xml"/>
-        <additional-files value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\vTypes.add.xml"/>
+        <route-files value="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.rou.xml"/>
+        <additional-files value="vTypes.add.xml"/>
     </input>
 
     <output>
-        <netstate-dump value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\export\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.export.xml"/>
-        <collision-output value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\collision\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.collisions.xml"/>
+        <netstate-dump value="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.export.xml"/>
+        <collision-output value="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.collisions.xml"/>
     </output>
 
     <time>

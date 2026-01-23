@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-01-15T21:10:07.921154+01:00 by Eclipse SUMO sumo 1.25.0
+<!-- generated on 2026-01-23T20:34:06.926015+01:00 by Eclipse SUMO GUI 1.25.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
         <net-file value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\grid_highway.net.xml"/>
-        <route-files value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\scenarios\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.rou.xml"/>
-        <additional-files value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\vTypes.add.xml"/>
+        <route-files value="D:\github\aqua\stars-coverage-significance\src\test\resources\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.rou.xml"/>
+        <additional-files value="D:\github\aqua\stars-coverage-significance\src\test\resources\vTypes.add.xml"/>
     </input>
 
     <output>
-        <netstate-dump value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\export\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.export.xml"/>
-        <collision-output value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\collision\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.collisions.xml"/>
+        <netstate-dump value="D:\github\aqua\stars-coverage-significance\src\test\resources\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.export.xml"/>
+        <collision-output value="D:\github\aqua\stars-coverage-significance\src\test\resources\r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.collisions.xml"/>
     </output>
 
     <time>
