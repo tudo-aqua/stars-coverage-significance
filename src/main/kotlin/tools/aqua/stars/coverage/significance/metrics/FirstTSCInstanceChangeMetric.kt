@@ -70,7 +70,7 @@ class FirstTSCInstanceChangeMetric(
    * Map storing the first change tick for each source identifier.
    * - Map<sourceIdentifier,FirstChangeData>.
    */
-  val instanceChangeMap: MutableMap<String, FirstChangeData> = mutableMapOf()
+  val instanceChangeMap: MutableMap<Pair<String, UUID>, FirstChangeData> = mutableMapOf()
 
   /**
    * Evaluates the metric for the given TSC, TSC instance, and tick.
@@ -85,14 +85,17 @@ class FirstTSCInstanceChangeMetric(
       tick: TimeStep
   ) {
     val sourceIdentifier = tscInstance.sourceIdentifier.replace(".export.xml", "")
+    checkNotNull(tick.mutantId) { "Mutant ID not set for $sourceIdentifier" }
     val existingChange =
-        instanceChangeMap.getOrPut(sourceIdentifier) { FirstChangeData(changedFrom = tscInstance) }
+        instanceChangeMap.getOrPut(sourceIdentifier to tick.mutantId) {
+          FirstChangeData(changedFrom = tscInstance)
+        }
     // If there is already a change recorded, do nothing
     if (existingChange.firstChangeAfterXUnits != null) return
 
     // If the TSC instance has changed, record the change
     if (existingChange.changedFrom != tscInstance) {
-      instanceChangeMap[sourceIdentifier] =
+      instanceChangeMap[sourceIdentifier to tick.mutantId] =
           FirstChangeData(
               changedFrom = existingChange.changedFrom,
               changedTo = tscInstance,
@@ -104,7 +107,8 @@ class FirstTSCInstanceChangeMetric(
   override fun postEvaluate() {
     db {
       val entries = mutableListOf<MetricFirstTSCInstanceChangeEntry>()
-      instanceChangeMap.forEach { (sourceIdentifier, firstChange) ->
+      instanceChangeMap.forEach { (key, firstChange) ->
+        val (sourceIdentifier, mutantId) = key
         val scenarioStartingConfigurationEntryId =
             ScenarioStartingConfigurationRepository.getByScenarioByHumanReadableScenarioId(
                     sourceIdentifier)
@@ -118,6 +122,7 @@ class FirstTSCInstanceChangeMetric(
                 runId = evaluationRunEntryId,
                 tscId = tscEntryId,
                 scenarioConfigId = scenarioStartingConfigurationEntryId,
+                mutantId = mutantId,
                 firstChangeMillis = firstChange.firstChangeAfterXUnits?.tickMillis)
         entries.add(changeEntry)
       }
