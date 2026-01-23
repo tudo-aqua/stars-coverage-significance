@@ -35,14 +35,8 @@ val collidesWith =
 val g0Accidents =
     SumoPredicate("G_0 Accidents") {
       globally(it) { tick ->
-        tick.vehiclesInTick.all { otherVehicle ->
-          otherVehicle != tick.ego &&
-              !tick.collisionsInTick.any { collision ->
-                (collision.colliderVehicle == tick.ego &&
-                    collision.victimVehicle == otherVehicle) ||
-                    (collision.colliderVehicle == otherVehicle &&
-                        collision.victimVehicle == tick.ego)
-              }
+        tick.otherVehicles.all { otherVehicle ->
+          !collidesWith.holds(tick, tick.ego to otherVehicle)
         }
       }
     }
