@@ -20,8 +20,12 @@ package tools.aqua.stars.coverage.significance
 import java.util.UUID
 import kotlin.math.roundToInt
 import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.core.evaluation.TSCEvaluation
+import tools.aqua.stars.core.evaluation.TickSequence
+import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
@@ -30,11 +34,14 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.ChunkJobSeeder
 import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
+import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /** Directory paths for grid traffic scenarios. */
 const val GRID_TRAFFIC_DIR = "sumo_data/gridTrafficScenarios"
@@ -67,7 +74,7 @@ const val BUFFER_SIZE = ((BUFFER_SIZE_IN_SECONDS * 1000) / TAKE_ONLY_TICKS_AT_X_
 val workProcesses = mutableListOf<NamedProcess>()
 
 /** Main entry point for the experiment. */
-fun main(args: Array<String>) {
+fun main() {
   Runtime.getRuntime()
       .addShutdownHook(
           Thread {
@@ -90,7 +97,64 @@ fun main(args: Array<String>) {
   val mutantIds = MutantGenerator.seed()
 
   // Run evaluation
-  runEvaluation(tscEntryId = tscEntryId, mutantIds = mutantIds)
+  //  runEvaluation(tscEntryId = tscEntryId, mutantIds = mutantIds)
+  val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
+  println("Created evaluation run: $evaluationRunId")
+
+  // Clear Table for convenience
+  MutantScenarioChunkJobsRepository.clearTable()
+
+  println("Seeding chunk jobs...")
+  ChunkJobSeeder.seedChunks(
+      runId = evaluationRunId, mutantIds = mutantIds.take(1), chunkSize = 1000L, scenarioCount = 10)
+
+  DbBootstrap.connectAndCreateSchema()
+
+  val staticTsc = staticTsc()
+
+  val eval =
+      TSCEvaluation(
+          staticTsc,
+          writePlots = false,
+          writePlotDataCSV = false,
+          writeSerializedResults = false,
+          compareToPreviousRun = false)
+
+  //  eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
+  eval.registerMetricProviders(
+      FirstTSCInstanceChangeMetric(evaluationRunEntryId = evaluationRunId, tscEntryId = tscEntryId),
+  )
+
+  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
+
+  while (true) {
+    val job =
+        MutantScenarioChunkJobsRepository.claimNextChunkJob(
+            runId = evaluationRunId, workerId = "workerId") ?: break
+
+    checkNotNull(job.jobId) {
+      "No chunk job found for runId=$evaluationRunId and workerId=workerId"
+    }
+
+    val tickSequences = mutableListOf<TickSequence<TimeStep>>()
+    val scenarios = db {
+      (job.seqFrom..job.seqTo).map {
+        ScenarioStartingConfigurationRepository.getBySequenceNumber(it)
+      }
+    }
+    scenarios.forEachIndexed { index, scenario ->
+      if (scenario == null) {
+        System.err.println("scenario missing for index=$index")
+        return@forEachIndexed
+      }
+      val runResult =
+          libsumoDynamicDataCollector.runGeneratedScenario(
+              scenario, job.mutantId, onlyFirstTick = false)
+      tickSequences.add(runResult.asTickSequence(bufferSize = BUFFER_SIZE))
+    }
+    eval.runEvaluation(tickSequences.asSequence())
+    MutantScenarioChunkJobsRepository.markDone(job.jobId)
+  }
 }
 
 /**
@@ -107,7 +171,8 @@ private fun runEvaluation(tscEntryId: UUID, mutantIds: List<UUID>) {
   MutantScenarioChunkJobsRepository.clearTable()
 
   println("Seeding chunk jobs...")
-  ChunkJobSeeder.seedChunks(runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L)
+  ChunkJobSeeder.seedChunks(
+      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L, 1000000)
 
   startProgressMonitor(evaluationRunId)
 

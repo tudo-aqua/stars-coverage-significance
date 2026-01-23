@@ -77,7 +77,8 @@ fun main(args: Array<String>) {
     if (workerId == "ValidStartingTSCInstancesWorker-0") {
       consoleProgress.step()
     }
-    val runResult = libsumoDynamicDataCollector.runGeneratedScenario(scenario, onlyFirstTick = true)
+    val runResult =
+        libsumoDynamicDataCollector.runGeneratedScenario(scenario, null, onlyFirstTick = true)
     tickSequences.add(runResult.asTickSequence())
   }
 
