@@ -46,7 +46,26 @@ class TimeStep(
         identifier = identifier) {
 
   /** Holds a list of all vehicles except the ego vehicle. */
-  val otherVehicles: List<Vehicle> = vehiclesInTick.filter { it != ego }
+  val nonEgoVehicles: List<Vehicle> = vehiclesInTick.filter { it != ego }
+
+  /**
+   * Gets all vehicles except the given one.
+   *
+   * @param vehicle Vehicle to exclude.
+   * @return List of vehicles except the given one.
+   */
+  fun getOtherVehicles(vehicle: Vehicle): List<Vehicle> = vehiclesInTick.filter { it != vehicle }
+
+  /**
+   * Gets a vehicle by its id.
+   *
+   * @param vehicleId Vehicle id.
+   * @return Vehicle with the given id.
+   * @throws IllegalArgumentException If no vehicle with the given id exists.
+   */
+  fun getVehicleById(vehicleId: String): Vehicle =
+      vehiclesInTick.firstOrNull { it.vehicleId == vehicleId }
+          ?: error("No vehicle with id $vehicleId")
 
   override fun toString(): String = sourceIdentifier
 }

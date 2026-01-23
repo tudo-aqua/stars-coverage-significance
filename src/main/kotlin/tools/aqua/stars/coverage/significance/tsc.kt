@@ -28,122 +28,131 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 fun staticTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Static TSC") {
       all("Root") {
+        monitors {
+          g0Accidents
+          g1SafeDistanceToPrecedingVehicle
+          g2UnnecessaryBraking
+          g3MaximumSpeedLimit
+          g4TrafficFlow
+          i1Stopping
+          i2DrivingFasterThenLeftTraffic
+        }
         exclusive("Lane") {
           optional("Left Lane") {
-            condition { isOnLeftLane.holds(it) }
+            condition(isOnLeftLane)
             exclusive("Has Vehicle in Front Same Lane") {
-              condition { hasVehicleInFrontOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle Behind Same Lane") {
-              condition { hasVehicleBehindOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleBehindOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneBehindIsSlower) }
             }
             exclusive("Has Vehicle on Right Lane Besides") {
-              condition { hasVehicleBesidesOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBesideIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneBesideSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBesideIsSlower.holds(it) } }
+              condition(hasVehicleBesidesOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneBesideIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneBesideSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneBesideIsSlower) }
             }
             exclusive("Has Vehicle in Front on Right Lane") {
-              condition { hasVehicleInFrontOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle in Behind on Right Lane") {
-              condition { hasVehicleInBehindOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleInBehindOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneBehindIsSlower) }
             }
           }
           optional("Middle Lane") {
-            condition { isOnMiddleLane.holds(it) }
+            condition(isOnMiddleLane)
             exclusive("Has Vehicle in Front Same Lane") {
-              condition { hasVehicleInFrontOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle Behind Same Lane") {
-              condition { hasVehicleBehindOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleBehindOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneBehindIsSlower) }
             }
             exclusive("Has Vehicle on Left Lane Besides") {
-              condition { hasVehicleBesidesOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBesideIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneBesideSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBesideIsSlower.holds(it) } }
+              condition(hasVehicleBesidesOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneBesideIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneBesideSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneBesideIsSlower) }
             }
             exclusive("Has Vehicle on Right Lane Besides") {
-              condition { hasVehicleBesidesOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBesideIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneBesideSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBesideIsSlower.holds(it) } }
+              condition(hasVehicleBesidesOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneBesideIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneBesideSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneBesideIsSlower) }
             }
             exclusive("Has Vehicle in Front on Left Lane") {
-              condition { hasVehicleInFrontOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle in Front on Right Lane") {
-              condition { hasVehicleInFrontOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle in Behind on Left Lane") {
-              condition { hasVehicleInBehindOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleInBehindOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneBehindIsSlower) }
             }
             exclusive("Has Vehicle in Behind on Right Lane") {
-              condition { hasVehicleInBehindOnRightLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnRightLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnRightLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnRightLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleInBehindOnRightLane)
+              leaf("Faster Vehicle") { condition(vehicleOnRightLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnRightLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnRightLaneBehindIsSlower) }
             }
           }
           optional("Right Lane") {
-            condition { isOnRightLane.holds(it) }
+            condition(isOnRightLane)
             exclusive("Has Vehicle in Front Same Lane") {
-              condition { hasVehicleInFrontOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle Behind Same Lane") {
-              condition { hasVehicleBehindOnSameLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnSameLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnSameLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnSameLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleBehindOnSameLane)
+              leaf("Faster Vehicle") { condition(vehicleOnSameLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnSameLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnSameLaneBehindIsSlower) }
             }
             exclusive("Has Vehicle on Left Lane Besides") {
-              condition { hasVehicleBesidesOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBesideIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneBesideSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBesideIsSlower.holds(it) } }
+              condition(hasVehicleBesidesOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneBesideIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneBesideSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneBesideIsSlower) }
             }
             exclusive("Has Vehicle in Front on Left Lane") {
-              condition { hasVehicleInFrontOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneInFrontIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneInFrontSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneInFrontIsSlower.holds(it) } }
+              condition(hasVehicleInFrontOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneInFrontIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneInFrontSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneInFrontIsSlower) }
             }
             exclusive("Has Vehicle in Behind on Left Lane") {
-              condition { hasVehicleInBehindOnLeftLane.holds(it) }
-              leaf("Faster Vehicle") { condition { vehicleOnLeftLaneBehindIsFaster.holds(it) } }
-              leaf("Same Speed") { condition { vehicleOnLeftLaneBehindSameSpeed.holds(it) } }
-              leaf("Slower Vehicle") { condition { vehicleOnLeftLaneBehindIsSlower.holds(it) } }
+              condition(hasVehicleInBehindOnLeftLane)
+              leaf("Faster Vehicle") { condition(vehicleOnLeftLaneBehindIsFaster) }
+              leaf("Same Speed") { condition(vehicleOnLeftLaneBehindSameSpeed) }
+              leaf("Slower Vehicle") { condition(vehicleOnLeftLaneBehindIsSlower) }
             }
           }
         }
