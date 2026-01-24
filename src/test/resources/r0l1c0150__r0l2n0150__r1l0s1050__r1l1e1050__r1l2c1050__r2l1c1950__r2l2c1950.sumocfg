@@ -6,7 +6,7 @@
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="D:\github\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\grid_highway.net.xml"/>
+        <net-file value="grid_highway.net.xml"/>
         <route-files value="r0l1c0150__r0l2n0150__r1l0s1050__r1l1e1050__r1l2c1050__r2l1c1950__r2l2c1950.rou.xml"/>
         <additional-files value="vTypes.add.xml"/>
     </input>
