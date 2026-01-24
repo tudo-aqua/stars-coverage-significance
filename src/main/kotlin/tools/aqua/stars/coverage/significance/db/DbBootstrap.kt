@@ -39,7 +39,7 @@ const val DB_USER = DB_NAME
 /** Default database credentials. */
 const val DB_PASSWORD = DB_NAME
 /** Default database connection parameters. */
-const val DB_HOST = "localhost"
+const val DB_HOST = "ls14-sting1.cs.tu-dortmund.de"
 /** Default database connection parameters. */
 const val DB_PORT = 5432
 

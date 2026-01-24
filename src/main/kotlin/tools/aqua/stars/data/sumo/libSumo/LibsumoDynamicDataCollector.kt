@@ -17,23 +17,26 @@
 
 package tools.aqua.stars.data.sumo.libSumo
 
-import java.nio.file.Path
-import java.util.UUID
-import kotlin.comparisons.compareBy
-import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
-import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.*
-import tools.aqua.stars.data.sumo.dataclasses.staticData.*
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
+import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
+import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
+import java.nio.file.Path
+import java.util.*
+import kotlin.io.path.Path
+import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 
 /**
  * Collector of dynamic data from a SUMO simulation using libsumo.
@@ -87,7 +90,16 @@ class LibsumoDynamicDataCollector(
       mutantId: UUID?,
       onlyFirstTick: Boolean = false
   ): List<TimeStep> {
-    Simulation.preloadLibraries()
+    if (Runtime.Version.parse(System.getProperty("java.version")).compareTo(Runtime.Version.parse("21.0.5")) < 0) {
+      System.err.println("The recommended minimal Java version is 21.0.5.")
+    }
+
+    if (System.getProperty("os.name").startsWith("Windows")) {
+      System.loadLibrary("libcrypto-3-x64")
+      System.loadLibrary("libssl-3-x64")
+    }
+
+    System.loadLibrary("libsumojni")
 
     // Reload simulation
     val baseArgs =
