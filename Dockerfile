@@ -1,12 +1,7 @@
-FROM ghcr.io/eclipse-sumo/sumo:v1_25_0
+FROM ubuntu:24.04
 
-USER root
-
-# ---- Install Java 21 (Temurin) ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates \
-      curl \
-      gnupg \
+      software-properties-common ca-certificates curl gnupg git \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public \
       | gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg \
@@ -14,20 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       > /etc/apt/sources.list.d/adoptium.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends temurin-21-jdk \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-# ---- Optional: create a normal user for IntelliJ exec ----
-ARG UID=1000
-ARG GID=1000
-RUN groupadd -g ${GID} dev \
- && useradd -m -u ${UID} -g ${GID} -s /bin/bash dev
+RUN add-apt-repository ppa:sumo/stable
+RUN apt-get update -y
+RUN apt-get install -y sumo sumo-tools sumo-doc
 
-WORKDIR /workspace
-USER root
+RUN ln -s /usr/lib/x86_64-linux-gnu/liblibsumojni.so /usr/lib/liblibsumojni.so
 
-# Keep the container running for IntelliJ to attach/exec into
-ENTRYPOINT ["sleep", "infinity"]
+CMD ["/bin/bash"]
