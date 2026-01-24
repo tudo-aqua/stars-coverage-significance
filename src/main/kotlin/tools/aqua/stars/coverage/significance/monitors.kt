@@ -49,7 +49,19 @@ val g0Accidents =
       }
     }
 
-val cutIn = predicate<TimeStep, Pair<Vehicle, Vehicle>>("Cut In") { _, (ego, otherVehicle) -> true }
+val cutIn =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Cut In") { startingTick, (ego, otherVehicle) ->
+      isOnSameLane.holds(startingTick, ego to otherVehicle) and
+          previous(startingTick) { previousTick ->
+            !isOnSameLane.holds(
+                previousTick,
+                previousTick.ego to previousTick.getVehicleById(otherVehicle.vehicleId)) and
+                isBesidesOf.holds(
+                    previousTick,
+                    previousTick.ego to previousTick.getVehicleById(otherVehicle.vehicleId))
+          } and
+          isInFrontOnSameLane.holds(startingTick, ego to otherVehicle)
+    }
 
 val keepSafeDistancePreceding =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Keep Safe Distance Preceding") {
@@ -96,7 +108,10 @@ val g2UnnecessaryBraking =
       globally(tick) { globallyTick -> !unnecessaryBraking.holds(globallyTick) }
     }
 
-val keepLaneSpeedLimit = predicate<TimeStep>("Keep Lane Speed Limit") { true }
+val keepLaneSpeedLimit =
+    predicate<TimeStep>("Keep Lane Speed Limit") { tick ->
+      tick.ego.speedMetersPerSecond <= tick.ego.currentLane.speedLimitMetersPerSecond
+    }
 
 val keepFovSpeedLimit = predicate<TimeStep>("Keep FOV Speed Limit") { true }
 
