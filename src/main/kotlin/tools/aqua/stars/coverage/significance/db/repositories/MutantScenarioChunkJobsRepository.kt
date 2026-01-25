@@ -18,28 +18,19 @@
 package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.time.Instant
-import java.util.UUID
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.selectAll
+import java.util.*
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.vendors.ForUpdateOption
 import tools.aqua.stars.coverage.significance.db.dataclasses.ChunkJobsProgress
 import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantScenarioChunkJob
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.attempts
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.errorText
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.finishedAt
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.lockedAt
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.lockedBy
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.mutant
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqFrom
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqTo
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.startedAt
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.status
 
 /** Repository for managing chunk jobs related to mutant scenario runs. */
@@ -65,54 +56,52 @@ object MutantScenarioChunkJobsRepository {
   }
 
   /**
-   * Retrieves the progress of chunk jobs for a given mutant scenario run.
+   * Retrieves the progress of chunk jobs for a given run ID.
    *
-   * @param runId The ID of the mutant scenario run.
-   * @return The [ChunkJobsProgress] representing the progress of chunk jobs.
+   * @param runId The UUID of the run to get progress for.
+   * @return A [ChunkJobsProgress] object containing the progress details.
    */
   fun getProgress(runId: UUID): ChunkJobsProgress = transaction {
-    val total =
-        MutantScenarioChunkJobsTable.selectAll()
+    val cnt = MutantScenarioChunkJobsTable.id.count()
+
+    // Returns rows: (status, count)
+    val byStatus =
+        MutantScenarioChunkJobsTable.select(status, cnt)
             .where { MutantScenarioChunkJobsTable.run eq runId }
-            .count()
+            .groupBy(status)
+            .associate { row -> row[status] to row[cnt] }
 
-    if (total == 0L) {
-      return@transaction ChunkJobsProgress(
-          total = 0, pending = 0, running = 0, done = 0, failed = 0)
-    }
-
-    fun countStatus(status: JobStatus): Long =
-        MutantScenarioChunkJobsTable.selectAll()
-            .where {
-              (MutantScenarioChunkJobsTable.run eq runId) and
-                  (MutantScenarioChunkJobsTable.status eq status)
-            }
-            .count()
+    val pending = byStatus[JobStatus.PENDING] ?: 0L
+    val running = byStatus[JobStatus.RUNNING] ?: 0L
+    val done = byStatus[JobStatus.DONE] ?: 0L
+    val failed = byStatus[JobStatus.FAILED] ?: 0L
+    val total = pending + running + done + failed
 
     ChunkJobsProgress(
         total = total,
-        pending = countStatus(JobStatus.PENDING),
-        running = countStatus(JobStatus.RUNNING),
-        done = countStatus(JobStatus.DONE),
-        failed = countStatus(JobStatus.FAILED),
+        pending = pending,
+        running = running,
+        done = done,
+        failed = failed,
     )
   }
 
   /**
-   * Claims the next available chunk job for processing by a worker.
+   * Claims the next available chunk job for processing.
    *
-   * @param runId The ID of the mutant scenario run.
-   * @param workerId The ID of the worker claiming the job.
-   * @return The claimed [MutantScenarioChunkJob] or null if no pending jobs are available.
+   * @param runId The UUID of the run to claim a job from.
+   * @param workerId The identifier of the worker claiming the job.
+   * @return The claimed [MutantScenarioChunkJob] or null if no pending jobs
    */
   fun claimNextChunkJob(runId: UUID, workerId: String): MutantScenarioChunkJob? = transaction {
-    // Pick one PENDING row, lock it with SKIP LOCKED
     val row =
-        MutantScenarioChunkJobsTable.selectAll()
-            .where {
-              (MutantScenarioChunkJobsTable.run eq runId) and
-                  (MutantScenarioChunkJobsTable.status eq JobStatus.PENDING)
-            }
+        MutantScenarioChunkJobsTable.select(
+                MutantScenarioChunkJobsTable.id,
+                MutantScenarioChunkJobsTable.run,
+                mutant,
+                seqFrom,
+                seqTo)
+            .where { (MutantScenarioChunkJobsTable.run eq runId) and (status eq JobStatus.PENDING) }
             .orderBy(MutantScenarioChunkJobsTable.id to SortOrder.ASC)
             .limit(1)
             .forUpdate(
@@ -123,10 +112,9 @@ object MutantScenarioChunkJobsRepository {
     val jobId = row[MutantScenarioChunkJobsTable.id].value
     val now = Instant.now()
 
-    // Mark RUNNING
     MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
       it[status] = JobStatus.RUNNING
-      it[attempts] = row[MutantScenarioChunkJobsTable.attempts] + 1
+      it[attempts] = attempts + 1
       it[lockedBy] = workerId
       it[lockedAt] = now
       it[startedAt] = now
@@ -136,15 +124,16 @@ object MutantScenarioChunkJobsRepository {
     MutantScenarioChunkJob(
         jobId = jobId,
         runId = row[MutantScenarioChunkJobsTable.run].value,
-        mutantId = row[MutantScenarioChunkJobsTable.mutant].value,
-        seqFrom = row[MutantScenarioChunkJobsTable.seqFrom],
-        seqTo = row[MutantScenarioChunkJobsTable.seqTo])
+        mutantId = row[mutant].value,
+        seqFrom = row[seqFrom],
+        seqTo = row[seqTo],
+    )
   }
 
   /**
    * Marks the specified chunk job as done.
    *
-   * @param jobId The ID of the chunk job to mark as done.
+   * @param jobId The ID of the job to mark as done.
    */
   fun markDone(jobId: Long) = transaction {
     MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
@@ -158,24 +147,34 @@ object MutantScenarioChunkJobsRepository {
   /**
    * Marks the specified chunk job as failed or requeues it based on the number of attempts.
    *
-   * @param jobId The ID of the chunk job to mark as failed or requeue.
+   * @param jobId The ID of the job to mark as failed or requeue.
    * @param error The error message associated with the failure.
-   * @param maxAttempts The maximum number of attempts allowed before marking as failed.
+   * @param maxAttempts The maximum number of attempts before marking as failed.
    */
   fun markFailedOrRequeue(jobId: Long, error: String, maxAttempts: Int) = transaction {
-    val attempts =
-        MutantScenarioChunkJobsTable.select(attempts)
-            .where { MutantScenarioChunkJobsTable.id eq jobId }
-            .first()[attempts]
+    val truncated = error.take(10_000)
 
-    val retry = attempts < maxAttempts
+    // Retry path: only if attempts < maxAttempts
+    val retried =
+        MutantScenarioChunkJobsTable.update({
+          (MutantScenarioChunkJobsTable.id eq jobId) and (attempts less maxAttempts)
+        }) {
+          it[status] = JobStatus.PENDING
+          it[errorText] = truncated
+          it[lockedBy] = null
+          it[lockedAt] = null
+          // Do not set finishedAt on retry
+        }
 
-    MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
-      it[status] = if (retry) JobStatus.PENDING else JobStatus.FAILED
-      it[errorText] = error.take(10_000)
-      it[lockedBy] = null
-      it[lockedAt] = null
-      if (!retry) it[finishedAt] = Instant.now()
+    if (retried == 0) {
+      // Final fail path
+      MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
+        it[status] = JobStatus.FAILED
+        it[errorText] = truncated
+        it[lockedBy] = null
+        it[lockedAt] = null
+        it[finishedAt] = Instant.now()
+      }
     }
   }
 }
