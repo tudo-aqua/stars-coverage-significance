@@ -35,6 +35,7 @@ import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProce
 fun main(args: Array<String>) {
   val bufferProcessors = parseIntArg(args, "--bufferProcessors", 0).coerceAtLeast(0)
   val parallelism = (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
+  println("Starting evaluation with parallelism=$parallelism (bufferProcessors=$bufferProcessors).")
   DbBootstrap.connect()
   val evaluationRunId =
       EvaluationRunsRepository.getLatest()?.id
