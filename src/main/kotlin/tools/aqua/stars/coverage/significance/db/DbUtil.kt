@@ -28,9 +28,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
  * @param block The block of code to execute within the transaction.
  * @return The result of the block execution.
  */
-fun <T> db(block: () -> T): T {
-  val current = TransactionManager.currentOrNull()
-  return if (current != null) {
+inline fun <T> db(crossinline block: () -> T): T {
+  return if (TransactionManager.currentOrNull() != null) {
     block()
   } else {
     transaction { block() }
