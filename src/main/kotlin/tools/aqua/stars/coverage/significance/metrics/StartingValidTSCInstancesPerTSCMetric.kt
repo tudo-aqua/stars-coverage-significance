@@ -19,7 +19,6 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
-import java.util.logging.Logger
 import kotlin.collections.component1
 import kotlin.collections.component2
 import tools.aqua.stars.core.metrics.providers.Loggable
@@ -64,21 +63,13 @@ import tools.aqua.stars.coverage.significance.utils.getJsonString
  * @param T [TickDataType].
  * @param U [TickUnit].
  * @param D [TickDifference].
- * @property loggerIdentifier identifier (name) for the logger.
- * @property logger [Logger] instance.
  */
 class StartingValidTSCInstancesPerTSCMetric<
     E : EntityType<E, T, U, D>,
     T : TickDataType<E, T, U, D>,
     U : TickUnit<U, D>,
     D : TickDifference<D>,
->(
-    override val loggerIdentifier: String = "starting-valid-tsc-instances-per-tsc",
-    override val logger: Logger = Loggable.getLogger(loggerIdentifier),
-) :
-    TSCAndTSCInstanceMetricProvider<E, T, U, D>,
-    PostEvaluationMetricProvider<E, T, U, D>,
-    Loggable {
+>() : TSCAndTSCInstanceMetricProvider<E, T, U, D>, PostEvaluationMetricProvider<E, T, U, D> {
   /**
    * Map a [TSC] to a map in which the occurrences of valid [TSCInstanceNode]s at the beginning of
    * the scenario are stored:
