@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 The STARS Coverage Significance Authors
+ * Copyright 2026 The STARS Coverage Significance Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,13 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
  * @property vehicleType Reference to inferred/known vehicle type.
  * @property currentLane Lane pointer the vehicle is on.
  * @property currentEdge Edge pointer the vehicle is on.
- * @property positionOnLaneMeters Position on lane (m).
+ * @property positionOnLaneMeters Position on lane (m). (SUMO lane position is the front bumper.)
  * @property speedMetersPerSecond Speed (m/s).
+ * @property accelerationMetersPerSecondSquared Acceleration (m/s²).
+ * @property frontBumperPositionOnLaneMeters Front bumper lane position (m).
+ * @property backBumperPositionOnLaneMeters Back bumper lane position (m).
+ * @property decelMetersPerSecondSquared vType decel (m/s²).
+ * @property emergencyDecelMetersPerSecondSquared vType emergencyDecel (m/s²).
  */
 data class Vehicle(
     val vehicleId: String,
@@ -37,7 +42,12 @@ data class Vehicle(
     val currentLane: Lane,
     val currentEdge: Edge,
     val positionOnLaneMeters: Float,
-    val speedMetersPerSecond: Float
+    val speedMetersPerSecond: Float,
+    val accelerationMetersPerSecondSquared: Float,
+    val frontBumperPositionOnLaneMeters: Float,
+    val backBumperPositionOnLaneMeters: Float,
+    val decelMetersPerSecondSquared: Float = 4.5f,
+    val emergencyDecelMetersPerSecondSquared: Float = 9.0f,
 ) : EntityType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>() {
 
   /** Speed in km/h. */

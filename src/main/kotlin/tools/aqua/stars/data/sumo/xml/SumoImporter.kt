@@ -1094,7 +1094,10 @@ object SumoImporter {
         currentLane = lane,
         currentEdge = edge,
         positionOnLaneMeters = pos,
-        speedMetersPerSecond = speed)
+        speedMetersPerSecond = speed,
+        accelerationMetersPerSecondSquared = -1.0f,
+        frontBumperPositionOnLaneMeters = pos,
+        backBumperPositionOnLaneMeters = pos - 2.0f)
   }
 
   /**
@@ -1236,7 +1239,10 @@ object SumoImporter {
           currentLane = lane,
           currentEdge = edge,
           positionOnLaneMeters = 0.0f,
-          speedMetersPerSecond = 0.0f)
+          speedMetersPerSecond = 0.0f,
+          accelerationMetersPerSecondSquared = 0.0f,
+          frontBumperPositionOnLaneMeters = 0.0f,
+          backBumperPositionOnLaneMeters = 0.0f)
 
   /**
    * Returns a lane if resolvable, else a placeholder lane with warnings.

@@ -26,6 +26,7 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
+import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
@@ -146,6 +147,12 @@ class LibsumoDynamicDataCollector(
                       "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
             }
 
+    if (mutantId != null) {
+      val mutantEntry = MutantsRepository.getById(mutantId)
+      checkNotNull(mutantEntry) { "Mutant with id $mutantId not found in database." }
+      MutantApplier.applyToEgoVehicle(egoId, mutantEntry)
+    }
+
     // Step until done
     val ticks = ArrayList<TimeStep>()
 
@@ -177,17 +184,58 @@ class LibsumoDynamicDataCollector(
     for (vehId in vehIds) {
       val laneId = SumoVehicle.getLaneID(vehId)
       val lane = laneById[laneId] ?: error("Unknown lane $laneId")
+
       val typeId = SumoVehicle.getTypeID(vehId)
-      val vType = vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+      val rawVType = vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+
+      // vType wrapper (parsed from vTypes.add.xml)
+      val vehicleType = VehicleType(rawVType)
+
+      // Simulation-derived values
+      val speedMs = SumoVehicle.getSpeed(vehId).toFloat()
+      val frontPos = SumoVehicle.getLanePosition(vehId).toFloat()
+
+      // Prefer acceleration from libsumo; fall back to finite-difference if bindings don’t expose
+      // it.
+      val accelMs2: Float =
+          runCatching { SumoVehicle.getAcceleration(vehId).toFloat() }
+              .getOrElse {
+                // Fallback: a = Δv / Δt using previous tick (ticks already passed into
+                // getCurrentTimeStep)
+                val prev = ticks.lastOrNull()?.vehiclesInTick?.firstOrNull { it.vehicleId == vehId }
+
+                if (prev == null) 0.0f
+                else {
+                  val dtSeconds = (stepLength).toFloat().coerceAtLeast(1e-6f)
+                  (speedMs - prev.speedMetersPerSecond) / dtSeconds
+                }
+              }
+
+      // Take SUMO default values for decel/emergency decel
+      // https://sumo.dlr.de/docs/Definition_of_Vehicles%2C_Vehicle_Types%2C_and_Routes.html#available_vtype_attributes
+      val decelMs2 = 4.5f
+      val emergencyDecelMs2 = 9.0f
+
+      // Get length of Vehicle for back bumper position
+      val lengthMeters: Float =
+          runCatching { SumoVehicle.getLength(vehId).toFloat() }.getOrElse { 0.0f }
+
+      val backPos = frontPos - lengthMeters
 
       vehiclesInTick +=
           Vehicle(
               vehicleId = vehId,
-              vehicleType = VehicleType(vType),
+              vehicleType = vehicleType,
               currentLane = lane,
               currentEdge = lane.parentEdge,
-              positionOnLaneMeters = SumoVehicle.getLanePosition(vehId).toFloat(),
-              speedMetersPerSecond = SumoVehicle.getSpeed(vehId).toFloat())
+              positionOnLaneMeters = frontPos, // keep existing semantics (front bumper)
+              speedMetersPerSecond = speedMs,
+              accelerationMetersPerSecondSquared = accelMs2,
+              frontBumperPositionOnLaneMeters = frontPos,
+              backBumperPositionOnLaneMeters = backPos,
+              decelMetersPerSecondSquared = decelMs2,
+              emergencyDecelMetersPerSecondSquared = emergencyDecelMs2,
+          )
     }
 
     val ego = vehiclesInTick.firstOrNull { it.vehicleId == egoId }
