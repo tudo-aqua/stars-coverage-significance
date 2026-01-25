@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -27,6 +28,19 @@ import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
 
 /** Repository for managing [EvaluationRunEntry] in the database. */
 object EvaluationRunsRepository {
+
+  /**
+   * Retrieves the latest [EvaluationRunEntry] from the database.
+   *
+   * @return Latest entry or null if none exist.
+   */
+  fun getLatest(): EvaluationRunEntry? = transaction {
+    EvaluationRunsTable.selectAll()
+        .orderBy(EvaluationRunsTable.createdAt, SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.toEntry()
+  }
 
   /**
    * Inserts a new [EvaluationRunEntry] into the database.
