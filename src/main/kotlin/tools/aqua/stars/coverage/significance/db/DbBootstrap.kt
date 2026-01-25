@@ -17,7 +17,8 @@
 
 package tools.aqua.stars.coverage.significance.db
 
-import java.lang.Thread.sleep
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
@@ -42,40 +43,103 @@ const val DB_PASSWORD = DB_NAME
 /** Default database connection parameters. */
 const val DB_HOST = "ls14-sting1.cs.tu-dortmund.de"
 /** Default database connection parameters. */
-const val DB_PORT = 5432
+const val DB_PORT = 6432
 
 /** Database bootstrap utility to connect to the PostgreSQL database and create necessary tables. */
 object DbBootstrap {
 
-  /**
-   * Database configuration.
-   *
-   * @property host Database host.
-   * @property port Database port.
-   * @property database Database name.
-   * @property user Database user.
-   * @property password Database password.
-   */
   data class DbConfig(
       val host: String = System.getenv("DB_HOST") ?: DB_HOST,
       val port: Int = System.getenv("DB_PORT")?.toInt() ?: DB_PORT,
       val database: String = System.getenv("DB_NAME") ?: DB_NAME,
       val user: String = System.getenv("DB_USER") ?: DB_USER,
       val password: String = System.getenv("DB_PASSWORD") ?: DB_PASSWORD,
+      // Keep these conservative for your multi-process + PgBouncer setup.
+      val maxPoolSize: Int = System.getenv("DB_POOL_MAX")?.toInt() ?: 1,
+      val minIdle: Int = System.getenv("DB_POOL_MIN_IDLE")?.toInt() ?: 0,
   )
 
+  /** One pool per JVM process. */
+  @Volatile private var dataSource: HikariDataSource? = null
+
+  /** Cached Exposed Database instance (per JVM process). */
+  @Volatile private var exposedDb: Database? = null
+
   /**
-   * Connects to the PostgreSQL database and creates necessary tables.
+   * Connect to the database (idempotent). Initializes the Hikari pool once per JVM process.
    *
-   * @param cfg Database configuration.
+   * @return the Exposed [Database] handle.
    */
-  fun connectAndCreateSchema(cfg: DbConfig = DbConfig()) {
-    val jdbcUrl = "jdbc:postgresql://${cfg.host}:${cfg.port}/${cfg.database}"
+  fun connect(cfg: DbConfig = DbConfig()): Database {
+    // Fast path
+    exposedDb?.let {
+      return it
+    }
 
-    Database.connect(
-        url = jdbcUrl, driver = "org.postgresql.Driver", user = cfg.user, password = cfg.password)
+    synchronized(this) {
+      exposedDb?.let {
+        return it
+      }
 
-    TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_READ_COMMITTED
+      val jdbcUrlBase = "jdbc:postgresql://${cfg.host}:${cfg.port}/${cfg.database}"
+      val jdbcUrl =
+          if (jdbcUrlBase.contains("?")) jdbcUrlBase
+          else
+              "$jdbcUrlBase?prepareThreshold=0&preparedStatementCacheQueries=0&preparedStatementCacheSizeMiB=0&preferQueryMode=simple"
+
+      val hikariCfg =
+          HikariConfig().apply {
+            this.jdbcUrl = jdbcUrl
+            username = cfg.user
+            password = cfg.password
+            driverClassName = "org.postgresql.Driver"
+
+            maximumPoolSize = cfg.maxPoolSize
+            minimumIdle = cfg.minIdle
+
+            // Exposed uses transactions; keep autocommit off
+            isAutoCommit = false
+            transactionIsolation = "TRANSACTION_READ_COMMITTED"
+
+            // Reasonable timeouts; fail fast rather than piling up threads
+            connectionTimeout = 10_000
+            validationTimeout = 5_000
+            idleTimeout = 60_000
+            maxLifetime = 10 * 60_000
+
+            // Optional but often helpful
+            addDataSourceProperty("tcpKeepAlive", "true")
+            addDataSourceProperty("reWriteBatchedInserts", "true")
+            addDataSourceProperty("prepareThreshold", "0")
+            addDataSourceProperty("preparedStatementCacheQueries", "0")
+            addDataSourceProperty("preparedStatementCacheSizeMiB", "0")
+            addDataSourceProperty("preferQueryMode", "simple")
+          }
+
+      val ds = HikariDataSource(hikariCfg)
+      dataSource = ds
+
+      val db = Database.connect(ds)
+      exposedDb = db
+
+      TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_READ_COMMITTED
+
+      // Ensure pool is closed on JVM shutdown
+      Runtime.getRuntime().addShutdownHook(Thread { runCatching { ds.close() } })
+
+      return db
+    }
+  }
+
+  /**
+   * Create/update the schema (idempotent).
+   *
+   * Requires [connect] to have been called before, otherwise throws.
+   */
+  fun createSchema() {
+    check(exposedDb != null) {
+      "Database is not connected. Call DbBootstrap.connect() before DbBootstrap.createSchema()."
+    }
 
     transaction {
       createMissingTablesAndColumns(
@@ -90,6 +154,16 @@ object DbBootstrap {
           MutantScenarioChunkJobsTable,
       )
     }
-    sleep(2000)
+  }
+
+  /**
+   * Convenience: connect (if needed) and create schema (idempotent).
+   *
+   * @return the Exposed [Database] handle.
+   */
+  fun connectAndCreateSchema(cfg: DbConfig = DbConfig()): Database {
+    val db = connect(cfg)
+    createSchema()
+    return db
   }
 }
