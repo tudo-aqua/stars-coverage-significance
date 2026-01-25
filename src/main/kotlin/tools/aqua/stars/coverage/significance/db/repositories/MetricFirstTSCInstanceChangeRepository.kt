@@ -21,6 +21,7 @@ import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -29,6 +30,9 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceCh
 
 /** Repository for [MetricFirstTSCInstanceChangeEntry]s. */
 object MetricFirstTSCInstanceChangeRepository {
+
+  /** Removes all entries from the database. */
+  fun clearTable() = transaction { MetricFirstTSCInstanceChangeTable.deleteAll() }
 
   /**
    * Inserts a new [MetricFirstTSCInstanceChangeEntry] into the database.
@@ -64,6 +68,7 @@ object MetricFirstTSCInstanceChangeRepository {
     MetricFirstTSCInstanceChangeTable.batchInsert(entries) { e ->
       this[MetricFirstTSCInstanceChangeTable.run] = e.runId
       this[MetricFirstTSCInstanceChangeTable.tsc] = e.tscId
+      this[MetricFirstTSCInstanceChangeTable.mutant] = e.mutantId
       this[MetricFirstTSCInstanceChangeTable.scenarioConfig] = e.scenarioConfigId
       this[MetricFirstTSCInstanceChangeTable.firstChangeMillis] = e.firstChangeMillis
       this[MetricFirstTSCInstanceChangeTable.createdAt] = e.createdAt
