@@ -80,24 +80,23 @@ object MetricFailedMonitorsRepository {
    * @param entries List of [MetricFailedMonitorsEntry] to insert. Each entry's `id` must be null.
    */
   fun batchInsert(entries: List<MetricFailedMonitorsEntry>) = transaction {
-    entries.forEach { entry ->
-      require(entry.id == null) { "bulkInsert() expects entry.id == null. Use upsert() otherwise." }
-      MetricFailedMonitorsTable.batchInsert(entries) { e ->
-        this[MetricFailedMonitorsTable.run] = entry.runId
-        this[MetricFailedMonitorsTable.tsc] = entry.tscId
-        this[MetricFailedMonitorsTable.startingScenarioConfiguration] = entry.scenarioConfigId
-        this[MetricFailedMonitorsTable.mutant] = entry.mutantId
+    if (entries.isEmpty()) return@transaction
 
-        this[MetricFailedMonitorsTable.monitorG0Failed] = entry.monitorG0Failed
-        this[MetricFailedMonitorsTable.monitorG1Failed] = entry.monitorG1Failed
-        this[MetricFailedMonitorsTable.monitorG2Failed] = entry.monitorG2Failed
-        this[MetricFailedMonitorsTable.monitorG3Failed] = entry.monitorG3Failed
-        this[MetricFailedMonitorsTable.monitorG4Failed] = entry.monitorG4Failed
-        this[MetricFailedMonitorsTable.monitorI1Failed] = entry.monitorI1Failed
-        this[MetricFailedMonitorsTable.monitorI2Failed] = entry.monitorI2Failed
+    MetricFailedMonitorsTable.batchInsert(entries) { e ->
+      this[MetricFailedMonitorsTable.run] = e.runId
+      this[MetricFailedMonitorsTable.tsc] = e.tscId
+      this[MetricFailedMonitorsTable.mutant] = e.mutantId
+      this[MetricFailedMonitorsTable.startingScenarioConfiguration] = e.scenarioConfigId
 
-        this[MetricFailedMonitorsTable.createdAt] = entry.createdAt
-      }
+      this[MetricFailedMonitorsTable.monitorG0Failed] = e.monitorG0Failed
+      this[MetricFailedMonitorsTable.monitorG1Failed] = e.monitorG1Failed
+      this[MetricFailedMonitorsTable.monitorG2Failed] = e.monitorG2Failed
+      this[MetricFailedMonitorsTable.monitorG3Failed] = e.monitorG3Failed
+      this[MetricFailedMonitorsTable.monitorG4Failed] = e.monitorG4Failed
+      this[MetricFailedMonitorsTable.monitorI1Failed] = e.monitorI1Failed
+      this[MetricFailedMonitorsTable.monitorI2Failed] = e.monitorI2Failed
+
+      this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
   }
 
