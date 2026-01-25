@@ -59,7 +59,7 @@ val collidesWith =
  * A recent cut-in (identified as a cut-in start within the last tCutIn seconds) temporarily relaxes
  * the requirement G_1.
  */
-const val tCutIn: Long = 3_000L
+const val TIME_CUT_IN: Long = 3_000L
 
 /** General Traffic Rules: G_1 Safe Distance To Preceding Vehicle - Predicate implementation. */
 val g1SafeDistanceToPrecedingVehicle =
@@ -71,8 +71,8 @@ val g1SafeDistanceToPrecedingVehicle =
                   tick,
                   interval =
                       Interval(
-                          TickDifferenceMilliseconds(0L), TickDifferenceMilliseconds(tCutIn))) {
-                      onceTick ->
+                          TickDifferenceMilliseconds(0L),
+                          TickDifferenceMilliseconds(TIME_CUT_IN))) { onceTick ->
                     cutIn.holds(
                         onceTick,
                         onceTick.getVehicleById(otherVehicle.vehicleId) to onceTick.ego) &&
@@ -111,7 +111,7 @@ const val SAFE_DISTANCE_REACTION_TIME_SECONDS: Float = 0.3f
 
 /**
  * Helper: bumper-to-bumper gap to a preceding vehicle on the same lane: gap = rear(preceding) -
- * front(ego)
+ * front(ego).
  */
 val hasPositiveBumperGapToPreceding =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Has Positive Gap To Preceding") {
@@ -122,7 +122,7 @@ val hasPositiveBumperGapToPreceding =
 
 /**
  * Helper: safe-distance condition based on the paper’s dsafe: dsafe = v_ego * t_d +
- * v_ego^2/(2*a_ego) - v_prec^2/(2*a_prec)
+ * v_ego^2/(2*a_ego) - v_prec^2/(2*a_prec).
  *
  * We use emergencyDecelMetersPerSecondSquared as |a_min| (positive magnitude). Clamp dsafe at 0 to
  * avoid negative requirements when the preceding car is much faster.
@@ -174,7 +174,7 @@ val g2UnnecessaryBraking =
     }
 
 // region G_2 helpers
-/** Paper parameter a_abrupt (Table II): -2.0 m/s^2 */
+/** Paper parameter a_abrupt (Table II): -2.0 m/s^2. */
 const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -2.0f
 
 /** Helper: ego brakes abruptly. (More negative acceleration than the abrupt threshold.) */
@@ -254,7 +254,7 @@ val g4TrafficFlow =
 
 // region G_4 helpers
 
-/** Paper parameter Δv_fl (Table II): 15.0 m/s */
+/** Paper parameter Δv_fl (Table II): 15.0 m/s. */
 const val TRAFFIC_FLOW_DELTA_V_FL_MPS: Float = 15.0f
 
 /** Predicate for checking whether there is a slow leading vehicle in front of the ego vehicle. */
@@ -306,16 +306,16 @@ val i1Stopping =
     }
 
 // region I_1 helpers
-/** Paper parameter verr (Table II): 0.01 m/s */
+/** Paper parameter verr (Table II): 0.01 m/s. */
 const val SPEED_MEASUREMENT_ERROR_VERR_MPS: Float = 0.01f
 
-/** Paper parameter vcon (Table II): 2.78 m/s */
+/** Paper parameter vcon (Table II): 2.78 m/s. */
 const val CONGESTION_MAX_SPEED_VCON_MPS: Float = 2.78f
 
-/** Paper parameter ncon (Table II): 3 */
+/** Paper parameter ncon (Table II): 3. */
 const val CONGESTION_MIN_VEHICLES_NCON: Int = 3
 
-/** inStandstill(xego): -verr <= v_ego <= verr */
+/** inStandstill(xego): -verr <= v_ego <= verr. */
 val inStandStill =
     predicate<TimeStep>("In Stand Still") { tick ->
       abs(tick.ego.speedMetersPerSecond) <= SPEED_MEASUREMENT_ERROR_VERR_MPS
@@ -323,7 +323,7 @@ val inStandStill =
 
 /**
  * existStandingLeadingVehicle(xego, X¬ego): ∃xp: same lane AND in front (absolute) AND xp is in
- * standstill
+ * standstill.
  */
 val existStandingLeadingVehicle =
     predicate<TimeStep>("Exist Standing Leading Vehicle") { tick ->
@@ -337,7 +337,7 @@ val existStandingLeadingVehicle =
 
 /**
  * inCongestion(xego, X¬ego): count of vehicles in front on same lane with v <= vcon is at least
- * ncon
+ * ncon.
  *
  * Note: signature keeps your (ego, list) style; the predicate uses the passed list.
  */
@@ -371,20 +371,22 @@ val i2DrivingFasterThenLeftTraffic =
     }
 
 // region I_2 helpers
-/** Paper parameter vso (Table II): 5.55 m/s */
+/** Paper parameter vso (Table II): 5.55 m/s. */
 const val SLIGHTLY_HIGHER_SPEED_VSO_MPS: Float = 5.55f
 
-/** Paper parameter vsmt (Table II): 8.33 m/s */
+/** Paper parameter vsmt (Table II): 8.33 m/s. */
 const val SLOW_MOVING_TRAFFIC_VSMT_MPS: Float = 8.33f
 
-/** Paper parameter vqv (Table II): 16.67 m/s */
+/** Paper parameter vqv (Table II): 16.67 m/s. */
 const val VEHICLE_QUEUE_VQV_MPS: Float = 16.67f
 
-/** Paper parameters nsmt/nqv (Table II): 3 */
+/** Paper parameters nsmt/nqv (Table II): 3. */
 const val SLOW_MOVING_TRAFFIC_MIN_COUNT_NSMT: Int = 3
+
+/** Paper parameters nsmt/nqv (Table II): 3. */
 const val VEHICLE_QUEUE_MIN_COUNT_NQV: Int = 3
 
-/** slightlyHigherSpeed(xego, xleft): 0 < v(ego) - v(left) < vso */
+/** slightlyHigherSpeed(xego, xleft): 0 < v(ego) - v(left) < vso. */
 val slightlyHigherSpeed =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Slightly Higher Speed") { _, (ego, other) ->
       val dv = ego.speedMetersPerSecond - other.speedMetersPerSecond
