@@ -30,7 +30,7 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable.seqFrom
+import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
@@ -73,7 +73,7 @@ fun main(args: Array<String>) {
       eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
       eval.registerMetricProviders(
           FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
-      )
+          FailedMonitorsMetric(tscId = tscEntryId))
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
