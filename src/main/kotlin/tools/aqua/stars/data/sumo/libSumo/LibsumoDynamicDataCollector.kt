@@ -285,7 +285,6 @@ class LibsumoDynamicDataCollector(
               rawAttributes = emptyMap())
     }
 
-    checkNotNull(mutantId)
     checkNotNull(scenarioConfigId)
     return TimeStep(
         runId = runId,

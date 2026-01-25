@@ -37,7 +37,7 @@ class TimeStep(
     identifier: String,
     val runId: UUID,
     val sourceIdentifier: String,
-    val mutantId: UUID,
+    val mutantId: UUID?,
     val scenarioConfigId: UUID,
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,

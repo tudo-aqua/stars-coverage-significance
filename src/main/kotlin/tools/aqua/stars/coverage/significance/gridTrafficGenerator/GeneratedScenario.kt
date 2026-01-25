@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
+import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
@@ -190,9 +191,9 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
    *
    * @return [ScenarioStartingConfigurationEntry] for this scenario.
    */
-  fun toScenarioStartingConfigurationEntry(): ScenarioStartingConfigurationEntry =
+  fun toScenarioStartingConfigurationEntry(id: UUID? = null): ScenarioStartingConfigurationEntry =
       ScenarioStartingConfigurationEntry(
-          id = null,
+          id = id,
           sequenceNumber = null,
           humanReadableScenarioId = buildHumanReadableId(),
           topLeftVehicleState = cellState(TOP_ROW, LEFT_LANE),
