@@ -30,5 +30,6 @@ WORKDIR /app
 RUN git clone --depth 1 ${REPO_URL} . \
     && chmod +x ./gradlew
 
-# Execute the evaluation; container exits when the command completes
-CMD ["./gradlew", "--no-daemon", "runEvaluation"]
+ENV BUFFER_PROCESSORS=0
+CMD ["sh", "-lc", "./gradlew --no-daemon runEvaluation --args=\"--bufferProcessors=${BUFFER_PROCESSORS}\""]
+
