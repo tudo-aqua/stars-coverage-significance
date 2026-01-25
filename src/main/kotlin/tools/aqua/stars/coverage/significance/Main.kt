@@ -149,7 +149,7 @@ fun main() {
       }
       val runResult =
           libsumoDynamicDataCollector.runGeneratedScenario(
-              scenario, job.mutantId, onlyFirstTick = false)
+              evaluationRunId, scenario, job.mutantId, onlyFirstTick = false)
       tickSequences.add(runResult.asTickSequence(bufferSize = BUFFER_SIZE))
     }
     eval.runEvaluation(tickSequences.asSequence())

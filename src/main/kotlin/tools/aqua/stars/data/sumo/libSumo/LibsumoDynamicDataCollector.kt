@@ -71,22 +71,29 @@ class LibsumoDynamicDataCollector(
   /**
    * Run a generated scenario in libsumo and collect dynamic data.
    *
+   * @param runId Run identifier.
    * @param scenario Generated scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
-  fun runGeneratedScenario(scenario: GeneratedScenario, mutantId: UUID?): List<TimeStep> =
-      runGeneratedScenario(scenario.toScenarioStartingConfigurationEntry(), mutantId)
+  fun runGeneratedScenario(
+      runId: UUID,
+      scenario: GeneratedScenario,
+      mutantId: UUID?
+  ): List<TimeStep> =
+      runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutantId)
 
   /**
    * Run a generated scenario in libsumo and collect dynamic data.
    *
+   * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
    * @param onlyFirstTick Whether to only run the first tick.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
+      runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutantId: UUID?,
       onlyFirstTick: Boolean = false
@@ -156,11 +163,14 @@ class LibsumoDynamicDataCollector(
     // Step until done
     val ticks = ArrayList<TimeStep>()
 
-    if (onlyFirstTick) return listOfNotNull(getCurrentTimeStep(egoId, mutantId, scenario, ticks))
+    if (onlyFirstTick)
+        return listOfNotNull(
+            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
 
     // Run until finished
     while (Simulation.getMinExpectedNumber() > 0) {
-      val timeStep = getCurrentTimeStep(egoId, mutantId, scenario, ticks) ?: break
+      val timeStep =
+          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
     }
 
@@ -168,6 +178,8 @@ class LibsumoDynamicDataCollector(
   }
 
   private fun getCurrentTimeStep(
+      runId: UUID,
+      scenarioConfigId: UUID?,
       egoId: String,
       mutantId: UUID?,
       scenario: ScenarioStartingConfigurationEntry,
@@ -273,8 +285,12 @@ class LibsumoDynamicDataCollector(
               rawAttributes = emptyMap())
     }
 
+    checkNotNull(mutantId)
+    checkNotNull(scenarioConfigId)
     return TimeStep(
+        runId = runId,
         identifier = "${scenario.id}#${ticks.size}",
+        scenarioConfigId = scenarioConfigId,
         sourceIdentifier = scenario.humanReadableScenarioId,
         tickTimeMillis = tickTimeMillis,
         vehiclesInTick = vehiclesInTick,

@@ -89,7 +89,7 @@ fun main(args: Array<String>) {
         }
         val runResult =
             libsumoDynamicDataCollector.runGeneratedScenario(
-                scenario, job.mutantId, onlyFirstTick = false)
+                runId = UUID.randomUUID(), scenario, job.mutantId, onlyFirstTick = false)
         tickSequences.add(runResult.asTickSequence())
       }
       eval.runEvaluation(tickSequences.asSequence())

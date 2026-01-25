@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.workers
 
+import java.util.UUID
 import kotlin.collections.map
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
@@ -78,7 +79,8 @@ fun main(args: Array<String>) {
       consoleProgress.step()
     }
     val runResult =
-        libsumoDynamicDataCollector.runGeneratedScenario(scenario, null, onlyFirstTick = true)
+        libsumoDynamicDataCollector.runGeneratedScenario(
+            runId = UUID.randomUUID(), scenario, null, onlyFirstTick = true)
     tickSequences.add(runResult.asTickSequence())
   }
 
