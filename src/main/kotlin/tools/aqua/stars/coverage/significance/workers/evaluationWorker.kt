@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance.workers
 import java.sql.SQLException
 import java.util.UUID
 import kotlin.collections.map
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
@@ -49,24 +50,7 @@ fun main(args: Array<String>) {
   val runId = CliArgs.requireUuid(args, "runId")
   val tscEntryId = CliArgs.requireUuid(args, "tscEntryId")
 
-  DbBootstrap.connectAndCreateSchema()
-
-  val staticTsc = staticTsc()
-
-  val eval =
-      TSCEvaluation(
-          staticTsc,
-          writePlots = false,
-          writePlotDataCSV = false,
-          writeSerializedResults = false,
-          compareToPreviousRun = false)
-
-  eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
-  eval.registerMetricProviders(
-      FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
-  )
-
-  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
+  DbBootstrap.connect()
 
   while (true) {
     val job =
@@ -76,6 +60,22 @@ fun main(args: Array<String>) {
     checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
 
     try {
+      val staticTsc = staticTsc()
+
+      val eval =
+          TSCEvaluation(
+              staticTsc,
+              writePlots = false,
+              writePlotDataCSV = false,
+              writeSerializedResults = false,
+              compareToPreviousRun = false)
+
+      eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
+      eval.registerMetricProviders(
+          FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
+      )
+
+      val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
       val scenarios = db {
         (job.seqFrom..job.seqTo).map {
@@ -89,11 +89,15 @@ fun main(args: Array<String>) {
         }
         val runResult =
             libsumoDynamicDataCollector.runGeneratedScenario(
-                runId = UUID.randomUUID(), scenario, job.mutantId, onlyFirstTick = false)
+                runId = runId, scenario, job.mutantId, onlyFirstTick = false)
         tickSequences.add(runResult.asTickSequence())
       }
       eval.runEvaluation(tickSequences.asSequence())
       MutantScenarioChunkJobsRepository.markDone(job.jobId)
+    } catch (e: ExposedSQLException) {
+      MutantScenarioChunkJobsRepository.markFailedOrRequeue(
+          job.jobId, e.stackTraceToString(), maxAttempts = 3)
+      System.err.println("[$workerId] job failed: ${e.message}")
     } catch (exception: SQLException) {
       MutantScenarioChunkJobsRepository.markFailedOrRequeue(
           job.jobId, exception.stackTraceToString(), maxAttempts = 3)

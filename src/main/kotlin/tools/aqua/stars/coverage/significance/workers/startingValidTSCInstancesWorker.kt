@@ -47,7 +47,7 @@ fun main(args: Array<String>) {
   val seqFrom = CliArgs.requireLong(args, "seqFrom")
   val seqTo = CliArgs.requireLong(args, "seqTo")
 
-  DbBootstrap.connectAndCreateSchema()
+  DbBootstrap.connect()
 
   val staticTsc = staticTsc()
 
