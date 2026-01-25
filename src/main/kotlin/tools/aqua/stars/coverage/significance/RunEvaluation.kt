@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance
 
-import kotlin.collections.plusAssign
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
@@ -27,7 +26,15 @@ import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
 
-fun main() {
+/**
+ * Main entry point for running evaluation workers in parallel.
+ *
+ * @param args Command line arguments. Supports: --bufferProcessors=<number> : Number of processors
+ *   to reserve for buffering (default: 0).
+ */
+fun main(args: Array<String>) {
+  val bufferProcessors = parseIntArg(args, "--bufferProcessors", 0).coerceAtLeast(0)
+  val parallelism = (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
   DbBootstrap.connect()
   val evaluationRunId =
       EvaluationRunsRepository.getLatest()?.id
@@ -54,4 +61,31 @@ fun main() {
     processes.toList().forEach { it.killProcessTree() }
     throw e
   }
+}
+
+/**
+ * Parses the parallelism argument from the command line arguments.
+ *
+ * @param args Command line arguments.
+ * @return The parsed parallelism value, or the default value of 4 if not provided or invalid.
+ */
+private fun parseIntArg(args: Array<String>, longName: String, defaultValue: Int): Int {
+  // Supports: --name=123  and  --name 123
+  args
+      .firstOrNull { it.startsWith("$longName=") }
+      ?.substringAfter("=")
+      ?.toIntOrNull()
+      ?.let {
+        return it
+      }
+
+  args
+      .indexOfFirst { it == longName }
+      .takeIf { it >= 0 && it + 1 < args.size }
+      ?.let { idx -> args[idx + 1].toIntOrNull() }
+      ?.let {
+        return it
+      }
+
+  return defaultValue
 }
