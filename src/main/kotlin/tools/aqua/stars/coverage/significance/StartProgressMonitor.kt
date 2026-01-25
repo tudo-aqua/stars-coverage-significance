@@ -23,12 +23,31 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 
+private fun currentPidString(): String {
+  // Prefer Java 9+ ProcessHandle; fall back to RuntimeMXBean parsing for older runtimes.
+  val pid = runCatching { ProcessHandle.current().pid().toString() }.getOrNull()
+  if (pid != null) return pid
+
+  return runCatching {
+        java.lang.management.ManagementFactory.getRuntimeMXBean().name.substringBefore('@')
+      }
+      .getOrElse { "unknown" }
+}
+
 fun main() {
+  val pid = currentPidString()
+  val mainThread = Thread.currentThread()
+  println("StartProgressMonitor starting (pid=$pid, thread=${mainThread.name}#${mainThread.id}).")
+
   DbBootstrap.connect()
   val latestRunId =
       EvaluationRunsRepository.getLatest()?.id
           ?: error("No evaluation runs found in EvaluationRunsRepository.")
   val t = Thread {
+    val pidT = pid
+    val tcur = Thread.currentThread()
+    println("Progress monitor thread started (pid=$pidT, thread=${tcur.name}#${tcur.id}).")
+
     var last = ""
     val startedAtMs = System.currentTimeMillis()
 
@@ -112,6 +131,16 @@ fun main() {
   }
 
   t.name = "progress-monitor"
-  t.isDaemon = true
+  t.isDaemon = false
+  Runtime.getRuntime()
+      .addShutdownHook(
+          Thread {
+            // Ensure we leave the console in a clean state.
+            println()
+            t.interrupt()
+          })
+
   t.start()
+  // Block main so the JVM does not exit immediately.
+  t.join()
 }
