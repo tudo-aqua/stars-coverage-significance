@@ -171,8 +171,9 @@ private fun runEvaluation(tscEntryId: UUID, mutantIds: List<UUID>) {
   MutantScenarioChunkJobsRepository.clearTable()
 
   println("Seeding chunk jobs...")
+  val numberOfScenarios = ScenarioStartingConfigurationRepository.getMaxSequenceNumber()
   ChunkJobSeeder.seedChunks(
-      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1_000L, 1_000_000)
+      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1_000L, numberOfScenarios)
 
   startProgressMonitor(evaluationRunId)
 

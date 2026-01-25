@@ -35,7 +35,7 @@ object ChunkJobSeeder {
    * @param chunkSize Number of scenarios per chunk (e.g., 500, 1000, 2000).
    * @param scenarioCount Total number of scenarios available.
    */
-  fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long, scenarioCount: Int) =
+  fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long, scenarioCount: Long) =
       transaction {
         require(chunkSize > 0) { "chunkSize must be > 0" }
         require(mutantIds.isNotEmpty()) { "mutantIds must not be empty" }
@@ -52,7 +52,7 @@ object ChunkJobSeeder {
           return@transaction
         }
 
-        maxSeq = minOf(maxSeq, scenarioCount.toLong())
+        maxSeq = minOf(maxSeq, scenarioCount)
 
         val ranges = buildList {
           var from = 1L
@@ -62,8 +62,6 @@ object ChunkJobSeeder {
             from = to + 1
           }
         }
-
-        println("Split scenarios into ${ranges.size} chunks.")
 
         val mutantScenarioChunkJobs = mutableListOf<MutantScenarioChunkJob>()
 
