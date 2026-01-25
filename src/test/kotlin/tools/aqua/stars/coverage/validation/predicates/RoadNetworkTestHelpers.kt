@@ -38,9 +38,11 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
  */
 object RoadNetworkTestHelpers {
 
-  /** Lane indices aligned with your predicate constants (RIGHT=0, MIDDLE=1, LEFT=2). */
+  /** Lane index constant for the right lane (index 0). */
   const val LANE_INDEX_RIGHT: Int = 0
+  /** Lane index constant for the middle lane (index 1). */
   const val LANE_INDEX_MIDDLE: Int = 1
+  /** Lane index constant for the left lane (index 2). */
   const val LANE_INDEX_LEFT: Int = 2
 
   /**
@@ -55,7 +57,7 @@ object RoadNetworkTestHelpers {
    * @param toJunctionId Target junction id.
    * @param laneLengthMeters Lane length for all three lanes.
    * @param speedLimitMetersPerSecond Speed limit for all three lanes.
-   * @return A [ThreeLaneNetwork] bundle with easy accessors.
+   * @return A [RoadNetwork] bundle with easy accessors.
    */
   fun threeLaneSingleEdgeNetwork(
       edgeId: String = "E0",
@@ -152,15 +154,18 @@ object RoadNetworkTestHelpers {
   }
 }
 
-/** Optional convenience extensions for tests. */
+/** Gets the single [Edge] of a single-edge [RoadNetwork]. */
 val RoadNetwork.singleEdge: Edge
   get() = edges.single()
 
+/** Gets the left lane (index 2) of a three-lane [RoadNetwork]. */
 val RoadNetwork.leftLane: Lane
   get() = lanes.single { it.laneIndex == RoadNetworkTestHelpers.LANE_INDEX_LEFT }
 
+/** Gets the middle lane (index 1) of a three-lane [RoadNetwork]. */
 val RoadNetwork.middleLane: Lane
   get() = lanes.single { it.laneIndex == RoadNetworkTestHelpers.LANE_INDEX_MIDDLE }
 
+/** Gets the right lane (index 0) of a three-lane [RoadNetwork]. */
 val RoadNetwork.rightLane: Lane
   get() = lanes.single { it.laneIndex == RoadNetworkTestHelpers.LANE_INDEX_RIGHT }

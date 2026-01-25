@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.isOnLeftLaneOf
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allRelativePositionPredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Test class for left lane predicates. */
 class LeftLanePredicateTest {
 
   /** Tests the [isOnLeftLaneOf] predicate for left lanes. */

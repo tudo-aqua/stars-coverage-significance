@@ -33,6 +33,7 @@ object ChunkJobSeeder {
    * @param runId Evaluation run ID (single global run).
    * @param mutantIds Mutant IDs to evaluate.
    * @param chunkSize Number of scenarios per chunk (e.g., 500, 1000, 2000).
+   * @param scenarioCount Total number of scenarios available.
    */
   fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long, scenarioCount: Int) =
       transaction {

@@ -172,7 +172,7 @@ private fun runEvaluation(tscEntryId: UUID, mutantIds: List<UUID>) {
 
   println("Seeding chunk jobs...")
   ChunkJobSeeder.seedChunks(
-      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1000L, 1000000)
+      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1_000L, 1_000_000)
 
   startProgressMonitor(evaluationRunId)
 

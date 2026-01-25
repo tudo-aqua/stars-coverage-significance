@@ -33,17 +33,23 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
 import tools.aqua.stars.data.sumo.dataclasses.routeData.VehicleTypeDefinition
 import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 
+/** Helper object for predicate tests. */
 object PredicateTestHelper {
+  /** Test road network with three lanes and a single edge. */
   val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
 
+  /** All lane predicates. */
   val allLanePredicates = listOf(isOnLeftLane, isOnMiddleLane, isOnRightLane)
+  /** All relative position predicates. */
   val allRelativePositionPredicates = listOf(isOnSameLane, isOnLeftLaneOf, isOnRightLaneOf)
+  /** All speed predicates for vehicles on the same lane in front of each other. */
   val allSpeedPredicatesSameLaneInFront =
       listOf(
           vehicleOnSameLaneInFrontIsFaster,
           vehicleOnSameLaneInFrontIsSlower,
           vehicleOnSameLaneInFrontSameSpeed)
 
+  /** Default vehicle type for test vehicles. */
   fun getDefaultVehicleType(): VehicleType =
       VehicleType(
           VehicleTypeDefinition(
@@ -54,6 +60,7 @@ object PredicateTestHelper {
               parameters = emptyList(),
               rawAttributes = emptyMap()))
 
+  /** Creates a test [TimeStep] with the given parameters. */
   fun getTestTimeStep(
       vehicles: List<Vehicle> = listOf(getTestVehicle()),
       tickTimeMillis: Long = 100L,
@@ -80,6 +87,7 @@ object PredicateTestHelper {
               },
           ego = ego)
 
+  /** Creates a test [Vehicle] with the given parameters. */
   fun getTestVehicle(
       vehicleId: String = "vehicle1",
       lane: Lane = roadNetwork.middleLane,
@@ -92,5 +100,8 @@ object PredicateTestHelper {
           currentLane = lane,
           currentEdge = roadNetwork.singleEdge,
           positionOnLaneMeters = positionInMeters,
-          speedMetersPerSecond = speedKmH / 3.6f)
+          speedMetersPerSecond = speedKmH / 3.6f,
+          accelerationMetersPerSecondSquared = -1.0f,
+          frontBumperPositionOnLaneMeters = positionInMeters,
+          backBumperPositionOnLaneMeters = positionInMeters - 2.0f)
 }

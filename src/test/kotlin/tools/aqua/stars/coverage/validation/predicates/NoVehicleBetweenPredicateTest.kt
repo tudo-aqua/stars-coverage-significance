@@ -21,8 +21,10 @@ import kotlin.test.Test
 import tools.aqua.stars.coverage.significance.noVehicleBetweenOnSameLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Test class for NoVehicleBetweenPredicate. */
 class NoVehicleBetweenPredicateTest {
 
+  /** Test no vehicle is between ego and other vehicle. */
   @Test
   fun `Test no vehicle is between ego and other vehicle`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
@@ -35,6 +37,7 @@ class NoVehicleBetweenPredicateTest {
     assert(noVehicleBetweenOnSameLane.holds(tick, ego to otherVehicle))
   }
 
+  /** Test vehicle is between ego and other vehicle. */
   @Test
   fun `Test vehicle is between ego and other vehicle`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()

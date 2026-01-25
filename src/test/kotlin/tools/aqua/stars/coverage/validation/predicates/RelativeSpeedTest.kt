@@ -23,8 +23,10 @@ import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsFaster
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allSpeedPredicatesSameLaneInFront
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Test class for relative speed predicates. */
 class RelativeSpeedTest {
 
+  /** Test vehicle in front is faster with one vehicle in front. */
   @Test
   fun `Test vehicle in front same speed with one vehicle in front`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
@@ -45,6 +47,7 @@ class RelativeSpeedTest {
     }
   }
 
+  /** Test vehicle in front is faster with two vehicles in front. */
   @Test
   fun `Test vehicle in front same speed with two vehicles in front`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()

@@ -24,6 +24,7 @@ import tools.aqua.stars.coverage.significance.isOnRightLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allLanePredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Test class for lane predicates: [isOnLeftLane], [isOnMiddleLane], and [isOnRightLane]. */
 class LaneTest {
 
   /** Tests the [isOnLeftLane] predicate. */

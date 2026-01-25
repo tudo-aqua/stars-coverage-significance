@@ -27,6 +27,7 @@ import tools.aqua.stars.coverage.validation.predicates.leftLane
 import tools.aqua.stars.coverage.validation.predicates.rightLane
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 
+/** Test class for G_0: Accidents monitor. */
 class G0AccidentsTest {
 
   /** Tests the [g0Accidents] monitor with no accidents. */
@@ -83,6 +84,7 @@ class G0AccidentsTest {
     assert(g0Accidents.holds(tick))
   }
 
+  /** Tests the [g0Accidents] monitor with an accident in the last tick of a tick sequence. */
   @Test
   fun `Test G_0 accidents monitor with accident in last tick`() {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
@@ -91,8 +93,8 @@ class G0AccidentsTest {
     val anotherVehicle = PredicateTestHelper.getTestVehicle("v3", roadNetwork.rightLane, 0.0f)
 
     val ticks = mutableListOf<TimeStep>()
-    (0..100).forEach {
-      val tick = getTestTimeStep(listOf(ego, otherVehicle, anotherVehicle), it.toLong())
+    for (i in 0..100) {
+      val tick = getTestTimeStep(listOf(ego, otherVehicle, anotherVehicle), i.toLong())
       ticks.add(tick)
     }
     ticks.add(

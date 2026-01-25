@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.isOnSameLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allRelativePositionPredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Test class for same lane predicates. */
 class SameLanePredicateTest {
 
   /** Tests the [isOnSameLane] predicate for same lanes. */
