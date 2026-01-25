@@ -51,7 +51,7 @@ import tools.aqua.stars.data.sumo.xml.SumoImporter
  * routes.
  */
 fun generationWorkflowWithFiles() {
-  DbBootstrap.connectAndCreateSchema()
+  DbBootstrap.connect()
 
   val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
 
