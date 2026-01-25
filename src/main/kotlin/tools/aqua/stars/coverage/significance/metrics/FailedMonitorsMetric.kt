@@ -101,8 +101,6 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
         val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
         checkNotNull(tscEntry) { "TSC not found in DB." }
         val failedMonitorsEntries = map.values.toList()
-        println(
-            "Inserting ${failedMonitorsEntries.size} failed monitors entries for TSC id ${tscEntry.id}.")
         MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries)
       }
     }
