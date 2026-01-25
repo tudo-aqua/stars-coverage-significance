@@ -160,6 +160,16 @@ val isInFrontOf =
                       .positionOnLaneMeters + VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO))
     }
 
+/**
+ * Helper predicate to determine if another vehicle is in front of the ego vehicle without distance
+ * constraints.
+ */
+val isInFrontOfAbsolute =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is In Front Of Absolute") { _, (otherVehicle, ego)
+      ->
+      otherVehicle.positionOnLaneMeters > ego.positionOnLaneMeters
+    }
+
 /** Helper predicate to determine if another vehicle is behind the ego vehicle. */
 val isBehindOf =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Behind Of") { _, (otherVehicle, ego) ->
