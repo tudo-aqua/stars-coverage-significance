@@ -24,6 +24,7 @@ import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceChangeTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
@@ -85,6 +86,7 @@ object DbBootstrap {
           TSCInstancesTable,
           MetricFirstTSCInstanceChangeTable,
           MetricStartingValidTSCInstancesTable,
+          MetricFailedMonitorsTable,
           MutantScenarioChunkJobsTable,
       )
     }
