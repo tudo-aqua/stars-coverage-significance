@@ -31,8 +31,6 @@ object MutantApplier {
    * @param m The [MutantEntry] containing the parameters to apply.
    */
   fun applyToEgoVehicle(egoVehId: String, m: MutantEntry) {
-    Vehicle.setParameter(egoVehId, "has.driverstate.device", "true")
-
     Vehicle.setSpeedFactor(egoVehId, m.speedFactor)
 
     // Lane change model attributes
