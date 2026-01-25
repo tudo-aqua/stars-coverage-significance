@@ -1,5 +1,8 @@
 FROM ubuntu:24.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Base tooling + JDK 21 (Temurin)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       software-properties-common ca-certificates curl gnupg git \
     && mkdir -p /etc/apt/keyrings \
@@ -14,10 +17,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-RUN add-apt-repository ppa:sumo/stable
-RUN apt-get update -y
-RUN apt-get install -y sumo sumo-tools sumo-doc
+# Install SUMO from the official PPA
+RUN add-apt-repository ppa:sumo/stable \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends sumo sumo-tools sumo-doc \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/lib/x86_64-linux-gnu/liblibsumojni.so /usr/lib/liblibsumojni.so
 
-RUN ln -s /usr/lib/x86_64-linux-gnu/liblibsumojni.so /usr/lib/liblibsumojni.so
+# Clone repository into the image
+ARG REPO_URL=https://github.com/tudo-aqua/stars-coverage-significance
+WORKDIR /app
+RUN git clone --depth 1 ${REPO_URL} . \
+    && chmod +x ./gradlew
 
-CMD ["/bin/bash"]
+# Execute the evaluation; container exits when the command completes
+CMD ["./gradlew", "--no-daemon", "runEvaluation"]

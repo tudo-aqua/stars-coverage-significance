@@ -83,6 +83,62 @@ spotless {
 
 tasks.test { useJUnitPlatform() }
 
-application { mainClass.set("tools.aqua.stars.coverage.significance.MainKt") }
+application { mainClass.set("tools.aqua.stars.coverage.significance.RunEvaluationKt") }
+
+val prepareDatabaseAndSeedWithScenariosAndMutants by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Prepares the database and seed the scenarios and mutants."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.BuildAndStaticallyAnalyzeScenariosKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
+val createChunkJobs by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Create chunk jobs."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.CreateChunkJobsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
+val runEvaluation by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Runs the evaluation."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunEvaluationKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
+val startProgressMonitor by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Start the progress monitor for evaluation."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.StartProgressMonitorKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
 
 kotlin { jvmToolchain(21) }
