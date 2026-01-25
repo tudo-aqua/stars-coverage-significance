@@ -29,13 +29,13 @@ fun staticTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Static TSC") {
       all("Root") {
         monitors {
-          g0Accidents
-          g1SafeDistanceToPrecedingVehicle
-          g2UnnecessaryBraking
-          g3MaximumSpeedLimit
-          g4TrafficFlow
-          i1Stopping
-          i2DrivingFasterThenLeftTraffic
+          monitor(g0Accidents.name, g0Accidents)
+          monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
+          monitor(g2UnnecessaryBraking.name, g2UnnecessaryBraking)
+          monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
+          monitor(g4TrafficFlow.name, g4TrafficFlow)
+          monitor(i1Stopping.name, i1Stopping)
+          monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
         }
         exclusive("Lane") {
           optional("Left Lane") {
