@@ -7,25 +7,52 @@ services:
       POSTGRES_DB: stars
       POSTGRES_USER: stars
       POSTGRES_PASSWORD: stars
+      # Force md5 auth so PgBouncer can authenticate easily via userlist
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     ports:
       - "5432:5432"
     volumes:
       - stars_pgdata:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=300"
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: stars_pgadmin
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.1-p0
+    container_name: stars_pgbouncer
     restart: unless-stopped
     depends_on:
       - db
-    environment:
-      PGADMIN_DEFAULT_EMAIL: till.schallau@tu-dortmund.de
-      PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "5050:80"
-    volumes:
-      - stars_pgadmin:/var/lib/pgadmin
+      - "6432:6432"
+    environment:
+      # Target database (inside the compose network)
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: stars
+      DB_USER: stars
+      DB_PASSWORD: stars
+
+      # PgBouncer listener
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: "6432"
+
+      # IMPORTANT: avoids needing MD5/SCRAM hashes in userlist;
+      # works well inside a private docker network.
+      AUTH_TYPE: plain
+
+      # Pooling settings
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "2000"
+      DEFAULT_POOL_SIZE: "150"
+      RESERVE_POOL_SIZE: "30"
+      RESERVE_POOL_TIMEOUT: "5"
+      SERVER_IDLE_TIMEOUT: "60"
+
+      # Optional
+      QUERY_WAIT_TIMEOUT: "120"
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
 
 volumes:
   stars_pgdata:
-  stars_pgadmin:
