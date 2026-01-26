@@ -1144,7 +1144,7 @@ object SumoImporter {
    */
   private fun resolveEgoVehicle(
       vehiclesInTick: List<Vehicle>,
-  ): Vehicle? = vehiclesInTick.find { it.vehicleType.typeId == "ego" }
+  ): Vehicle? = vehiclesInTick.find { it.vehicleId.lowercase().contains("ego") }
 
   /**
    * Converts SUMO seconds into milliseconds using rounding.
