@@ -223,7 +223,10 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
    * vTypes once via --additional-files (recommended) or by listing a types file first in
    * --route-files.
    */
-  fun toRouXml(cfg: SumoRouExportConfig = SumoRouExportConfig()): String {
+  fun toRouXml(
+      cfg: SumoRouExportConfig = SumoRouExportConfig(),
+      changeEgoTypeTo: String? = null
+  ): String {
     require(cfg.routeEdges.isNotEmpty()) { "routeEdges must not be empty" }
 
     fun esc(s: String): String =
@@ -248,7 +251,10 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
 
       for (sp in sorted) {
         val vehId = getVehicleId(sp.type.toString(), sp.row, sp.lane, id)
-        val typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
+        var typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
+        if (changeEgoTypeTo != null && typeId == "ego") {
+          typeId = changeEgoTypeTo
+        }
         val departLane = sp.lane
 
         appendLine(
@@ -268,10 +274,15 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
    *
    * @param outFile Output file path.
    * @param cfg Configuration for the export.
+   * @param changeEgoTypeTo If non-null, changes the type of the EGO vehicle to the given value.
    */
-  fun writeRouXml(outFile: Path, cfg: SumoRouExportConfig = SumoRouExportConfig()) {
+  fun writeRouXml(
+      outFile: Path,
+      cfg: SumoRouExportConfig = SumoRouExportConfig(),
+      changeEgoTypeTo: String? = null
+  ) {
     Files.createDirectories(outFile.parent)
-    Files.writeString(outFile, toRouXml(cfg), StandardCharsets.UTF_8)
+    Files.writeString(outFile, toRouXml(cfg, changeEgoTypeTo), StandardCharsets.UTF_8)
   }
 
   /**
