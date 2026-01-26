@@ -91,7 +91,8 @@ val prepareDatabaseAndSeedWithScenariosAndMutants by
       description = "Prepares the database and seed the scenarios and mutants."
       dependsOn(tasks.run.get().taskDependencies)
 
-      mainClass.set("tools.aqua.stars.coverage.significance.BuildAndStaticallyAnalyzeScenariosKt")
+      mainClass.set(
+          "tools.aqua.stars.coverage.significance.PrepareDatabaseAndSeedWithScenariosAndMutantsKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       // optional
