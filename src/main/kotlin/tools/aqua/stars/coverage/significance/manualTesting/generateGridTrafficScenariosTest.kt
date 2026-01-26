@@ -93,7 +93,9 @@ fun generateGridTrafficScenariosTest(
   val pb = ConsoleProgress(total, label = "Grid Traffic Generator")
   pb.render(0, "starting")
   allScenarios.forEach { scenario ->
-    scenario.writeRouXml(Path("sumo_data/gridTrafficScenarios/scenarios/scenario.rou.xml"), changeEgoTypeTo = "mutant1")
+    scenario.writeRouXml(
+        Path("sumo_data/gridTrafficScenarios/scenarios/scenario.rou.xml"),
+        changeEgoTypeTo = "mutant1")
     done++
     pb.step()
   }
