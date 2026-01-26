@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <additional>
+    <!-- Mutant 1 vehicle -->
+    <vType id="mutant1"
+           vClass="passenger"
+           maxSpeed="55.55"
+           speedFactor="2.0"
+           speedDev="0.0"
+           sigma="0"
+           tau="0.01"
+           minGap="0.0"
+		   color="255,255,255">
+        <param key="has.driverstate.device" value="true"/>
+    </vType>	
 
     <!-- Ego vehicle -->
     <vType id="ego"
            vClass="passenger"
-           maxSpeed="27.78"
-           speedFactor="1.0"
+           maxSpeed="55.55"
+           speedFactor="2.0"
            speedDev="0.0"
-           sigma="0.5"
-           tau="1.0"
-           minGap="2.5"
+           sigma="0"
+           tau="0.01"
+           minGap="0.0"
 		   color="255,255,255">
         <param key="has.driverstate.device" value="true"/>
     </vType>
