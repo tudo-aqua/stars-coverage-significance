@@ -266,7 +266,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
         val departLane = sp.lane
 
         appendLine(
-            """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}" depart="${fmtTime(cfg.departTimeSeconds)}" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}" departSpeed="${esc(sp.type.departSpeedMs.toString())}"/>""")
+            """  <vehicle id="$vehId" type="${esc(typeId)}" route="${esc(id)}" depart="${fmtTime(cfg.departTimeSeconds)}" departLane="$departLane" departPos="${fmtPos(sp.positionMeters)}" departSpeed="${esc(((sp.type.departSpeedKmh - 10) / 3.6).toString())}"/>""")
       }
 
       appendLine("</routes>")
