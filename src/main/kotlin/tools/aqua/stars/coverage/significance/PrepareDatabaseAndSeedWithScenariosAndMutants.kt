@@ -36,7 +36,8 @@ fun main() {
   TSCsRepository.upsertAndGetId(entry = staticTsc().toTSCEntry())
 
   // Seed scenarios
-  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = true)
+  seedGridTrafficScenarios(
+      seed = SEED, insertIntoDatabase = true, enablePositionVariance = true, n = 10_000)
 
   // Precompute scenario-only metric once
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism)
