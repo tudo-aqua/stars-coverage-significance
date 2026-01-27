@@ -157,10 +157,13 @@ object MetricFailedMonitorsRepository {
                   st[monitorG0Failed] = entry.monitorG0Failed
                   st[monitorG1Failed] = entry.monitorG1Failed
                   st[monitorG2Failed] = entry.monitorG2Failed
+                  st[monitorG22Failed] = entry.monitorG22Failed
                   st[monitorG3Failed] = entry.monitorG3Failed
                   st[monitorG4Failed] = entry.monitorG4Failed
                   st[monitorI1Failed] = entry.monitorI1Failed
                   st[monitorI2Failed] = entry.monitorI2Failed
+                  st[monitorI3Failed] = entry.monitorI3Failed
+                  st[monitorI4Failed] = entry.monitorI4Failed
 
                   st[createdAt] = entry.createdAt
                 }
