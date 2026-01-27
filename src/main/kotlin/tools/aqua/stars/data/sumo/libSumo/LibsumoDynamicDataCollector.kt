@@ -271,7 +271,12 @@ class LibsumoDynamicDataCollector(
       val lane = laneById[laneId] ?: error("Unknown lane $laneId")
 
       val typeId = SumoVehicle.getTypeID(vehId)
-      val rawVType = vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+      val rawVType =
+          if (typeId.lowercase().contains("mutant")) {
+            vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId")
+          } else {
+            vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+          }
 
       // vType wrapper (parsed from vTypes.add.xml)
       val vehicleType = VehicleType(rawVType)
