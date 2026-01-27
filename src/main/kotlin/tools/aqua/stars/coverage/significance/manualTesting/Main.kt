@@ -30,7 +30,7 @@ fun main() {
   DbBootstrap.connectAndCreateSchema()
   val numberOfScenarios = 1
   val seed = 1
-  val scenarios = generateGridTrafficScenariosTest(seed = seed)
+  val scenarios = generateGridTrafficScenariosTest(seed = seed, enablePositionVariance = true)
 
   val libsumoDynamicDataCollector = LibsumoDynamicDataCollectorTest()
 
@@ -43,16 +43,10 @@ fun main() {
           mutant =
               Mutant(
                   initialAwareness = 0.0,
-                  headwayErrorCoefficient = 20.0,
-                  speedDifferenceErrorCoefficient = 20.0,
-                  errorNoiseIntensityCoefficient = 2.0,
                   speedFactor = 2.0,
-                  speedDeviation = 0.0,
-                  sigma = 1.0,
-                  tau = 0.01,
-                  minGap = 0.0,
-                  maxSpeed = 55.55,
-              ))
+                  lcAssertive = 3.0,
+                  lcSpeedGain = 2.0,
+                  lcCooperative = 0.0))
 
   println(
       """
