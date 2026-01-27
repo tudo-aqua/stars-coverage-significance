@@ -42,7 +42,7 @@ fun seedGridTrafficScenarios(
   val generator =
       GridTrafficScenarioGenerator(
           enablePositionVariance = enablePositionVariance,
-          positionVariantsPerOccupancy = 3,
+          positionVariantsPerOccupancy = 1,
           seed = seed,
           minForwardGapMeters = 50.0f,
           i0Start = 0.0f,
