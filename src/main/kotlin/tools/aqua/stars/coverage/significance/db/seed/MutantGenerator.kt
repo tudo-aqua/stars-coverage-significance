@@ -130,7 +130,7 @@ object MutantGenerator {
       }
     }
 
-    check(mutantEntries.size == 576) { "Expected 576 mutants, got ${mutantEntries.size}" }
+    check(mutantEntries.size == 243) { "Expected 243 mutants, got ${mutantEntries.size}" }
     return mutantEntries
   }
 
