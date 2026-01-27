@@ -38,5 +38,8 @@ fun main() {
   println("Seeding chunk jobs...")
   val numberOfScenarios = ScenarioStartingConfigurationRepository.getMaxSequenceNumber()
   ChunkJobSeeder.seedChunks(
-      runId = evaluationRunId, mutantIds = mutantIds, chunkSize = 1_000L, scenarioCount = numberOfScenarios)
+      runId = evaluationRunId,
+      mutantIds = mutantIds,
+      chunkSize = 1_000L,
+      scenarioCount = numberOfScenarios)
 }
