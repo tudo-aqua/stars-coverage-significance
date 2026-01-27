@@ -36,8 +36,7 @@ fun main() {
   TSCsRepository.upsertAndGetId(entry = staticTsc().toTSCEntry())
 
   // Seed scenarios
-  seedGridTrafficScenarios(
-      seed = SEED, insertIntoDatabase = true, enablePositionVariance = true, n = 10_000)
+  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = true)
 
   // Seed mutants
   MutantGenerator.seed()
