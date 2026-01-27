@@ -42,7 +42,7 @@ fun main() {
   MutantGenerator.seed()
 
   // Precompute scenario-only metric once
-  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
+  //  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
 }
 
 /**
