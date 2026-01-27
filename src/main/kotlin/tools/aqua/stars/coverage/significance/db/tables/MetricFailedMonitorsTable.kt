@@ -65,10 +65,13 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val monitorG0Failed = bool("monitor_g0_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_failed").default(false)
   val monitorG2Failed = bool("monitor_g2_failed").default(false)
+  val monitorG22Failed = bool("monitor_g2_2_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_failed").default(false)
   val monitorI2Failed = bool("monitor_i2_failed").default(false)
+  val monitorI3Failed = bool("monitor_i3_failed").default(false)
+  val monitorI4Failed = bool("monitor_i4_failed").default(false)
   val createdAt = timestamp("created_at")
 
   init {

@@ -31,10 +31,13 @@ import java.util.UUID
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
+ * @property monitorG22Failed Whether monitor G22 failed.
  * @property monitorG3Failed Whether monitor G3 failed.
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
  * @property monitorI2Failed Whether monitor I2 failed.
+ * @property monitorI3Failed Whether monitor I3 failed.
+ * @property monitorI4Failed Whether monitor I4 failed.
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricFailedMonitorsEntry(
@@ -46,9 +49,12 @@ data class MetricFailedMonitorsEntry(
     var monitorG0Failed: Boolean,
     var monitorG1Failed: Boolean,
     var monitorG2Failed: Boolean,
+    var monitorG22Failed: Boolean,
     var monitorG3Failed: Boolean,
     var monitorG4Failed: Boolean,
     var monitorI1Failed: Boolean,
     var monitorI2Failed: Boolean,
-    val createdAt: Instant = Instant.now()
+    var monitorI3Failed: Boolean,
+    var monitorI4Failed: Boolean,
+    val createdAt: Instant = Instant.now(),
 )

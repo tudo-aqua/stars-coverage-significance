@@ -38,6 +38,7 @@ fun staticTsc() =
           monitor(i1Stopping.name, i1Stopping)
           monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
           monitor(i3RightOvertaking.name, i3RightOvertaking)
+          monitor(i4KeepRight.name, i4KeepRight)
         }
         exclusive("Lane") {
           optional("Left Lane") {

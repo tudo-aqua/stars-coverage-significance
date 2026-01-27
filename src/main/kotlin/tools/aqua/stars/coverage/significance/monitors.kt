@@ -509,3 +509,77 @@ val i3RightOvertaking =
         }
       }
     }
+
+/**
+ * Grace period after finishing an overtake to return right. (Avoids flagging immediately after the
+ * pass is completed.)
+ */
+const val TIME_KEEP_RIGHT_RETURN: Long = 3_000L
+
+/**
+ * Helper: ego is currently overtaking on the left.
+ *
+ * True iff there exists a vehicle on ego's right lane that is in front of ego, and ego is faster.
+ * (I.e., ego is left of it and passing it.)
+ */
+val isOvertakingOnLeft =
+    predicate<TimeStep>("Is Overtaking On Left") { tick ->
+      val ego = tick.ego
+      tick.nonEgoVehicles.any { other ->
+        isOnLeftLaneOf.holds(tick, ego to other) && // other is on right lane of ego
+            isInFrontOfAbsolute.holds(tick, other to ego) &&
+            drivesFasterAbsolute.holds(tick, ego to other)
+      }
+    }
+
+/**
+ * Helper: ego has recently finished an overtake (within TIME_KEEP_RIGHT_RETURN) while still on the
+ * left.
+ *
+ * True iff:
+ * - other is on ego's right lane now, and ego is in front now,
+ * - and within the last TIME_KEEP_RIGHT_RETURN ms, other used to be in front (same left/right
+ *   relation).
+ */
+val recentlyFinishedOvertakeOnLeft =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Recently Finished Overtake On Left") {
+        tick,
+        (ego, other) ->
+      isOnLeftLaneOf.holds(tick, ego to other) &&
+          isInFrontOfAbsolute.holds(tick, ego to other) &&
+          once(
+              tick,
+              interval =
+                  Interval(
+                      TickDifferenceMilliseconds(0L),
+                      TickDifferenceMilliseconds(TIME_KEEP_RIGHT_RETURN))) { pastTick ->
+                val pastEgo = pastTick.ego
+                val pastOther = pastTick.getVehicleById(other.vehicleId)
+
+                isOnLeftLaneOf.holds(pastTick, pastEgo to pastOther) &&
+                    isInFrontOfAbsolute.holds(pastTick, pastOther to pastEgo)
+              }
+    }
+
+/** General Traffic Rules: I_4 Keep Right - Predicate implementation. */
+val i4KeepRight =
+    predicate<TimeStep>("I_4 Keep Right") { startingTick ->
+      globally(startingTick) { tick ->
+        val ego = tick.ego
+
+        val hasVehicleOnRight =
+            tick.nonEgoVehicles.any { other -> isOnLeftLaneOf.holds(tick, ego to other) }
+
+        val hasRecentFinishedOvertake =
+            tick.nonEgoVehicles.any { other ->
+              recentlyFinishedOvertakeOnLeft.holds(tick, ego to other)
+            }
+
+        hasVehicleOnRight implies
+            (isOvertakingOnLeft.holds(tick) ||
+                hasRecentFinishedOvertake ||
+                inVehicleQueue.holds(tick, ego) ||
+                inSlowMovingTraffic.holds(tick, ego) ||
+                inCongestion.holds(tick, ego to tick.nonEgoVehicles))
+      }
+    }
