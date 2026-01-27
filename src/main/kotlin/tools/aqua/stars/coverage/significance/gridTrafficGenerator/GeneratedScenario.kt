@@ -65,6 +65,14 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       for (r in BOTTOM_ROW..TOP_ROW) for (l in RIGHT_LANE..LEFT_LANE) grid[r][l]?.let { add(it) }
     }
 
+  /** Returns the SUMO vehicle ID for the ego vehicle. */
+  val egoId: String
+    get() {
+      val egoSpawn = spawnAt(MIDDLE_ROW, egoLane)
+      checkNotNull(egoSpawn) { "Scenario has no EGO spawn in middle row" }
+      return getVehicleId(egoSpawn.type.toString(), egoSpawn.row, egoSpawn.lane, id)
+    }
+
   /** Lane index (0..2) where the ego vehicle is located. */
   val egoLane: Int
     get() {
