@@ -31,7 +31,6 @@ import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
@@ -76,24 +75,8 @@ class LibsumoDynamicDataCollectorTest(
    * Run a generated scenario in libsumo and collect dynamic data.
    *
    * @param runId Run identifier.
-   * @param scenario Generated scenario to run.
-   * @param mutantId Id of the mutant which should be simulated.
-   * @return Collected dynamic data as list of
-   *   [tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep]s.
-   */
-  fun runGeneratedScenario(
-      runId: UUID,
-      scenario: GeneratedScenario,
-      mutant: Mutant
-  ): List<TimeStep> =
-      runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutant)
-
-  /**
-   * Run a generated scenario in libsumo and collect dynamic data.
-   *
-   * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
-   * @param onlyFirstTick Whether to only run the first tick.
+   * @param mutant Mutant which should be simulated.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
@@ -118,8 +101,8 @@ class LibsumoDynamicDataCollectorTest(
             "0.1",
             "--seed",
             "1",
-//            "--device.driverstate.probability",
-//            "1.0",
+            //            "--device.driverstate.probability",
+            //            "1.0",
             //            "--no-warnings",
             "--fcd-output",
             Path("${SCENARIO_DIR}/replay").toAbsolutePath().toString().plus(".fcd.xml"),
@@ -158,23 +141,31 @@ class LibsumoDynamicDataCollectorTest(
 
         // vType attributes (sigma == imperfection)
         SumoVehicleType.setVehicleClass(typeId, "passenger")
-        SumoVehicleType.setMaxSpeed(typeId, 55.55)
-        SumoVehicleType.setSpeedFactor(typeId, 2.0)
-        SumoVehicleType.setSpeedDeviation(typeId, 0.0)
-        SumoVehicleType.setImperfection(typeId, 1.0) // sigma
-        SumoVehicleType.setTau(typeId, 0.01)
-        SumoVehicleType.setMinGap(typeId, 0.0)
+        SumoVehicleType.setMaxSpeed(typeId, mutant.maxSpeed)
+        SumoVehicleType.setSpeedFactor(typeId, mutant.speedFactor)
+        SumoVehicleType.setSpeedDeviation(typeId, mutant.speedDeviation)
+        SumoVehicleType.setImperfection(typeId, mutant.sigma) // sigma
+        SumoVehicleType.setTau(typeId, mutant.tau)
+        SumoVehicleType.setMinGap(typeId, mutant.minGap)
         SumoVehicleType.setColor(typeId, TraCIColor(255, 255, 255, 255))
 
         // Driverstate device params on the vType (generic parameters)
         SumoVehicleType.setParameter(typeId, "has.driverstate.device", "true")
         SumoVehicleType.setParameter(typeId, "device.driverstate.probability", "1")
-        SumoVehicleType.setParameter(typeId, "device.driverstate.initialAwareness", "0.0")
-        SumoVehicleType.setParameter(typeId, "device.driverstate.headwayErrorCoefficient", "20.0")
         SumoVehicleType.setParameter(
-            typeId, "device.driverstate.speedDifferenceErrorCoefficient", "20.0")
+            typeId, "device.driverstate.initialAwareness", mutant.initialAwareness.toString())
         SumoVehicleType.setParameter(
-            typeId, "device.driverstate.errorNoiseIntensityCoefficient", "2.0")
+            typeId,
+            "device.driverstate.headwayErrorCoefficient",
+            mutant.headwayErrorCoefficient.toString())
+        SumoVehicleType.setParameter(
+            typeId,
+            "device.driverstate.speedDifferenceErrorCoefficient",
+            mutant.speedDifferenceErrorCoefficient.toString())
+        SumoVehicleType.setParameter(
+            typeId,
+            "device.driverstate.errorNoiseIntensityCoefficient",
+            mutant.errorNoiseIntensityCoefficient.toString())
       }
 
       // Add vehicle
@@ -189,19 +180,18 @@ class LibsumoDynamicDataCollectorTest(
                       "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
             }
 
-//    MutantApplierTest.applyToEgoVehicle(egoId, mutant)
+    // Force placement of vehicle into simulation, so that all vehicleType parameters are set
+    // correctly
+    for (sp in sortedPlacements) {
+      val vehId =
+          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+      val departLane = sp.lane.toString()
+      val departPos = sp.positionMeters
 
-        for (sp in sortedPlacements) {
-          val vehId =
-              getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-          val departLane = sp.lane.toString()
-          val departPos = sp.positionMeters
+      // Force place vehicle
+      SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
+    }
 
-          // Add vehicle
-          SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
-        }
-
-    // Step until done
     val ticks = ArrayList<TimeStep>()
 
     // Run until finished
@@ -209,6 +199,7 @@ class LibsumoDynamicDataCollectorTest(
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutant.id, scenario, ticks) ?: break
       ticks += timeStep
+      Simulation.step()
     }
     Simulation.close()
 
@@ -223,7 +214,6 @@ class LibsumoDynamicDataCollectorTest(
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList()
   ): TimeStep? {
-    Simulation.step()
     val simTimeSeconds = Simulation.getTime()
     val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
 
