@@ -82,8 +82,10 @@ object MutantsRepository {
           this[MutantsTable.maximalReactionTime] = m.maximalReactionTime
 
           this[MutantsTable.errorNoiseIntensityCoefficient] = m.errorNoiseIntensityCoefficient
+          this[MutantsTable.errorTimeScaleCoefficient] = m.errorTimeScaleCoefficient
 
           this[MutantsTable.initialAwareness] = m.initialAwareness
+          this[MutantsTable.minAwareness] = m.minAwareness
 
           this[MutantsTable.speedFactor] = m.speedFactor
           this[MutantsTable.lcAssertive] = m.lcAssertive
