@@ -27,6 +27,7 @@ import org.eclipse.sumo.libsumo.TraCIColor
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
@@ -98,7 +99,9 @@ class LibsumoDynamicDataCollector(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutantId: UUID?,
-      onlyFirstTick: Boolean = false
+      onlyFirstTick: Boolean = false,
+      takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
+      maxLengthOfScenarioInSeconds: Double? = null,
   ): List<TimeStep> {
     Simulation.preloadLibraries()
 
@@ -218,7 +221,7 @@ class LibsumoDynamicDataCollector(
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
-    val ticks = ArrayList<TimeStep>()
+    val ticks = mutableListOf<TimeStep>()
 
     if (onlyFirstTick)
         return listOfNotNull(
@@ -233,7 +236,18 @@ class LibsumoDynamicDataCollector(
     }
     Simulation.close()
 
-    return ticks
+    var resultList: List<TimeStep> = ticks
+    if (takeOnlyTicksAtXMillis != null) {
+      resultList = ticks.filter { tick -> tick.tickTimeMillis % takeOnlyTicksAtXMillis == 0L }
+    }
+    if (maxLengthOfScenarioInSeconds != null) {
+      resultList =
+          resultList.takeWhile { tick ->
+            tick.tickTimeMillis < (maxLengthOfScenarioInSeconds * 1_000L)
+          }
+    }
+
+    return resultList
   }
 
   private fun getCurrentTimeStep(
