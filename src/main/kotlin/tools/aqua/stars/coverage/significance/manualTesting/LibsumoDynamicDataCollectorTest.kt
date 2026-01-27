@@ -25,7 +25,9 @@ import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
+import org.eclipse.sumo.libsumo.TraCIColor
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
@@ -98,7 +100,6 @@ class LibsumoDynamicDataCollectorTest(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutant: Mutant,
-      onlyFirstTick: Boolean = false
   ): List<TimeStep> {
     Simulation.preloadLibraries()
 
@@ -110,16 +111,20 @@ class LibsumoDynamicDataCollectorTest(
             "--additional-files",
             vTypesFile.toAbsolutePath().toString(),
             "--insertion-checks",
-            insertionChecks,
+            "none",
             "--route-steps",
-            routeSteps.toString(),
+            "0.0",
             "--step-length",
-            stepLength.toString(),
+            "0.1",
             "--seed",
             "1",
-            "--no-warnings",
+//            "--device.driverstate.probability",
+//            "1.0",
+            //            "--no-warnings",
             "--fcd-output",
-            Path("${SCENARIO_DIR}/scenario").toAbsolutePath().toString().plus(".fcd.xml"),
+            Path("${SCENARIO_DIR}/replay").toAbsolutePath().toString().plus(".fcd.xml"),
+            "--fcd-output.params",
+            "device.driverstate.initialAwareness,device.driverstate.minAwareness,device.driverstate.maximalReactionTime,device.driverstate.headwayErrorCoefficient,device.driverstate.speedDifferenceErrorCoefficient,device.driverstate.errorNoiseIntensityCoefficient,lcAssertive,lcSpeedGain,lcCooperative,speedFactor,carFollowModel,tau,minGap,sigma,accel,decel,emergencyDecel,maxSpeed",
             "--collision.action",
             "warn")
 
@@ -141,17 +146,39 @@ class LibsumoDynamicDataCollectorTest(
     for (sp in sortedPlacements) {
       val vehId =
           getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      val typeId = sp.type.sumoId
+      var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
       val departSpeed = sp.type.departSpeedMs.toString()
 
-      // Add vehicle
-      SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
-
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
+        typeId = "mutant"
+        SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
+
+        // vType attributes (sigma == imperfection)
+        SumoVehicleType.setVehicleClass(typeId, "passenger")
+        SumoVehicleType.setMaxSpeed(typeId, 55.55)
+        SumoVehicleType.setSpeedFactor(typeId, 2.0)
+        SumoVehicleType.setSpeedDeviation(typeId, 0.0)
+        SumoVehicleType.setImperfection(typeId, 1.0) // sigma
+        SumoVehicleType.setTau(typeId, 0.01)
+        SumoVehicleType.setMinGap(typeId, 0.0)
+        SumoVehicleType.setColor(typeId, TraCIColor(255, 255, 255, 255))
+
+        // Driverstate device params on the vType (generic parameters)
+        SumoVehicleType.setParameter(typeId, "has.driverstate.device", "true")
+        SumoVehicleType.setParameter(typeId, "device.driverstate.probability", "1")
+        SumoVehicleType.setParameter(typeId, "device.driverstate.initialAwareness", "0.0")
+        SumoVehicleType.setParameter(typeId, "device.driverstate.headwayErrorCoefficient", "20.0")
+        SumoVehicleType.setParameter(
+            typeId, "device.driverstate.speedDifferenceErrorCoefficient", "20.0")
+        SumoVehicleType.setParameter(
+            typeId, "device.driverstate.errorNoiseIntensityCoefficient", "2.0")
       }
+
+      // Add vehicle
+      SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
     }
 
     val egoId =
@@ -162,14 +189,20 @@ class LibsumoDynamicDataCollectorTest(
                       "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
             }
 
-    MutantApplierTest.applyToEgoVehicle(egoId, mutant)
+//    MutantApplierTest.applyToEgoVehicle(egoId, mutant)
+
+        for (sp in sortedPlacements) {
+          val vehId =
+              getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+          val departLane = sp.lane.toString()
+          val departPos = sp.positionMeters
+
+          // Add vehicle
+          SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
+        }
 
     // Step until done
     val ticks = ArrayList<TimeStep>()
-
-    if (onlyFirstTick)
-        return listOfNotNull(
-            getCurrentTimeStep(runId, scenario.id, egoId, mutant.id, scenario, ticks))
 
     // Run until finished
     while (Simulation.getMinExpectedNumber() > 0) {
@@ -212,7 +245,7 @@ class LibsumoDynamicDataCollectorTest(
 
       val typeId = SumoVehicle.getTypeID(vehId)
       val rawVType =
-          if (typeId.lowercase().contains("ego")) {
+          if (typeId.lowercase().contains("mutant")) {
             vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId")
           } else {
             vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
@@ -225,21 +258,7 @@ class LibsumoDynamicDataCollectorTest(
       val speedMs = SumoVehicle.getSpeed(vehId).toFloat()
       val frontPos = SumoVehicle.getLanePosition(vehId).toFloat()
 
-      // Prefer acceleration from libsumo; fall back to finite-difference if bindings don’t expose
-      // it.
-      val accelMs2: Float =
-          runCatching { SumoVehicle.getAcceleration(vehId).toFloat() }
-              .getOrElse {
-                // Fallback: a = Δv / Δt using previous tick (ticks already passed into
-                // getCurrentTimeStep)
-                val prev = ticks.lastOrNull()?.vehiclesInTick?.firstOrNull { it.vehicleId == vehId }
-
-                if (prev == null) 0.0f
-                else {
-                  val dtSeconds = (stepLength).toFloat().coerceAtLeast(1e-6f)
-                  (speedMs - prev.speedMetersPerSecond) / dtSeconds
-                }
-              }
+      val accelMs2: Float = SumoVehicle.getAcceleration(vehId).toFloat()
 
       // Take SUMO default values for decel/emergency decel
       // https://sumo.dlr.de/docs/Definition_of_Vehicles%2C_Vehicle_Types%2C_and_Routes.html#available_vtype_attributes
@@ -258,7 +277,7 @@ class LibsumoDynamicDataCollectorTest(
               vehicleType = vehicleType,
               currentLane = lane,
               currentEdge = lane.parentEdge,
-              positionOnLaneMeters = frontPos, // keep existing semantics (front bumper)
+              positionOnLaneMeters = frontPos,
               speedMetersPerSecond = speedMs,
               accelerationMetersPerSecondSquared = accelMs2,
               frontBumperPositionOnLaneMeters = frontPos,
