@@ -132,7 +132,7 @@ class LibsumoDynamicDataCollectorTest(
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
-      val departSpeed = sp.type.departSpeedMs.toString()
+      val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
@@ -166,6 +166,16 @@ class LibsumoDynamicDataCollectorTest(
             typeId,
             "device.driverstate.errorNoiseIntensityCoefficient",
             mutant.errorNoiseIntensityCoefficient.toString())
+        SumoVehicleType.setParameter(
+            typeId,
+            "device.driverstate.headwayChangePerceptionThreshold",
+            mutant.headwayChangePerceptionThreshold.toString())
+        SumoVehicleType.setParameter(
+            typeId,
+            "device.driverstate.speedDifferenceChangePerceptionThreshold",
+            mutant.speedDifferenceChangePerceptionThreshold.toString())
+        SumoVehicleType.setParameter(
+            typeId, "device.driverstate.maximalReactionTime", mutant.maximalReactionTime.toString())
       }
 
       // Add vehicle

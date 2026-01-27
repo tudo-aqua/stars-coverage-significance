@@ -23,7 +23,9 @@ import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
+import org.eclipse.sumo.libsumo.TraCIColor
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
@@ -108,13 +110,17 @@ class LibsumoDynamicDataCollector(
             "--additional-files",
             vTypesFile.toAbsolutePath().toString(),
             "--insertion-checks",
-            insertionChecks,
+            "none",
             "--route-steps",
-            routeSteps.toString(),
+            "0.0",
             "--step-length",
-            stepLength.toString(),
+            "0.1",
+            "--seed",
+            "1",
+            "--no-warnings",
             "--collision.action",
             "warn")
+
     Simulation.load(StringVector(baseArgs.toTypedArray()))
 
     // Add a single route for this run
@@ -133,34 +139,85 @@ class LibsumoDynamicDataCollector(
     for (sp in sortedPlacements) {
       val vehId =
           getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      val typeId = sp.type.sumoId
+      var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
-      val departSpeed = sp.type.departSpeedMs.toString()
-
-      // Add vehicle
-      SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
+      val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
+        typeId = "mutant"
+        SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
+
+        // vType attributes (sigma == imperfection)
+        if (mutantId != null) {
+          val mutant = MutantsRepository.getById(mutantId)
+          checkNotNull(mutant) { "Mutant with id $mutantId not found in database." }
+          SumoVehicleType.setVehicleClass(typeId, "passenger")
+          SumoVehicleType.setMaxSpeed(typeId, mutant.maxSpeed)
+          SumoVehicleType.setSpeedFactor(typeId, mutant.speedFactor)
+          SumoVehicleType.setSpeedDeviation(typeId, mutant.speedDeviation)
+          SumoVehicleType.setImperfection(typeId, mutant.sigma) // sigma
+          SumoVehicleType.setTau(typeId, mutant.tau)
+          SumoVehicleType.setMinGap(typeId, mutant.minGap)
+          SumoVehicleType.setColor(typeId, TraCIColor(255, 255, 255, 255))
+
+          // Driverstate device params on the vType (generic parameters)
+          SumoVehicleType.setParameter(typeId, "has.driverstate.device", "true")
+          SumoVehicleType.setParameter(typeId, "device.driverstate.probability", "1")
+          SumoVehicleType.setParameter(
+              typeId, "device.driverstate.initialAwareness", mutant.initialAwareness.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.headwayErrorCoefficient",
+              mutant.headwayErrorCoefficient.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.speedDifferenceErrorCoefficient",
+              mutant.speedDifferenceErrorCoefficient.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.errorNoiseIntensityCoefficient",
+              mutant.errorNoiseIntensityCoefficient.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.headwayChangePerceptionThreshold",
+              mutant.headwayChangePerceptionThreshold.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.speedDifferenceChangePerceptionThreshold",
+              mutant.speedDifferenceChangePerceptionThreshold.toString())
+          SumoVehicleType.setParameter(
+              typeId,
+              "device.driverstate.maximalReactionTime",
+              mutant.maximalReactionTime.toString())
+        }
       }
+
+      // Add vehicle
+      SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
     }
 
     val egoId =
         egoVehicleId
             ?: run {
               error(
-                  "Ego not found in placements; falling back to first spawned vehicle." +
+                  "Ego not found in placements; falling back to first spawned SumoVehicle." +
                       "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
             }
 
-    if (mutantId != null) {
-      val mutantEntry = MutantsRepository.getById(mutantId)
-      checkNotNull(mutantEntry) { "Mutant with id $mutantId not found in database." }
-      MutantApplier.applyToEgoVehicle(egoId, mutantEntry)
+    // Force placement of vehicle into simulation, so that all vehicleType parameters are set
+    // correctly
+    for (sp in sortedPlacements) {
+      val vehId =
+          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+      val departLane = sp.lane.toString()
+      val departPos = sp.positionMeters
+
+      // Force place vehicle
+      SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
-    // Step until done
     val ticks = ArrayList<TimeStep>()
 
     if (onlyFirstTick)
@@ -172,7 +229,9 @@ class LibsumoDynamicDataCollector(
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
+      Simulation.step()
     }
+    Simulation.close()
 
     return ticks
   }
