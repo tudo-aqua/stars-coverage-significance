@@ -19,8 +19,31 @@ package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.util.UUID
 
-class Mutant(
+/**
+ * Data class representing a mutant.
+ *
+ * @property id Unique identifier of the mutant.
+ * @property initialAwareness Initial awareness of the mutant.
+ * @property headwayErrorCoefficient Headway error coefficient of the mutant.
+ * @property speedDifferenceErrorCoefficient Speed difference error coefficient of the mutant.
+ * @property errorNoiseIntensityCoefficient Error noise intensity coefficient of the mutant.
+ * @property maxSpeed Maximum speed of the mutant.
+ * @property speedFactor Speed factor of the mutant.
+ * @property speedDeviation Speed deviation of the mutant.
+ * @property sigma Sigma of the mutant.
+ * @property tau Tau of the mutant.
+ * @property minGap Minimum gap of the mutant.
+ */
+data class Mutant(
     val id: UUID = UUID.randomUUID(),
     val initialAwareness: Double = 1.0,
     val headwayErrorCoefficient: Double = 0.75,
+    val speedDifferenceErrorCoefficient: Double = 0.15,
+    val errorNoiseIntensityCoefficient: Double = 0.2,
+    val maxSpeed: Double = 55.55,
+    val speedFactor: Double = 1.0,
+    val speedDeviation: Double = 0.0,
+    val sigma: Double = 0.5,
+    val tau: Double = 1.0,
+    val minGap: Double = 2.5
 )
