@@ -39,11 +39,11 @@ fun main() {
   seedGridTrafficScenarios(
       seed = SEED, insertIntoDatabase = true, enablePositionVariance = true, n = 10_000)
 
-  // Precompute scenario-only metric once
-  runStartingValidTSCInstancesEvaluation(parallelism = parallelism)
-
   // Seed mutants
   MutantGenerator.seed()
+
+  // Precompute scenario-only metric once
+  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
 }
 
 /**
