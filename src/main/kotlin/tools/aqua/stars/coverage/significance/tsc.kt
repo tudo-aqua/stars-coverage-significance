@@ -32,6 +32,7 @@ fun staticTsc() =
           monitor(g0Accidents.name, g0Accidents)
           monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
           monitor(g2UnnecessaryBraking.name, g2UnnecessaryBraking)
+          monitor(g22AbruptBraking.name, g22AbruptBraking)
           monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
           monitor(g4TrafficFlow.name, g4TrafficFlow)
           monitor(i1Stopping.name, i1Stopping)

@@ -175,12 +175,18 @@ val g2UnnecessaryBraking =
 
 // region G_2 helpers
 /** Paper parameter a_abrupt (Table II): -2.0 m/s^2. */
-const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -2.0f
+const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -4.6f
 
 /** Helper: ego brakes abruptly. (More negative acceleration than the abrupt threshold.) */
 val isBrakingAbruptly =
-    predicate<TimeStep, Vehicle>("Is Braking Abruptly") { tick, vehicle ->
-      vehicle.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
+    predicate<TimeStep>("Is Braking Abruptly") { tick ->
+      tick.ego.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
+    }
+
+/** Paper-level predicate: g2_2_abrupt_braking(x_k): ego brakes abruptly in tick k. */
+val g22AbruptBraking =
+    predicate<TimeStep>("G_2_2 Abrupt Braking") { tick ->
+      globally(tick) { globallyTick -> !isBrakingAbruptly.holds(globallyTick) }
     }
 
 /**
@@ -199,16 +205,18 @@ val isBrakingAbruptly =
  * - (a_ego - a_leader) < a_abrupt (paper’s “relative abruptness” check)
  */
 val unnecessaryBraking =
-    predicate<TimeStep, Vehicle>("Unnecessary Braking") { tick, vehicleK ->
-      (vehicleK.accelerationMetersPerSecondSquared < 0.0f) implies
-          ((tick.getOtherVehicles(vehicleK).none { vehicleP ->
-            isInFrontOnSameLane.holds(tick, vehicleP to vehicleK) &&
-                isBrakingAbruptly.holds(tick, vehicleK)
+    predicate<TimeStep, Vehicle>("Unnecessary Braking") { tick, ego ->
+      val otherVehicles = tick.getOtherVehicles(ego)
+      (ego.accelerationMetersPerSecondSquared < 0.0f) implies
+          ((otherVehicles.none { vehicleP ->
+            isOnSameLane.holds(tick, vehicleP to ego) &&
+                isInFrontOfAbsolute.holds(tick, vehicleP to ego) &&
+                isBrakingAbruptly.holds(tick)
           }) ||
-              (tick.getOtherVehicles(vehicleK).any { vehicleP ->
-                keepSafeDistancePreceding.holds(tick, vehicleK to vehicleP) &&
-                    isInFrontOnSameLane.holds(tick, vehicleP to vehicleK) &&
-                    (vehicleK.accelerationMetersPerSecondSquared -
+              (otherVehicles.any { vehicleP ->
+                keepSafeDistancePreceding.holds(tick, ego to vehicleP) &&
+                    isInFrontOnSameLane.holds(tick, vehicleP to ego) &&
+                    (ego.accelerationMetersPerSecondSquared -
                         vehicleP.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2)
               }))
     }
