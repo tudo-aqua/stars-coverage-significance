@@ -451,3 +451,61 @@ val drivesFasterAbsolute =
       first.speedMetersPerSecond > second.speedMetersPerSecond
     }
 // endregion
+
+/**
+ * Right-overtaking detection window. We consider it a "right overtake" if the relative order flips
+ * within this time.
+ */
+const val TIME_RIGHT_OVERTAKE: Long = 5_000L
+
+/**
+ * Helper: "Right Overtake" event.
+ *
+ * True iff (w.r.t. some other vehicle `other`):
+ * - other is on the lane to the *left* of ego (=> ego is on the right),
+ * - ego is in front of other now,
+ * - and within the last TIME_RIGHT_OVERTAKE ms, other used to be in front of ego while still left
+ *   of ego.
+ *
+ * This captures an actual pass, not just "ego happens to be ahead".
+ */
+val rightOvertake =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Right Overtake") { tick, (ego, other) ->
+      // current situation: other left of ego, ego ahead of other
+      isOnLeftLaneOf.holds(tick, other to ego) &&
+          isInFrontOfAbsolute.holds(tick, ego to other) &&
+          // (optional but usually sensible) ego must be faster at this instant
+          drivesFasterAbsolute.holds(tick, ego to other) &&
+          // past evidence: within window, other was ahead while being left of ego
+          once(
+              tick,
+              interval =
+                  Interval(
+                      TickDifferenceMilliseconds(0L),
+                      TickDifferenceMilliseconds(TIME_RIGHT_OVERTAKE))) { pastTick ->
+                val pastOther = pastTick.getVehicleById(other.vehicleId)
+                val pastEgo = pastTick.ego
+                isOnLeftLaneOf.holds(pastTick, pastOther to pastEgo) &&
+                    isInFrontOfAbsolute.holds(pastTick, pastOther to pastEgo)
+              }
+    }
+
+/**
+ * General Traffic Rules: I_3 Right Overtaking - Predicate implementation.
+ *
+ * If ego performs a right-overtake of a vehicle on the left lane, it is only acceptable under the
+ * same exception pattern you already use in I_2 (queue / slow traffic / congestion / slightly
+ * higher speed).
+ */
+val i3RightOvertaking =
+    predicate<TimeStep>("I_3 Right Overtaking") { startingTick ->
+      globally(startingTick) { tick ->
+        tick.nonEgoVehicles.all { otherVehicle ->
+          rightOvertake.holds(tick, tick.ego to otherVehicle) implies
+              (inVehicleQueue.holds(tick, otherVehicle) ||
+                  inSlowMovingTraffic.holds(tick, otherVehicle) ||
+                  inCongestion.holds(tick, otherVehicle to tick.getOtherVehicles(otherVehicle)) ||
+                  slightlyHigherSpeed.holds(tick, tick.ego to otherVehicle))
+        }
+      }
+    }
