@@ -34,15 +34,29 @@ fun main() {
 
   val libsumoDynamicDataCollector = LibsumoDynamicDataCollectorTest()
 
+  val firstScenario = scenarios.first()
+
   val libSumoTicks =
       libsumoDynamicDataCollector.runGeneratedScenario(
           runId = UUID.randomUUID(),
-          scenario = scenarios.first().toScenarioStartingConfigurationEntry(UUID.randomUUID()),
-          mutant = Mutant())
+          scenario = firstScenario.toScenarioStartingConfigurationEntry(UUID.randomUUID()),
+          mutant =
+              Mutant(
+                  initialAwareness = 0.0,
+                  headwayErrorCoefficient = 20.0,
+                  speedDifferenceErrorCoefficient = 20.0,
+                  errorNoiseIntensityCoefficient = 2.0,
+                  speedFactor = 2.0,
+                  speedDeviation = 0.0,
+                  sigma = 1.0,
+                  tau = 0.01,
+                  minGap = 0.0,
+                  maxSpeed = 55.55,
+              ))
 
   println(
       """
-    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k replay.sumocfg -f ${scenarios.first().id}.fcd.xml
+    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k replay.sumocfg -f replay.fcd.xml
   """
           .trimIndent())
 
