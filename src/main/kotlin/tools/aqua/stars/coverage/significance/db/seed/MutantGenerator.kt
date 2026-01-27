@@ -37,52 +37,34 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
  */
 object MutantGenerator {
 
-  /**
-   * Bundle C1: (headwayErrorCoefficient, speedDifferenceErrorCoefficient)
-   *
-   * C1–1 : (0.75, 0.15), C1–2 : (1.00, 0.30), C1–3 : (1.30, 0.60), C1–4 : (1.70, 0.90).
-   */
+  /** Bundle C1: (headwayErrorCoefficient, speedDifferenceErrorCoefficient). */
   private val C1 =
       listOf(
-          0.75 to 0.15,
-          1.00 to 0.30,
-          1.30 to 0.60,
-          1.70 to 0.90,
+          0.25 to 0.25,
+          1.00 to 1.00,
+          1.50 to 1.50,
       )
 
   /**
    * Bundle C2: (headwayChangePerceptionThreshold, speedDifferenceChangePerceptionThreshold,
-   * maximalReactionTime)
-   *
-   * C2–1 : (0.10, 0.10, 0.30), C2–2 : (0.25, 0.25, 0.80), C2–3 : (0.50, 0.50, 1.60), C2–4 : (0.75,
-   * 0.75, 2.50).
+   * maximalReactionTime).
    */
   private val C2 =
       listOf(
-          Triple(0.10, 0.10, 0.30),
-          Triple(0.25, 0.25, 0.80),
+          Triple(0.25, 0.25, 0.50),
+          Triple(1.00, 1.00, 1.00),
           Triple(0.50, 0.50, 1.60),
-          Triple(0.75, 0.75, 2.50),
       )
 
-  /**
-   * Bundle C3: (errorNoiseIntensityCoefficient, errorTimeScaleCoefficient)
-   *
-   * C3–1 : (0.20, 20), C3–2 : (1.00, 20), C3–3 : (0.20, 400), C3–4 : (1.00, 400).
-   */
+  /** Bundle C3: (errorNoiseIntensityCoefficient, errorTimeScaleCoefficient). */
   private val C3 =
       listOf(
-          0.20 to 20.0,
+          0.50 to 20.0,
           1.00 to 20.0,
-          0.20 to 400.0,
-          1.00 to 400.0,
+          2.00 to 400.0,
       )
 
-  /**
-   * Bundle C4: (initialAwareness, minAwareness)
-   *
-   * C4–1 : (0.70, 0.08), C4–2 : (0.50, 0.05), C4–3 : (0.30, 0.02).
-   */
+  /** Bundle C4: (initialAwareness, minAwareness).. */
   private val C4 =
       listOf(
           0.70 to 0.08,
@@ -90,17 +72,12 @@ object MutantGenerator {
           0.30 to 0.02,
       )
 
-  /**
-   * Bundle C5: (speedFactor, lcAssertive, lcSpeedGain, lcCooperative)
-   *
-   * C5–1 : (1.00, 0.50, 1.00, 1.00), C5–2 : (1.10, 0.70, 1.50, 0.50), C5–3 : (1.20, 0.90, 2.00,
-   * 0.00).
-   */
+  /** Bundle C5: (speedFactor, lcAssertive, lcSpeedGain, lcCooperative). */
   private val C5 =
       listOf(
           listOf(1.00, 0.50, 1.00, 1.00),
-          listOf(1.10, 0.70, 1.50, 0.50),
-          listOf(1.20, 0.90, 2.00, 0.00),
+          listOf(1.50, 1.00, 1.50, 0.50),
+          listOf(2.00, 1.50, 2.00, 0.00),
       )
 
   /**

@@ -37,11 +37,15 @@ import java.util.UUID
  * @property speedDifferenceChangePerceptionThreshold Threshold for perceiving changes in speed
  *   difference.
  * @property maximalReactionTime Maximal reaction time of the driver model.
+ * @property maxSpeed Maximum speed of the driver model.
  * @property errorNoiseIntensityCoefficient Coefficient for the intensity of error noise.
- * @property errorTimeScaleCoefficient Coefficient for the time scale of errors.
+ * @property errorTimeScaleCoefficient Coefficient for the time scale of error noise.
  * @property initialAwareness Initial awareness level of the driver model.
- * @property minAwareness Minimum awareness level of the driver model.
  * @property speedFactor Speed factor of the driver model.
+ * @property speedDeviation Speed deviation of the driver model.
+ * @property sigma Sigma of the driver model.
+ * @property tau Tau of the driver model.
+ * @property minGap Minimum gap of the driver model.
  * @property lcAssertive Level of assertiveness in lane changing.
  * @property lcSpeedGain Speed gain factor in lane changing.
  * @property lcCooperative Level of cooperativeness in lane changing.
@@ -55,17 +59,22 @@ data class MutantEntry(
     val c3Level: Int,
     val c4Level: Int,
     val c5Level: Int,
-    val headwayErrorCoefficient: Double,
-    val speedDifferenceErrorCoefficient: Double,
-    val headwayChangePerceptionThreshold: Double,
-    val speedDifferenceChangePerceptionThreshold: Double,
-    val maximalReactionTime: Double,
-    val errorNoiseIntensityCoefficient: Double,
-    val errorTimeScaleCoefficient: Double,
-    val initialAwareness: Double,
-    val minAwareness: Double,
-    val speedFactor: Double,
-    val lcAssertive: Double,
-    val lcSpeedGain: Double,
-    val lcCooperative: Double,
+    val initialAwareness: Double = 1.0,
+    val minAwareness: Double = 0.0,
+    val headwayErrorCoefficient: Double = 0.75,
+    val headwayChangePerceptionThreshold: Double = 0.05,
+    val speedDifferenceErrorCoefficient: Double = 0.15,
+    val speedDifferenceChangePerceptionThreshold: Double = 0.05,
+    val errorNoiseIntensityCoefficient: Double = 0.2,
+    val errorTimeScaleCoefficient: Double = 0.05,
+    val maximalReactionTime: Double = 2.5,
+    val maxSpeed: Double = 55.55,
+    val speedFactor: Double = 1.0,
+    val speedDeviation: Double = 0.0,
+    val sigma: Double = 0.5,
+    val tau: Double = 1.0,
+    val minGap: Double = 2.5,
+    val lcAssertive: Double = 1.0,
+    val lcSpeedGain: Double = 1.0,
+    val lcCooperative: Double = 1.0,
 )

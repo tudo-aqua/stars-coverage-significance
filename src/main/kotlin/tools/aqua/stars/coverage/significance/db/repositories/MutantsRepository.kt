@@ -82,15 +82,19 @@ object MutantsRepository {
           this[MutantsTable.maximalReactionTime] = m.maximalReactionTime
 
           this[MutantsTable.errorNoiseIntensityCoefficient] = m.errorNoiseIntensityCoefficient
-          this[MutantsTable.errorTimeScaleCoefficient] = m.errorTimeScaleCoefficient
 
           this[MutantsTable.initialAwareness] = m.initialAwareness
-          this[MutantsTable.minAwareness] = m.minAwareness
 
           this[MutantsTable.speedFactor] = m.speedFactor
           this[MutantsTable.lcAssertive] = m.lcAssertive
           this[MutantsTable.lcSpeedGain] = m.lcSpeedGain
           this[MutantsTable.lcCooperative] = m.lcCooperative
+
+          this[MutantsTable.tau] = m.tau
+          this[MutantsTable.sigma] = m.sigma
+          this[MutantsTable.minGap] = m.minGap
+          this[MutantsTable.speedDeviation] = m.speedDeviation
+          this[MutantsTable.maxSpeed] = m.maxSpeed
         }
         .map { it.toEntry() }
   }
@@ -152,5 +156,10 @@ object MutantsRepository {
           lcAssertive = this[MutantsTable.lcAssertive],
           lcSpeedGain = this[MutantsTable.lcSpeedGain],
           lcCooperative = this[MutantsTable.lcCooperative],
+          maxSpeed = this[MutantsTable.maxSpeed],
+          speedDeviation = this[MutantsTable.speedDeviation],
+          sigma = this[MutantsTable.sigma],
+          tau = this[MutantsTable.tau],
+          minGap = this[MutantsTable.minGap],
       )
 }

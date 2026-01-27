@@ -58,6 +58,12 @@ object MutantsTable : UUIDTable("mutants") {
   val c4Level = integer("c4_level")
   val c5Level = integer("c5_level")
 
+  val tau = double("tau")
+  val sigma = double("sigma")
+  val minGap = double("min_gap")
+  val speedDeviation = double("speed_deviation")
+  val maxSpeed = double("max_speed")
+
   // Bundle C1
   val headwayErrorCoefficient = double("headway_error_coefficient")
   val speedDifferenceErrorCoefficient = double("speed_difference_error_coefficient")
