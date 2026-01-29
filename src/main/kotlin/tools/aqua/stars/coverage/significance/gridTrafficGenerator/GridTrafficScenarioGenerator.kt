@@ -20,6 +20,10 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
+import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
 
 /**
  * Exhaustive 3x3-grid scenario generator.
@@ -43,11 +47,14 @@ data class GridTrafficScenarioGenerator(
 
     // Intervals (meters)
     val i0Start: Float = 0.0f,
-    val i0End: Float = 100.0f,
-    val i1Start: Float = 100.0f,
-    val i1End: Float = 110.0f,
-    val i2Start: Float = 110.0f,
-    val i2End: Float = 210.0f,
+    val i0End: Float = VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO,
+    val i1Start: Float = i0End,
+    val i1End: Float =
+        i1Start +
+            VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM +
+            VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM,
+    val i2Start: Float = i1End,
+    val i2End: Float = i2Start + VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO,
 
     // Constraint (meters)
     val minForwardGapMeters: Float = 50.0f,
@@ -130,7 +137,7 @@ data class GridTrafficScenarioGenerator(
     val egoCell = Pair(1, egoLane)
 
     // --- Step 1: place all middle-row vehicles first (including ego) ---
-    val egoMiddlePos = placeMiddleFeasible(rng, lane = egoLane, occupancy = occupancy)
+    val egoMiddlePos = placeMiddleFeasible(rng, lane = egoLane, occupancy = occupancy, isEgo = true)
     placements +=
         Spawn(row = 1, lane = egoLane, positionMeters = egoMiddlePos, type = GridVehicleType.EGO)
 
@@ -176,6 +183,7 @@ data class GridTrafficScenarioGenerator(
       rng: Random,
       lane: Int,
       occupancy: Array<GridVehicleType?>,
+      isEgo: Boolean = false
   ): Float {
     val row0Occupied = occupancy[0 * 3 + lane] != null
     val row2Occupied = occupancy[2 * 3 + lane] != null
@@ -193,7 +201,7 @@ data class GridTrafficScenarioGenerator(
     }
 
     val restricted = Interval(lower, upper)
-    return restricted.pick(rng, enablePositionVariance)
+    return if (isEgo) restricted.pick(rng, false) else restricted.pick(rng, enablePositionVariance)
   }
 
   /**
