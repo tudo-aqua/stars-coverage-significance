@@ -156,7 +156,7 @@ val isInFrontOf =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is In Front Of") { _, (otherVehicle, ego) ->
       otherVehicle.positionOnLaneMeters > ego.positionOnLaneMeters &&
           (otherVehicle.positionOnLaneMeters in
-              (ego.positionOnLaneMeters + VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM)..(ego
+              (ego.positionOnLaneMeters + VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM)..<(ego
                       .positionOnLaneMeters + VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO))
     }
 
@@ -175,7 +175,7 @@ val isBehindOf =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Behind Of") { _, (otherVehicle, ego) ->
       otherVehicle.positionOnLaneMeters < ego.positionOnLaneMeters &&
           (otherVehicle.positionOnLaneMeters in
-              ((ego.positionOnLaneMeters - VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO)..ego
+              ((ego.positionOnLaneMeters - VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO)..<ego
                       .positionOnLaneMeters - VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM))
     }
 
@@ -183,7 +183,7 @@ val isBehindOf =
 val isBesidesOf =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Besides Of") { _, (otherVehicle, ego) ->
       otherVehicle.positionOnLaneMeters in
-          (ego.positionOnLaneMeters - VEHICLE_BESIDES_MAX_DISTANCE_METERS)..(ego
+          (ego.positionOnLaneMeters - VEHICLE_BESIDES_MAX_DISTANCE_METERS)..<(ego
                   .positionOnLaneMeters + VEHICLE_BESIDES_MAX_DISTANCE_METERS)
     }
 
