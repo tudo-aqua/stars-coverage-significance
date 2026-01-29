@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
   val workerId = CliArgs.requireString(args, "workerId")
   val seqFrom = CliArgs.requireLong(args, "seqFrom")
   val seqTo = CliArgs.requireLong(args, "seqTo")
+  println("Worker-Id: $workerId")
 
   DbBootstrap.connect()
 
