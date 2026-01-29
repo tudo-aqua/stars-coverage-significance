@@ -19,16 +19,22 @@ package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 
 /** Repository for [TSCInstanceEntry]s. */
 object TSCInstancesRepository {
+
+  fun countByTSC(tscId: UUID): Long = db {
+    TSCInstancesTable.selectAll().where(TSCInstancesTable.tsc eq tscId).count()
+  }
 
   /**
    * Returns the existing row with the same [instanceJson], or null if none exists.
