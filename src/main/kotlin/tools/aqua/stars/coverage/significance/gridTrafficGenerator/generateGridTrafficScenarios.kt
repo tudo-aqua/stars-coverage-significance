@@ -38,19 +38,14 @@ fun seedGridTrafficScenarios(
     enablePositionVariance: Boolean = false,
     insertIntoDatabase: Boolean = true
 ): List<GeneratedScenario> {
+  println("Generating scenarios...")
   val rng = Random(seed)
   val generator =
       GridTrafficScenarioGenerator(
           enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 1,
           seed = seed,
-          minForwardGapMeters = 50.0f,
-          i0Start = 0.0f,
-          i0End = 100.0f,
-          i1Start = 100.0f,
-          i1End = 110.0f,
-          i2Start = 110.0f,
-          i2End = 210.0f,
+
       )
 
   var allScenarios = generator.generateAll().toList()
@@ -72,6 +67,7 @@ fun seedGridTrafficScenarios(
     ScenarioStartingConfigurationRepository.batchInsert(
         allScenarios.map { it.toScenarioStartingConfigurationEntry() })
   }
+  println("Generated ${allScenarios.size} scenarios.")
   return allScenarios
 }
 
@@ -100,13 +96,6 @@ fun generateGridTrafficScenarios(
           enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 3,
           seed = seed,
-          minForwardGapMeters = 50.0f,
-          i0Start = 0.0f,
-          i0End = 100.0f,
-          i1Start = 100.0f,
-          i1End = 110.0f,
-          i2Start = 110.0f,
-          i2End = 210.0f,
       )
 
   val existingFiles =
