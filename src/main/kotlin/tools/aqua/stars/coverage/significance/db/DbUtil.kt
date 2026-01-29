@@ -28,10 +28,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
  * @param block The block of code to execute within the transaction.
  * @return The result of the block execution.
  */
-inline fun <T> db(crossinline block: () -> T): T {
-  return if (TransactionManager.currentOrNull() != null) {
-    block()
-  } else {
-    transaction { block() }
-  }
-}
+inline fun <T> db(crossinline block: () -> T): T =
+    if (TransactionManager.currentOrNull() != null) {
+      block()
+    } else {
+      transaction { block() }
+    }
