@@ -17,14 +17,23 @@
 
 package tools.aqua.stars.coverage.significance
 
+import java.util.UUID
+import kotlin.collections.map
+import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
+import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
+import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
+import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
 
@@ -32,8 +41,12 @@ import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInsta
 fun main() {
   DbBootstrap.connectAndCreateSchema()
 
+  val tsc = staticTsc()
+
   // Add TSC to db
-  TSCsRepository.upsertAndGetId(entry = staticTsc().toTSCEntry())
+  val tscId = TSCsRepository.upsertAndGetId(entry = tsc.toTSCEntry())
+
+  insertAllTSCInstance(tsc, tscId)
 
   // Seed scenarios
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = true)
@@ -42,7 +55,25 @@ fun main() {
   MutantGenerator.seed()
 
   // Precompute scenario-only metric once
-  //  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
+  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
+}
+
+private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
+  val existingEntries = TSCInstancesRepository.countByTSC(tscId)
+  if (existingEntries == tsc.instanceCount.toLong()) {
+    println("TSCInstances are already in Db.")
+    return@db
+  }
+  val consoleProgress = ConsoleProgress(tsc.instanceCount.toInt())
+  println("Inserting ${tsc.instanceCount} TSCInstances into Db.")
+  tsc.possibleTSCInstances.forEach { tscInstance ->
+    consoleProgress.step()
+    TSCInstancesRepository.insertIfAbsentReturnId(
+        TSCInstanceEntry(
+            tscId = tscId,
+            instanceJson = SerializableTSCNode(tscInstance.rootNode).getJsonString()))
+  }
+  println("Finished inserting TSCInstances.")
 }
 
 /**
@@ -51,6 +82,7 @@ fun main() {
  * @param parallelism Number of parallel workers to use.
  */
 private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
+  println("Precomputing starting valid TSC instances...")
   val maxSeq = ScenarioStartingConfigurationRepository.getMaxSequenceNumber()
   if (maxSeq <= 0L) {
     println("No scenarios found; skipping premetric phase.")
@@ -93,4 +125,5 @@ private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
     processes.toList().forEach { it.killProcessTree() }
     throw e
   }
+  println("Precomputation finished.")
 }
