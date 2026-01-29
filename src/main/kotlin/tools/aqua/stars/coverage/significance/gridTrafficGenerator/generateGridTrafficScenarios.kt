@@ -45,7 +45,6 @@ fun seedGridTrafficScenarios(
           enablePositionVariance = enablePositionVariance,
           positionVariantsPerOccupancy = 1,
           seed = seed,
-
       )
 
   var allScenarios = generator.generateAll().toList()
