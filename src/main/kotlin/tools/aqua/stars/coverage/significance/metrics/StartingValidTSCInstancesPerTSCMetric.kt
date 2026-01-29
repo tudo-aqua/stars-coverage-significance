@@ -33,7 +33,6 @@ import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
 import tools.aqua.stars.core.types.*
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
-import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
@@ -69,7 +68,7 @@ class StartingValidTSCInstancesPerTSCMetric<
     T : TickDataType<E, T, U, D>,
     U : TickUnit<U, D>,
     D : TickDifference<D>,
->() : TSCAndTSCInstanceMetricProvider<E, T, U, D>, PostEvaluationMetricProvider<E, T, U, D> {
+> : TSCAndTSCInstanceMetricProvider<E, T, U, D>, PostEvaluationMetricProvider<E, T, U, D> {
   /**
    * Map a [TSC] to a map in which the occurrences of valid [TSCInstanceNode]s at the beginning of
    * the scenario are stored:
@@ -93,6 +92,10 @@ class StartingValidTSCInstancesPerTSCMetric<
    * @param tscInstance The current [TSCInstance] which is checked for validity.
    */
   override fun evaluate(tsc: TSC<E, T, U, D>, tscInstance: TSCInstance<E, T, U, D>) {
+    if (tscInstance.rootNode.validate().any()) {
+      println("Found invalid TSC Instance: ${tscInstance} in ${tscInstance.sourceIdentifier}")
+      return
+    }
     val sourceIdentifier = tscInstance.sourceIdentifier.replace(".export.xml", "")
 
     // Get current count of unique and valid TSC instance for the current TSC
@@ -126,8 +129,10 @@ class StartingValidTSCInstancesPerTSCMetric<
         map.forEach { (tscInstance, sourceIdentifiers) ->
           val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
           val tscInstanceEntryId =
-              TSCInstancesRepository.insertIfAbsentReturnId(
-                  TSCInstanceEntry(tscId = tscEntryId, instanceJson = tscInstanceJsonString))
+              TSCInstancesRepository.getByInstanceJson(tscInstanceJsonString, tscEntryId)?.id
+          checkNotNull(tscInstanceEntryId) {
+            "TSC instance entry not found in database: ${tscInstanceJsonString}"
+          }
 
           sourceIdentifiers.forEach { sourceIdentifier ->
             val scenarioStartingConfigurationEntry =
