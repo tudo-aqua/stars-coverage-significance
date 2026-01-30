@@ -27,6 +27,7 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMillisec
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.logic.kcmftbl.Interval
+import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 import tools.aqua.stars.logic.kcmftbl.future.globally
 import tools.aqua.stars.logic.kcmftbl.past.once
 import tools.aqua.stars.logic.kcmftbl.past.previous
@@ -48,9 +49,8 @@ val g0Accidents =
 /** Predicate for checking whether two vehicles collide with each other. */
 val collidesWith =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Collides With") { tick, (ego, otherVehicle) ->
-      tick.collisionsInTick.any { collision ->
-        (collision.colliderVehicle == ego && collision.victimVehicle == otherVehicle) ||
-            (collision.colliderVehicle == otherVehicle && collision.victimVehicle == ego)
+      exists(tick.collisionsInTick) { collision ->
+        collision.colliderVehicle == ego && collision.victimVehicle == otherVehicle
       }
     }
 // endregion
@@ -368,6 +368,7 @@ val i2DrivingFasterThenLeftTraffic =
       globally(tick) { globallyTick ->
         globallyTick.nonEgoVehicles.all { otherVehicle ->
           (isOnLeftLaneOf.holds(globallyTick, otherVehicle to globallyTick.ego) &&
+              isNearby.holds(globallyTick, otherVehicle to globallyTick.ego) &&
               drivesFasterAbsolute.holds(globallyTick, otherVehicle to globallyTick.ego)) implies
               (inVehicleQueue.holds(globallyTick, otherVehicle) ||
                   inSlowMovingTraffic.holds(globallyTick, otherVehicle) ||
@@ -394,11 +395,19 @@ const val SLOW_MOVING_TRAFFIC_MIN_COUNT_NSMT: Int = 3
 /** Paper parameters nsmt/nqv (Table II): 3. */
 const val VEHICLE_QUEUE_MIN_COUNT_NQV: Int = 3
 
+const val VEHICLE_LENGTH: Double = 2.0
+
 /** slightlyHigherSpeed(xego, xleft): 0 < v(ego) - v(left) < vso. */
 val slightlyHigherSpeed =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Slightly Higher Speed") { _, (ego, other) ->
       val dv = ego.speedMetersPerSecond - other.speedMetersPerSecond
       dv > 0.0f && dv < SLIGHTLY_HIGHER_SPEED_VSO_MPS
+    }
+
+val isNearby =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Nearby") { tick, (first, second) ->
+      abs(first.frontBumperPositionOnLaneMeters - second.frontBumperPositionOnLaneMeters) <=
+          VEHICLE_LENGTH
     }
 
 /**
