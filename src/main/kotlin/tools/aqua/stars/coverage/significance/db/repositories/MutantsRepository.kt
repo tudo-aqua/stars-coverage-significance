@@ -22,9 +22,11 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.insertIgnoreAndGetId
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 
 /** Repository for [MutantEntry]s. */
@@ -55,6 +57,45 @@ object MutantsRepository {
         .limit(1)
         .firstOrNull()
         ?.toEntry()
+  }
+
+  fun insertIfMissingAndGetId(mutant: MutantEntry): UUID? = db {
+    MutantsTable.insertIgnoreAndGetId { m ->
+          m[MutantsTable.createdAt] = mutant.createdAt
+          m[MutantsTable.mutantKey] = mutant.mutantKey
+
+          m[MutantsTable.c1Level] = mutant.c1Level
+          m[MutantsTable.c2Level] = mutant.c2Level
+          m[MutantsTable.c3Level] = mutant.c3Level
+          m[MutantsTable.c4Level] = mutant.c4Level
+          m[MutantsTable.c5Level] = mutant.c5Level
+
+          m[MutantsTable.headwayErrorCoefficient] = mutant.headwayErrorCoefficient
+          m[MutantsTable.speedDifferenceErrorCoefficient] = mutant.speedDifferenceErrorCoefficient
+
+          m[MutantsTable.headwayChangePerceptionThreshold] = mutant.headwayChangePerceptionThreshold
+          m[MutantsTable.speedDifferenceChangePerceptionThreshold] =
+              mutant.speedDifferenceChangePerceptionThreshold
+          m[MutantsTable.maximalReactionTime] = mutant.maximalReactionTime
+
+          m[MutantsTable.errorNoiseIntensityCoefficient] = mutant.errorNoiseIntensityCoefficient
+          m[MutantsTable.errorTimeScaleCoefficient] = mutant.errorTimeScaleCoefficient
+
+          m[MutantsTable.initialAwareness] = mutant.initialAwareness
+          m[MutantsTable.minAwareness] = mutant.minAwareness
+
+          m[MutantsTable.speedFactor] = mutant.speedFactor
+          m[MutantsTable.lcAssertive] = mutant.lcAssertive
+          m[MutantsTable.lcSpeedGain] = mutant.lcSpeedGain
+          m[MutantsTable.lcCooperative] = mutant.lcCooperative
+
+          m[MutantsTable.tau] = mutant.tau
+          m[MutantsTable.sigma] = mutant.sigma
+          m[MutantsTable.minGap] = mutant.minGap
+          m[MutantsTable.speedDeviation] = mutant.speedDeviation
+          m[MutantsTable.maxSpeed] = mutant.maxSpeed
+        }
+        ?.value ?: getByKey(mutant.mutantKey)?.id
   }
 
   /**

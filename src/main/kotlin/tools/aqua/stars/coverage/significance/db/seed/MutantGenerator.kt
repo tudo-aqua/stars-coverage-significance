@@ -134,6 +134,25 @@ object MutantGenerator {
     return mutantEntries
   }
 
+  fun seedBaseline(): UUID {
+    println("Seeding database with baseline mutant...")
+    val baseLineMutant =
+        MutantEntry(
+            createdAt = Instant.now(),
+            mutantKey = "BASELINE",
+            c1Level = 0,
+            c2Level = 0,
+            c3Level = 0,
+            c4Level = 0,
+            c5Level = 0,
+        )
+
+    val mutantEntryId = MutantsRepository.insertIfMissingAndGetId(baseLineMutant)
+    checkNotNull(mutantEntryId) { "Failed to insert baseline mutant." }
+    println("Seeded baseline mutant with ID: $mutantEntryId")
+    return mutantEntryId
+  }
+
   /**
    * Seeds the database with mutant entries if it is currently empty.
    *

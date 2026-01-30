@@ -49,9 +49,10 @@ fun main() {
   insertAllTSCInstance(tsc, tscId)
 
   // Seed scenarios
-  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = true)
+  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = false)
 
   // Seed mutants
+  MutantGenerator.seedBaseline()
   MutantGenerator.seed()
 
   // Precompute scenario-only metric once
