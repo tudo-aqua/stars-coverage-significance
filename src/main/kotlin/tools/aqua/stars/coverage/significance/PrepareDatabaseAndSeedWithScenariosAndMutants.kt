@@ -58,6 +58,12 @@ fun main() {
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
 }
 
+/**
+ * Inserts all TSC instances into the database if they are not already present.
+ *
+ * @param tsc The TSC whose instances are to be inserted.
+ * @param tscId The database ID of the TSC.
+ */
 private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
   val existingEntries = TSCInstancesRepository.countByTSC(tscId)
   if (existingEntries == tsc.instanceCount.toLong()) {
