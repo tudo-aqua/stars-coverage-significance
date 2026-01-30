@@ -179,14 +179,14 @@ const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -4.6f
 
 /** Helper: ego brakes abruptly. (More negative acceleration than the abrupt threshold.) */
 val isBrakingAbruptly =
-    predicate<TimeStep>("Is Braking Abruptly") { tick ->
-      tick.ego.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
+    predicate<TimeStep, Vehicle>("Is Braking Abruptly") { _, vehicle ->
+      vehicle.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
     }
 
 /** Paper-level predicate: g2_2_abrupt_braking(x_k): ego brakes abruptly in tick k. */
 val g22AbruptBraking =
     predicate<TimeStep>("G_2_2 Abrupt Braking") { tick ->
-      globally(tick) { globallyTick -> !isBrakingAbruptly.holds(globallyTick) }
+      globally(tick) { globallyTick -> !isBrakingAbruptly.holds(globallyTick, globallyTick.ego) }
     }
 
 /**
@@ -211,7 +211,7 @@ val unnecessaryBraking =
           ((otherVehicles.none { vehicleP ->
             isOnSameLane.holds(tick, vehicleP to ego) &&
                 isInFrontOfAbsolute.holds(tick, vehicleP to ego) &&
-                isBrakingAbruptly.holds(tick)
+                isBrakingAbruptly.holds(tick, tick.getVehicleById(vehicleP.vehicleId))
           }) ||
               (otherVehicles.any { vehicleP ->
                 keepSafeDistancePreceding.holds(tick, ego to vehicleP) &&
