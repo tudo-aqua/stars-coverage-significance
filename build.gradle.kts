@@ -56,7 +56,7 @@ dependencies {
   runtimeOnly("org.postgresql:postgresql:42.7.3")
   implementation(
       group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.9.0")
-  implementation(group = "org.eclipse.sumo", name = "libsumo", version = "1.24.0")
+  implementation(group = "org.eclipse.sumo", name = "libsumo", version = "1.25.0")
   implementation("com.zaxxer:HikariCP:5.1.0")
 }
 
