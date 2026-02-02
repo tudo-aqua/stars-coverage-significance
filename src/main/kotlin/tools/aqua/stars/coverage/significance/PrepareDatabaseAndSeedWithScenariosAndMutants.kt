@@ -25,10 +25,12 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
+import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator.expectedMutantCount
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
@@ -52,11 +54,40 @@ fun main() {
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = false)
 
   // Seed mutants
-  MutantGenerator.seedBaseline()
-  MutantGenerator.seed()
+  seedMutants()
 
   // Precompute scenario-only metric once
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
+}
+
+/** Seed all mutants and the baseline mutant into the database. */
+private fun seedMutants(
+    seedBaseLine: Boolean = true,
+    seedMutants: Boolean = true,
+    numberOfMutants: Int? = null
+): List<UUID> {
+  val existing = MutantsRepository.getAllIds()
+  // When all "MutantGenerator.expectedMutantCount " mutants exist and the number of mutants to seed
+  // is not specified, return early.
+  if (numberOfMutants == null && existing.isNotEmpty() && existing.size == expectedMutantCount) {
+    println("Database already seeded with $expectedMutantCount mutants.")
+    return existing
+  }
+
+  // A new number of mutants was specified. Therefore, clean previously generated mutants.
+  MutantsRepository.cleanTable()
+
+  val mutantIds = mutableListOf<UUID>()
+
+  // Seed mutants
+  if (seedBaseLine) {
+    mutantIds += MutantGenerator.seedBaseline()
+  }
+  if (seedMutants) {
+    mutantIds += MutantGenerator.seed()
+  }
+
+  return mutantIds
 }
 
 /**
