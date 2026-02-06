@@ -19,15 +19,8 @@ package tools.aqua.stars.coverage.significance.manualTesting
 
 import kotlin.io.path.Path
 import kotlin.random.Random
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.BOTTOM_ROW
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.LEFT_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.MIDDLE_ROW
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
 /**
@@ -41,7 +34,7 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 fun generateGridTrafficScenariosTest(
     seed: Int = 1,
     enablePositionVariance: Boolean = false,
-    cleanGenerationFiles: Boolean = true
+    writeXmlFiles: Boolean = false
 ): List<GeneratedScenario> {
   val rng = Random(seed)
   val generator =
@@ -69,35 +62,22 @@ fun generateGridTrafficScenariosTest(
     return emptyList()
   }
 
-  var allScenarios = generator.generateAll().toList()
+  val allScenarios = generator.generateAll().toList()
 
   var done = 0
 
-  val scenario =
-      allScenarios.first { generatedScenario ->
-        generatedScenario.spawnAt(BOTTOM_ROW, LEFT_LANE)?.type == GridVehicleType.SPEEDY &&
-            generatedScenario.spawnAt(BOTTOM_ROW, CENTER_LANE)?.type == GridVehicleType.SPEEDY &&
-            generatedScenario.spawnAt(BOTTOM_ROW, RIGHT_LANE)?.type == GridVehicleType.SPEEDY &&
-            generatedScenario.spawnAt(MIDDLE_ROW, LEFT_LANE)?.type == GridVehicleType.CALM &&
-            generatedScenario.spawnAt(MIDDLE_ROW, CENTER_LANE)?.type == GridVehicleType.EGO &&
-            generatedScenario.spawnAt(MIDDLE_ROW, RIGHT_LANE)?.type == GridVehicleType.CALM &&
-            generatedScenario.spawnAt(TOP_ROW, LEFT_LANE)?.type == GridVehicleType.CALM &&
-            generatedScenario.spawnAt(TOP_ROW, CENTER_LANE)?.type == GridVehicleType.CALM &&
-            generatedScenario.spawnAt(TOP_ROW, RIGHT_LANE)?.type == GridVehicleType.CALM
-      }
-  allScenarios = listOf(scenario)
-
   val total = allScenarios.size
   println("Generating and writing ${allScenarios.size} scenarios...")
-
-  val pb = ConsoleProgress(total, label = "Grid Traffic Generator")
-  pb.render(0, "starting")
-  allScenarios.forEach { scenario ->
-    scenario.writeRouXml(
-        Path("sumo_data/gridTrafficScenarios/scenarios/scenario.rou.xml"),
-        changeEgoTypeTo = "mutant1")
-    done++
-    pb.step()
+  if (writeXmlFiles) {
+    val pb = ConsoleProgress(total, label = "Grid Traffic Generator")
+    pb.render(0, "starting")
+    allScenarios.forEach { scenario ->
+      scenario.writeRouXml(
+          Path("sumo_data/gridTrafficScenarios/scenarios/scenario.rou.xml"),
+          changeEgoTypeTo = "mutant1")
+      done++
+      pb.step()
+    }
   }
   return allScenarios
 }

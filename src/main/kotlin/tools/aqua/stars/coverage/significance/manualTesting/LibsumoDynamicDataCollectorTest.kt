@@ -106,6 +106,8 @@ class LibsumoDynamicDataCollectorTest(
             //            "--no-warnings",
             "--fcd-output",
             Path("${SCENARIO_DIR}/replay").toAbsolutePath().toString().plus(".fcd.xml"),
+            "--fcd-output.attributes",
+            "acceleration",
             "--fcd-output.params",
             "device.driverstate.initialAwareness,device.driverstate.minAwareness,device.driverstate.maximalReactionTime,device.driverstate.headwayErrorCoefficient,device.driverstate.speedDifferenceErrorCoefficient,device.driverstate.errorNoiseIntensityCoefficient,lcAssertive,lcSpeedGain,lcCooperative,speedFactor,carFollowModel,tau,minGap,sigma,accel,decel,emergencyDecel,maxSpeed",
             "--collision.action",
