@@ -26,6 +26,7 @@ import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.createdAt
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.scenarioConfig
@@ -34,6 +35,15 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCIn
 
 /** Repository for [MetricStartingValidTSCInstancesEntry]s. */
 object MetricStartingValidTSCInstancesRepository {
+
+  /**
+   * Returns a query containing all entries in the table.
+   *
+   * @return The query containing all entries.
+   */
+  fun getAll(): List<MetricStartingValidTSCInstancesEntry> = db {
+    MetricStartingValidTSCInstancesTable.selectAll().map { it.toEntry() }
+  }
 
   /**
    * Returns the number of entries in the table.
