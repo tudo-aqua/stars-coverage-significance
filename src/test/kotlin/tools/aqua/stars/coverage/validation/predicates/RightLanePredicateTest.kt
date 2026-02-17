@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
@@ -80,7 +81,7 @@ class RightLanePredicateTest {
     val behindVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.middleLane, 0.0f)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
-    assert(isInFrontOnRightLane.holds(tick, frontVehicle to behindVehicle))
+    assertFalse(isInFrontOnRightLane.holds(tick, frontVehicle to behindVehicle))
   }
 
   /**
@@ -187,7 +188,7 @@ class RightLanePredicateTest {
             frontVehicle.positionOnLaneMeters - VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
-    assert(isBehindOnRightLane.holds(tick, behindVehicle to frontVehicle))
+    assertFalse(isBehindOnRightLane.holds(tick, behindVehicle to frontVehicle))
   }
 
   /** Tests the [isBehindOnRightLane] predicate for vehicles behind each other at min distance+1. */

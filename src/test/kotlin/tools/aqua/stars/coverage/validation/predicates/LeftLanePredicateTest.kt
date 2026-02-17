@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
 import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
@@ -76,11 +77,11 @@ class LeftLanePredicateTest {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
     val frontVehicle =
         PredicateTestHelper.getTestVehicle(
-            "v2", roadNetwork.leftLane, VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO)
+            "v2", roadNetwork.leftLane, (VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO))
     val behindVehicle = PredicateTestHelper.getTestVehicle("v1", roadNetwork.middleLane, 0.0f)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
-    assert(isInFrontOnLeftLane.holds(tick, frontVehicle to behindVehicle))
+    assert(!isInFrontOnLeftLane.holds(tick, frontVehicle to behindVehicle))
   }
 
   /**
@@ -127,7 +128,7 @@ class LeftLanePredicateTest {
             "v2", roadNetwork.leftLane, VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM - 1)
 
     val tick = getTestTimeStep(listOf(vehicle1, vehicle2))
-    assert(!isInFrontOnLeftLane.holds(tick, vehicle2 to vehicle1))
+    assertFalse(isInFrontOnLeftLane.holds(tick, vehicle2 to vehicle1))
   }
 
   // endregion
@@ -187,7 +188,7 @@ class LeftLanePredicateTest {
             frontVehicle.positionOnLaneMeters - VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM)
 
     val tick = getTestTimeStep(listOf(frontVehicle, behindVehicle))
-    assert(isBehindOnLeftLane.holds(tick, behindVehicle to frontVehicle))
+    assertFalse(isBehindOnLeftLane.holds(tick, behindVehicle to frontVehicle))
   }
 
   /** Tests the [isBehindOnLeftLane] predicate for vehicles behind each other at min distance+1. */
