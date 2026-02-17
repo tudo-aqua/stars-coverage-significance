@@ -26,6 +26,7 @@ import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
+import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
@@ -89,7 +90,11 @@ fun main(args: Array<String>) {
         }
         val runResult =
             libsumoDynamicDataCollector.runGeneratedScenario(
-                runId = runId, scenario, job.mutantId, onlyFirstTick = false)
+                runId = runId,
+                scenario,
+                job.mutantId,
+                onlyFirstTick = false,
+                maxLengthOfScenarioInSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS)
         tickSequences.add(runResult.asTickSequence())
       }
       eval.runEvaluation(tickSequences.asSequence())
