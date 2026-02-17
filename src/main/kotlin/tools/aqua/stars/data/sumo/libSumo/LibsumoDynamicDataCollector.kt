@@ -258,8 +258,6 @@ class LibsumoDynamicDataCollector(
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList()
   ): TimeStep? {
-    Simulation.step()
-
     val simTimeSeconds = Simulation.getTime()
     val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
 
