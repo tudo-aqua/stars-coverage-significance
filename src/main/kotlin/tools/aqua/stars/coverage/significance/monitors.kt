@@ -190,10 +190,46 @@ val g22AbruptBraking =
     }
 
 /**
- * Predicate for unnecessary braking: ego brakes abruptly while there is no reason to brake (no
- * leader, or leader is far enough and not braking abruptly itself).
+ * Detects **unnecessary abrupt braking** by the ego vehicle according to the structure of
+ * Maierhofer-style rule RG2 (“no unnecessary braking”), adapted for our paper.
  *
- * Differs from Paper.
+ * ## Informal meaning
+ * This predicate evaluates to `true` at a time step `tick` for a vehicle `ego` iff:
+ * 1. The ego vehicle is **braking abruptly** at `tick` (as defined by [isBrakingAbruptly]), and
+ * 2. At least one of the following *“unnecessary braking”* cases holds:
+ *
+ * ### Case A — No leader ahead on the same lane
+ * There exists **no** other vehicle `v` such that `v` is *in front of* `ego` **on the same lane**
+ * (as defined by [isInFrontOnSameLane]).
+ *
+ * Intuition: if the ego brakes abruptly without any preceding vehicle ahead on the same lane, the
+ * braking is considered unnecessary (under this formalization).
+ *
+ * ### Case B — Braking is not justified by a safely-distanced leader’s behavior
+ * There exists a *leading* vehicle `leader` in front of the ego on the same lane such that:
+ * - `leader` is in front of `ego` on the same lane ([isInFrontOnSameLane]),
+ * - the ego is currently maintaining a safe following distance to `leader`
+ *   ([keepSafeDistancePreceding]), and
+ * - the ego’s deceleration is **too strong relative to the leader’s acceleration**, i.e.
+ *
+ *   `ego.acceleration - leader.acceleration < ABRUPT_BRAKING_THRESHOLD_MPS2`
+ *
+ * Intuition: if the ego already keeps a safe distance to the leader, but still brakes abruptly
+ * “more than necessary” compared to the leader’s motion, the braking is deemed unnecessary.
+ *
+ * ## Formal structure
+ * Let `BrakeAbrupt(ego)` abbreviate [isBrakingAbruptly], and `FrontSameLane(x,y)` abbreviate
+ * [isInFrontOnSameLane] for the pair `(x,y)`.
+ *
+ * ```
+ * unnecessaryBraking(tick, ego) :=
+ *   BrakeAbrupt(ego) ∧ ( ¬∃v. FrontSameLane(v,ego)
+ *                       ∨ ∃leader. FrontSameLane(leader,ego)
+ *                                ∧ keepSafeDistancePreceding(ego,leader)
+ *                                ∧ (a_ego − a_leader < a_abrupt) )
+ * ```
+ *
+ * where `a_abrupt` is [ABRUPT_BRAKING_THRESHOLD_MPS2].
  */
 val unnecessaryBraking =
     predicate<TimeStep, Vehicle>("Unnecessary Braking") { tick, ego ->
@@ -332,8 +368,6 @@ val existStandingLeadingVehicle =
 /**
  * inCongestion(xego, X¬ego): count of vehicles in front on same lane with v <= vcon is at least
  * ncon.
- *
- * Note: signature keeps your (ego, list) style; the predicate uses the passed list.
  */
 val inCongestion =
     predicate<TimeStep, Pair<Vehicle, List<Vehicle>>>("In Congestion") { tick, (ego, others) ->
@@ -401,8 +435,6 @@ val isNearby =
 /**
  * inVehicleQueue(xo, X¬o): analogous to in_congestion Count vehicles in front of xo on the same
  * lane with v <= vqv, require count >= nqv.
- *
- * Signature is Vehicle-only in your code, so we use tick.getOtherVehicles(vehicle).
  */
 val inVehicleQueue =
     predicate<TimeStep, Vehicle>("In Vehicle Queue") { tick, vehicle ->
@@ -421,8 +453,6 @@ val inVehicleQueue =
 /**
  * inSlowMovingTraffic(xo, X¬o): analogous to in_congestion Count vehicles in front of xo on the
  * same lane with v <= vsmt, require count >= nsmt.
- *
- * Signature is Vehicle-only in your code, so we use tick.getOtherVehicles(vehicle).
  */
 val inSlowMovingTraffic =
     predicate<TimeStep, Vehicle>("In Slow Moving Traffic") { tick, vehicle ->
