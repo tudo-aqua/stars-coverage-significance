@@ -175,7 +175,7 @@ val g2UnnecessaryBraking =
 
 // region G_2 helpers
 /** Paper parameter a_abrupt (Table II): -2.0 m/s^2. */
-const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -4.6f
+const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -2.0f
 
 /** Helper: ego brakes abruptly. (More negative acceleration than the abrupt threshold.) */
 val isBrakingAbruptly =
@@ -190,35 +190,21 @@ val g22AbruptBraking =
     }
 
 /**
- * Paper-level predicate: unnecessary_braking(x_k, X_not_k)
+ * Predicate for unnecessary braking: ego brakes abruptly while there is no reason to brake (no
+ * leader, or leader is far enough and not braking abruptly itself).
  *
- * Ego-first convention: unnecessaryBraking(tick) evaluates ego vs all non-ego vehicles in tick.
- *
- * Case A:
- * - ego brakes abruptly
- * - no leading vehicle exists on same lane
- *
- * Case B:
- * - ego brakes abruptly
- * - there is a closest leading vehicle on same lane (leader)
- * - ego still keeps safe distance to leader
- * - (a_ego - a_leader) < a_abrupt (paper’s “relative abruptness” check)
+ * Differs from Paper.
  */
 val unnecessaryBraking =
     predicate<TimeStep, Vehicle>("Unnecessary Braking") { tick, ego ->
-      val otherVehicles = tick.getOtherVehicles(ego)
-      (ego.accelerationMetersPerSecondSquared < 0.0f) implies
-          ((otherVehicles.none { vehicleP ->
-            isOnSameLane.holds(tick, vehicleP to ego) &&
-                isInFrontOfAbsolute.holds(tick, vehicleP to ego) &&
-                isBrakingAbruptly.holds(tick, tick.getVehicleById(vehicleP.vehicleId))
-          }) ||
-              (otherVehicles.any { vehicleP ->
-                keepSafeDistancePreceding.holds(tick, ego to vehicleP) &&
-                    isInFrontOnSameLane.holds(tick, vehicleP to ego) &&
+      isBrakingAbruptly.holds(tick, ego) &&
+          (!exists(tick.getOtherVehicles(ego)) { v -> isInFrontOnSameLane.holds(tick, v to ego) } ||
+              exists(tick.getOtherVehicles(ego)) { leader ->
+                isInFrontOnSameLane.holds(tick, leader to ego) &&
+                    keepSafeDistancePreceding.holds(tick, ego to leader) &&
                     (ego.accelerationMetersPerSecondSquared -
-                        vehicleP.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2)
-              }))
+                        leader.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2)
+              })
     }
 // endregion
 
