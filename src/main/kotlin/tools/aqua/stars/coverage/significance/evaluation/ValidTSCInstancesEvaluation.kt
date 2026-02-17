@@ -25,15 +25,28 @@ import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 
+/**
+ * This utility evaluates the valid TSC instances metric by counting how many valid TSC instances
+ * there are per TSC instance ID, ordering the counts, and writing the results to a CSV and a LaTeX
+ * pgfplots file for plotting. It also generates a bar chart using the STARS core plotting
+ * utilities.
+ */
 object ValidTSCInstancesEvaluation {
+  /**
+   * Main entry point for the evaluation. Connects to the database, retrieves valid TSC instances,
+   * counts them per TSC instance ID, orders the counts, and writes the results to CSV and LaTeX
+   * files, as well as generating a bar chart.
+   */
   fun evaluate() {
     DbBootstrap.connect()
     val validStartingTSCInstances = MetricStartingValidTSCInstancesRepository.getAll()
     val groupedByTSCInstance = validStartingTSCInstances.groupingBy { it.tscInstanceId }.eachCount()
     val orderedCounts = groupedByTSCInstance.values.sortedDescending()
 
-    val csvPath = Path.of("post-evaluation", "ordered_counts.csv")
-    val texPath = Path.of("post-evaluation", "ordered_counts_plot.tex")
+    val folder = "post-evaluation"
+
+    val csvPath = Path.of(folder, "ordered_counts.csv")
+    val texPath = Path.of(folder, "ordered_counts_plot.tex")
 
     writeOrderedCountsCsv(orderedCounts, csvPath)
     writePgfplotsBarChartTex(
@@ -48,7 +61,7 @@ object ValidTSCInstancesEvaluation {
             "Instance Count",
             xValues = orderedCounts.mapIndexed { index, _ -> index },
             yValues = orderedCounts)
-    plotDataAsBarChart(plot, "ordered_counts", "post-evaluation")
+    plotDataAsBarChart(plot, "ordered_counts", folder)
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */

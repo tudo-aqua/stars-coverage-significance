@@ -48,6 +48,19 @@ const val DB_PORT = 6432
 /** Database bootstrap utility to connect to the PostgreSQL database and create necessary tables. */
 object DbBootstrap {
 
+  /**
+   * Configuration for connecting to the database. Values are read from environment variables if
+   * set, otherwise default values are used.
+   *
+   * @property host Database host (default: [DB_HOST] or env var "DB_HOST")
+   * @property port Database port (default: [DB_PORT] or env var "DB_PORT")
+   * @property database Database name (default: [DB_NAME] or env var "DB_NAME")
+   * @property user Database user (default: [DB_USER] or env var "DB_USER")
+   * @property password Database password (default: [DB_PASSWORD] or env var "DB_PASSWORD")
+   * @property maxPoolSize Maximum size of the Hikari connection pool (default: 1 or env var
+   *   "DB_POOL_MAX")
+   * @property minIdle Minimum
+   */
   data class DbConfig(
       val host: String = System.getenv("DB_HOST") ?: DB_HOST,
       val port: Int = System.getenv("DB_PORT")?.toInt() ?: DB_PORT,

@@ -31,16 +31,17 @@ import java.util.UUID
  * @property c3Level Level of parameter c3.
  * @property c4Level Level of parameter c4.
  * @property c5Level Level of parameter c5.
+ * @property initialAwareness Initial awareness level of the driver model.
+ * @property minAwareness Minimum awareness level of the driver model.
  * @property headwayErrorCoefficient Coefficient for headway error.
- * @property speedDifferenceErrorCoefficient Coefficient for speed difference error.
  * @property headwayChangePerceptionThreshold Threshold for perceiving changes in headway.
+ * @property speedDifferenceErrorCoefficient Coefficient for speed difference error.
  * @property speedDifferenceChangePerceptionThreshold Threshold for perceiving changes in speed
  *   difference.
- * @property maximalReactionTime Maximal reaction time of the driver model.
- * @property maxSpeed Maximum speed of the driver model.
  * @property errorNoiseIntensityCoefficient Coefficient for the intensity of error noise.
  * @property errorTimeScaleCoefficient Coefficient for the time scale of error noise.
- * @property initialAwareness Initial awareness level of the driver model.
+ * @property maximalReactionTime Maximal reaction time of the driver model.
+ * @property maxSpeed Maximum speed of the driver model.
  * @property speedFactor Speed factor of the driver model.
  * @property speedDeviation Speed deviation of the driver model.
  * @property sigma Sigma of the driver model.

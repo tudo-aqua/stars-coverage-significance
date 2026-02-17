@@ -93,6 +93,10 @@ class LibsumoDynamicDataCollector(
    * @param scenario Database entry of the scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
    * @param onlyFirstTick Whether to only run the first tick.
+   * @param takeOnlyTicksAtXMillis If not null, only take ticks at multiples of this number of
+   *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
+   * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
+   *   into the scenario. (e.g. if 10, only take ticks until 10 seconds into the scenario).
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(

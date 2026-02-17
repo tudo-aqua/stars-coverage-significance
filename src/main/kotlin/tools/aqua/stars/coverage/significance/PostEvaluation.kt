@@ -19,6 +19,12 @@ package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.evaluation.ValidTSCInstancesEvaluation
 
+/**
+ * This utility runs the post-evaluation analysis for valid TSC instances. It can be run after all
+ * evaluation runs have completed to analyze the results and determine the significance of the
+ * coverage of valid TSC instances. It can be run multiple times without side effects, as it only
+ * reads from the database and writes output files without modifying the database.
+ */
 fun main() {
   ValidTSCInstancesEvaluation.evaluate()
 }

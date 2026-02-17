@@ -32,6 +32,12 @@ import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 /** Repository for [TSCInstanceEntry]s. */
 object TSCInstancesRepository {
 
+  /**
+   * Counts the number of TSC instances for a given TSC ID.
+   *
+   * @param tscId The ID of the TSC to count instances for.
+   * @return The number of TSC instances associated with the given TSC ID.
+   */
   fun countByTSC(tscId: UUID): Long = db {
     TSCInstancesTable.selectAll().where(TSCInstancesTable.tsc eq tscId).count()
   }

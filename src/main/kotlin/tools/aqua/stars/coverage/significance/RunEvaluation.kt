@@ -68,6 +68,8 @@ fun main(args: Array<String>) {
  * Parses the parallelism argument from the command line arguments.
  *
  * @param args Command line arguments.
+ * @param longName The long name of the argument to parse (e.g., "--parallelism").
+ * @param defaultValue The default value to return if the argument is not provided or invalid.
  * @return The parsed parallelism value, or the default value of 4 if not provided or invalid.
  */
 private fun parseIntArg(args: Array<String>, longName: String, defaultValue: Int): Int {

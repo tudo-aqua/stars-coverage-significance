@@ -34,6 +34,14 @@ private fun currentPidString(): String {
       .getOrElse { "unknown" }
 }
 
+/**
+ * Utility to monitor and print the progress of mutant scenario chunk jobs for the latest evaluation
+ * run. It periodically queries the database for the progress and prints a progress bar,
+ * percentages, and estimated time remaining. It can be run while the evaluation is still running to
+ * observe the progress in real time. It can also be run after the evaluation has completed to see
+ * the final progress and timing information. It does not modify the database and can be safely run
+ * multiple times.
+ */
 fun main() {
   val pid = currentPidString()
   val mainThread = Thread.currentThread()
@@ -126,7 +134,7 @@ fun main() {
         last = line
       }
 
-      Thread.sleep(10000)
+      Thread.sleep(10_000)
     }
   }
 

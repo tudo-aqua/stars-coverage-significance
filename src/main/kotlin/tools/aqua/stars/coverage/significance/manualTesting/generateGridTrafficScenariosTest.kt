@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.manualTesting
 
 import kotlin.io.path.Path
-import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
@@ -26,17 +25,15 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 /**
  * Function to generate grid traffic scenarios.
  *
- * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
  * @param enablePositionVariance Whether to enable position variance sampling.
- * @param cleanGenerationFiles Whether to clean the generation files directory before generating.
+ * @param writeXmlFiles Whether to write the generated scenarios to XML files.
  */
 fun generateGridTrafficScenariosTest(
     seed: Int = 1,
     enablePositionVariance: Boolean = false,
     writeXmlFiles: Boolean = false
 ): List<GeneratedScenario> {
-  val rng = Random(seed)
   val generator =
       GridTrafficScenarioGenerator(
           enablePositionVariance = enablePositionVariance,

@@ -395,6 +395,7 @@ const val SLOW_MOVING_TRAFFIC_MIN_COUNT_NSMT: Int = 3
 /** Paper parameters nsmt/nqv (Table II): 3. */
 const val VEHICLE_QUEUE_MIN_COUNT_NQV: Int = 3
 
+/** Length of vehicles. */
 const val VEHICLE_LENGTH: Double = 2.0
 
 /** slightlyHigherSpeed(xego, xleft): 0 < v(ego) - v(left) < vso. */
@@ -404,8 +405,9 @@ val slightlyHigherSpeed =
       dv > 0.0f && dv < SLIGHTLY_HIGHER_SPEED_VSO_MPS
     }
 
+/** isNearby(xo, xleft): |pos_front(xo) - pos_front(xleft)| <= vehicle_length. */
 val isNearby =
-    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Nearby") { tick, (first, second) ->
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is Nearby") { _, (first, second) ->
       abs(first.frontBumperPositionOnLaneMeters - second.frontBumperPositionOnLaneMeters) <=
           VEHICLE_LENGTH
     }

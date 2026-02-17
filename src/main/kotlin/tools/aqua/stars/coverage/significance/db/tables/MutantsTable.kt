@@ -31,6 +31,11 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
  * @property c3Level Level of bundle C3.
  * @property c4Level Level of bundle C4.
  * @property c5Level Level of bundle C5.
+ * @property tau Tau parameter of the driver model.
+ * @property sigma Sigma parameter of the driver model.
+ * @property minGap Minimum gap parameter of the driver model.
+ * @property speedDeviation Speed deviation parameter of the driver model.
+ * @property maxSpeed Maximum speed parameter of the driver model.
  * @property headwayErrorCoefficient Headway error coefficient (C1).
  * @property speedDifferenceErrorCoefficient Speed difference error coefficient (C1).
  * @property headwayChangePerceptionThreshold Headway change perception threshold (C2).

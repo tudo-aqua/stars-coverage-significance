@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.batchInsert
@@ -59,6 +60,16 @@ object MutantsRepository {
         ?.toEntry()
   }
 
+  /**
+   * Inserts a mutant into the database if a mutant with the same mutant key does not already exist.
+   * Returns the ID of the existing or newly inserted mutant.
+   *
+   * @param mutant MutantEntry to insert.
+   * @return ID of the existing or newly inserted mutant, or null if insertion failed for some
+   *   reason.
+   * @throws ExposedSQLException if the insertion fails due to a database error other than a unique
+   *   constraint violation on the mutant key.
+   */
   fun insertIfMissingAndGetId(mutant: MutantEntry): UUID? = db {
     MutantsTable.insertIgnoreAndGetId { m ->
           m[MutantsTable.createdAt] = mutant.createdAt

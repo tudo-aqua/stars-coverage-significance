@@ -137,6 +137,13 @@ object MutantGenerator {
     return mutantEntries
   }
 
+  /**
+   * Seeds the database with a baseline mutant entry that serves as a reference point for all other
+   * mutants.
+   *
+   * @return The ID of the inserted baseline mutant entry.
+   * @throws IllegalStateException if the baseline mutant entry could not be inserted.
+   */
   fun seedBaseline(): UUID {
     println("Seeding database with baseline mutant...")
     val baseLineMutant =

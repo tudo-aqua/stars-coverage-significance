@@ -177,6 +177,8 @@ data class GridTrafficScenarioGenerator(
    * @param rng Random number generator.
    * @param lane Lane index (0 to 2).
    * @param occupancy Occupancy array representing vehicle types in the grid.
+   * @param isEgo Whether the vehicle being placed is the ego vehicle (which requires special
+   *   handling for position variance).
    * @return Position (meters) for the middle-row vehicle.
    */
   private fun placeMiddleFeasible(

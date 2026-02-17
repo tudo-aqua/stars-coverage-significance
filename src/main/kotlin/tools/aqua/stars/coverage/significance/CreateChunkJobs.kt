@@ -25,6 +25,11 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.seed.ChunkJobSeeder
 
+/**
+ * This utility creates chunk jobs for all mutants and scenarios and inserts them into the database.
+ * It can be run multiple times without creating duplicate jobs, as it first clears the chunk jobs
+ * table for convenience.
+ */
 fun main() {
   DbBootstrap.connect()
   val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())

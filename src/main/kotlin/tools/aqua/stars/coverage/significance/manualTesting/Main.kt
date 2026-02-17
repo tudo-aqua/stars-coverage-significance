@@ -33,6 +33,11 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.staticTsc
 
+/**
+ * This is a manual testing utility to run a single scenario and collect the dynamic data using
+ * libsumo, then evaluate it using the TSCEvaluation. It can be used to quickly test changes to the
+ * evaluation logic or metrics without running the entire evaluation pipeline.
+ */
 fun main() {
   DbBootstrap.connectAndCreateSchema()
   val numberOfScenarios = 1
