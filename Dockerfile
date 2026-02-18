@@ -23,9 +23,13 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/liblibsumojni.so /usr/lib/liblibsumojni.so
 # Clone repository into the image
 ARG REPO_URL=https://github.com/tudo-aqua/stars-coverage-significance
 WORKDIR /app
-RUN git clone --depth 1 ${REPO_URL} . \
-    && chmod +x ./gradlew
+RUN git clone ${REPO_URL}
 
-ENV BUFFER_PROCESSORS=2
-CMD ["sh", "-lc", "./gradlew --no-daemon runEvaluation --args=\"--bufferProcessors=${BUFFER_PROCESSORS}\""]
+ARG STARS_REPO_URL=https://github.com/tudo-aqua/stars
+RUN git clone -b coverage-significance ${STARS_REPO_URL}
+
+WORKDIR /app/stars-coverage-significance
+RUN chmod +x ./gradlew
+
+RUN ./gradlew assemble
 
