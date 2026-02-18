@@ -40,15 +40,17 @@ class G1SafeDistanceToPrecedingVehicleTest {
     val roadNetwork = RoadNetworkTestHelpers.threeLaneSingleEdgeNetwork()
     val ego1 = PredicateTestHelper.getTestVehicle("ego", roadNetwork.middleLane, 20.0f)
     val otherVehicle1 = PredicateTestHelper.getTestVehicle("other", roadNetwork.leftLane, 20.0f)
-    val tick1 = getTestTimeStep(listOf(ego1, otherVehicle1), ego = ego1)
+    val tick1 =
+        getTestTimeStep(tickTimeMillis = 0L, vehicles = listOf(ego1, otherVehicle1), ego = ego1)
 
     val ego2 = PredicateTestHelper.getTestVehicle("ego", roadNetwork.leftLane, 25.0f)
     val otherVehicle2 = PredicateTestHelper.getTestVehicle("other", roadNetwork.leftLane, 30.0f)
-    val tick2 = getTestTimeStep(listOf(ego2, otherVehicle2), ego = ego2)
+    val tick2 =
+        getTestTimeStep(tickTimeMillis = 1L, vehicles = listOf(ego2, otherVehicle2), ego = ego2)
 
-    val ticks = listOf(tick1, tick2).asTickSequence().toList()
-    val firstTick = ticks[1]
-    val secondTick = ticks[1].nextTick
+    val ticks = listOf(tick1, tick2).asTickSequence(bufferSize = 2).toList()
+    val firstTick = ticks[0]
+    val secondTick = ticks[0].nextTick
     checkNotNull(secondTick)
     assertEquals(secondTick, tick2)
     assert(
@@ -85,9 +87,9 @@ class G1SafeDistanceToPrecedingVehicleTest {
     val otherVehicle2 = PredicateTestHelper.getTestVehicle("other", roadNetwork.leftLane, 30.0f)
     val tick2 = getTestTimeStep(listOf(ego2, otherVehicle2), ego = ego2)
 
-    val ticks = listOf(tick1, tick2).asTickSequence().toList()
-    val firstTick = ticks[1]
-    val secondTick = ticks[1].nextTick
+    val ticks = listOf(tick1, tick2).asTickSequence(bufferSize = 2).toList()
+    val firstTick = ticks[0]
+    val secondTick = ticks[0].nextTick
     checkNotNull(secondTick)
     assertEquals(secondTick, tick2)
     assert(
@@ -124,9 +126,9 @@ class G1SafeDistanceToPrecedingVehicleTest {
     val otherVehicle2 = PredicateTestHelper.getTestVehicle("other", roadNetwork.leftLane, 25.0f)
     val tick2 = getTestTimeStep(listOf(ego2, otherVehicle2), ego = ego2)
 
-    val ticks = listOf(tick1, tick2).asTickSequence().toList()
-    val firstTick = ticks[1]
-    val secondTick = ticks[1].nextTick
+    val ticks = listOf(tick1, tick2).asTickSequence(bufferSize = 2).toList()
+    val firstTick = ticks[0]
+    val secondTick = ticks[0].nextTick
     checkNotNull(secondTick)
     assertEquals(secondTick, tick2)
     assert(
