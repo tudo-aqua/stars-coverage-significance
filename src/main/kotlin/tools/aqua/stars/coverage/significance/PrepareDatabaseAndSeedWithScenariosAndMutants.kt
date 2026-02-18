@@ -21,6 +21,7 @@ import java.util.UUID
 import kotlin.collections.map
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.core.tsc.builder.tsc
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
@@ -57,7 +58,7 @@ fun main() {
   seedMutants()
 
   // Precompute scenario-only metric once
-  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2)
+  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2, tscId = tscId)
 }
 
 /** Seed all mutants and the baseline mutant into the database. */
@@ -66,6 +67,7 @@ private fun seedMutants(
     seedMutants: Boolean = true,
     numberOfMutants: Int? = null
 ): List<UUID> {
+  println("Seeding mutants into the database...")
   val existing = MutantsRepository.getAllIds()
   // When all "MutantGenerator.expectedMutantCount " mutants exist and the number of mutants to seed
   // is not specified, return early.
@@ -73,6 +75,9 @@ private fun seedMutants(
     println("Database already seeded with $expectedMutantCount mutants.")
     return existing
   }
+
+  println(
+      "Expected mutant count: $expectedMutantCount. Existing mutants in database: ${existing.size}. Seeding mutants...")
 
   // A new number of mutants was specified. Therefore, clean previously generated mutants.
   MutantsRepository.cleanTable()
@@ -87,6 +92,7 @@ private fun seedMutants(
     mutantIds += MutantGenerator.seed()
   }
 
+  println("Finished seeding mutants. Total mutants in database: ${mutantIds.size}")
   return mutantIds
 }
 
@@ -97,11 +103,13 @@ private fun seedMutants(
  * @param tscId The database ID of the TSC.
  */
 private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
+  println("Checking existing TSCInstances in Db...")
   val existingEntries = TSCInstancesRepository.countByTSC(tscId)
   if (existingEntries == tsc.instanceCount.toLong()) {
     println("TSCInstances are already in Db.")
     return@db
   }
+  println("TSCInstances not found in Db. Inserting...")
   val consoleProgress = ConsoleProgress(tsc.instanceCount.toInt())
   println("Inserting ${tsc.instanceCount} TSCInstances into Db.")
   tsc.possibleTSCInstances.forEach { tscInstance ->
@@ -118,8 +126,9 @@ private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
  * Runs the evaluation of starting valid TSC instances in parallel.
  *
  * @param parallelism Number of parallel workers to use.
+ * @param tscId The database ID of the TSC for which to evaluate starting valid TSC instances.
  */
-private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
+private fun runStartingValidTSCInstancesEvaluation(parallelism: Int, tscId: UUID) {
   println("Precomputing starting valid TSC instances...")
   val maxSeq = ScenarioStartingConfigurationRepository.getMaxSequenceNumber()
   if (maxSeq <= 0L) {
@@ -127,14 +136,16 @@ private fun runStartingValidTSCInstancesEvaluation(parallelism: Int) {
     return
   }
 
-  val existingStartingValidTSCInstances: Long = MetricStartingValidTSCInstancesRepository.count()
+  val existingStartingValidTSCInstances: Long =
+      MetricStartingValidTSCInstancesRepository.countByTSC(tscId)
 
   if (existingStartingValidTSCInstances == maxSeq) {
-    println("All starting valid TSC instances already exist; skipping calculation.")
+    println(
+        "All starting valid TSC instances for TSC ${tscId }} already exist; skipping calculation.")
     return
   }
 
-  MetricStartingValidTSCInstancesRepository.clearTable()
+  MetricStartingValidTSCInstancesRepository.clearTSCEntries(tscId)
 
   val workerCount = minOf(parallelism.coerceAtLeast(1), maxSeq.toInt())
   val base = maxSeq / workerCount

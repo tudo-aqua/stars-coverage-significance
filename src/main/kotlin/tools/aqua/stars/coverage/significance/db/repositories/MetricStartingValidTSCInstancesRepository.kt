@@ -19,9 +19,11 @@ package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -52,8 +54,18 @@ object MetricStartingValidTSCInstancesRepository {
    */
   fun count(): Long = transaction { MetricStartingValidTSCInstancesTable.selectAll().count() }
 
+  /** Returns the number of entries for a given TSC. */
+  fun countByTSC(tscId: UUID): Long = transaction {
+    MetricStartingValidTSCInstancesTable.selectAll().where { tsc eq tscId }.count()
+  }
+
   /** Clears the table. */
   fun clearTable() = transaction { MetricStartingValidTSCInstancesTable.deleteAll() }
+
+  /** Clears all entries for a given TSC. */
+  fun clearTSCEntries(tscId: UUID) = transaction {
+    MetricStartingValidTSCInstancesTable.deleteWhere { tsc eq tscId }
+  }
 
   /**
    * Inserts a list of [MetricStartingValidTSCInstancesEntry]s in a single batch.
