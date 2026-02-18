@@ -25,9 +25,9 @@ import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 
 /** Repository for managing [MetricFailedMonitorsEntry] in the [MetricFailedMonitorsTable]. */
@@ -39,7 +39,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry.
    * @return The corresponding [MetricFailedMonitorsEntry] or null if not found.
    */
-  fun getById(id: UUID): MetricFailedMonitorsEntry? = transaction {
+  fun getById(id: UUID): MetricFailedMonitorsEntry? = db {
     MetricFailedMonitorsTable.selectAll()
         .where { MetricFailedMonitorsTable.id eq id }
         .limit(1)
@@ -61,7 +61,7 @@ object MetricFailedMonitorsRepository {
       tscId: UUID,
       scenarioConfigId: UUID,
       mutantId: UUID
-  ): MetricFailedMonitorsEntry? = transaction {
+  ): MetricFailedMonitorsEntry? = db {
     MetricFailedMonitorsTable.selectAll()
         .where {
           (MetricFailedMonitorsTable.run eq runId) and
@@ -79,8 +79,8 @@ object MetricFailedMonitorsRepository {
    *
    * @param entries List of [MetricFailedMonitorsEntry] to insert. Each entry's `id` must be null.
    */
-  fun batchInsert(entries: List<MetricFailedMonitorsEntry>) = transaction {
-    if (entries.isEmpty()) return@transaction
+  fun batchInsert(entries: List<MetricFailedMonitorsEntry>) = db {
+    if (entries.isEmpty()) return@db
 
     MetricFailedMonitorsTable.batchInsert(entries) { e ->
       this[MetricFailedMonitorsTable.run] = e.runId
@@ -109,7 +109,7 @@ object MetricFailedMonitorsRepository {
    * @param entry The [MetricFailedMonitorsEntry] to insert. Its `id` must be null.
    * @return The inserted [MetricFailedMonitorsEntry] with the generated `id`.
    */
-  fun insert(entry: MetricFailedMonitorsEntry): MetricFailedMonitorsEntry = transaction {
+  fun insert(entry: MetricFailedMonitorsEntry): MetricFailedMonitorsEntry = db {
     require(entry.id == null) { "insert() expects entry.id == null. Use upsert() otherwise." }
 
     val newId =
@@ -122,7 +122,7 @@ object MetricFailedMonitorsRepository {
               row[monitorG0Failed] = entry.monitorG0Failed
               row[monitorG1Failed] = entry.monitorG1Failed
               row[monitorG2Failed] = entry.monitorG2Failed
-              row[monitorG22Failed] = entry.monitorG2Failed
+              row[monitorG22Failed] = entry.monitorG22Failed
               row[monitorG3Failed] = entry.monitorG3Failed
               row[monitorG4Failed] = entry.monitorG4Failed
               row[monitorI1Failed] = entry.monitorI1Failed
@@ -141,9 +141,12 @@ object MetricFailedMonitorsRepository {
    * Inserts or updates a row and returns the canonical DB state (read-back).
    *
    * @param entry The [MetricFailedMonitorsEntry] to upsert. Its `id` must be null.
-   * @return The upserted [MetricFailedMonitorsEntry] with the generated `
+   * @return The upserted [MetricFailedMonitorsEntry] with the generated `id` (if inserted) or
+   *   existing `id` (if updated).
+   * @throws IllegalArgumentException if `entry.id` is not null.
+   * @throws IllegalStateException if the upserted entry cannot be retrieved after the operation
    */
-  fun upsert(entry: MetricFailedMonitorsEntry): MetricFailedMonitorsEntry = transaction {
+  fun upsert(entry: MetricFailedMonitorsEntry): MetricFailedMonitorsEntry = db {
     require(entry.id == null) { "upsert() expects entry.id == null." }
 
     val row =
@@ -184,7 +187,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry to delete.
    * @return The number of rows deleted (0 or 1).
    */
-  fun deleteById(id: UUID): Int = transaction {
+  fun deleteById(id: UUID): Int = db {
     MetricFailedMonitorsTable.deleteWhere { MetricFailedMonitorsTable.id eq id }
   }
 
@@ -194,7 +197,7 @@ object MetricFailedMonitorsRepository {
    * @param runId Unique identifier of the evaluation run.
    * @return The number of rows deleted.
    */
-  fun deleteByRun(runId: UUID): Int = transaction {
+  fun deleteByRun(runId: UUID): Int = db {
     MetricFailedMonitorsTable.deleteWhere { MetricFailedMonitorsTable.run eq runId }
   }
 
