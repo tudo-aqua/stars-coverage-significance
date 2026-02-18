@@ -45,6 +45,6 @@ fun main() {
   ChunkJobSeeder.seedChunks(
       runId = evaluationRunId,
       mutantIds = mutantIds,
-      chunkSize = 1_000L,
-      scenarioCount = numberOfScenarios)
+      chunkSize = 1L,
+      scenarioCount = 1)
 }
