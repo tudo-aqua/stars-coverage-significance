@@ -42,6 +42,6 @@ const val BUFFER_SIZE_IN_SECONDS = 10.0
 /** When importing tick sequences, only take ticks at every X milliseconds. This reduces memory */
 const val TAKE_ONLY_TICKS_AT_X_MILLIS = 100
 /** Maximum length of a scenario in seconds. */
-const val MAX_LENGTH_OF_SCENARIO_IN_SECONDS = 20.0
+const val MAX_LENGTH_OF_SCENARIO_IN_SECONDS = 10.0
 /** Size of the buffer (in number of ticks) to use when importing tick sequences. */
 const val BUFFER_SIZE = ((BUFFER_SIZE_IN_SECONDS * 1000) / TAKE_ONLY_TICKS_AT_X_MILLIS).toInt()
