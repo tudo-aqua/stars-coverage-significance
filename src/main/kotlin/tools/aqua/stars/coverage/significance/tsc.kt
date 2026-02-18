@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("StringLiteralDuplication")
+
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.core.tsc.builder.tsc
@@ -23,7 +25,6 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
-@SuppressWarnings("StringLiteralDuplication")
 /** TSC for static starting configurations. */
 fun staticTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Static TSC") {
@@ -162,6 +163,7 @@ fun staticTsc() =
       }
     }
 
+//noinspection DuplicatedCode
 /** TSC for static starting configurations. */
 fun smallStaticTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Small Static TSC") {
@@ -229,7 +231,6 @@ fun smallStaticTsc() =
       }
     }
 
-@SuppressWarnings("StringLiteralDuplication")
 /** TSC for SUMO highway scenarios. */
 fun oldTsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("SUMO Highway TSC") {
