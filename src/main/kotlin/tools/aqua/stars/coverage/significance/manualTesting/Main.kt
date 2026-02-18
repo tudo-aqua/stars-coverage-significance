@@ -71,7 +71,7 @@ fun main() {
   """
           .trimIndent())
 
-  val ticks = listOf(libSumoTicks.asTickSequence(BUFFER_SIZE)).asSequence()
+  val ticks = listOf(libSumoTicks.asTickSequence(bufferSize = BUFFER_SIZE)).asSequence()
   val staticTsc = smallStaticTsc()
 
   val eval =
