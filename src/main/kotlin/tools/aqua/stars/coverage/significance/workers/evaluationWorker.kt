@@ -25,19 +25,27 @@ import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
+import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.dataclasses.MetricTotalTickDifferenceEntry
 import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.repositories.MetricTotalTickDifferenceRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
+import tools.aqua.stars.coverage.significance.hooks.TSCInstanceChangedHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
+import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /**
@@ -71,10 +79,19 @@ fun main(args: Array<String>) {
               writeSerializedResults = false,
               compareToPreviousRun = false)
 
-      eval.registerPreTickEvaluationHooks(MinTicksPerTickSequenceHook(BUFFER_SIZE))
+      eval.registerPreTickEvaluationHooks(
+          MinTicksPerTickSequenceHook(BUFFER_SIZE),
+          MaxSecondsEvaluationHook(maxSeconds = 10),
+          TSCInstanceChangedHook(staticTsc))
+
+      val totalTickDifferenceMetric =
+          TotalTickDifferenceMetric<
+              Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
+
       eval.registerMetricProviders(
           FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
-          FailedMonitorsMetric(tscId = tscEntryId))
+          FailedMonitorsMetric(tscId = tscEntryId),
+          totalTickDifferenceMetric)
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
@@ -95,9 +112,24 @@ fun main(args: Array<String>) {
                 job.mutantId,
                 onlyFirstTick = false,
                 maxLengthOfScenarioInSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS)
-        tickSequences.add(runResult.asTickSequence())
+        tickSequences.add(runResult.asTickSequence(scenario.id.toString()))
       }
       eval.runEvaluation(tickSequences.asSequence())
+
+      val totalTickDifferences = totalTickDifferenceMetric.getState()
+      db {
+        totalTickDifferences.map { (identifier, tickDifference) ->
+          val dbEntry =
+              MetricTotalTickDifferenceEntry(
+                  tscId = tscEntryId,
+                  mutantId = job.mutantId,
+                  runId = runId,
+                  scenarioConfigId = UUID.fromString(identifier),
+                  totalTickDifferenceMillis = tickDifference?.differenceMillis ?: 0L)
+          MetricTotalTickDifferenceRepository.insertIfMissingAndReturnId(dbEntry)
+        }
+      }
+
       MutantScenarioChunkJobsRepository.markDone(job.jobId)
     } catch (e: ExposedSQLException) {
       MutantScenarioChunkJobsRepository.markFailedOrRequeue(
