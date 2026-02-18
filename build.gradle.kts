@@ -31,7 +31,7 @@ repositories {
   maven { url = URI("https://central.sonatype.com/repository/maven-snapshots/") }
 }
 
-val starsVersion = "2.0-coverage-significance-17-5af075b-SNAPSHOT"
+val starsVersion = "2.0-coverage-significance-19-93bb26d-SNAPSHOT"
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
