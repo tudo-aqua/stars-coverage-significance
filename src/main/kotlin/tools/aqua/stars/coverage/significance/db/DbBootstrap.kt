@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceChangeTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
+import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
@@ -165,7 +166,7 @@ object DbBootstrap {
           MetricStartingValidTSCInstancesTable,
           MetricFailedMonitorsTable,
           MutantScenarioChunkJobsTable,
-      )
+          MetricTotalTickDifferenceTable)
     }
   }
 
