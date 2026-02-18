@@ -45,7 +45,8 @@ private fun currentPidString(): String {
 fun main() {
   val pid = currentPidString()
   val mainThread = Thread.currentThread()
-  println("StartProgressMonitor starting (pid=$pid, thread=${mainThread.name}#${mainThread.threadId()}).")
+  println(
+      "StartProgressMonitor starting (pid=$pid, thread=${mainThread.name}#${mainThread.threadId()}).")
 
   DbBootstrap.connect()
   val latestRunId =

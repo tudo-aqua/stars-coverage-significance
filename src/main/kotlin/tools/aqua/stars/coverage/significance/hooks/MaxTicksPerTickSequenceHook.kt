@@ -32,9 +32,9 @@ import tools.aqua.stars.core.types.TickUnit
  * @param T [TickDataType].
  * @param U [TickUnit].
  * @param D [TickDifference].
- * @param minTicks The minimum number of [TickDataType]s a tick must contain.
- * @param failPolicy The [EvaluationHookResult] to return if the [TickDataType] contains less than
- *   [minTicks] [TickDataType]s.
+ * @property minTicks The minimum number of [TickDataType]s a tick must contain.
+ * @property failPolicy The [EvaluationHookResult] to return if the [TickDataType] contains less
+ *   than [minTicks] [TickDataType]s.
  */
 class MaxTicksPerTickSequenceHook<
     E : EntityType<E, T, U, D>,
@@ -52,6 +52,7 @@ class MaxTicksPerTickSequenceHook<
     require(minTicks >= 0) { "minTicks must be >= 0" }
   }
 
+  /** Checks if the [TickDataType] contains at least [minTicks] [TickDataType]s. */
   override fun evaluate(tick: T): EvaluationHookResult =
       if (tick.sequenceLength <= minTicks) EvaluationHookResult.OK else failPolicy
 }

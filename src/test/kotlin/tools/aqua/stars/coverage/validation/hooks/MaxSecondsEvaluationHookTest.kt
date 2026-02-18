@@ -24,6 +24,7 @@ import tools.aqua.stars.core.hooks.EvaluationHookResult
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
+/** Tests for [MaxSecondsEvaluationHook]. */
 class MaxSecondsEvaluationHookTest {
 
   /**
