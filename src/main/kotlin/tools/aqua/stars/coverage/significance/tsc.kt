@@ -162,6 +162,73 @@ fun staticTsc() =
       }
     }
 
+/** TSC for static starting configurations. */
+fun smallStaticTsc() =
+    tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Small Static TSC") {
+      all("Root") {
+        monitors {
+          monitor(g0Accidents.name, g0Accidents)
+          monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
+          monitor(g2UnnecessaryBraking.name, g2UnnecessaryBraking)
+          monitor(g22AbruptBraking.name, g22AbruptBraking)
+          monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
+          monitor(g4TrafficFlow.name, g4TrafficFlow)
+          monitor(i1Stopping.name, i1Stopping)
+          monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
+          monitor(i3RightOvertaking.name, i3RightOvertaking)
+          monitor(i4KeepRight.name, i4KeepRight)
+        }
+        exclusive("Lane") {
+          optional("Left Lane") {
+            condition(isOnLeftLane)
+            leaf("Has Slower Vehicle in Front Same Lane") {
+              condition(vehicleOnSameLaneInFrontIsSlower)
+            }
+            leaf("Has Vehicle on Right Lane Besides") { condition(hasVehicleBesidesOnRightLane) }
+            leaf("Has Slower Vehicle in Front on Right Lane") {
+              condition(vehicleOnRightLaneInFrontIsSlower)
+            }
+            leaf("Has Faster Vehicle in Behind on Right Lane") {
+              condition(vehicleOnRightLaneBehindIsFaster)
+            }
+          }
+          optional("Middle Lane") {
+            condition(isOnMiddleLane)
+            leaf("Has Slower Vehicle in Front Same Lane") {
+              condition(vehicleOnSameLaneInFrontIsSlower)
+            }
+            leaf("Has Vehicle on Left Lane Besides") { condition(hasVehicleBesidesOnLeftLane) }
+            leaf("Has Vehicle on Right Lane Besides") { condition(hasVehicleBesidesOnRightLane) }
+            leaf("Has Slower Vehicle in Front on Left Lane") {
+              condition(vehicleOnLeftLaneInFrontIsSlower)
+            }
+            leaf("Has Slower Vehicle in Front on Right Lane") {
+              condition(vehicleOnRightLaneInFrontIsSlower)
+            }
+            leaf("Has Faster Vehicle in Behind on Left Lane") {
+              condition(vehicleOnLeftLaneBehindIsFaster)
+            }
+            leaf("Has Faster Vehicle in Behind on Right Lane") {
+              condition(vehicleOnRightLaneBehindIsFaster)
+            }
+          }
+          optional("Right Lane") {
+            condition(isOnRightLane)
+            leaf("Has Slower Vehicle in Front Same Lane") {
+              condition(vehicleOnSameLaneInFrontIsSlower)
+            }
+            leaf("Has Vehicle on Left Lane Besides") { condition(hasVehicleBesidesOnLeftLane) }
+            leaf("Has Slower Vehicle in Front on Left Lane") {
+              condition(vehicleOnLeftLaneInFrontIsSlower)
+            }
+            leaf("Has Faster Vehicle in Behind on Left Lane") {
+              condition(vehicleOnLeftLaneBehindIsFaster)
+            }
+          }
+        }
+      }
+    }
+
 @SuppressWarnings("StringLiteralDuplication")
 /** TSC for SUMO highway scenarios. */
 fun oldTsc() =

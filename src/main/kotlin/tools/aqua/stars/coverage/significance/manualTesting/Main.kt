@@ -31,7 +31,7 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.MIDDLE_ROW
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
-import tools.aqua.stars.coverage.significance.staticTsc
+import tools.aqua.stars.coverage.significance.smallStaticTsc
 
 /**
  * This is a manual testing utility to run a single scenario and collect the dynamic data using
@@ -72,7 +72,7 @@ fun main() {
           .trimIndent())
 
   val ticks = listOf(libSumoTicks.asTickSequence(BUFFER_SIZE)).asSequence()
-  val staticTsc = staticTsc()
+  val staticTsc = smallStaticTsc()
 
   val eval =
       TSCEvaluation(

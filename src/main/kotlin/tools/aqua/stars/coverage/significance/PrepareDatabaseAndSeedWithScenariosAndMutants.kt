@@ -43,7 +43,7 @@ import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInsta
 fun main() {
   DbBootstrap.connectAndCreateSchema()
 
-  val tsc = staticTsc()
+  val tsc = smallStaticTsc()
 
   // Add TSC to db
   val tscId = TSCsRepository.upsertAndGetId(entry = tsc.toTSCEntry())

@@ -30,7 +30,7 @@ import tools.aqua.stars.coverage.significance.hooks.MaxTicksPerTickSequenceHook
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.staticTsc
+import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -50,7 +50,7 @@ fun main(args: Array<String>) {
 
   DbBootstrap.connect()
 
-  val staticTsc = staticTsc()
+  val staticTsc = smallStaticTsc()
 
   val eval =
       TSCEvaluation(
