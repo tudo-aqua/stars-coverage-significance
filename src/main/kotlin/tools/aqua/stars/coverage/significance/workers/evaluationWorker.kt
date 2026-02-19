@@ -26,7 +26,6 @@ import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
-import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricTotalTickDifferenceEntry
@@ -80,8 +79,8 @@ fun main(args: Array<String>) {
               compareToPreviousRun = false)
 
       eval.registerPreTickEvaluationHooks(
-          MinTicksPerTickSequenceHook(BUFFER_SIZE),
-          MaxSecondsEvaluationHook(maxSeconds = 10),
+          MinTicksPerTickSequenceHook(2),
+          MaxSecondsEvaluationHook(maxSeconds = 12),
           TSCInstanceChangedHook(staticTsc))
 
       val totalTickDifferenceMetric =
@@ -112,7 +111,11 @@ fun main(args: Array<String>) {
                 job.mutantId,
                 onlyFirstTick = false,
                 maxLengthOfScenarioInSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS)
-        tickSequences.add(runResult.asTickSequence(scenario.id.toString()))
+        tickSequences.add(
+            runResult.asTickSequence(
+                scenario.id.toString(),
+                iterationOrder = TickSequence.IterationOrder.BACKWARD,
+                iterationMode = TickSequence.IterationMode.END_FILLED))
       }
       eval.runEvaluation(tickSequences.asSequence())
 
