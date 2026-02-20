@@ -9,6 +9,8 @@
            sigma="0"
            tau="0.01"
            minGap="0.0"
+       lcStrategic="-1"
+       lcCooperative="-1"
 		   color="255,255,255">
         <param key="has.driverstate.device" value="true"/>
     </vType>	

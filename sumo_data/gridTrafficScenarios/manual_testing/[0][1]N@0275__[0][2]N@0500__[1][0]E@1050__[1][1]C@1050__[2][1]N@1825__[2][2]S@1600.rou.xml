@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" edges="highway"/>
+  <vehicle id="1" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="1" departPos="50.0" departSpeed="19.444444444444443"/>
+  <vehicle id="2" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="2" departPos="50.00" departSpeed="19.444444444444443"/>
+  <vehicle id="ego" type="mutant1" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="0" departPos="105.00" departSpeed="27.78">	   
+        <param key="carFollowModel.ignoreIDs" value="1 2 3 4 5 6"/>
+        <param key="carFollowModel.ignoreTypes" value="car_calm"/>
+  </vehicle>
+  <vehicle id="3" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="1" departPos="105.00" departSpeed="19.444444444444443"/>
+  <vehicle id="4" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="1" departPos="150.00" departSpeed="19.444444444444443"/>
+  <vehicle id="5" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="2" departPos="150.00" departSpeed="19.444444444444443"/>  
+  <vehicle id="6" type="car_calm" route="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600" depart="0.00" departLane="0" departPos="150.00" departSpeed="19.444444444444443"/>
+</routes>
