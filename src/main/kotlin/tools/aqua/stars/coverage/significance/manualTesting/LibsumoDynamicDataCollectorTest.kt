@@ -211,10 +211,16 @@ class LibsumoDynamicDataCollectorTest(
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutant.id, scenario, ticks) ?: break
       ticks += timeStep
+
+      SumoVehicle.setSpeedMode(egoId, 96)
+      SumoVehicle.setLaneChangeMode(egoId, 512)
+
       Simulation.step()
     }
     Simulation.close()
 
+    println(
+        "Collected ${ticks.size} ticks for scenario ${scenario.humanReadableScenarioId} with mutant ${mutant.id}")
     return ticks
   }
 

@@ -3,14 +3,15 @@
     <!-- Mutant 1 vehicle -->
     <vType id="mutant1"
            vClass="passenger"
-           maxSpeed="55.55"
-           speedFactor="2.0"
+           maxSpeed="27.78"
+           speedFactor="1.0"
            speedDev="0.0"
            sigma="0"
            tau="0.01"
            minGap="0.0"
-       lcStrategic="-1"
-       lcCooperative="-1"
+		   lcCooperative="0"
+		   lcSpeedGain="100"
+		   lcSigma="0"
 		   color="255,255,255">
         <param key="has.driverstate.device" value="true"/>
     </vType>	

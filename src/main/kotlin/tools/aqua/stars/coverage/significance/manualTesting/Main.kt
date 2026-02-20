@@ -55,9 +55,9 @@ fun main() {
             it.spawnAt(MIDDLE_ROW, LEFT_LANE) == null &&
             it.spawnAt(MIDDLE_ROW, CENTER_LANE)?.type == GridVehicleType.EGO &&
             it.spawnAt(MIDDLE_ROW, RIGHT_LANE) == null &&
-            it.spawnAt(TOP_ROW, LEFT_LANE) == null &&
-            it.spawnAt(TOP_ROW, CENTER_LANE) == null &&
-            it.spawnAt(TOP_ROW, RIGHT_LANE) == null
+            it.spawnAt(TOP_ROW, LEFT_LANE)?.type == GridVehicleType.CALM &&
+            it.spawnAt(TOP_ROW, CENTER_LANE)?.type == GridVehicleType.CALM &&
+            it.spawnAt(TOP_ROW, RIGHT_LANE)?.type == GridVehicleType.CALM
       }
 
   val libSumoTicks =
