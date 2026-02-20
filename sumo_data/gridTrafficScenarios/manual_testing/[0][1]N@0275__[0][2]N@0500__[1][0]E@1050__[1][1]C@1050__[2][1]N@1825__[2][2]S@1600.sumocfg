@@ -6,14 +6,14 @@
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="C:\Repositories\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\grid_highway.net.xml"/>
-        <route-files value="C:\Repositories\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\scenarios\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.rou.xml"/>
-        <additional-files value="C:\Repositories\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\vTypes.add.xml"/>
+        <net-file value="..\grid_highway.net.xml"/>
+        <route-files value="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.rou.xml"/>
+        <additional-files value="..\vTypes.add.xml"/>
     </input>
 
     <output>
-        <netstate-dump value="C:\Repositories\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\export\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.export.xml"/>
-        <collision-output value="C:\Repositories\aqua\stars-coverage-significance\sumo_data\gridTrafficScenarios\collision\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.collisions.xml"/>
+        <netstate-dump value="..\export\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.export.xml"/>
+        <collision-output value="..\collision\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.collisions.xml"/>
     </output>
 
     <time>
