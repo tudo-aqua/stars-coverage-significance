@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.util.*
 import tools.aqua.stars.core.evaluation.TSCEvaluation
+import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
@@ -71,7 +72,13 @@ fun main() {
   """
           .trimIndent())
 
-  val ticks = listOf(libSumoTicks.asTickSequence(bufferSize = BUFFER_SIZE)).asSequence()
+  val ticks =
+      listOf(
+              libSumoTicks.asTickSequence(
+                  bufferSize = BUFFER_SIZE,
+                  iterationMode = TickSequence.IterationMode.END_FILLED,
+                  iterationOrder = TickSequence.IterationOrder.BACKWARD))
+          .asSequence()
   val staticTsc = smallStaticTsc()
 
   val eval =
