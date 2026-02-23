@@ -29,16 +29,12 @@ import tools.aqua.stars.coverage.significance.utils.getVehicleId
 @SuppressWarnings("StringLiteralDuplication")
 /** Index for the top row. */
 const val TOP_ROW = 2
-
 /** Index for the middle row. */
 const val MIDDLE_ROW = 1
-
 /** Index for the bottom row. */
 const val BOTTOM_ROW = 0
-
 /** Index for the left lane. */
 const val LEFT_LANE = 2
-
 /** Index for the center lane. */
 const val CENTER_LANE = 1
 /** Index for the right lane. */
@@ -50,7 +46,6 @@ const val RIGHT_LANE = 0
  * @property grid 3x3 grid of spawns.
  */
 data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
-
   init {
     require(grid.size == 3) { "Grid must have 3 rows" }
     require(grid.all { it.size == 3 }) { "Grid must have 3 lanes per row" }
@@ -102,6 +97,9 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       }
       return occ
     }
+
+  /** Constructs a [GeneratedScenario] from a list of spawns. */
+  constructor(spawns: List<Spawn>) : this(buildGridFromSpawns(spawns))
 
   /**
    * Returns the spawn at the given row and lane.
@@ -357,5 +355,22 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     result = 31 * result + placements.hashCode()
     result = 31 * result + occupancy.contentHashCode()
     return result
+  }
+
+  /** Builds a 3x3 grid from a list of spawns. */
+  private companion object {
+    private fun buildGridFromSpawns(spawns: List<Spawn>): Array<Array<Spawn?>> {
+      val g: Array<Array<Spawn?>> = arrayOf(arrayOfNulls(3), arrayOfNulls(3), arrayOfNulls(3))
+
+      for (sp in spawns) {
+        require(sp.row in 0..2) { "Spawn row must be in 0..2 but was ${sp.row} (spawn=$sp)" }
+        require(sp.lane in 0..2) { "Spawn lane must be in 0..2 but was ${sp.lane} (spawn=$sp)" }
+        require(g[sp.row][sp.lane] == null) {
+          "Duplicate spawn for cell [${sp.row}][${sp.lane}]: existing=${g[sp.row][sp.lane]} new=$sp"
+        }
+        g[sp.row][sp.lane] = sp
+      }
+      return g
+    }
   }
 }

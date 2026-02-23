@@ -26,6 +26,7 @@ import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.TraCIColor
+import tools.aqua.stars.coverage.significance.FCD_DIR
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
@@ -39,6 +40,7 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
 import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
+import tools.aqua.stars.data.sumo.libSumo.TraCIModes
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
 
@@ -54,9 +56,9 @@ import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
  * @property vehicleIdPrefix Prefix for vehicle ids.
  */
 class LibsumoDynamicDataCollectorTest(
-    val baseDir: Path = Path(GRID_TRAFFIC_DIR),
-    val netFileName: String = "grid_highway.net.xml",
-    val vTypeAdditionalFile: String = "vTypes.add.xml",
+    val baseDir: Path = Path(FCD_DIR),
+    val netFileName: String = "gridHighway.net.xml",
+    val vTypeAdditionalFile: String = "fcdReplay.add.xml",
     val insertionChecks: String = "none",
     val routeSteps: Int = 0,
     val stepLength: Double = 0.1,
@@ -77,12 +79,14 @@ class LibsumoDynamicDataCollectorTest(
    * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
    * @param mutant Mutant which should be simulated.
+   * @param traciModes TraCI modes to use for simulation.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutant: Mutant,
+      traciModes: TraCIModes = TraCIModes(speedMode = 96, laneChangeMode = 512),
   ): List<TimeStep> {
     Simulation.preloadLibraries()
 
@@ -105,11 +109,12 @@ class LibsumoDynamicDataCollectorTest(
             //            "1.0",
             //            "--no-warnings",
             "--fcd-output",
-            Path("${SCENARIO_DIR}/replay").toAbsolutePath().toString().plus(".fcd.xml"),
-            "--fcd-output.attributes",
-            "acceleration",
-            "--fcd-output.params",
-            "device.driverstate.initialAwareness,device.driverstate.minAwareness,device.driverstate.maximalReactionTime,device.driverstate.headwayErrorCoefficient,device.driverstate.speedDifferenceErrorCoefficient,device.driverstate.errorNoiseIntensityCoefficient,lcAssertive,lcSpeedGain,lcCooperative,speedFactor,carFollowModel,tau,minGap,sigma,accel,decel,emergencyDecel,maxSpeed",
+            Path(FCD_DIR).toAbsolutePath().toString().plus("/fcdReplay.fcd.xml"),
+            //            "--fcd-output.attributes",
+            //            "acceleration",
+            //            "--fcd-output.params",
+            //
+            // "device.driverstate.initialAwareness,device.driverstate.minAwareness,device.driverstate.maximalReactionTime,device.driverstate.headwayErrorCoefficient,device.driverstate.speedDifferenceErrorCoefficient,device.driverstate.errorNoiseIntensityCoefficient,lcAssertive,lcSpeedGain,lcCooperative,speedFactor,carFollowModel,tau,minGap,sigma,accel,decel,emergencyDecel,maxSpeed",
             "--collision.action",
             "warn")
 
@@ -134,7 +139,7 @@ class LibsumoDynamicDataCollectorTest(
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
-      val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
+      val departSpeed = (sp.type.departSpeedKmh / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
@@ -204,6 +209,9 @@ class LibsumoDynamicDataCollectorTest(
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
+    SumoVehicle.setSpeedMode(egoId, traciModes.speedMode)
+    SumoVehicle.setLaneChangeMode(egoId, traciModes.laneChangeMode)
+
     val ticks = ArrayList<TimeStep>()
 
     // Run until finished
@@ -212,8 +220,9 @@ class LibsumoDynamicDataCollectorTest(
           getCurrentTimeStep(runId, scenario.id, egoId, mutant.id, scenario, ticks) ?: break
       ticks += timeStep
 
-      SumoVehicle.setSpeedMode(egoId, 96)
-      SumoVehicle.setLaneChangeMode(egoId, 512)
+      // Apply TraCI/libsumo runtime bitsets
+      SumoVehicle.setSpeedMode(egoId, traciModes.speedMode)
+      SumoVehicle.setLaneChangeMode(egoId, traciModes.laneChangeMode)
 
       Simulation.step()
     }
@@ -254,9 +263,9 @@ class LibsumoDynamicDataCollectorTest(
       val typeId = SumoVehicle.getTypeID(vehId)
       val rawVType =
           if (typeId.lowercase().contains("mutant")) {
-            vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId")
+            vehicleTypesById["ego"] ?: error("Unknown vehicle type '$typeId'")
           } else {
-            vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
+            vehicleTypesById[typeId] ?: error("Unknown vehicle type '$typeId'")
           }
 
       // vType wrapper (parsed from vTypes.add.xml)

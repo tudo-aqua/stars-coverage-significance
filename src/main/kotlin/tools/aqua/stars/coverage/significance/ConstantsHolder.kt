@@ -18,7 +18,9 @@
 package tools.aqua.stars.coverage.significance
 
 /** Directory paths for grid traffic scenarios. */
-const val GRID_TRAFFIC_DIR = "sumo_data/gridTrafficScenarios"
+const val GRID_TRAFFIC_DIR = "sumoData/gridTrafficScenarios"
+/** Directory path for FCD replay files. */
+const val FCD_DIR = "sumoData/fcdReplay"
 /** Sub-directory for scenario files. */
 const val SCENARIO_DIR = "$GRID_TRAFFIC_DIR/scenarios"
 /** Sub-directory for exported SUMO files. */
