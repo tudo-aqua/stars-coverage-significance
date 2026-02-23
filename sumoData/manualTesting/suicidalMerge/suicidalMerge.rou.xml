@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="route" edges="highway"/>
+  <vehicle id="veh_SPEEDY_2" type="car_speedy" route="route" depart="0.00" departLane="1" departPos="85" departSpeed="36.11111"/>
+  <vehicle id="veh_EGO" type="suicidalMerge" route="route" depart="0.00" departLane="0" departPos="100" departSpeed="25.0"/>
+  <vehicle id="veh_CALM_1" type="car_calm" route="route" depart="0.00" departLane="0" departPos="130" departSpeed="16.666666666666668"/>
+</routes>

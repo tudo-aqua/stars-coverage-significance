@@ -7,14 +7,9 @@
 
     <input>
         <net-file value="..\grid_highway.net.xml"/>
-        <route-files value="[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.rou.xml"/>
-        <additional-files value="..\vTypes.add.xml"/>
+        <route-files value="suicidalMerge.rou.xml"/>
+        <additional-files value="suicidalMerge.add.xml"/>
     </input>
-
-    <output>
-        <netstate-dump value="..\export\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.export.xml"/>
-        <collision-output value="..\collision\[0][1]N@0275__[0][2]N@0500__[1][0]E@1050__[1][1]C@1050__[2][1]N@1825__[2][2]S@1600.collisions.xml"/>
-    </output>
 
     <time>
         <step-length value="0.1"/>
@@ -24,6 +19,7 @@
         <route-steps value="0"/>
         <insertion-checks value="none"/>
         <collision.action value="warn"/>
+        <step-method.ballistic value="true"/>
     </processing>
 
 </sumoConfiguration>

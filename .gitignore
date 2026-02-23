@@ -12,8 +12,11 @@
 **/build
 .idea
 /.idea/
-/sumo_data
-/post-evaluation
-!sumo_data/gridTrafficScenarios/vTypes.add.xml
-!sumo_data/gridTrafficScenarios/grid_highway.net.xml
-!sumo_data/gridTrafficScenarios/manual_testing/
+/sumoData/*
+/post-evaluation/*
+
+!/sumoData/manualTesting/
+!/sumoData/fcdReplay/fcdReplay.add.xml
+!/sumoData/fcdReplay/fcdReplay.rou.xml
+!/sumoData/fcdReplay/fcdReplay.sumocfg
+!/sumoData/gridHighway.net.xml

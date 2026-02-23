@@ -1,33 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <additional>
-    <!-- Mutant 1 vehicle -->
-    <vType id="mutant1"
-           vClass="passenger"
-           maxSpeed="27.78"
-           speedFactor="1.0"
-           speedDev="0.0"
-           sigma="0"
-           tau="0.01"
-           minGap="0.0"
-		   lcCooperative="0"
-		   lcSpeedGain="100"
-		   lcSigma="0"
-		   color="255,255,255">
-        <param key="has.driverstate.device" value="true"/>
-    </vType>	
-
-    <!-- Ego vehicle -->
-    <vType id="ego"
-           vClass="passenger"
-           maxSpeed="55.55"
-           speedFactor="2.0"
-           speedDev="0.0"
-           sigma="0"
-           tau="0.01"
-           minGap="0.0"
-		   color="255,255,255">
-        <param key="has.driverstate.device" value="true"/>
-    </vType>
+    <vType id="brakeFailure"
+           decel="0.01"
+           emergencyDecel="0.01"
+           tau="0.1"
+           lcStrategic="-1"
+           lcCooperative="-1"
+           lcSpeedGain="0"
+           lcKeepRight="0"
+           color="white"/>
 
     <!-- Calm car (70 km/h = 19.44 m/s) -->
     <vType id="car_calm"
@@ -38,7 +19,7 @@
            sigma="0.5"
            tau="1.0"
            minGap="2.5"
-		   color="0,255,0"/>
+           color="0,255,0"/>
 
     <!-- Normal car (100 km/h = 27.78 m/s) -->
     <vType id="car_normal"
@@ -49,7 +30,7 @@
            sigma="0.5"
            tau="1.0"
            minGap="2.5"
-		   color="255,255,0"/>
+           color="255,255,0"/>
 
     <!-- Speedy car (130 km/h = 36.11 m/s) -->
     <vType id="car_speedy"
@@ -60,6 +41,5 @@
            sigma="0.5"
            tau="1.0"
            minGap="2.5"
-		   color="255,0,0"/>
-
+           color="255,0,0"/>
 </additional>
