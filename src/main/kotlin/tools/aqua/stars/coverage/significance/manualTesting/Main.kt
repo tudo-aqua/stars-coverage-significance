@@ -23,16 +23,16 @@ import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
-import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.BOTTOM_ROW
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.LEFT_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.MIDDLE_ROW
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.Spawn
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.data.sumo.libSumo.TraCIModes
 
 /**
  * This is a manual testing utility to run a single scenario and collect the dynamic data using
@@ -40,35 +40,46 @@ import tools.aqua.stars.coverage.significance.smallStaticTsc
  * evaluation logic or metrics without running the entire evaluation pipeline.
  */
 fun main() {
-  DbBootstrap.connectAndCreateSchema()
-  val numberOfScenarios = 1
-  val seed = 1
-  val scenarios = generateGridTrafficScenariosTest(seed = seed, enablePositionVariance = false)
-
   val libsumoDynamicDataCollector = LibsumoDynamicDataCollectorTest()
 
-  val firstScenario =
-      scenarios.first {
-        it.spawnAt(BOTTOM_ROW, LEFT_LANE) == null &&
-            it.spawnAt(BOTTOM_ROW, CENTER_LANE) == null &&
-            it.spawnAt(BOTTOM_ROW, RIGHT_LANE) == null &&
-            it.spawnAt(MIDDLE_ROW, LEFT_LANE) == null &&
-            it.spawnAt(MIDDLE_ROW, CENTER_LANE)?.type == GridVehicleType.EGO &&
-            it.spawnAt(MIDDLE_ROW, RIGHT_LANE) == null &&
-            it.spawnAt(TOP_ROW, LEFT_LANE)?.type == GridVehicleType.CALM &&
-            it.spawnAt(TOP_ROW, CENTER_LANE)?.type == GridVehicleType.CALM &&
-            it.spawnAt(TOP_ROW, RIGHT_LANE)?.type == GridVehicleType.CALM
-      }
+  val scenario =
+      GeneratedScenario(
+          spawns =
+              listOf(
+                  Spawn(
+                      row = MIDDLE_ROW,
+                      lane = RIGHT_LANE,
+                      positionMeters = 100.0f,
+                      type = GridVehicleType.EGO),
+                  Spawn(
+                      row = MIDDLE_ROW,
+                      lane = CENTER_LANE,
+                      positionMeters = 100.0f,
+                      type = GridVehicleType.CALM),
+                  Spawn(
+                      row = TOP_ROW,
+                      lane = RIGHT_LANE,
+                      positionMeters = 130.0f,
+                      type = GridVehicleType.CALM),
+              ))
+
+  val allTraciModes = TraCIModes.allModeCombinations
+
+  val mode = TraCIModes(speedMode = 0, laneChangeMode = 0)
+
+  println("Current TraCI mode: $mode")
 
   val libSumoTicks =
       libsumoDynamicDataCollector.runGeneratedScenario(
           runId = UUID.randomUUID(),
-          scenario = firstScenario.toScenarioStartingConfigurationEntry(UUID.randomUUID()),
-          mutant = Mutant())
+          scenario = scenario.toScenarioStartingConfigurationEntry(UUID.randomUUID()),
+          mutant = Mutant(lcAssertive = 50.0, lcCooperative = 0.0, lcSpeedGain = 100.0),
+          traciModes = mode)
 
   println(
       """
-    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k replay.sumocfg -f replay.fcd.xml
+    Inside /sumoData/fcdReplay:
+    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k replay.sumocfg -f fcdReplay.fcd.xml
   """
           .trimIndent())
 
