@@ -26,11 +26,9 @@ import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.TraCIColor
-import tools.aqua.stars.coverage.significance.FCD_DIR
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
-import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
-import tools.aqua.stars.coverage.significance.SCENARIO_DIR
+import tools.aqua.stars.coverage.significance.FCD_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
