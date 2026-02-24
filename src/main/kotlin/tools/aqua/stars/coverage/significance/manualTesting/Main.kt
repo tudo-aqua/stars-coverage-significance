@@ -40,7 +40,7 @@ import tools.aqua.stars.data.sumo.libSumo.TraCIModes
  * evaluation logic or metrics without running the entire evaluation pipeline.
  */
 fun main() {
-  val libsumoDynamicDataCollector = LibsumoDynamicDataCollectorTest()
+  val libsumoDynamicDataCollector = LibsumoAutopilotDataCollector()
 
   val scenario =
       GeneratedScenario(
@@ -79,7 +79,7 @@ fun main() {
   println(
       """
     Inside /sumoData/fcdReplay:
-    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k replay.sumocfg -f fcdReplay.fcd.xml
+    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k fcdReplay.sumocfg -f fcdReplay.fcd.xml
   """
           .trimIndent())
 
