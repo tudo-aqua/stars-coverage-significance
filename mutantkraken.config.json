@@ -1,0 +1,16 @@
+{
+  "general": {
+    "operators": [
+      "ArithmeticReplacementOperator",
+      "UnaryRemovalOperator",
+      "LogicalReplacementOperator",
+      "AssignmentReplacementOperator",
+      "UnaryReplacementOperator",
+      "LiteralChangeOperator",
+      "ElvisLiteralChangeOperator",
+      "WhenRemoveBranchOperator",
+      "FunctionalBinaryReplacementOperator",
+      "FunctionalReplacementOperator"
+    ]
+  }
+}
