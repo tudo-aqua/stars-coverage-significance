@@ -40,8 +40,19 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
 import tools.aqua.stars.data.sumo.libSumo.TraCIModes
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
-import tools.aqua.stars.sumo.SimpleAutopilot
+import tools.aqua.stars.sumo.Autopilot
 
+/**
+ * Collector of dynamic data from a SUMO simulation using libsumo.
+ *
+ * @property baseDir Path to SUMO network files.
+ * @property netFileName Name of SUMO network file.
+ * @property vTypeAdditionalFile Name of SUMO additional file containing vehicle types.
+ * @property insertionChecks SUMO insertion checks mode.
+ * @property routeSteps Number of route steps per tick.
+ * @property stepLength Length of a single simulation step in seconds.
+ * @property vehicleIdPrefix Prefix for vehicle IDs.
+ */
 class LibsumoAutopilotDataCollector(
     val baseDir: Path = Path(FCD_DIR),
     val netFileName: String = "gridHighway.net.xml",
@@ -161,7 +172,7 @@ class LibsumoAutopilotDataCollector(
     SumoVehicle.setSpeedMode(egoId, traciModes.speedMode)
     SumoVehicle.setLaneChangeMode(egoId, traciModes.laneChangeMode)
 
-    val autopilot = SimpleAutopilot()
+    val autopilot = Autopilot()
 
     val ticks = ArrayList<TimeStep>()
 
