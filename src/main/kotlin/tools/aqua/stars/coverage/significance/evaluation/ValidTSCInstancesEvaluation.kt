@@ -87,8 +87,7 @@ object ValidTSCInstancesEvaluation {
       xLabel: String = "Index",
       yLabel: String = "Count"
   ) {
-    // Use forward slashes to keep LaTeX happy on Windows too.
-    val csvForLatex = csvPath.toString().replace('\\', '/')
+    val csvForLatex = csvPath.fileName.toString()
 
     val tex =
         """
@@ -100,23 +99,25 @@ object ValidTSCInstancesEvaluation {
         \begin{tikzpicture}
         \begin{axis}[
             ybar,
-            bar width=3pt,
+            bar width=1pt,
             title={${escapeLatex(title)}},
             xlabel={${escapeLatex(xLabel)}},
             ylabel={${escapeLatex(yLabel)}},
             enlargelimits=0.02,
             ymin=0,
-            xtick=data,
+            xtick distance=50,
             xticklabel style={rotate=90, anchor=east},
             tick label style={font=\small},
-            % If there are many bars, showing every x tick can be heavy. Optional:
-            % x tick label as interval=false,
+            scaled y ticks=false,
         ]
-        \addplot table[
+        \addplot+[ybar,
+        draw=.,
+        fill=.,
+        ] table[
             col sep=comma,
             x=index,
             y=count
-        ] {${escapeLatex(csvForLatex)}};
+        ] {$csvForLatex};
         \end{axis}
         \end{tikzpicture}
         \end{document}
