@@ -93,6 +93,7 @@ class LibsumoDynamicDataCollector(
    * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
+   * @param onlyFirstTick Whether to only run the first tick.
    * @param takeOnlyTicksAtXMillis If not null, only take ticks at multiples of this number of
    *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
    * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
@@ -103,6 +104,7 @@ class LibsumoDynamicDataCollector(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutantId: UUID,
+      onlyFirstTick: Boolean = false,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
   ): List<TimeStep> {
@@ -178,14 +180,18 @@ class LibsumoDynamicDataCollector(
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
+    val ticks = mutableListOf<TimeStep>()
+
+    if (onlyFirstTick)
+      return listOfNotNull(
+        getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
+
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
 
     val mutantEntry = MutantsRepository.getById(mutantId)
     checkNotNull(mutantEntry)
     val autopilot = AutopilotMutants.create(mutantEntry.mutantNumber)
-
-    val ticks = ArrayList<TimeStep>()
 
     while (Simulation.getMinExpectedNumber() > 0) {
       val timeStep =
