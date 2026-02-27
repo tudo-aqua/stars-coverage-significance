@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance
 
-import tools.aqua.stars.coverage.significance.evaluation.ValidTSCInstancesEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.ValidTSCInstancesEvaluation
 
 /**
  * This utility runs the post-evaluation analysis for valid TSC instances. It can be run after all

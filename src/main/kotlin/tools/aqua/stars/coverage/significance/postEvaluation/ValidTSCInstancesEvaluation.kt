@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.evaluation
+package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
