@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.sumo
 
+import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
@@ -28,16 +29,19 @@ class Autopilot : Mutant() {
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
   /** The time headway to the leader in seconds. */
-  var timeHeadwayToLeaderInSeconds = 1.3
+  var timeHeadwayToLeaderInSeconds = 1.0
   /** The minimum gap to the leading vehicle in meters. */
-  var minGapToLeadingInMeters = 5.0
+  var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
-  var maxAccelerationInMps2 = 2.0
+  var maxAccelerationInMps2 = 2.6
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
+
+  /** Assumed maximum deceleration of the leader [m/s²] for kinematic safety checks. */
+  var leaderMaxDecelerationInMps2 = 9.0
 
   /** Gain applied to the gap error term (`gap - desiredGap`) when computing ACC target speed. */
   var gapGain = 0.5
@@ -49,7 +53,7 @@ class Autopilot : Mutant() {
    */
   var hardBrakeGapFactor = 0.6
   /** The minimum target speed in meters per second. */
-  var minTargetSpeedMps = 19.99
+  var minTargetSpeedMps = 0.0
 
   // -------------------- Lane change parameters --------------------
   /**
@@ -147,12 +151,56 @@ class Autopilot : Mutant() {
       if (hardProposal < vTarget) vTarget = hardProposal
     }
 
+    // Kinematic safety clamp (braking-distance based).
+    // This provides a hard upper bound on speed so that, under the assumptions below,
+    // the ego can still avoid collision even if the leader brakes strongly.
+    val vSafe = safeSpeedKinematic(gapMeters = gap, vLeader = vLeader)
+    if (vSafe < vTarget) vTarget = vSafe
+
     // clamp lower bound
     if (vTarget < minTargetSpeedMps) vTarget = minTargetSpeedMps
     // clamp upper bound (explicit, no min())
     if (vTarget > cruiseSpeedInMps) vTarget = cruiseSpeedInMps
 
     return vTarget
+  }
+
+  /**
+   * Computes a kinematic safe speed upper bound using a simple braking-distance inequality.
+   *
+   * Assumptions:
+   * - Ego may continue at current speed for one control step (reaction time = [stepLengthSeconds]).
+   * - After that, ego brakes with [maxDecelerationInMps2].
+   * - Leader may brake immediately with [leaderMaxDecelerationInMps2].
+   * - A standstill gap of [minGapToLeadingInMeters] is preserved.
+   *
+   * The returned value is an upper bound for the *next* commanded speed.
+   */
+  private fun safeSpeedKinematic(gapMeters: Double, vLeader: Double): Double {
+    val bEgo = if (maxDecelerationInMps2 > 0.0) maxDecelerationInMps2 else 0.0
+    if (bEgo <= 1e-9) return 0.0
+
+    val bLead = if (leaderMaxDecelerationInMps2 > 0.0) leaderMaxDecelerationInMps2 else bEgo
+    val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0
+
+    // Free space available for ego braking (gap minus desired standstill gap).
+    val netGap = gapMeters - minGapToLeadingInMeters
+    val netGapClamped = if (netGap > 0.0) netGap else 0.0
+
+    // Leader stopping distance under assumed max braking.
+    val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)
+
+    // Total distance ego may spend: net gap + leader stopping distance.
+    val sAvail = netGapClamped + leaderStopDist
+
+    // Solve: v*tau + v^2/(2*bEgo) <= sAvail
+    // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
+    val bt = bEgo * tau
+    val disc = bt * bt + 2.0 * bEgo * sAvail
+    val root = if (disc > 0.0) sqrt(disc) else 0.0
+    val vSafe = root - bt
+
+    return if (vSafe > 0.0) vSafe else 0.0
   }
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
