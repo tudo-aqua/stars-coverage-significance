@@ -24,10 +24,12 @@ import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
+import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
@@ -39,6 +41,7 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
+import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
 /**
  * Collector of dynamic data from a SUMO simulation using libsumo.
@@ -80,7 +83,7 @@ class LibsumoDynamicDataCollector(
   fun runGeneratedScenario(
       runId: UUID,
       scenario: GeneratedScenario,
-      mutantId: UUID?
+      mutantId: UUID
   ): List<TimeStep> =
       runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutantId)
 
@@ -90,7 +93,6 @@ class LibsumoDynamicDataCollector(
    * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
-   * @param onlyFirstTick Whether to only run the first tick.
    * @param takeOnlyTicksAtXMillis If not null, only take ticks at multiples of this number of
    *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
    * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
@@ -100,8 +102,7 @@ class LibsumoDynamicDataCollector(
   fun runGeneratedScenario(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
-      mutantId: UUID?,
-      onlyFirstTick: Boolean = false,
+      mutantId: UUID,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
   ): List<TimeStep> {
@@ -144,13 +145,15 @@ class LibsumoDynamicDataCollector(
     for (sp in sortedPlacements) {
       val vehId =
           getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      val typeId = sp.type.sumoId
+      var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
       val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
+        typeId = "mutant"
+        SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
       }
 
       // Add vehicle
@@ -175,19 +178,25 @@ class LibsumoDynamicDataCollector(
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
-    val ticks = mutableListOf<TimeStep>()
+    SumoVehicle.setSpeedMode(egoId, 0)
+    SumoVehicle.setLaneChangeMode(egoId, 0)
 
-    if (onlyFirstTick)
-        return listOfNotNull(
-            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
+    val mutantEntry = MutantsRepository.getById(mutantId)
+    checkNotNull(mutantEntry)
+    val autopilot = AutopilotMutants.create(mutantEntry.mutantNumber)
 
-    // Run until finished
+    val ticks = ArrayList<TimeStep>()
+
     while (Simulation.getMinExpectedNumber() > 0) {
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
+
+      autopilot.controlTick(egoId)
+
       Simulation.step()
     }
+
     Simulation.close()
 
     var resultList: List<TimeStep> = ticks

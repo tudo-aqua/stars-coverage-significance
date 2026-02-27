@@ -81,7 +81,7 @@ fun main(args: Array<String>) {
 
       eval.registerPreTickEvaluationHooks(
           MinTicksPerTickSequenceHook(2),
-        MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()),
+          MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()),
           TSCInstanceChangedHook(staticTsc))
 
       val totalTickDifferenceMetric =
@@ -110,7 +110,6 @@ fun main(args: Array<String>) {
                 runId = runId,
                 scenario,
                 job.mutantId,
-                onlyFirstTick = false,
                 maxLengthOfScenarioInSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS)
         tickSequences.add(
             runResult.asTickSequence(
