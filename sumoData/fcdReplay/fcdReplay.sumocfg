@@ -6,7 +6,7 @@
 <libsumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/libsumoConfiguration.xsd">
 
     <input>
-        <net-file value="grid_highway.net.xml"/>
+        <net-file value="gridHighway.net.xml"/>
     </input>
 
     <time>
