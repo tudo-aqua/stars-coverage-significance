@@ -146,80 +146,32 @@ class LibsumoDynamicDataCollector(
     for (sp in sortedPlacements) {
       val vehId =
           getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      var typeId = sp.type.sumoId
+      val typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
       val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
-        typeId = "mutant"
-        SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
-
-        // vType attributes (sigma == imperfection)
-        if (mutantId != null) {
-          val mutant = MutantsRepository.getById(mutantId)
-          checkNotNull(mutant) { "Mutant with id $mutantId not found in database." }
-          SumoVehicleType.setVehicleClass(typeId, "passenger")
-          SumoVehicleType.setMaxSpeed(typeId, mutant.maxSpeed)
-          SumoVehicleType.setSpeedFactor(typeId, mutant.speedFactor)
-          SumoVehicleType.setSpeedDeviation(typeId, mutant.speedDeviation)
-          SumoVehicleType.setImperfection(typeId, mutant.sigma) // sigma
-          SumoVehicleType.setTau(typeId, mutant.tau)
-          SumoVehicleType.setMinGap(typeId, mutant.minGap)
-          SumoVehicleType.setColor(typeId, TraCIColor(255, 255, 255, 255))
-
-          // Driverstate device params on the vType (generic parameters)
-          SumoVehicleType.setParameter(typeId, "has.driverstate.device", "true")
-          SumoVehicleType.setParameter(typeId, "device.driverstate.probability", "1")
-          SumoVehicleType.setParameter(
-              typeId, "device.driverstate.initialAwareness", mutant.initialAwareness.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.headwayErrorCoefficient",
-              mutant.headwayErrorCoefficient.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.speedDifferenceErrorCoefficient",
-              mutant.speedDifferenceErrorCoefficient.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.errorNoiseIntensityCoefficient",
-              mutant.errorNoiseIntensityCoefficient.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.headwayChangePerceptionThreshold",
-              mutant.headwayChangePerceptionThreshold.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.speedDifferenceChangePerceptionThreshold",
-              mutant.speedDifferenceChangePerceptionThreshold.toString())
-          SumoVehicleType.setParameter(
-              typeId,
-              "device.driverstate.maximalReactionTime",
-              mutant.maximalReactionTime.toString())
-        }
       }
 
       // Add vehicle
       SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
     }
 
-    val egoId =
-        egoVehicleId
-            ?: run {
-              error(
-                  "Ego not found in placements; falling back to first spawned SumoVehicle." +
-                      "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
-            }
+    val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
 
     // Force placement of vehicle into simulation, so that all vehicleType parameters are set
     // correctly
-    for (sp in sortedPlacements) {
+    sortedPlacements.forEach { placement ->
       val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      val departLane = sp.lane.toString()
-      val departPos = sp.positionMeters
+          getVehicleId(
+              placement.type.toString(),
+              placement.row,
+              placement.lane,
+              scenario.humanReadableScenarioId)
+      val departLane = placement.lane.toString()
+      val departPos = placement.positionMeters
 
       // Force place vehicle
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())

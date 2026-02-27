@@ -71,6 +71,7 @@ private fun seedMutants(
   val existing = MutantsRepository.getAllIds()
   // When all "MutantGenerator.expectedMutantCount " mutants exist and the number of mutants to seed
   // is not specified, return early.
+  val expectedMutantCount = AutopilotMutants.byIndex.size
   if (numberOfMutants == null && existing.isNotEmpty() && existing.size == expectedMutantCount) {
     println("Database already seeded with $expectedMutantCount mutants.")
     return existing

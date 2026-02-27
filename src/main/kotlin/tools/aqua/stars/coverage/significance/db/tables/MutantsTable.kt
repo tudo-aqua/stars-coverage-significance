@@ -25,71 +25,16 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
  * Table object for the [MutantEntry] data class.
  *
  * @property createdAt Timestamp of when the mutant was created.
- * @property mutantKey Unique key identifying the mutant.
- * @property c1Level Level of bundle C1.
- * @property c2Level Level of bundle C2.
- * @property c3Level Level of bundle C3.
- * @property c4Level Level of bundle C4.
- * @property c5Level Level of bundle C5.
- * @property tau Tau parameter of the driver model.
- * @property sigma Sigma parameter of the driver model.
- * @property minGap Minimum gap parameter of the driver model.
- * @property speedDeviation Speed deviation parameter of the driver model.
- * @property maxSpeed Maximum speed parameter of the driver model.
- * @property headwayErrorCoefficient Headway error coefficient (C1).
- * @property speedDifferenceErrorCoefficient Speed difference error coefficient (C1).
- * @property headwayChangePerceptionThreshold Headway change perception threshold (C2).
- * @property speedDifferenceChangePerceptionThreshold Speed difference change perception threshold
- *   (C2).
- * @property maximalReactionTime Maximal reaction time (C2).
- * @property errorNoiseIntensityCoefficient Error noise intensity coefficient (C3).
- * @property errorTimeScaleCoefficient Error time scale coefficient (C3).
- * @property initialAwareness Initial awareness (C4).
- * @property minAwareness Minimum awareness (C4).
- * @property speedFactor Speed factor (C5).
- * @property lcAssertive Lane change assertiveness (C5).
- * @property lcSpeedGain Lane change speed gain (C5).
- * @property lcCooperative Lane change cooperativeness (C5).
+ * @property mutantNumber Unique number identifying the mutant.
+ * @property className Name of the class the mutant belongs to.
  */
 object MutantsTable : UUIDTable("mutants") {
   val createdAt = timestamp("created_at")
 
-  val mutantKey = varchar("mutant_key", 32).uniqueIndex()
+  val mutantNumber = integer("mutant_number")
+  val className = varchar("class_name", 256)
 
-  // Bundle levels
-  val c1Level = integer("c1_level")
-  val c2Level = integer("c2_level")
-  val c3Level = integer("c3_level")
-  val c4Level = integer("c4_level")
-  val c5Level = integer("c5_level")
-
-  val tau = double("tau")
-  val sigma = double("sigma")
-  val minGap = double("min_gap")
-  val speedDeviation = double("speed_deviation")
-  val maxSpeed = double("max_speed")
-
-  // Bundle C1
-  val headwayErrorCoefficient = double("headway_error_coefficient")
-  val speedDifferenceErrorCoefficient = double("speed_difference_error_coefficient")
-
-  // Bundle C2
-  val headwayChangePerceptionThreshold = double("headway_change_perception_threshold")
-  val speedDifferenceChangePerceptionThreshold =
-      double("speed_difference_change_perception_threshold")
-  val maximalReactionTime = double("maximal_reaction_time")
-
-  // Bundle C3
-  val errorNoiseIntensityCoefficient = double("error_noise_intensity_coefficient")
-  val errorTimeScaleCoefficient = double("error_time_scale_coefficient")
-
-  // Bundle C4
-  val initialAwareness = double("initial_awareness")
-  val minAwareness = double("min_awareness")
-
-  // Bundle C5
-  val speedFactor = double("speed_factor")
-  val lcAssertive = double("lc_assertive")
-  val lcSpeedGain = double("lc_speed_gain")
-  val lcCooperative = double("lc_cooperative")
+  init {
+    index(true, mutantNumber, className)
+  }
 }
