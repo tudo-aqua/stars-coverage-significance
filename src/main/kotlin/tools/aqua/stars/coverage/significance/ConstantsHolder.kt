@@ -17,22 +17,28 @@
 
 package tools.aqua.stars.coverage.significance
 
+/** Base directory for all data. */
+const val BASE_DIR = "sumoData"
 /** Directory paths for grid traffic scenarios. */
-const val GRID_TRAFFIC_DIR = "sumoData/gridTrafficScenarios"
+const val EXPERIMENT_DIR = "$BASE_DIR/experiment"
 /** Directory path for FCD replay files. */
-const val FCD_DIR = "sumoData/fcdReplay"
+const val FCD_DIR = "$BASE_DIR/fcdReplay"
 /** Sub-directory for scenario files. */
-const val SCENARIO_DIR = "$GRID_TRAFFIC_DIR/scenarios"
+const val SCENARIO_DIR = "$EXPERIMENT_DIR/scenarios"
 /** Sub-directory for exported SUMO files. */
-const val EXPORT_DIR = "$GRID_TRAFFIC_DIR/export"
+const val EXPORT_DIR = "$EXPERIMENT_DIR/export"
 /** Sub-directory for collision files. */
-const val COLLISION_DIR = "$GRID_TRAFFIC_DIR/collision"
+const val COLLISION_DIR = "$EXPERIMENT_DIR/collision"
 /** File extension for scenario files. */
 const val SCENARIO_FILE_EXTENSION = "rou.xml"
 /** File extension for exported SUMO files. */
 const val EXPORT_FILE_EXTENSION = "export.xml"
 /** File extension for collision files. */
 const val COLLISION_FILE_EXTENSION = "collisions.xml"
+/** Name of the network file. */
+const val NETWORK_FILE_NAME = "gridHighway.net.xml"
+/** Name of the FCD replay file. */
+const val FCD_REPLAY_FILE_NAME = "fcdReplay.fcd.xml"
 /** Number of parallel threads to use for experiment runs. */
 val parallelism = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 /** Number of scenarios to generate and evaluate in the main function. */

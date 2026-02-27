@@ -23,8 +23,8 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
+import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
-import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
@@ -64,8 +64,8 @@ class TestSameResultsFromInProcessAndFile {
               scenarioFile = scenarioFile,
               exportFile = exportFile,
               collisionFile = collisionFile,
-              netFilePath = Path("$GRID_TRAFFIC_DIR/grid_highway.net.xml"),
-              vehicleTypesAdditionalFilePath = Path("$GRID_TRAFFIC_DIR/vTypes.add.xml"))
+              netFilePath = Path("$EXPERIMENT_DIR/grid_highway.net.xml"),
+              vehicleTypesAdditionalFilePath = Path("$EXPERIMENT_DIR/vTypes.add.xml"))
 
       val scenarios =
           seedGridTrafficScenarios(n = numberOfScenarios, seed = i, insertIntoDatabase = false)

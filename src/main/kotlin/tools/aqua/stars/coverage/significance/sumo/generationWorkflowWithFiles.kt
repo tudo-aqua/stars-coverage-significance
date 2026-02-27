@@ -26,8 +26,9 @@ import tools.aqua.stars.core.metrics.evaluation.InvalidTSCInstancesPerTSCMetric
 import tools.aqua.stars.core.metrics.evaluation.TickCountMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
+import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
-import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
@@ -104,8 +105,8 @@ fun generationWorkflowWithFiles() {
                         exportFiles = bucketExports,
                         collisionsFiles = bucketCollisions,
                         bufferSize = BUFFER_SIZE,
-                        netFilePath = Path("${GRID_TRAFFIC_DIR}/grid_highway.net.xml"),
-                        vehicleTypesAdditionalFilePath = Path("${GRID_TRAFFIC_DIR}/vTypes.add.xml"),
+                        netFilePath = Path("${EXPERIMENT_DIR}/$NETWORK_FILE_NAME"),
+                        vehicleTypesAdditionalFilePath = Path("${EXPERIMENT_DIR}/vTypes.add.xml"),
                         takeOnlyTicksAtXMillis = TAKE_ONLY_TICKS_AT_X_MILLIS,
                         maxLengthOfScenarioInSeconds = 30.0,
                         consoleProgress = consoleProgress)

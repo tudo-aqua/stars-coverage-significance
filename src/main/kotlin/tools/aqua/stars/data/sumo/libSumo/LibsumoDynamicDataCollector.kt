@@ -23,13 +23,11 @@ import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringVector
-import org.eclipse.sumo.libsumo.TraCIColor
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
-import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
+import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
-import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
@@ -54,8 +52,8 @@ import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
  * @property vehicleIdPrefix Prefix for vehicle ids.
  */
 class LibsumoDynamicDataCollector(
-    val baseDir: Path = Path(GRID_TRAFFIC_DIR),
-    val netFileName: String = "grid_highway.net.xml",
+    val baseDir: Path = Path(EXPERIMENT_DIR),
+    val netFileName: String = NETWORK_FILE_NAME,
     val vTypeAdditionalFile: String = "vTypes.add.xml",
     val insertionChecks: String = "none",
     val routeSteps: Int = 0,

@@ -29,6 +29,8 @@ import org.eclipse.sumo.libsumo.TraCIColor
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.FCD_DIR
+import tools.aqua.stars.coverage.significance.FCD_REPLAY_FILE_NAME
+import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
@@ -55,7 +57,7 @@ import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
  */
 class LibsumoDynamicDataCollectorTest(
     val baseDir: Path = Path(FCD_DIR),
-    val netFileName: String = "gridHighway.net.xml",
+    val netFileName: String = NETWORK_FILE_NAME,
     val vTypeAdditionalFile: String = "fcdReplay.add.xml",
     val insertionChecks: String = "none",
     val routeSteps: Int = 0,
@@ -107,7 +109,7 @@ class LibsumoDynamicDataCollectorTest(
             //            "1.0",
             //            "--no-warnings",
             "--fcd-output",
-            Path(FCD_DIR).toAbsolutePath().toString().plus("/fcdReplay.fcd.xml"),
+            Path(FCD_DIR).toAbsolutePath().toString().plus("/$FCD_REPLAY_FILE_NAME"),
             //            "--fcd-output.attributes",
             //            "acceleration",
             //            "--fcd-output.params",

@@ -24,8 +24,9 @@ import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
 import kotlin.io.path.Path
 import tools.aqua.stars.coverage.significance.COLLISION_DIR
+import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.EXPORT_DIR
-import tools.aqua.stars.coverage.significance.GRID_TRAFFIC_DIR
+import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
 /**
@@ -44,8 +45,8 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
  */
 fun runSumoForScenariosParallel(
     scenarioFiles: List<File>,
-    baseDir: Path = Path(GRID_TRAFFIC_DIR),
-    netFileName: String = "grid_highway.net.xml",
+    baseDir: Path = Path(EXPERIMENT_DIR),
+    netFileName: String = NETWORK_FILE_NAME,
     vTypesFileName: String = "vTypes.add.xml",
     parallelism: Int = Runtime.getRuntime().availableProcessors().coerceAtLeast(1),
     requireRouExtension: Boolean = true,
