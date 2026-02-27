@@ -21,40 +21,86 @@ import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 
-class SimpleAutopilot {
+/** Simple Autopilot with ACC and Lane Change behavior. Extends [Mutant]. */
+class Autopilot : Mutant() {
 
   // -------------------- ACC parameters --------------------
+  /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
+  /** The time headway to the leader in seconds. */
   var timeHeadwayToLeaderInSeconds = 1.3
+  /** The minimum gap to the leading vehicle in meters. */
   var minGapToLeadingInMeters = 5.0
 
-  var maxAccelMps2 = 2.0
-  var maxDecelMps2 = 4.5
+  /** Maximum longitudinal acceleration [m/s²]. */
+  var maxAccelerationInMps2 = 2.0
+  /** The maximum deceleration in meters per second squared. */
+  var maxDecelerationInMps2 = 4.5
+  /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 
-  // Controller knobs (extra mutation points)
+  /** Gain applied to the gap error term (`gap - desiredGap`) when computing ACC target speed. */
   var gapGain = 0.5
-  var relSpeedGain = 0.2
+
+  /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
+  var relativeSpeedGain = 0.2
+  /**
+   * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
+   */
   var hardBrakeGapFactor = 0.6
-  var minTargetSpeedMps = 0.0
+  /** The minimum target speed in meters per second. */
+  var minTargetSpeedMps = 19.99
 
   // -------------------- Lane change parameters --------------------
+  /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
   var laneChangeCooldownInSeconds = 2.0
-  var lcMinGainMps = 1.0
-  var neighborLookAheadM = 150.0
-  var leaderLookAheadM = 200.0
 
-  // LC variation points
+  /**
+   * The minimum gain in meters per second for lane change. If the gain is below this threshold,
+   * lane change will be postponed.
+   */
+  var laneChangeMinGainInMps = 1.0
+
+  /** The distance ahead to look for a neighbor. */
+  var neighborLookAheadInMeters = 150.0
+
+  /** The distance ahead to look for the leader. */
+  var leaderLookAheadInMeters = 200.0
+
+  /**
+   * Whether to prefer a left lane change. If true, the ego vehicle will prefer left lane change. If
+   * false, the ego vehicle will prefer a right lane change.
+   */
   var preferLeftLane = true
+
+  /**
+   * The factor for determining if the ego vehicle is stuck. If the gap to the leader is less than
+   * this factor times the desired gap, and the leader is slower than the ego vehicle, the ego
+   * vehicle will consider lane change.
+   */
   var stuckGapFactor = 1.0
+
+  /**
+   * The speed delta for determining if the ego vehicle is stuck. If the leader is slower than the
+   * ego vehicle by this amount, the ego vehicle will consider a lane change.
+   */
   var stuckSpeedDeltaMps = 0.5
+
+  /** Weight for the side-lane speed-gain term in lane-change scoring. */
   var sideLeaderWeight = 1.0
-  var maxLaneChangeDurationS = 1.0
+
+  /**
+   * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
+   */
+  var maxLaneChangeDurationInSeconds = 1.0
 
   private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
-  fun controlTick(egoId: String) {
+  override fun controlTick(egoId: String) {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -70,7 +116,7 @@ class SimpleAutopilot {
 
   // -------------------- ACC --------------------
   private fun leaderInfoOrNull(egoId: String): StringDoublePair? =
-      runCatching { SumoVehicle.getLeader(egoId, leaderLookAheadM) }
+      runCatching { SumoVehicle.getLeader(egoId, leaderLookAheadInMeters) }
           .getOrNull()
           ?.takeIf { it.first.isNotEmpty() }
 
@@ -91,7 +137,7 @@ class SimpleAutopilot {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -111,8 +157,8 @@ class SimpleAutopilot {
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
-    val dvMaxUp = maxAccelMps2 * dt
-    val dvMaxDown = -maxDecelMps2 * dt
+    val dvMaxUp = maxAccelerationInMps2 * dt
+    val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -141,15 +187,16 @@ class SimpleAutopilot {
 
     val stuck = isStuck(vEgo, curLeaderSpeed, curGap, desiredGap)
 
-    val left = evaluateLaneChange(egoId, dir = +1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
-    val right = evaluateLaneChange(egoId, dir = -1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+    val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+    val right =
+        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir = chooseDirection(left, right) ?: return
 
     val targetLaneIndex = baseLaneIndex + chosenDir
     if (targetLaneIndex < 0) return
 
-    SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationS)
+    SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
     lastLaneChangeSimTimeInSeconds = now
   }
 
@@ -169,8 +216,11 @@ class SimpleAutopilot {
       stuck: Boolean,
       curLeaderSpeed: Double
   ): LaneEval {
-    if (dir != 1 && dir != -1)
-        return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
+    val wantRight = dir < 0
+    val wantLeft = dir > 0
+    if (!wantLeft && !wantRight) {
+      return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
+    }
 
     val safe = isTargetDirectionFree(egoId, dir)
     if (!safe) return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
@@ -180,11 +230,11 @@ class SimpleAutopilot {
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
     val gain = vSideLeader - curLeaderSpeed
-    val stuckBonus = if (stuck) 0.5 * lcMinGainMps else 0.0
+    val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus
 
-    val feasible = stuck || (score > lcMinGainMps)
+    val feasible = stuck || (score > laneChangeMinGainInMps)
     return LaneEval(dir, feasible = feasible, score = score)
   }
 
@@ -209,15 +259,21 @@ class SimpleAutopilot {
    * - 2^2: blocking only (else all)
    */
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
-    val wantRight = dir == -1
-    val wantLeft = dir == 1
-    if (!wantLeft && !wantRight) return false
+    val wantRight = dir < 0
+    val wantLeft = dir > 0
+    if (!wantLeft && !wantRight) return false // dir == 0
 
-    val blockingOnly = 0b100
-    val rightBit = if (wantRight) 0b001 else 0b000
+    // Mode bits (as Int):
+    // bit0: right neighbors (else left)
+    // bit1: ahead (else behind)
+    // bit2: only blocking neighbors (else all)
+    val bitRight = 1
+    val bitAhead = 2
+    val bitBlockingOnly = 4
 
-    val modeAheadBlocking = blockingOnly or rightBit or 0b010
-    val modeBehindBlocking = blockingOnly or rightBit
+    val rightBit = if (wantRight) bitRight else 0
+    val modeAheadBlocking = bitBlockingOnly or rightBit or bitAhead
+    val modeBehindBlocking = bitBlockingOnly or rightBit
 
     val ahead =
         runCatching { SumoVehicle.getNeighbors(egoId, modeAheadBlocking) }.getOrNull().orEmpty()
@@ -235,12 +291,15 @@ class SimpleAutopilot {
    * is intentionally written as a readable loop (more mutation points).
    */
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
-    val wantRight = dir == -1
-    val wantLeft = dir == 1
+    val wantRight = dir < 0
+    val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return null
 
-    val rightBit = if (wantRight) 0b001 else 0b000
-    val modeAheadAll = rightBit or 0b010
+    val bitRight = 1
+    val bitAhead = 2
+
+    val rightBit = if (wantRight) bitRight else 0
+    val modeAheadAll = rightBit or bitAhead
 
     val neighbors =
         runCatching { SumoVehicle.getNeighbors(egoId, modeAheadAll) }.getOrNull().orEmpty()
@@ -252,7 +311,7 @@ class SimpleAutopilot {
 
       if (id.isEmpty()) continue
       if (dist <= 0.0) continue
-      if (dist > neighborLookAheadM) continue
+      if (dist > neighborLookAheadInMeters) continue
 
       if (best == null) {
         best = Neighbor(id, dist)

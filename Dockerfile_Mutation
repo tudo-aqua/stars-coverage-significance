@@ -1,7 +1,6 @@
-# ---- builder: install mutant-kraken with Rust toolchain ----
+# Install mutant-kraken with Rust toolchain ----
 FROM rust:1-bookworm AS builder
 
-# Faster + more reliable cargo installs
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:/usr/local/rustup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -9,10 +8,9 @@ ENV CARGO_HOME=/usr/local/cargo \
 # Install mutant-kraken into /usr/local/cargo/bin
 RUN cargo install mutant-kraken
 
-# ---- runtime: your repo + mutant-kraken binary ----
 FROM debian:bookworm-slim AS runtime
 
-# Minimal runtime deps (ca-certs is commonly needed for HTTPS access)
+# Minimal runtime deps
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -20,12 +18,11 @@ RUN apt-get update \
 # Copy the installed binary from the builder stage
 COPY --from=builder /usr/local/cargo/bin/mutant-kraken /usr/local/bin/mutant-kraken
 
-# Copy your repository into the container
+# Test mutant-kraken
+RUN mutant-kraken --version
+
+# Copy repository into the container
 WORKDIR /repo
 COPY . /repo
 
-# Optional: show version on build to verify it's there (kept as a runtime command instead)
-# RUN mutant-kraken -v
-
-# Default shell; you can override in `docker run ...`
 CMD ["bash"]
