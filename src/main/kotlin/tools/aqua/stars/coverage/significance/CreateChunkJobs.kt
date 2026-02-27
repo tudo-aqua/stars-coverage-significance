@@ -31,7 +31,7 @@ import tools.aqua.stars.coverage.significance.db.seed.ChunkJobSeeder
  * table for convenience.
  */
 fun main() {
-  DbBootstrap.connect()
+  DbBootstrap.connectAndCreateSchema()
   val evaluationRunId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
   println("Created evaluation run: $evaluationRunId")
 
