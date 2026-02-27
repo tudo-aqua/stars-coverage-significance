@@ -18,6 +18,8 @@
 package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.util.UUID
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -46,6 +48,17 @@ object MetricFailedMonitorsRepository {
         .singleOrNull()
         ?.toEntry()
   }
+
+  fun callPredicate(predicate: Op<Boolean>) = db {
+    MetricFailedMonitorsTable.selectAll().where(predicate)
+  }
+
+  /**
+   * Retrieves all [MetricFailedMonitorsEntry]s.
+   *
+   * @return All [MetricFailedMonitorsEntry]s as a [Query].
+   */
+  fun getAll(): Query = db { MetricFailedMonitorsTable.selectAll() }
 
   /**
    * Retrieves a [MetricFailedMonitorsEntry] by its unique key: (run, tsc, scenario_config, mutant).
