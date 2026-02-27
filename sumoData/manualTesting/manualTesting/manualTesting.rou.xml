@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="route" edges="highway"/>
+  <vehicle id="veh_EGO" type="manualTesting" route="route" depart="0.00" departLane="0" departPos="100" departSpeed="27.77777778"/>
+  <vehicle id="veh_CALM_1" type="car_calm" route="route" depart="0.00" departLane="0" departPos="150" departSpeed="16.666666666666668"/>
+</routes>
