@@ -183,8 +183,8 @@ class LibsumoDynamicDataCollector(
     val ticks = mutableListOf<TimeStep>()
 
     if (onlyFirstTick)
-      return listOfNotNull(
-        getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
+        return listOfNotNull(
+            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
 
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
