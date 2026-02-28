@@ -15,6 +15,7 @@
 /sumoData/*
 /post-evaluation/*
 
+!/sumoData/experiment
 !/sumoData/manualTesting/
 !/sumoData/fcdReplay/fcdReplay.add.xml
 !/sumoData/fcdReplay/fcdReplay.rou.xml
