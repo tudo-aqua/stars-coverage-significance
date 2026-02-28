@@ -20,6 +20,11 @@ package tools.aqua.stars.coverage.significance.utils
 import java.io.File
 import kotlin.io.path.Path
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.Case
+import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.ExpressionWithColumnType
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.intLiteral
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
@@ -59,6 +64,45 @@ fun <T> List<T>.buckets(bucketCount: Int): List<List<T>> = run {
         bucket
       }
       .filter { it.isNotEmpty() }
+}
+
+/**
+ * Converts a boolean column to an integer column.
+ *
+ * @param col The boolean column to convert.
+ * @return The integer column representing the boolean values.
+ */
+fun boolToInt(col: Column<Boolean>): ExpressionWithColumnType<Int> =
+    Case().When(col eq true, intLiteral(1)).Else(intLiteral(0))
+
+/**
+ * Returns a new list containing every nth element from the original list, starting at the specified
+ * offset.
+ *
+ * @param T Type of the list elements.
+ * @param n The interval at which elements are selected. Must be greater than 0.
+ * @param offset The starting index from which to begin selecting elements. Must be in the range 0
+ *   until n.
+ * @return A list containing every nth element from the original list, starting at the specified
+ *   offset.
+ * @throws IllegalArgumentException if the value of n is less than or equal to 0, or if the offset
+ *   is not in the range 0 until n.
+ */
+fun <T> List<T>.everyNth(n: Int, offset: Int = 0): List<T> {
+  require(n > 0) { "n must be > 0" }
+  require(offset in 0 until n) { "offset must be in 0 until n (was $offset)" }
+
+  if (isEmpty()) return emptyList()
+
+  val outSize = ((size - 1 - offset).coerceAtLeast(-1) / n) + 1
+  val result = ArrayList<T>(outSize.coerceAtLeast(0))
+
+  var i = offset
+  while (i < size) {
+    result.add(this[i])
+    i += n
+  }
+  return result
 }
 
 /**

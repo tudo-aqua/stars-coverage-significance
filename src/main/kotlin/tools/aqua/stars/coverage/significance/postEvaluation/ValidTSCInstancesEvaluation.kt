@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsBarChart
+import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 
@@ -43,10 +44,11 @@ object ValidTSCInstancesEvaluation {
     val groupedByTSCInstance = validStartingTSCInstances.groupingBy { it.tscInstanceId }.eachCount()
     val orderedCounts = groupedByTSCInstance.values.sortedDescending()
 
-    val folder = "post-evaluation"
+    val folder = POST_EVALUATION_BASE_DIR
+    val subfolder = "valid_tsc_instances"
 
-    val csvPath = Path.of(folder, "ordered_counts.csv")
-    val texPath = Path.of(folder, "ordered_counts_plot.tex")
+    val csvPath = Path.of(folder, subfolder, "ordered_counts.csv")
+    val texPath = Path.of(folder, subfolder, "ordered_counts_plot.tex")
 
     writeOrderedCountsCsv(orderedCounts, csvPath)
     writePgfplotsBarChartTex(
