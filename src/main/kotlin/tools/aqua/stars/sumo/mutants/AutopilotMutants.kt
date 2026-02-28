@@ -1,0 +1,260 @@
+/*
+ * Copyright 2026 The STARS Coverage Significance Authors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package tools.aqua.stars.sumo.mutants
+
+import kotlin.reflect.KClass
+import kotlin.reflect.full.createInstance
+import tools.aqua.stars.sumo.Autopilot
+import tools.aqua.stars.sumo.Mutant
+
+/** AUTO-GENERATED: registry of all Autopilot mutants. */
+object AutopilotMutants {
+  /** Mapping from index to the corresponding mutant class. */
+  val byIndex: Map<Int, KClass<out Mutant>> =
+      mapOf(
+          1 to AutopilotMutant1::class,
+          2 to AutopilotMutant2::class,
+          3 to AutopilotMutant3::class,
+          4 to AutopilotMutant4::class,
+          5 to AutopilotMutant5::class,
+          6 to AutopilotMutant6::class,
+          7 to AutopilotMutant7::class,
+          8 to AutopilotMutant8::class,
+          9 to AutopilotMutant9::class,
+          10 to AutopilotMutant10::class,
+          11 to AutopilotMutant11::class,
+          12 to AutopilotMutant12::class,
+          13 to AutopilotMutant13::class,
+          14 to AutopilotMutant14::class,
+          15 to AutopilotMutant15::class,
+          16 to AutopilotMutant16::class,
+          17 to AutopilotMutant17::class,
+          18 to AutopilotMutant18::class,
+          19 to AutopilotMutant19::class,
+          20 to AutopilotMutant20::class,
+          21 to AutopilotMutant21::class,
+          22 to AutopilotMutant22::class,
+          23 to AutopilotMutant23::class,
+          24 to AutopilotMutant24::class,
+          25 to AutopilotMutant25::class,
+          26 to AutopilotMutant26::class,
+          27 to AutopilotMutant27::class,
+          28 to AutopilotMutant28::class,
+          29 to AutopilotMutant29::class,
+          30 to AutopilotMutant30::class,
+          31 to AutopilotMutant31::class,
+          32 to AutopilotMutant32::class,
+          33 to AutopilotMutant33::class,
+          34 to AutopilotMutant34::class,
+          35 to AutopilotMutant35::class,
+          36 to AutopilotMutant36::class,
+          37 to AutopilotMutant37::class,
+          38 to AutopilotMutant38::class,
+          39 to AutopilotMutant39::class,
+          40 to AutopilotMutant40::class,
+          41 to AutopilotMutant41::class,
+          42 to AutopilotMutant42::class,
+          43 to AutopilotMutant43::class,
+          44 to AutopilotMutant44::class,
+          45 to AutopilotMutant45::class,
+          46 to AutopilotMutant46::class,
+          47 to AutopilotMutant47::class,
+          48 to AutopilotMutant48::class,
+          49 to AutopilotMutant49::class,
+          50 to AutopilotMutant50::class,
+          51 to AutopilotMutant51::class,
+          52 to AutopilotMutant52::class,
+          53 to AutopilotMutant53::class,
+          54 to AutopilotMutant54::class,
+          55 to AutopilotMutant55::class,
+          56 to AutopilotMutant56::class,
+          57 to AutopilotMutant57::class,
+          58 to AutopilotMutant58::class,
+          59 to AutopilotMutant59::class,
+          60 to AutopilotMutant60::class,
+          61 to AutopilotMutant61::class,
+          62 to AutopilotMutant62::class,
+          63 to AutopilotMutant63::class,
+          64 to AutopilotMutant64::class,
+          65 to AutopilotMutant65::class,
+          66 to AutopilotMutant66::class,
+          67 to AutopilotMutant67::class,
+          68 to AutopilotMutant68::class,
+          69 to AutopilotMutant69::class,
+          70 to AutopilotMutant70::class,
+          71 to AutopilotMutant71::class,
+          72 to AutopilotMutant72::class,
+          73 to AutopilotMutant73::class,
+          74 to AutopilotMutant74::class,
+          75 to AutopilotMutant75::class,
+          76 to AutopilotMutant76::class,
+          77 to AutopilotMutant77::class,
+          78 to AutopilotMutant78::class,
+          79 to AutopilotMutant79::class,
+          80 to AutopilotMutant80::class,
+          81 to AutopilotMutant81::class,
+          82 to AutopilotMutant82::class,
+          83 to AutopilotMutant83::class,
+          84 to AutopilotMutant84::class,
+          85 to AutopilotMutant85::class,
+          86 to AutopilotMutant86::class,
+          87 to AutopilotMutant87::class,
+          88 to AutopilotMutant88::class,
+          89 to AutopilotMutant89::class,
+          90 to AutopilotMutant90::class,
+          91 to AutopilotMutant91::class,
+          92 to AutopilotMutant92::class,
+          93 to AutopilotMutant93::class,
+          94 to AutopilotMutant94::class,
+          95 to AutopilotMutant95::class,
+          96 to AutopilotMutant96::class,
+          97 to AutopilotMutant97::class,
+          98 to AutopilotMutant98::class,
+          99 to AutopilotMutant99::class,
+          100 to AutopilotMutant100::class,
+          101 to AutopilotMutant101::class,
+          102 to AutopilotMutant102::class,
+          103 to AutopilotMutant103::class,
+          104 to AutopilotMutant104::class,
+          105 to AutopilotMutant105::class,
+          106 to AutopilotMutant106::class,
+          107 to AutopilotMutant107::class,
+          108 to AutopilotMutant108::class,
+          109 to AutopilotMutant109::class,
+          110 to AutopilotMutant110::class,
+          111 to AutopilotMutant111::class,
+          112 to AutopilotMutant112::class,
+          113 to AutopilotMutant113::class,
+          114 to AutopilotMutant114::class,
+          115 to AutopilotMutant115::class,
+          116 to AutopilotMutant116::class,
+          117 to AutopilotMutant117::class,
+          118 to AutopilotMutant118::class,
+          119 to AutopilotMutant119::class,
+          120 to AutopilotMutant120::class,
+          121 to AutopilotMutant121::class,
+          122 to AutopilotMutant122::class,
+          123 to AutopilotMutant123::class,
+          124 to AutopilotMutant124::class,
+          125 to AutopilotMutant125::class,
+          126 to AutopilotMutant126::class,
+          127 to AutopilotMutant127::class,
+          128 to AutopilotMutant128::class,
+          129 to AutopilotMutant129::class,
+          130 to AutopilotMutant130::class,
+          131 to AutopilotMutant131::class,
+          132 to AutopilotMutant132::class,
+          133 to AutopilotMutant133::class,
+          134 to AutopilotMutant134::class,
+          135 to AutopilotMutant135::class,
+          136 to AutopilotMutant136::class,
+          137 to AutopilotMutant137::class,
+          138 to AutopilotMutant138::class,
+          139 to AutopilotMutant139::class,
+          140 to AutopilotMutant140::class,
+          141 to AutopilotMutant141::class,
+          142 to AutopilotMutant142::class,
+          143 to AutopilotMutant143::class,
+          144 to AutopilotMutant144::class,
+          145 to AutopilotMutant145::class,
+          146 to AutopilotMutant146::class,
+          147 to AutopilotMutant147::class,
+          148 to AutopilotMutant148::class,
+          149 to AutopilotMutant149::class,
+          150 to AutopilotMutant150::class,
+          151 to AutopilotMutant151::class,
+          152 to AutopilotMutant152::class,
+          153 to AutopilotMutant153::class,
+          154 to AutopilotMutant154::class,
+          155 to AutopilotMutant155::class,
+          156 to AutopilotMutant156::class,
+          157 to AutopilotMutant157::class,
+          158 to AutopilotMutant158::class,
+          159 to AutopilotMutant159::class,
+          160 to AutopilotMutant160::class,
+          161 to AutopilotMutant161::class,
+          162 to AutopilotMutant162::class,
+          163 to AutopilotMutant163::class,
+          164 to AutopilotMutant164::class,
+          165 to AutopilotMutant165::class,
+          166 to AutopilotMutant166::class,
+          167 to AutopilotMutant167::class,
+          168 to AutopilotMutant168::class,
+          169 to AutopilotMutant169::class,
+          170 to AutopilotMutant170::class,
+          171 to AutopilotMutant171::class,
+          172 to AutopilotMutant172::class,
+          173 to AutopilotMutant173::class,
+          174 to AutopilotMutant174::class,
+          175 to AutopilotMutant175::class,
+          176 to AutopilotMutant176::class,
+          177 to AutopilotMutant177::class,
+          178 to AutopilotMutant178::class,
+          179 to AutopilotMutant179::class,
+          180 to AutopilotMutant180::class,
+          181 to AutopilotMutant181::class,
+          182 to AutopilotMutant182::class,
+          183 to AutopilotMutant183::class,
+          184 to AutopilotMutant184::class,
+          185 to AutopilotMutant185::class,
+          186 to AutopilotMutant186::class,
+          187 to AutopilotMutant187::class,
+          188 to AutopilotMutant188::class,
+          189 to AutopilotMutant189::class,
+          190 to AutopilotMutant190::class,
+          191 to AutopilotMutant191::class,
+          192 to AutopilotMutant192::class,
+          193 to AutopilotMutant193::class,
+          194 to AutopilotMutant194::class,
+          195 to AutopilotMutant195::class,
+          196 to AutopilotMutant196::class,
+          197 to AutopilotMutant197::class,
+          198 to AutopilotMutant198::class,
+          199 to AutopilotMutant199::class,
+          200 to AutopilotMutant200::class,
+          201 to AutopilotMutant201::class,
+          202 to AutopilotMutant202::class,
+          203 to AutopilotMutant203::class,
+          204 to AutopilotMutant204::class,
+          205 to AutopilotMutant205::class,
+          206 to AutopilotMutant206::class,
+          207 to AutopilotMutant207::class)
+
+  /**
+   * Creates a new instance of the [Mutant] at the given [index].
+   *
+   * @param index The index of the [Mutant] that should be instantiated.
+   * @return The instantiated Mutant.
+   */
+  fun create(index: Int): Mutant {
+    if (index == -1) {
+      return Autopilot()
+    }
+    return byIndex[index]?.createInstance() ?: error("No mutant for index=$index")
+  }
+
+  /**
+   * Creates a list of new instances of [Mutant] in the range [from]..[toInclusive].
+   *
+   * @param from The start index of the range (inclusive).
+   * @param toInclusive The end index of the range (inclusive).
+   * @return A list of new instances of [Mutant] in the range [from]..[toInclusive].
+   */
+  fun createRange(from: Int, toInclusive: Int): List<Mutant> =
+      (from..toInclusive).map { create(it) }
+}
