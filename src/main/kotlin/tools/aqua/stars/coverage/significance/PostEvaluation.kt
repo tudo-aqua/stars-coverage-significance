@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerStartingScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.KillingsPerMonitorPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.ValidTSCInstancesEvaluation
 
 /**
@@ -31,4 +32,5 @@ fun main() {
   FailedMonitorsCountPerStartingScenarioPostEvaluation.evaluate()
   FailedMonitorsCountPerMutantPostEvaluation.evaluate()
   ValidTSCInstancesEvaluation.evaluate()
+  KillingsPerMonitorPostEvaluation.evaluate()
 }
