@@ -54,7 +54,7 @@ fun main() {
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = false)
 
   // Seed mutants
-  seedMutants(seedBaseLine = true, seedMutants = false)
+  seedMutants(seedBaseLine = true, seedMutants = true)
 
   // Precompute scenario-only metric once
   runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2, tscId = tscId)
