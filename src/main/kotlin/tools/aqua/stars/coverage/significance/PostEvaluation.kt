@@ -17,7 +17,8 @@
 
 package tools.aqua.stars.coverage.significance
 
-import tools.aqua.stars.coverage.significance.postEvaluation.MonitorResultEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerMutantPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerStartingScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.ValidTSCInstancesEvaluation
 
 /**
@@ -27,6 +28,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.ValidTSCInstancesEv
  * reads from the database and writes output files without modifying the database.
  */
 fun main() {
-  MonitorResultEvaluation.evaluate()
+  FailedMonitorsCountPerStartingScenarioPostEvaluation.evaluate()
+  FailedMonitorsCountPerMutantPostEvaluation.evaluate()
   ValidTSCInstancesEvaluation.evaluate()
 }
