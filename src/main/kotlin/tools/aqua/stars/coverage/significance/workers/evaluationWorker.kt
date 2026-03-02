@@ -35,7 +35,6 @@ import tools.aqua.stars.coverage.significance.db.repositories.MetricTotalTickDif
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
-import tools.aqua.stars.coverage.significance.hooks.TSCInstanceChangedHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
@@ -81,8 +80,7 @@ fun main(args: Array<String>) {
 
       eval.registerPreTickEvaluationHooks(
           MinTicksPerTickSequenceHook(2),
-          MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()),
-          TSCInstanceChangedHook(staticTsc))
+          MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()))
 
       val totalTickDifferenceMetric =
           TotalTickDifferenceMetric<

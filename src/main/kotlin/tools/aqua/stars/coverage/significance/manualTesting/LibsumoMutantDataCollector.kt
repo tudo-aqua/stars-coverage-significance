@@ -20,7 +20,6 @@ package tools.aqua.stars.coverage.significance.manualTesting
 import java.nio.file.Path
 import java.util.ArrayList
 import java.util.UUID
-import kotlin.collections.first
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
@@ -28,9 +27,10 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.FCD_DIR
-import tools.aqua.stars.coverage.significance.FCD_REPLAY_FILE_NAME
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
+import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
@@ -39,10 +39,9 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
 import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
-import tools.aqua.stars.data.sumo.libSumo.TraCIModes
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
-import tools.aqua.stars.sumo.Autopilot
+import tools.aqua.stars.sumo.Mutant
 
 /**
  * Collector of dynamic data from a SUMO simulation using libsumo.
@@ -55,7 +54,7 @@ import tools.aqua.stars.sumo.Autopilot
  * @property stepLength Length of a single simulation step in seconds.
  * @property vehicleIdPrefix Prefix for vehicle IDs.
  */
-class LibsumoAutopilotDataCollector(
+class LibsumoMutantDataCollector(
     val baseDir: Path = Path(FCD_DIR),
     val netFileName: String = NETWORK_FILE_NAME,
     val vTypeAdditionalFile: String = "fcdReplay.add.xml",
@@ -77,16 +76,39 @@ class LibsumoAutopilotDataCollector(
    * Run a generated scenario in libsumo and collect dynamic data.
    *
    * @param runId Run identifier.
+   * @param scenario Generated scenario to run.
+   * @param mutant The mutant which should be simulated.
+   * @return Collected dynamic data as list of [TimeStep]s.
+   */
+  fun runGeneratedScenario(
+      runId: UUID,
+      scenario: GeneratedScenario,
+      mutant: Mutant,
+      mutantId: UUID
+  ): List<TimeStep> =
+      runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutant, mutantId)
+
+  /**
+   * Run a generated scenario in libsumo and collect dynamic data.
+   *
+   * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
-   * @param mutant Mutant which should be simulated.
-   * @param traciModes TraCI modes to use for simulation.
+   * @param mutant The mutant which should be simulated.
+   * @param onlyFirstTick Whether to only run the first tick.
+   * @param takeOnlyTicksAtXMillis If not null, only take ticks at multiples of this number of
+   *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
+   * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
+   *   into the scenario. (e.g. if 10, only take ticks until 10 seconds into the scenario).
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
       runId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       mutant: Mutant,
-      traciModes: TraCIModes = TraCIModes(speedMode = 96, laneChangeMode = 512),
+      mutantId: UUID,
+      onlyFirstTick: Boolean = false,
+      takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
+      maxLengthOfScenarioInSeconds: Double? = null,
   ): List<TimeStep> {
     Simulation.preloadLibraries()
 
@@ -105,13 +127,6 @@ class LibsumoAutopilotDataCollector(
             "0.1",
             "--seed",
             "1",
-            "--fcd-output",
-            Path(FCD_DIR).toAbsolutePath().toString().plus("/$FCD_REPLAY_FILE_NAME"),
-            "--fcd-output.attributes",
-            "acceleration, speed, x, y",
-            //            "--fcd-output.params",
-            //
-            // "device.driverstate.initialAwareness,device.driverstate.minAwareness,device.driverstate.maximalReactionTime,device.driverstate.headwayErrorCoefficient,device.driverstate.speedDifferenceErrorCoefficient,device.driverstate.errorNoiseIntensityCoefficient,lcAssertive,lcSpeedGain,lcCooperative,speedFactor,carFollowModel,tau,minGap,sigma,accel,decel,emergencyDecel,maxSpeed",
             "--collision.action",
             "warn")
 
@@ -136,7 +151,7 @@ class LibsumoAutopilotDataCollector(
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
-      val departSpeed = (sp.type.departSpeedKmh / 3.6).toString()
+      val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
 
       if (sp.type == GridVehicleType.EGO) {
         egoVehicleId = vehId
@@ -148,52 +163,64 @@ class LibsumoAutopilotDataCollector(
       SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
     }
 
-    val egoId =
-        egoVehicleId
-            ?: run {
-              error(
-                  "Ego not found in placements; falling back to first spawned SumoVehicle." +
-                      "${vehicleIdPrefix}_${sortedPlacements.first().type}_${scenario.id}_r${sortedPlacements.first().row}_l${sortedPlacements.first().lane}_0")
-            }
+    val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
 
     // Force placement of vehicle into simulation, so that all vehicleType parameters are set
     // correctly
-    for (sp in sortedPlacements) {
+    sortedPlacements.forEach { placement ->
       val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      val departLane = sp.lane.toString()
-      val departPos = sp.positionMeters
+          getVehicleId(
+              placement.type.toString(),
+              placement.row,
+              placement.lane,
+              scenario.humanReadableScenarioId)
+      val departLane = placement.lane.toString()
+      val departPos = placement.positionMeters
 
       // Force place vehicle
       SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
     }
 
-    SumoVehicle.setSpeedMode(egoId, traciModes.speedMode)
-    SumoVehicle.setLaneChangeMode(egoId, traciModes.laneChangeMode)
+    val ticks = mutableListOf<TimeStep>()
 
-    val autopilot = Autopilot()
+    if (onlyFirstTick)
+        return listOfNotNull(
+            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
 
-    val ticks = ArrayList<TimeStep>()
+    SumoVehicle.setSpeedMode(egoId, 0)
+    SumoVehicle.setLaneChangeMode(egoId, 0)
 
     while (Simulation.getMinExpectedNumber() > 0) {
       val timeStep =
-          getCurrentTimeStep(runId, scenario.id, egoId, mutant.id, scenario, ticks) ?: break
+          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
 
-      autopilot.controlTick(egoId)
+      mutant.controlTick(egoId)
 
       Simulation.step()
     }
 
     Simulation.close()
-    return ticks
+
+    var resultList: List<TimeStep> = ticks
+    if (takeOnlyTicksAtXMillis != null) {
+      resultList = ticks.filter { tick -> tick.tickTimeMillis % takeOnlyTicksAtXMillis == 0L }
+    }
+    if (maxLengthOfScenarioInSeconds != null) {
+      resultList =
+          resultList.takeWhile { tick ->
+            tick.tickTimeMillis < (maxLengthOfScenarioInSeconds * 1_000L)
+          }
+    }
+
+    return resultList
   }
 
   private fun getCurrentTimeStep(
       runId: UUID,
       scenarioConfigId: UUID?,
       egoId: String,
-      mutantId: UUID?,
+      mutantId: UUID,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList()
   ): TimeStep? {
@@ -203,15 +230,6 @@ class LibsumoAutopilotDataCollector(
     val vehIds = SumoVehicle.getIDList()
     val vehiclesInTick = ArrayList<Vehicle>(vehIds.size)
 
-    val egoId = vehIds.firstOrNull { it == egoId }
-    if (simTimeSeconds == 0.1 && egoId == null) {
-      error("Ego did not spawn at first tick")
-    }
-    if (egoId == null) {
-      // Early return: Ego left the simulation
-      return null
-    }
-
     for (vehId in vehIds) {
       val laneId = SumoVehicle.getLaneID(vehId)
       val lane = laneById[laneId] ?: error("Unknown lane $laneId")
@@ -219,9 +237,9 @@ class LibsumoAutopilotDataCollector(
       val typeId = SumoVehicle.getTypeID(vehId)
       val rawVType =
           if (typeId.lowercase().contains("mutant")) {
-            vehicleTypesById["ego"] ?: error("Unknown vehicle type '$typeId'")
+            vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId")
           } else {
-            vehicleTypesById[typeId] ?: error("Unknown vehicle type '$typeId'")
+            vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId")
           }
 
       // vType wrapper (parsed from vTypes.add.xml)
@@ -231,7 +249,21 @@ class LibsumoAutopilotDataCollector(
       val speedMs = SumoVehicle.getSpeed(vehId).toFloat()
       val frontPos = SumoVehicle.getLanePosition(vehId).toFloat()
 
-      val accelMs2: Float = SumoVehicle.getAcceleration(vehId).toFloat()
+      // Prefer acceleration from libsumo; fall back to finite-difference if bindings don’t expose
+      // it.
+      val accelMs2: Float =
+          runCatching { SumoVehicle.getAcceleration(vehId).toFloat() }
+              .getOrElse {
+                // Fallback: a = Δv / Δt using previous tick (ticks already passed into
+                // getCurrentTimeStep)
+                val prev = ticks.lastOrNull()?.vehiclesInTick?.firstOrNull { it.vehicleId == vehId }
+
+                if (prev == null) 0.0f
+                else {
+                  val dtSeconds = (stepLength).toFloat().coerceAtLeast(1e-6f)
+                  (speedMs - prev.speedMetersPerSecond) / dtSeconds
+                }
+              }
 
       // Take SUMO default values for decel/emergency decel
       // https://sumo.dlr.de/docs/Definition_of_Vehicles%2C_Vehicle_Types%2C_and_Routes.html#available_vtype_attributes
@@ -250,7 +282,7 @@ class LibsumoAutopilotDataCollector(
               vehicleType = vehicleType,
               currentLane = lane,
               currentEdge = lane.parentEdge,
-              positionOnLaneMeters = frontPos,
+              positionOnLaneMeters = frontPos, // keep existing semantics (front bumper)
               speedMetersPerSecond = speedMs,
               accelerationMetersPerSecondSquared = accelMs2,
               frontBumperPositionOnLaneMeters = frontPos,
@@ -258,6 +290,15 @@ class LibsumoAutopilotDataCollector(
               decelMetersPerSecondSquared = decelMs2,
               emergencyDecelMetersPerSecondSquared = emergencyDecelMs2,
           )
+    }
+
+    val ego = vehiclesInTick.firstOrNull { it.vehicleId == egoId }
+    if (simTimeSeconds == 0.1 && ego == null) {
+      error("Ego did not spawn at first tick")
+    }
+    if (ego == null) {
+      // Early return: Ego left the simulation
+      return null
     }
 
     val collisionsInTick = ArrayList<CollisionEvent>()
@@ -285,8 +326,6 @@ class LibsumoAutopilotDataCollector(
               collisionType = collision.type ?: "",
               rawAttributes = emptyMap())
     }
-
-    val ego = vehiclesInTick.first { it.vehicleId == egoId }
 
     checkNotNull(scenarioConfigId)
     return TimeStep(
