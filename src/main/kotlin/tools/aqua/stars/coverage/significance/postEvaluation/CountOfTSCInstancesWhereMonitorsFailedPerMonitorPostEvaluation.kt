@@ -117,11 +117,24 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
     val tex = buildTexString(csvFileName)
     texPath.writeText(tex)
 
+    val x =
+        points
+            .mapIndexed { index, (mutantName, count) ->
+              mutantName to listOf(index) to listOf(count)
+            }
+            .toMap()
+
     val plot =
         getPlot(
-            "#TSC instances where monitor failed",
-            xValues = points.mapIndexed { index, _ -> index },
-            yValues = points.map { (_, count) -> count })
+            nameToValuesMap =
+                points
+                    .mapIndexed { index, (mutantName, count) ->
+                      mutantName to (listOf(index) to listOf(count))
+                    }
+                    .toMap(),
+            xAxisName = "Monitor",
+            yAxisName = "#TSC instances where monitor failed",
+            legendHeader = "Number of TSC instances where monitor failed")
     checkNotNull(plot) { "Plot could not be created." }
     plotDataAsBarChart(plot, plotName, plotPath)
   }
