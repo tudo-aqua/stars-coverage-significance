@@ -43,9 +43,9 @@ dependencies {
   detektPlugins(
       group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.8")
 
-  implementation("org.jetbrains.exposed:exposed-core:0.53.0")
-  implementation("org.jetbrains.exposed:exposed-jdbc:0.53.0")
-  implementation("org.jetbrains.exposed:exposed-java-time:0.53.0")
+  implementation("org.jetbrains.exposed:exposed-core:1.1.1")
+  implementation("org.jetbrains.exposed:exposed-jdbc:1.1.1")
+  implementation("org.jetbrains.exposed:exposed-java-time:1.1.1")
 
   implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:4.12.0")
   implementation("org.jetbrains.lets-plot:lets-plot-image-export:4.8.1")
