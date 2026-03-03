@@ -26,6 +26,8 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.sum
+import tools.aqua.stars.core.utils.getPlot
+import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
@@ -35,7 +37,7 @@ import tools.aqua.stars.coverage.significance.utils.boolToInt
 import tools.aqua.stars.coverage.significance.utils.everyNth
 
 /** This utility evaluates the failed monitors count per mutant. */
-object FailedMonitorsCountPerMutantPostEvaluation {
+object TotalNumberOfFailedMonitorsPerMonitorPostEvaluation {
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
     DbBootstrap.connect()
@@ -81,7 +83,7 @@ object FailedMonitorsCountPerMutantPostEvaluation {
       points: List<Pair<String, Int>>,
   ) {
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "failed_monitors_count_per_mutant"
+    val subfolder = "total_number_of_failed_monitors_per_mutant"
 
     listOf(1).forEach { everyNthEntry ->
       val everyNThSubfolder =
@@ -93,19 +95,36 @@ object FailedMonitorsCountPerMutantPostEvaluation {
       val csvFileName = "${subfolder}-$everyNThSubfolder.csv"
       val texFileName = "${subfolder}-$everyNThSubfolder.tex"
       val largeTexFileName = "${subfolder}-$everyNThSubfolder-large.tex"
+      val plotName = "${subfolder}-$everyNThSubfolder.png"
 
       val csvPath = Path.of(folder, subfolder, everyNThSubfolder, csvFileName)
       val texPath = Path.of(folder, subfolder, everyNThSubfolder, texFileName)
       val largeTexPath = Path.of(folder, subfolder, everyNThSubfolder, largeTexFileName)
+      val plotPath = Path.of(folder, subfolder, everyNThSubfolder)
 
       Files.createDirectories(csvPath.parent)
 
-      val csv = buildCSVString(points.everyNth(everyNthEntry))
+      val filteredPoints = points.everyNth(everyNthEntry)
+
+      val csv = buildCSVString(filteredPoints)
       csvPath.writeText(csv)
       val tex = buildTexString(csvFileName, everyNthEntry)
       texPath.writeText(tex)
       val largeTex = buildLargeTexString(csvFileName, everyNthEntry)
       largeTexPath.writeText(largeTex)
+      val plot =
+          getPlot(
+              nameToValuesMap =
+                  filteredPoints
+                      .mapIndexed { index, (mutantName, count) ->
+                        mutantName to (listOf(index) to listOf(count))
+                      }
+                      .toMap(),
+              xAxisName = "Mutant",
+              yAxisName = "Failed Monitors",
+              legendHeader = "Total Number of Failed Monitors per Mutant")
+      checkNotNull(plot) { "Plot could not be created: $subfolder." }
+      plotDataAsBarChart(plot, plotName, plotPath)
     }
   }
 
@@ -125,7 +144,7 @@ object FailedMonitorsCountPerMutantPostEvaluation {
         \begin{axis}[
             ybar, 
             bar width=1pt,
-            title={Failed Monitors per Mutant (every $${everyNthEntry}^{th}$ entry)},
+            title={Total Number of Failed Monitors per Mutant (every $${everyNthEntry}^{th}$ entry)},
             xlabel={Mutant},
             ylabel={Failed Monitors},
             enlarge x limits=false,
