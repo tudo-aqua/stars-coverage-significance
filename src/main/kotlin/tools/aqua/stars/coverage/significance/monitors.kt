@@ -37,7 +37,7 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 /** General Traffic Rules: G_0 Accidents - Predicate implementation. */
 val g0Accidents =
-    predicate<TimeStep>("G_0 Accidents") { startingTick ->
+    predicate<TimeStep>("G0 Accidents") { startingTick ->
       globally(startingTick) { tick ->
         tick.nonEgoVehicles.all { otherVehicle ->
           !collidesWith.holds(tick, tick.ego to otherVehicle)
@@ -63,7 +63,7 @@ const val TIME_CUT_IN: Long = 3_000L
 
 /** General Traffic Rules: G_1 Safe Distance To Preceding Vehicle - Predicate implementation. */
 val g1SafeDistanceToPrecedingVehicle =
-    predicate<TimeStep>("G_1 Safe Distance To Preceding Vehicle") { startingTick ->
+    predicate<TimeStep>("G1 Safe Distance To Preceding Vehicle") { startingTick ->
       globally(startingTick) { tick ->
         tick.nonEgoVehicles.all { otherVehicle ->
           (isInFrontOnSameLane.holds(tick, otherVehicle to tick.ego) &&
@@ -169,8 +169,14 @@ val keepSafeDistancePreceding =
 
 /** General Traffic Rules: G_2 Unnecessary Braking - Predicate implementation. */
 val g2UnnecessaryBraking =
-    predicate<TimeStep>("G_2 Unnecessary Braking") { tick ->
+    predicate<TimeStep>("G2 Unnecessary Braking") { tick ->
       globally(tick) { globallyTick -> !unnecessaryBraking.holds(globallyTick, globallyTick.ego) }
+    }
+
+/** Paper-level predicate: g2_2_abrupt_braking(x_k): ego brakes abruptly in tick k. */
+val g22AbruptBraking =
+    predicate<TimeStep>("G22 Abrupt Braking") { tick ->
+      globally(tick) { globallyTick -> !isBrakingAbruptly.holds(globallyTick, globallyTick.ego) }
     }
 
 // region G_2 helpers
@@ -181,12 +187,6 @@ const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -2.0f
 val isBrakingAbruptly =
     predicate<TimeStep, Vehicle>("Is Braking Abruptly") { _, vehicle ->
       vehicle.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
-    }
-
-/** Paper-level predicate: g2_2_abrupt_braking(x_k): ego brakes abruptly in tick k. */
-val g22AbruptBraking =
-    predicate<TimeStep>("G_2_2 Abrupt Braking") { tick ->
-      globally(tick) { globallyTick -> !isBrakingAbruptly.holds(globallyTick, globallyTick.ego) }
     }
 
 /**
@@ -246,7 +246,7 @@ val unnecessaryBraking =
 
 /** General Traffic Rules: G_3 Maximum Speed Limit - Predicate implementation. */
 val g3MaximumSpeedLimit =
-    predicate<TimeStep>("G_3 Maximum Speed Limit") { tick ->
+    predicate<TimeStep>("G3 Maximum Speed Limit") { tick ->
       globally(tick) { globallyTick ->
         keepLaneSpeedLimit.holds(globallyTick) && keepFovSpeedLimit.holds(globallyTick)
       }
@@ -276,7 +276,7 @@ val keepFovSpeedLimit =
 
 /** General Traffic Rules: G_4 Traffic Flow - Predicate implementation. */
 val g4TrafficFlow =
-    predicate<TimeStep>("G_4 Traffic Flow") { tick ->
+    predicate<TimeStep>("G4 Traffic Flow") { tick ->
       globally(tick) { globallyTick ->
         !slowLeadingVehicle.holds(globallyTick) implies preservesFlow.holds(globallyTick)
       }
@@ -327,7 +327,7 @@ val preservesFlow =
 
 /** General Traffic Rules: I_1 Stopping - Predicate implementation. */
 val i1Stopping =
-    predicate<TimeStep>("I_1 Stopping") { tick ->
+    predicate<TimeStep>("I1 Stopping") { tick ->
       globally(tick) { globallyTick ->
         !(inCongestion.holds(globallyTick, globallyTick.ego to globallyTick.nonEgoVehicles) ||
             existStandingLeadingVehicle.holds(globallyTick)) implies
@@ -384,7 +384,7 @@ val inCongestion =
 
 /** General Traffic Rules: I_2 Driving Faster Than Left Traffic - Predicate implementation. */
 val i2DrivingFasterThenLeftTraffic =
-    predicate<TimeStep>("I_2 Driving Faster Than Left Traffic") { tick ->
+    predicate<TimeStep>("I2 Driving Faster Than Left Traffic") { tick ->
       globally(tick) { globallyTick ->
         globallyTick.nonEgoVehicles.all { otherVehicle ->
           (isOnLeftLaneOf.holds(globallyTick, otherVehicle to globallyTick.ego) &&
@@ -525,7 +525,7 @@ val rightOvertake =
  * higher speed).
  */
 val i3RightOvertaking =
-    predicate<TimeStep>("I_3 Right Overtaking") { startingTick ->
+    predicate<TimeStep>("I3 Right Overtaking") { startingTick ->
       globally(startingTick) { tick ->
         tick.nonEgoVehicles.all { otherVehicle ->
           rightOvertake.holds(tick, tick.ego to otherVehicle) implies
@@ -590,7 +590,7 @@ val recentlyFinishedOvertakeOnLeft =
 
 /** General Traffic Rules: I_4 Keep Right - Predicate implementation. */
 val i4KeepRight =
-    predicate<TimeStep>("I_4 Keep Right") { startingTick ->
+    predicate<TimeStep>("I4 Keep Right") { startingTick ->
       globally(startingTick) { tick ->
         val ego = tick.ego
 
