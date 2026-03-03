@@ -65,7 +65,8 @@ object TSCInstancesLongTailDistributionPostEvaluation {
             xValues = orderedCounts.mapIndexed { index, _ -> index },
             yValues = orderedCounts)
     checkNotNull(plot) { "Plot could not be created: $subfolder." }
-    plotDataAsBarChart(plot, fileName = plotName, plotPath)
+    plotDataAsBarChart(
+        plot, fileName = plotName, path = plotPath, title = "TSC Instances Long Tail Distribution")
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */

@@ -24,6 +24,8 @@ import org.jetbrains.letsPlot.export.ggsave
 import org.jetbrains.letsPlot.geom.geomBar
 import org.jetbrains.letsPlot.ggsize
 import org.jetbrains.letsPlot.intern.Plot
+import org.jetbrains.letsPlot.label.ggtitle
+import org.jetbrains.letsPlot.label.labs
 import org.jetbrains.letsPlot.pos.positionDodge
 import org.jetbrains.letsPlot.sampling.samplingNone
 import org.jetbrains.letsPlot.scale.scaleXContinuous
@@ -48,16 +50,26 @@ import org.jetbrains.letsPlot.scale.scaleYLog10
 fun plotDataAsBarChart(
     plot: Plot,
     fileName: String,
+    title: String?,
     path: Path,
     size: Pair<Number, Number>? = null,
     xAxisScaleMaxValue: Number? = null,
     yAxisScaleMaxValue: Number? = null,
     logScaleX: Boolean = false,
     logScaleY: Boolean = false,
+    subtitle: String? = null,
 ) =
     ggsave(
         plot =
-            applyStyle(plot, size, xAxisScaleMaxValue, yAxisScaleMaxValue, logScaleX, logScaleY) +
+            applyStyle(
+                plot,
+                size,
+                xAxisScaleMaxValue,
+                yAxisScaleMaxValue,
+                logScaleX,
+                logScaleY,
+                title,
+                subtitle) +
                 geomBar(stat = Stat.identity, position = positionDodge(), sampling = samplingNone),
         filename = fileName,
         path = path.absolutePathString(),
@@ -83,8 +95,15 @@ private fun applyStyle(
     yAxisScaleMaxValue: Number?,
     logScaleX: Boolean,
     logScaleY: Boolean,
+    title: String?,
+    subtitle: String?,
 ): Plot {
   var innerPlot = plot
+
+  if (title != null) {
+    innerPlot += ggtitle(title)
+    if (subtitle != null) innerPlot += labs(subtitle = subtitle)
+  }
 
   // Set size
   if (size != null) innerPlot += ggsize(size.first, size.second)

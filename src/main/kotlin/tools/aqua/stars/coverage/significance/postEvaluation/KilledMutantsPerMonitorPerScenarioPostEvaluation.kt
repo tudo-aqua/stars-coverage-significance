@@ -121,12 +121,12 @@ object KilledMutantsPerMonitorPerScenarioPostEvaluation {
       largeTexPath.writeText(buildLargeTexString(csvFileName, everyNthEntry, monitorName))
       val plot =
           getPlot(
-              legendHeader = "Killed Mutants per Scenario",
               xValues = List(filteredPoints.size) { it },
               yValues = filteredPoints.map { it.second },
               legendEntry = "Mutants")
       checkNotNull(plot) { "Plot could not be created: $subfolder." }
-      plotDataAsBarChart(plot, fileName = plotName, path = plotPath)
+      plotDataAsBarChart(
+          plot, fileName = plotName, path = plotPath, title = "Killed Mutants per Scenario")
     }
   }
 

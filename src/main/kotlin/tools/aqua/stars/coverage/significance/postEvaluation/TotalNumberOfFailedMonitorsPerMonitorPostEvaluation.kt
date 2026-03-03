@@ -121,9 +121,13 @@ object TotalNumberOfFailedMonitorsPerMonitorPostEvaluation {
                       .toMap(),
               xAxisName = "Mutant",
               yAxisName = "Failed Monitors",
-              legendHeader = "Total Number of Failed Monitors per Mutant")
+              legendHeader = "Legend")
       checkNotNull(plot) { "Plot could not be created: $subfolder." }
-      tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart(plot, plotName, plotPath)
+      tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart(
+          plot = plot,
+          fileName = plotName,
+          path = plotPath,
+          title = "Total Number of Failed Monitors per Mutant")
     }
   }
 

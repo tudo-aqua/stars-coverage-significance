@@ -104,12 +104,12 @@ object TotalMutantsKilledPerScenarioPostEvaluation {
 
       val plot =
           getPlot(
-              legendHeader = "Killed Mutants per Scenario Configuration",
               legendEntry = "Mutants",
               xValues = List(points.size) { it },
               yValues = points.map { it.second })
       checkNotNull(plot) { "Plot could not be created: $subfolder." }
-      plotDataAsBarChart(plot, fileName = plotName, path = plotPath)
+      plotDataAsBarChart(
+          plot, fileName = plotName, path = plotPath, title = "Killed Mutants per Scenario")
     }
   }
 

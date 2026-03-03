@@ -135,9 +135,13 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
                     .toMap(),
             xAxisName = "Monitor",
             yAxisName = "#TSC instances where monitor failed",
-            legendHeader = "Number of TSC instances where monitor failed")
-    checkNotNull(plot) { "Plot could not be created." }
-    plotDataAsBarChart(plot, plotName, plotPath)
+            legendHeader = "Legend")
+    checkNotNull(plot) { "Plot could not be created: $subfolder." }
+    plotDataAsBarChart(
+        plot,
+        fileName = plotName,
+        path = plotPath,
+        title = "Number of TSC instances where monitor failed")
   }
 
   private fun buildCSVString(sortedCounts: List<Pair<String, Long>>) = buildString {

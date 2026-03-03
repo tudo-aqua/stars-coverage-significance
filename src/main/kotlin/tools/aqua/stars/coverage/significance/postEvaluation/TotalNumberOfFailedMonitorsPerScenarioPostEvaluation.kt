@@ -23,19 +23,20 @@ import java.util.UUID
 import kotlin.collections.sortedByDescending
 import kotlin.io.path.writeText
 import org.jetbrains.exposed.sql.ExpressionWithColumnType
-import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.sum
+import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.utils.boolToInt
 import tools.aqua.stars.coverage.significance.utils.everyNth
+import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
 /** This utility evaluates the failed monitors count per starting scenario configuration. */
-object FailedMonitorsCountPerStartingScenarioPostEvaluation {
+object TotalNumberOfFailedMonitorsPerScenarioPostEvaluation {
 
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
@@ -62,7 +63,6 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
       val result =
           t.select(t.startingScenarioConfiguration, countAlias)
               .groupBy(t.startingScenarioConfiguration)
-              .orderBy(countAlias, SortOrder.DESC)
 
       val points =
           result
@@ -76,7 +76,7 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
       points: List<Pair<UUID, Int>>,
   ) {
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "failed_monitors_count_per_starting_scenario_config"
+    val subfolder = "total_number_of_failed_monitors_per_scenario"
 
     listOf(1, 20).forEach { everyNthEntry ->
       val everyNThSubfolder =
@@ -87,9 +87,11 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
           }
       val csvFileName = "${subfolder}-$everyNThSubfolder.csv"
       val texFileName = "${subfolder}-$everyNThSubfolder.tex"
+      val plotName = "${subfolder}-$everyNThSubfolder.png"
 
       val csvPath = Path.of(folder, subfolder, everyNThSubfolder, csvFileName)
       val texPath = Path.of(folder, subfolder, everyNThSubfolder, texFileName)
+      val plotPath = Path.of(folder, subfolder, everyNThSubfolder)
 
       Files.createDirectories(csvPath.parent)
 
@@ -97,6 +99,18 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
       csvPath.writeText(csv)
       val tex = buildTexString(csvFileName, everyNthEntry)
       texPath.writeText(tex)
+
+      val plot =
+          getPlot(
+              legendEntry = "Monitors",
+              xValues = List(points.size) { index -> index },
+              yValues = points.map { it.second })
+      checkNotNull(plot) { "Plot could not be created: $subfolder." }
+      plotDataAsBarChart(
+          plot,
+          fileName = plotName,
+          path = plotPath,
+          title = "Total Number of Failed Monitors per Scenario")
     }
   }
 
