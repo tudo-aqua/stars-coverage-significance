@@ -47,8 +47,8 @@ object ValidTSCInstancesEvaluation {
     val folder = POST_EVALUATION_BASE_DIR
     val subfolder = "valid_tsc_instances"
 
-    val csvPath = Path.of(folder, subfolder, "ordered_counts.csv")
-    val texPath = Path.of(folder, subfolder, "ordered_counts_plot.tex")
+    val csvPath = Path.of(folder, subfolder, "$subfolder.csv")
+    val texPath = Path.of(folder, subfolder, "$subfolder.tex")
 
     writeOrderedCountsCsv(orderedCounts, csvPath)
     writePgfplotsBarChartTex(
@@ -63,7 +63,7 @@ object ValidTSCInstancesEvaluation {
             "Instance Count",
             xValues = orderedCounts.mapIndexed { index, _ -> index },
             yValues = orderedCounts)
-    plotDataAsBarChart(plot, "ordered_counts", folder)
+    plotDataAsBarChart(plot, subfolder, folder)
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */

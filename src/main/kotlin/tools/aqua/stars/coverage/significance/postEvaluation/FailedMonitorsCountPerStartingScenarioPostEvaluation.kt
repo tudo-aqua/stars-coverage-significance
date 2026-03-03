@@ -78,10 +78,15 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
     val folder = POST_EVALUATION_BASE_DIR
     val subfolder = "failed_monitors_count_per_starting_scenario_config"
 
-    listOf(1, 2, 5, 10).forEach { everyNthEntry ->
-      val everyNThSubfolder = "every_${everyNthEntry}-th_entry"
-      val csvFileName = "${subfolder}-every_${everyNthEntry}-th_entry.csv"
-      val texFileName = "${subfolder}-every_${everyNthEntry}-th_entry.tex"
+    listOf(1, 20).forEach { everyNthEntry ->
+      val everyNThSubfolder =
+        when (everyNthEntry) {
+          1 -> "full"
+          2 -> "every_${everyNthEntry}nd_entry"
+          else -> "every_${everyNthEntry}th_entry"
+        }
+      val csvFileName = "${subfolder}-$everyNThSubfolder.csv"
+      val texFileName = "${subfolder}-$everyNThSubfolder.tex"
 
       val csvPath = Path.of(folder, subfolder, everyNThSubfolder, csvFileName)
       val texPath = Path.of(folder, subfolder, everyNThSubfolder, texFileName)
@@ -107,14 +112,15 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
     \begin{axis}[
       ybar,
       bar width=1pt,
-      title={Failed Monitors per Mutant (every $${everyNthEntry}^{th}$ entry)},
-      xlabel={Mutant},
+      title={Failed Monitors per Scenario (every $${everyNthEntry}^{th}$ entry)},
+      xlabel={Scenario},
       ylabel={Failed Monitors},
-      enlargelimits=0.02,
       ymin=0,
       xticklabel style={rotate=90, anchor=east},
       tick label style={font=\small},
+      enlarge x limits=false,
       scaled y ticks=false,
+      scaled x ticks=false,
       ]
     \addplot table[
         col sep=comma,

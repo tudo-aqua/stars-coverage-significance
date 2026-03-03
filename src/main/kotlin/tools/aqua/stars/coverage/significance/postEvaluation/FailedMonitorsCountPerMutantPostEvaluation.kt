@@ -34,9 +34,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.utils.boolToInt
 import tools.aqua.stars.coverage.significance.utils.everyNth
 
-/**
- * This utility evaluates the failed monitors count per mutant.
- */
+/** This utility evaluates the failed monitors count per mutant. */
 object FailedMonitorsCountPerMutantPostEvaluation {
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
@@ -86,10 +84,15 @@ object FailedMonitorsCountPerMutantPostEvaluation {
     val subfolder = "failed_monitors_count_per_mutant"
 
     listOf(1).forEach { everyNthEntry ->
-      val everyNThSubfolder = "every_${everyNthEntry}-th_entry"
-      val csvFileName = "${subfolder}-every_${everyNthEntry}-th_entry.csv"
-      val texFileName = "${subfolder}-every_${everyNthEntry}-th_entry.tex"
-      val largeTexFileName = "${subfolder}-every_${everyNthEntry}-th_entry-large.tex"
+      val everyNThSubfolder =
+          when (everyNthEntry) {
+            1 -> "full"
+            2 -> "every_${everyNthEntry}nd_entry"
+            else -> "every_${everyNthEntry}th_entry"
+          }
+      val csvFileName = "${subfolder}-$everyNThSubfolder.csv"
+      val texFileName = "${subfolder}-$everyNThSubfolder.tex"
+      val largeTexFileName = "${subfolder}-$everyNThSubfolder-large.tex"
 
       val csvPath = Path.of(folder, subfolder, everyNThSubfolder, csvFileName)
       val texPath = Path.of(folder, subfolder, everyNThSubfolder, texFileName)
@@ -131,7 +134,10 @@ object FailedMonitorsCountPerMutantPostEvaluation {
             xticklabel style={rotate=45, anchor=east},
             scaled y ticks=false,
             ]
-            \addplot table[
+            \addplot+[ybar,
+            draw=.,
+            fill=.,
+            ] table[
             x expr=\coordindex,
             y=count,
             ]{\datatable};
@@ -142,7 +148,7 @@ object FailedMonitorsCountPerMutantPostEvaluation {
     """
 
   private fun buildLargeTexString(csvFileName: String, everyNthEntry: Int) =
-    """
+      """
 \documentclass[tikz,border=5pt]{standalone}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
@@ -169,7 +175,10 @@ object FailedMonitorsCountPerMutantPostEvaluation {
             tick label style={font=\small},
             scaled y ticks=false,
             ]
-            \addplot table[
+            \addplot+[ybar,
+            draw=.,
+            fill=.,
+            ] table[
             x expr=\coordindex,
             y=count,
             ]{\datatable};
