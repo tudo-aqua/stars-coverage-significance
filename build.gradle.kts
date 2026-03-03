@@ -47,6 +47,9 @@ dependencies {
   implementation("org.jetbrains.exposed:exposed-jdbc:0.53.0")
   implementation("org.jetbrains.exposed:exposed-java-time:0.53.0")
 
+  implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:4.12.0")
+  implementation("org.jetbrains.lets-plot:lets-plot-image-export:4.8.1")
+
   runtimeOnly("org.postgresql:postgresql:42.7.3")
   implementation(
       group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.9.0")
