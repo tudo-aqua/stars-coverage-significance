@@ -34,6 +34,9 @@ import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.utils.boolToInt
 import tools.aqua.stars.coverage.significance.utils.everyNth
 
+/**
+ * This utility evaluates the failed monitors count per mutant.
+ */
 object FailedMonitorsCountPerMutantPostEvaluation {
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
