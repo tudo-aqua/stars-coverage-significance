@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation
+package tools.aqua.stars.coverage.significance.utils
 
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString

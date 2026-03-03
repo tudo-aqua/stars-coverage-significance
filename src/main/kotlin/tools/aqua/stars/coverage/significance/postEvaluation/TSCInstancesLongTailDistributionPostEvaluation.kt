@@ -24,6 +24,7 @@ import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
+import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
 /**
  * This utility evaluates the valid TSC instances metric by counting how many valid TSC instances

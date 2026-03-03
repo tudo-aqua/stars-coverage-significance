@@ -27,7 +27,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.sum
 import tools.aqua.stars.core.utils.getPlot
-import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
@@ -124,7 +123,7 @@ object TotalNumberOfFailedMonitorsPerMonitorPostEvaluation {
               yAxisName = "Failed Monitors",
               legendHeader = "Total Number of Failed Monitors per Mutant")
       checkNotNull(plot) { "Plot could not be created: $subfolder." }
-      plotDataAsBarChart(plot, plotName, plotPath)
+      tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart(plot, plotName, plotPath)
     }
   }
 

@@ -48,6 +48,7 @@ import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
 import tools.aqua.stars.coverage.significance.i3RightOvertaking
 import tools.aqua.stars.coverage.significance.i4KeepRight
+import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
 /** Counts the number of TSC instances where a monitor failed. */
 object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
