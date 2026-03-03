@@ -51,12 +51,7 @@ object ValidTSCInstancesEvaluation {
     val texPath = Path.of(folder, subfolder, "$subfolder.tex")
 
     writeOrderedCountsCsv(orderedCounts, csvPath)
-    writePgfplotsBarChartTex(
-        csvPath = csvPath,
-        texPath = texPath,
-        title = "Ordered counts per TSC instance",
-        xLabel = "Index",
-        yLabel = "Count")
+    writePgfplotsBarChartTex(csvPath = csvPath, texPath = texPath)
 
     val plot =
         getPlot(
@@ -85,9 +80,6 @@ object ValidTSCInstancesEvaluation {
   fun writePgfplotsBarChartTex(
       csvPath: Path,
       texPath: Path,
-      title: String = "Bar plot",
-      xLabel: String = "Index",
-      yLabel: String = "Count"
   ) {
     val csvForLatex = csvPath.fileName.toString()
 
@@ -102,9 +94,9 @@ object ValidTSCInstancesEvaluation {
         \begin{axis}[
             ybar,
             bar width=1pt,
-            title={${escapeLatex(title)}},
-            xlabel={${escapeLatex(xLabel)}},
-            ylabel={${escapeLatex(yLabel)}},
+            title={Ordered counts per TSC instance},
+            xlabel={TSC Instance Index},
+            ylabel={Count},
             enlargelimits=0.02,
             ymin=0,
             xtick distance=50,
