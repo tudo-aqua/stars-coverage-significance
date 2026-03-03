@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import tools.aqua.stars.core.utils.getPlot
-import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
@@ -32,7 +31,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingVali
  * pgfplots file for plotting. It also generates a bar chart using the STARS core plotting
  * utilities.
  */
-object ValidTSCInstancesEvaluation {
+object TSCInstancesLongTailDistributionPostEvaluation {
   /**
    * Main entry point for the evaluation. Connects to the database, retrieves valid TSC instances,
    * counts them per TSC instance ID, orders the counts, and writes the results to CSV and LaTeX
@@ -45,10 +44,16 @@ object ValidTSCInstancesEvaluation {
     val orderedCounts = groupedByTSCInstance.values.sortedDescending()
 
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "valid_tsc_instances"
+    val subfolder = "tsc_instances_long_tail_distribution"
+    val csvFileName = "${subfolder}.csv"
+    val texFileName = "${subfolder}.tex"
+    val plotName = "${subfolder}.png"
 
-    val csvPath = Path.of(folder, subfolder, "$subfolder.csv")
-    val texPath = Path.of(folder, subfolder, "$subfolder.tex")
+    val csvPath = Path.of(folder, subfolder, csvFileName)
+    val texPath = Path.of(folder, subfolder, texFileName)
+    val plotPath = Path.of(folder, subfolder)
+
+    Files.createDirectories(csvPath.parent)
 
     writeOrderedCountsCsv(orderedCounts, csvPath)
     writePgfplotsBarChartTex(csvPath = csvPath, texPath = texPath)
@@ -58,7 +63,8 @@ object ValidTSCInstancesEvaluation {
             "Instance Count",
             xValues = orderedCounts.mapIndexed { index, _ -> index },
             yValues = orderedCounts)
-    plotDataAsBarChart(plot, subfolder, folder)
+    checkNotNull(plot) { "Plot could not be created: $subfolder." }
+    plotDataAsBarChart(plot, fileName = plotName, plotPath)
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */
