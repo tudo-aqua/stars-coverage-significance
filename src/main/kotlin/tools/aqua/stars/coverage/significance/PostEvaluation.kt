@@ -17,20 +17,21 @@
 
 package tools.aqua.stars.coverage.significance
 
-import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerMutantPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.FailedMonitorsCountPerStartingScenarioPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.KillingsPerMonitorPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.ValidTSCInstancesEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.KilledMutantsPerMonitorPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstancesLongTailDistributionPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerMonitorPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfMutantsKilledPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation
 
-/**
- * This utility runs the post-evaluation analysis for valid TSC instances. It can be run after all
- * evaluation runs have completed to analyze the results and determine the significance of the
- * coverage of valid TSC instances. It can be run multiple times without side effects, as it only
- * reads from the database and writes output files without modifying the database.
- */
+/** Post-evaluation of the coverage significance evaluation. */
 fun main() {
-  FailedMonitorsCountPerStartingScenarioPostEvaluation.evaluate()
-  FailedMonitorsCountPerMutantPostEvaluation.evaluate()
-  ValidTSCInstancesEvaluation.evaluate()
-  KillingsPerMonitorPostEvaluation.evaluate()
+  CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
+  TSCInstancesLongTailDistributionPostEvaluation.evaluate()
+  KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
+  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
+  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
+  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
+  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
 }
