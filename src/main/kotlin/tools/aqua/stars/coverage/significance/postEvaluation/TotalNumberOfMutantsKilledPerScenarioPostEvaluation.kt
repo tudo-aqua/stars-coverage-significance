@@ -26,7 +26,6 @@ import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.countDistinct
 import org.jetbrains.exposed.sql.or
 import tools.aqua.stars.core.utils.getPlot
-import tools.aqua.stars.core.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
@@ -35,7 +34,7 @@ import tools.aqua.stars.coverage.significance.utils.everyNth
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
 /** This utility evaluates the killed mutants per scenario configuration. */
-object TotalMutantsKilledPerScenarioPostEvaluation {
+object TotalNumberOfMutantsKilledPerScenarioPostEvaluation {
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
     DbBootstrap.connect()
@@ -76,7 +75,7 @@ object TotalMutantsKilledPerScenarioPostEvaluation {
 
   private fun writeResultFiles(points: List<Pair<UUID, Long>>) {
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "total_mutants_killed_per_scenario"
+    val subfolder = "total_number_of_mutants_killed_per_scenario"
 
     listOf(1, 20).forEach { everyNthEntry ->
       val everyNThSubfolder =
