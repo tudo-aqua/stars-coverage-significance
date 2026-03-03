@@ -80,11 +80,11 @@ object FailedMonitorsCountPerStartingScenarioPostEvaluation {
 
     listOf(1, 20).forEach { everyNthEntry ->
       val everyNThSubfolder =
-        when (everyNthEntry) {
-          1 -> "full"
-          2 -> "every_${everyNthEntry}nd_entry"
-          else -> "every_${everyNthEntry}th_entry"
-        }
+          when (everyNthEntry) {
+            1 -> "full"
+            2 -> "every_${everyNthEntry}nd_entry"
+            else -> "every_${everyNthEntry}th_entry"
+          }
       val csvFileName = "${subfolder}-$everyNThSubfolder.csv"
       val texFileName = "${subfolder}-$everyNThSubfolder.tex"
 
