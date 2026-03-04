@@ -50,13 +50,12 @@ object KilledMutantsPerMonitorPerScenarioPostEvaluation {
               "g0Accidents" to mfm.monitorG0Failed,
               "g1SafeDistanceToPrecedingVehicle" to mfm.monitorG1Failed,
               "g2UnnecessaryBraking" to mfm.monitorG2Failed,
-              "g22AbruptBraking" to mfm.monitorG22Failed,
               "g3MaximumSpeedLimit" to mfm.monitorG3Failed,
               "g4TrafficFlow" to mfm.monitorG4Failed,
+              "g5EmergencyBraking" to mfm.monitorG5Failed,
               "i1Stopping" to mfm.monitorI1Failed,
               "i2DrivingFasterThenLeftTraffic" to mfm.monitorI2Failed,
               "i3RightOvertaking" to mfm.monitorI3Failed,
-              "i4KeepRight" to mfm.monitorI4Failed,
           )
 
       val allScenarios: List<UUID> =

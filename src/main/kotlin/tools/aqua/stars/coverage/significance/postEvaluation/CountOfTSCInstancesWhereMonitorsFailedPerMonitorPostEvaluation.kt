@@ -29,25 +29,21 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG0Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG1Failed
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG22Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG2Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG3Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG4Failed
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG5Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI1Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI2Failed
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI3Failed
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI4Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.g0Accidents
 import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
-import tools.aqua.stars.coverage.significance.g22AbruptBraking
 import tools.aqua.stars.coverage.significance.g2UnnecessaryBraking
 import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
 import tools.aqua.stars.coverage.significance.g4TrafficFlow
+import tools.aqua.stars.coverage.significance.g5AbruptBraking
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
-import tools.aqua.stars.coverage.significance.i3RightOvertaking
-import tools.aqua.stars.coverage.significance.i4KeepRight
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
 /** Counts the number of TSC instances where a monitor failed. */
@@ -86,13 +82,11 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
             g0Accidents.name to monitorG0Failed,
             g1SafeDistanceToPrecedingVehicle.name to monitorG1Failed,
             g2UnnecessaryBraking.name to monitorG2Failed,
-            g22AbruptBraking.name to monitorG22Failed,
+            g5AbruptBraking.name to monitorG5Failed,
             g3MaximumSpeedLimit.name to monitorG3Failed,
             g4TrafficFlow.name to monitorG4Failed,
             i1Stopping.name to monitorI1Failed,
             i2DrivingFasterThenLeftTraffic.name to monitorI2Failed,
-            i3RightOvertaking.name to monitorI3Failed,
-            i4KeepRight.name to monitorI4Failed,
         )
 
     monitors.associate { (name, col) -> name to killingsPerTscInstance(col) }

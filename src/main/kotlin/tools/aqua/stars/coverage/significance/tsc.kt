@@ -33,13 +33,12 @@ fun staticTsc() =
           monitor(g0Accidents.name, g0Accidents)
           monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
           monitor(g2UnnecessaryBraking.name, g2UnnecessaryBraking)
-          monitor(g22AbruptBraking.name, g22AbruptBraking)
           monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
           monitor(g4TrafficFlow.name, g4TrafficFlow)
+          monitor(g5AbruptBraking.name, g5AbruptBraking)
           monitor(i1Stopping.name, i1Stopping)
           monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
-          monitor(i3RightOvertaking.name, i3RightOvertaking)
-          monitor(i4KeepRight.name, i4KeepRight)
+          monitor(i3DangerousCutIn.name, i3DangerousCutIn)
         }
         exclusive("Lane") {
           optional("Left Lane") {
@@ -172,13 +171,12 @@ fun smallStaticTsc() =
           monitor(g0Accidents.name, g0Accidents)
           monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
           monitor(g2UnnecessaryBraking.name, g2UnnecessaryBraking)
-          monitor(g22AbruptBraking.name, g22AbruptBraking)
           monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
           monitor(g4TrafficFlow.name, g4TrafficFlow)
+          monitor(g5AbruptBraking.name, g5AbruptBraking)
           monitor(i1Stopping.name, i1Stopping)
           monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
-          monitor(i3RightOvertaking.name, i3RightOvertaking)
-          monitor(i4KeepRight.name, i4KeepRight)
+          monitor(i3DangerousCutIn.name, i3DangerousCutIn)
         }
         exclusive("Lane") {
           optional("Left Lane") {

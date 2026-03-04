@@ -31,13 +31,12 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
- * @property monitorG22Failed Whether monitor G2.2 failed.
+ * @property monitorG5Failed Whether monitor G2.2 failed.
  * @property monitorG3Failed Whether monitor G3 failed.
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
  * @property monitorI2Failed Whether monitor I2 failed.
  * @property monitorI3Failed Whether monitor I3 failed.
- * @property monitorI4Failed Whether monitor I4 failed.
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
@@ -68,13 +67,12 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val monitorG0Failed = bool("monitor_g0_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_failed").default(false)
   val monitorG2Failed = bool("monitor_g2_failed").default(false)
-  val monitorG22Failed = bool("monitor_g2_2_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_failed").default(false)
+  val monitorG5Failed = bool("monitor_g5_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_failed").default(false)
   val monitorI2Failed = bool("monitor_i2_failed").default(false)
   val monitorI3Failed = bool("monitor_i3_failed").default(false)
-  val monitorI4Failed = bool("monitor_i4_failed").default(false)
   val createdAt = timestamp("created_at")
 
   init {

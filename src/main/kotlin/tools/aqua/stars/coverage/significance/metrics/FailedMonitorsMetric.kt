@@ -29,14 +29,13 @@ import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonito
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.g0Accidents
 import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
-import tools.aqua.stars.coverage.significance.g22AbruptBraking
 import tools.aqua.stars.coverage.significance.g2UnnecessaryBraking
 import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
 import tools.aqua.stars.coverage.significance.g4TrafficFlow
+import tools.aqua.stars.coverage.significance.g5AbruptBraking
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
-import tools.aqua.stars.coverage.significance.i3RightOvertaking
-import tools.aqua.stars.coverage.significance.i4KeepRight
+import tools.aqua.stars.coverage.significance.i3DangerousCutIn
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -79,11 +78,10 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
               monitorG2Failed = false,
               monitorG3Failed = false,
               monitorG4Failed = false,
+              monitorG5Failed = false,
               monitorI1Failed = false,
               monitorI2Failed = false,
-              monitorG22Failed = false,
-              monitorI3Failed = false,
-              monitorI4Failed = false)
+              monitorI3Failed = false)
         }
     val violatedMonitors = tscInstance.rootNode.validateMonitors(tick.identifier)
     violatedMonitors.forEach { violatedMonitor ->
@@ -91,13 +89,12 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
         g0Accidents.name -> failedMonitorsEntry.monitorG0Failed = true
         g1SafeDistanceToPrecedingVehicle.name -> failedMonitorsEntry.monitorG1Failed = true
         g2UnnecessaryBraking.name -> failedMonitorsEntry.monitorG2Failed = true
-        g22AbruptBraking.name -> failedMonitorsEntry.monitorG22Failed = true
         g3MaximumSpeedLimit.name -> failedMonitorsEntry.monitorG3Failed = true
         g4TrafficFlow.name -> failedMonitorsEntry.monitorG4Failed = true
+        g5AbruptBraking.name -> failedMonitorsEntry.monitorG5Failed = true
         i1Stopping.name -> failedMonitorsEntry.monitorI1Failed = true
         i2DrivingFasterThenLeftTraffic.name -> failedMonitorsEntry.monitorI2Failed = true
-        i3RightOvertaking.name -> failedMonitorsEntry.monitorI3Failed = true
-        i4KeepRight.name -> failedMonitorsEntry.monitorI4Failed = true
+        i3DangerousCutIn.name -> failedMonitorsEntry.monitorI3Failed = true
       }
     }
   }
@@ -129,7 +126,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
     //            "${g2UnnecessaryBraking.name}: ${if (failedMetric.monitorG2Failed) "failed" else
     // "passed"}")
     //        println(
-    //            "${g22AbruptBraking.name}: ${if (failedMetric.monitorG22Failed) "failed" else
+    //            "${g5EmergencyBraking.name}: ${if (failedMetric.monitorG22Failed) "failed" else
     // "passed"}")
     //        println(
     //            "${g3MaximumSpeedLimit.name}: ${if (failedMetric.monitorG3Failed) "failed" else

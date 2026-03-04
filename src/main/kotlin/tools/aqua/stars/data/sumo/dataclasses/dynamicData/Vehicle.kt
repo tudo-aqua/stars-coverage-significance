@@ -46,8 +46,8 @@ data class Vehicle(
     val accelerationMetersPerSecondSquared: Float,
     val frontBumperPositionOnLaneMeters: Float,
     val backBumperPositionOnLaneMeters: Float,
-    val decelMetersPerSecondSquared: Float = 4.5f,
-    val emergencyDecelMetersPerSecondSquared: Float = 9.0f,
+    val decelMetersPerSecondSquared: Float = -4.5f,
+    val emergencyDecelMetersPerSecondSquared: Float = -9.0f,
 ) : EntityType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>() {
 
   /** Speed in km/h. */

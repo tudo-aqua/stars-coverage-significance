@@ -49,13 +49,12 @@ object TotalNumberOfFailedMonitorsPerScenarioPostEvaluation {
           boolToInt(t.monitorG0Failed) +
               boolToInt(t.monitorG1Failed) +
               boolToInt(t.monitorG2Failed) +
-              boolToInt(t.monitorG22Failed) +
               boolToInt(t.monitorG3Failed) +
               boolToInt(t.monitorG4Failed) +
+              boolToInt(t.monitorG5Failed) +
               boolToInt(t.monitorI1Failed) +
               boolToInt(t.monitorI2Failed) +
-              boolToInt(t.monitorI3Failed) +
-              boolToInt(t.monitorI4Failed)
+              boolToInt(t.monitorI3Failed)
 
       // group aggregate: sum across all rows in the group
       val countAlias = perRowCount.sum().alias("count")
