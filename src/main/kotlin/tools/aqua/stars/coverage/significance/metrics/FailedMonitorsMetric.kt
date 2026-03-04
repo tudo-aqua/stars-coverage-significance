@@ -32,7 +32,7 @@ import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
 import tools.aqua.stars.coverage.significance.g2UnnecessaryBraking
 import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
 import tools.aqua.stars.coverage.significance.g4TrafficFlow
-import tools.aqua.stars.coverage.significance.g5AbruptBraking
+import tools.aqua.stars.coverage.significance.g5EmergencyBraking
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
 import tools.aqua.stars.coverage.significance.i3DangerousCutIn
@@ -91,7 +91,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
         g2UnnecessaryBraking.name -> failedMonitorsEntry.monitorG2Failed = true
         g3MaximumSpeedLimit.name -> failedMonitorsEntry.monitorG3Failed = true
         g4TrafficFlow.name -> failedMonitorsEntry.monitorG4Failed = true
-        g5AbruptBraking.name -> failedMonitorsEntry.monitorG5Failed = true
+        g5EmergencyBraking.name -> failedMonitorsEntry.monitorG5Failed = true
         i1Stopping.name -> failedMonitorsEntry.monitorI1Failed = true
         i2DrivingFasterThenLeftTraffic.name -> failedMonitorsEntry.monitorI2Failed = true
         i3DangerousCutIn.name -> failedMonitorsEntry.monitorI3Failed = true

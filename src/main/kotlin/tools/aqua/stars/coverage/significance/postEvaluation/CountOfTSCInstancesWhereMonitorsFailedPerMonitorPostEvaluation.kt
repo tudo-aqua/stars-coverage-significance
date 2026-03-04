@@ -41,7 +41,7 @@ import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
 import tools.aqua.stars.coverage.significance.g2UnnecessaryBraking
 import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
 import tools.aqua.stars.coverage.significance.g4TrafficFlow
-import tools.aqua.stars.coverage.significance.g5AbruptBraking
+import tools.aqua.stars.coverage.significance.g5EmergencyBraking
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
@@ -82,7 +82,7 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
             g0Accidents.name to monitorG0Failed,
             g1SafeDistanceToPrecedingVehicle.name to monitorG1Failed,
             g2UnnecessaryBraking.name to monitorG2Failed,
-            g5AbruptBraking.name to monitorG5Failed,
+            g5EmergencyBraking.name to monitorG5Failed,
             g3MaximumSpeedLimit.name to monitorG3Failed,
             g4TrafficFlow.name to monitorG4Failed,
             i1Stopping.name to monitorI1Failed,

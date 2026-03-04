@@ -268,8 +268,8 @@ val preservesFlow =
  * General Traffic Rules: G_5 Abrupt Braking - Predicate implementation. (Stricter than G_2, no
  * exceptions.)
  */
-val g5AbruptBraking =
-    predicate<TimeStep>("G5 Abrupt Braking") { tick ->
+val g5EmergencyBraking =
+    predicate<TimeStep>("G5 Emergency Braking") { tick ->
       globally(tick) { globallyTick -> !isBrakingEmergently.holds(globallyTick, globallyTick.ego) }
     }
 

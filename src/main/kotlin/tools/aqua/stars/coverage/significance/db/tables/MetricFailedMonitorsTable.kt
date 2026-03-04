@@ -64,15 +64,15 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           foreign = MutantsTable,
           onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
           onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
-  val monitorG0Failed = bool("monitor_g0_failed").default(false)
-  val monitorG1Failed = bool("monitor_g1_failed").default(false)
-  val monitorG2Failed = bool("monitor_g2_failed").default(false)
-  val monitorG3Failed = bool("monitor_g3_failed").default(false)
-  val monitorG4Failed = bool("monitor_g4_failed").default(false)
-  val monitorG5Failed = bool("monitor_g5_failed").default(false)
-  val monitorI1Failed = bool("monitor_i1_failed").default(false)
-  val monitorI2Failed = bool("monitor_i2_failed").default(false)
-  val monitorI3Failed = bool("monitor_i3_failed").default(false)
+  val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
+  val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
+  val monitorG2Failed = bool("monitor_g2_UnnecessaryBraking_failed").default(false)
+  val monitorG3Failed = bool("monitor_g3_MaximumSpeedLimit_failed").default(false)
+  val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
+  val monitorG5Failed = bool("monitor_g5_EmergencyBraking_failed").default(false)
+  val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
+  val monitorI2Failed = bool("monitor_i2_DrivingFasterThenLeftTraffic_failed").default(false)
+  val monitorI3Failed = bool("monitor_i3_DangerousCutIn_failed").default(false)
   val createdAt = timestamp("created_at")
 
   init {
