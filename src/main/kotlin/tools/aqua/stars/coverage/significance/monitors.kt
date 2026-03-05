@@ -328,14 +328,16 @@ val existsSlowLeadingVehicle =
 val i2DrivingFasterThenLeftTraffic =
     predicate<TimeStep>("I2 Driving Faster Than Left Traffic") { tick ->
       globally(tick) { globallyTick ->
-        exists(globallyTick.nonEgoVehicles) { other ->
-          rightOvertaking.holds(globallyTick, globallyTick.ego to other) implies
-              (other.speedKmPerHour < 60.0 &&
-                  (globallyTick.ego.speedKmPerHour - other.speedKmPerHour) < 10.0)
+        !exists(globallyTick.nonEgoVehicles) { other ->
+          rightOvertaking.holds(globallyTick, globallyTick.ego to other) &&
+              (other.speedKmPerHour >= 60.0 ||
+                  (globallyTick.ego.speedKmPerHour - other.speedKmPerHour) >= 10.0)
         }
       }
     }
 
+
+// region I2 Helper
 /**
  * Helper: right overtaking: ego is on the left lane of another vehicle, and overtakes it from the
  * right side (i.e., was behind it in the previous tick, and is now alongside or in front of it).
@@ -378,3 +380,4 @@ val changedToSameLane =
           } &&
           isInFrontOfAbsolute.holds(startingTick, ego to otherVehicle)
     }
+// endregion
