@@ -132,9 +132,9 @@ object MutantKilling {
   ) {
     val allScenarios = scenarioFailures.map { it.scenarioId }
 
-    //    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 160)
+    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 80, 100, 120, 140, 160)
 
-    val coverageList = List(allScenarios.size) { it + 1 }
+    //    val coverageList = List(allScenarios.size) { it + 1 }
 
     val consoleProgress =
         ConsoleProgress(
