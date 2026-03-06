@@ -351,6 +351,7 @@ val rightOvertaking =
           isOnLeftLaneOf.holds(tick, tick.getVehicleById(other.vehicleId) to tick.ego) &&
           tick.ego.frontBumperPositionOnLaneMeters >= other.backBumperPositionOnLaneMeters
     }
+// endregion
 
 /** Interstate Traffic Rule: I_3 Dangerous Cut-In - Predicate implementation. */
 val i3DangerousCutIn =
@@ -363,6 +364,7 @@ val i3DangerousCutIn =
       }
     }
 
+// region I3 Helper
 /**
  * Helper: changed to same lane: another vehicle was not on the same lane as the ego vehicle in the
  * previous tick, but is now on the same lane and in front of the ego vehicle.
