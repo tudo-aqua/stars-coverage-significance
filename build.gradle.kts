@@ -82,6 +82,8 @@ tasks.test { useJUnitPlatform() }
 
 application { mainClass.set("tools.aqua.stars.coverage.significance.RunEvaluationKt") }
 
+tasks.withType<JavaExec>().configureEach { jvmArgs("-Xms8g", "-Xmx56g", "-XX:+UseG1GC") }
+
 val prepareDatabaseAndSeedWithScenariosAndMutants by
     tasks.registering(JavaExec::class) {
       group = "application"
