@@ -336,7 +336,6 @@ val i2DrivingFasterThenLeftTraffic =
       }
     }
 
-
 // region I2 Helper
 /**
  * Helper: right overtaking: ego is on the left lane of another vehicle, and overtakes it from the
