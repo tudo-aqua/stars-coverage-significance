@@ -35,6 +35,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG5Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI1Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI2Failed
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI3Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.g0Accidents
 import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
@@ -44,10 +45,11 @@ import tools.aqua.stars.coverage.significance.g4TrafficFlow
 import tools.aqua.stars.coverage.significance.g5EmergencyBraking
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
+import tools.aqua.stars.coverage.significance.i3DangerousCutIn
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
-/** Counts the number of TSC instances where a monitor failed. */
-object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
+/** Counts the number of scenarios where a monitor failed. */
+object CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation {
 
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
@@ -82,12 +84,12 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
             g0Accidents.name to monitorG0Failed,
             g1SafeDistanceToPrecedingVehicle.name to monitorG1Failed,
             g2UnnecessaryBraking.name to monitorG2Failed,
-            g5EmergencyBraking.name to monitorG5Failed,
             g3MaximumSpeedLimit.name to monitorG3Failed,
             g4TrafficFlow.name to monitorG4Failed,
+            g5EmergencyBraking.name to monitorG5Failed,
             i1Stopping.name to monitorI1Failed,
             i2DrivingFasterThenLeftTraffic.name to monitorI2Failed,
-        )
+            i3DangerousCutIn.name to monitorI3Failed)
 
     monitors.associate { (name, col) -> name to killingsPerTscInstance(col) }
   }
@@ -96,7 +98,7 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
       points: List<Pair<String, Long>>,
   ) {
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "count_of_tsc_instances_where_monitors_failed_per_monitor"
+    val subfolder = "count_of_scenarios_where_monitors_failed_per_monitor"
     val csvFileName = "${subfolder}.csv"
     val texFileName = "${subfolder}.tex"
     val plotName = "${subfolder}.png"
@@ -111,13 +113,6 @@ object CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation {
     csvPath.writeText(csv)
     val tex = buildTexString(csvFileName)
     texPath.writeText(tex)
-
-    val x =
-        points
-            .mapIndexed { index, (mutantName, count) ->
-              mutantName to listOf(index) to listOf(count)
-            }
-            .toMap()
 
     val plot =
         getPlot(
