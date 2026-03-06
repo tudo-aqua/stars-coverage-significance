@@ -17,7 +17,8 @@
 
 package tools.aqua.stars.coverage.significance
 
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.KilledMutantsPerMonitorPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstancesLongTailDistributionPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerMonitorPostEvaluation
@@ -27,7 +28,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfScenar
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
-  CountOfTSCInstancesWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
+  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
+  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   TSCInstancesLongTailDistributionPostEvaluation.evaluate()
   KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
   TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
