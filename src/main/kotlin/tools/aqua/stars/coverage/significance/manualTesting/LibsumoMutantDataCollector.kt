@@ -27,6 +27,7 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.FCD_DIR
+import tools.aqua.stars.coverage.significance.FCD_REPLAY_FILE_NAME
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
@@ -99,6 +100,7 @@ class LibsumoMutantDataCollector(
    *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
    * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
    *   into the scenario. (e.g. if 10, only take ticks until 10 seconds into the scenario).
+   * @param writeFCDReplayFile Whether to write an FCD replay file for the scenario.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
@@ -109,6 +111,7 @@ class LibsumoMutantDataCollector(
       onlyFirstTick: Boolean = false,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
+      writeFCDReplayFile: Boolean = false
   ): List<TimeStep> {
     Simulation.preloadLibraries()
 
@@ -129,6 +132,12 @@ class LibsumoMutantDataCollector(
             "1",
             "--collision.action",
             "warn")
+    if (writeFCDReplayFile) {
+      baseArgs.add("--fcd-output")
+      baseArgs.add(Path(FCD_DIR).toAbsolutePath().toString().plus("/$FCD_REPLAY_FILE_NAME"))
+      baseArgs.add("--fcd-output.attributes")
+      baseArgs.add("x,y,z,speed,acceleration")
+    }
 
     Simulation.load(StringVector(baseArgs.toTypedArray()))
 
