@@ -140,17 +140,17 @@ val startProgressMonitor by
     }
 
 val runPostEvaluation by
-tasks.registering(JavaExec::class) {
-  group = "application"
-  description = "Start the post evaluation process."
-  dependsOn(tasks.run.get().taskDependencies)
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Start the post evaluation process."
+      dependsOn(tasks.run.get().taskDependencies)
 
-  mainClass.set("tools.aqua.stars.coverage.significance.PostEvaluationKt")
-  classpath = sourceSets.main.get().runtimeClasspath
+      mainClass.set("tools.aqua.stars.coverage.significance.PostEvaluationKt")
+      classpath = sourceSets.main.get().runtimeClasspath
 
-  // optional
-   jvmArgs = listOf("-Xmx64g")
-  // args = listOf("--flag", "value")
-}
+      // optional
+      jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
 
 kotlin { jvmToolchain(21) }
