@@ -20,11 +20,11 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
-import kotlin.collections.sorted
 import kotlin.io.path.writeText
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
+import kotlin.random.Random
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
@@ -41,6 +41,8 @@ typealias ScenarioId = UUID
 typealias ScenarioInstanceId = UUID
 
 typealias MutantId = UUID
+
+val RAND = Random(seed = 42)
 
 enum class MonitorViolation {
   G0Accidents,
@@ -76,6 +78,14 @@ data class BoxPlotData(
 
 object MutantKilling {
 
+  private val monitorCombinations: List<Set<MonitorViolation>> =
+      MonitorViolation.entries
+          .toList()
+          .allNonEmptySubsets()
+          .sortedWith(
+              compareBy<Set<MonitorViolation>> { it.size }
+                  .thenBy { set -> set.map { it.name }.sorted().joinToString("_") })
+
   fun evaluate() {
     DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
     db {
@@ -101,36 +111,53 @@ object MutantKilling {
               MetricFailedMonitorsTable.monitorI1Failed,
               MetricFailedMonitorsTable.monitorI2Failed,
               MetricFailedMonitorsTable.monitorI3Failed)
+
       println("Starting to load data from DB")
       val result = buildFailedMonitorMapping(fullQuery)
-      println("Finished Loading Data from DB: ${result.size}")
-      createBoxPlot(scenarioFailures = result, repetitions = 1_000)
+      println("Finished loading data from DB: ${result.size}")
+
+      monitorCombinations.forEach { monitorCombination ->
+        println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
+        createBoxPlot(
+            scenarioFailures = result, repetitions = 1_000, selectedMonitors = monitorCombination)
+      }
     }
   }
 
   private fun createBoxPlot(
       scenarioFailures: List<ScenarioFailure>,
       repetitions: Int,
+      selectedMonitors: Set<MonitorViolation>,
       scenarioInstancesPerRepetition: Int = 1_000
   ) {
     val allScenarios = scenarioFailures.map { it.scenarioId }
 
-    val consoleProgress = ConsoleProgress(total = 6, label = "Evaluating mutant killing: ")
+    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 160)
+
+    val consoleProgress =
+        ConsoleProgress(
+            total = coverageList.size,
+            label = "Evaluating mutant killing (${selectedMonitors.toFileNameSuffix()}): ")
 
     val boxPlotData = mutableMapOf<Int, BoxPlotData>()
-    listOf(1, 10, 20, 40, 80, 160).forEach { coverage ->
+
+    coverageList.forEach { coverage ->
       consoleProgress.step()
+
       val countOfKilledMutants = mutableListOf<Int>()
       val normalizedCountOfKilledMutants = mutableListOf<Double>()
       val countOfFailedMonitors = mutableListOf<Int>()
       val normalizedCountOfFailedMonitors = mutableListOf<Double>()
       val countOfDistinctMonitorsFailed = mutableListOf<Int>()
+
       repeat(repetitions) {
         val repetitionScenarioIds = allScenarios.drawRandomElements(coverage)
         val filteredScenarioFailures =
             scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
+
         val minAmountOfScenarioInstancesInRepetition =
             filteredScenarioFailures.minOf { it.scenarios.size }
+
         val scenarioInstancesToDrawPerScenario =
             min(scenarioInstancesPerRepetition / coverage, minAmountOfScenarioInstancesInRepetition)
 
@@ -138,26 +165,28 @@ object MutantKilling {
             filteredScenarioFailures.flatMap {
               it.scenarios.drawRandomElements(scenarioInstancesToDrawPerScenario)
             }
-        val mutantsKilled =
-            drawnScenarioInstances
-                .flatMap { it.mutants.filter { it.violations.any{it == MonitorViolation.G0Accidents || it == MonitorViolation.G1SafeDistance} } }
-                .map { it.mutantId }
-                .toSet()
-                .count()
+
+        val relevantMonitors =
+            drawnScenarioInstances.flatMap { scenarioInstance ->
+              scenarioInstance.mutants.filter { mutant ->
+                mutant.violations.any { it in selectedMonitors }
+              }
+            }
+
+        val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
         countOfKilledMutants += mutantsKilled
         normalizedCountOfKilledMutants +=
             mutantsKilled / (scenarioInstancesToDrawPerScenario.toDouble() * coverage)
 
-        val monitorsFailed =
-            drawnScenarioInstances.flatMap { it.mutants.flatMap { it.violations } }.count()
+        val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
         countOfFailedMonitors += monitorsFailed
         normalizedCountOfFailedMonitors +=
             monitorsFailed / (scenarioInstancesToDrawPerScenario.toDouble() * coverage)
 
-        val distinctMonitorsFailed =
-            drawnScenarioInstances.flatMap { it.mutants.flatMap { it.violations } }.toSet().count()
+        val distinctMonitorsFailed = relevantMonitors.flatMap { it.violations }.toSet().count()
         countOfDistinctMonitorsFailed += distinctMonitorsFailed
       }
+
       boxPlotData +=
           coverage to
               BoxPlotData(
@@ -167,7 +196,8 @@ object MutantKilling {
                   countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed,
                   normalizedCountOfFailedMonitors = normalizedCountOfFailedMonitors)
     }
-    writeCSVFiles(boxPlotData)
+
+    writeCSVFiles(map = boxPlotData, selectedMonitors = selectedMonitors)
   }
 
   data class BoxPlotValues(
@@ -176,6 +206,7 @@ object MutantKilling {
       val thirdQuartile: Double,
       val min: Double,
       val max: Double,
+      val allData: List<Double>
   )
 
   fun getBoxPlotValues(boxPlotData: List<Number>): BoxPlotValues {
@@ -185,13 +216,10 @@ object MutantKilling {
         firstQuartile = sortedDoubleList.nTile(0.25),
         thirdQuartile = sortedDoubleList.nTile(0.75),
         min = sortedDoubleList.min(),
-        max = sortedDoubleList.max())
+        max = sortedDoubleList.max(),
+        allData = sortedDoubleList)
   }
 
-  /**
-   * Return the n-Tile of the list, where n is a value between 0 and 1. For example, if n is 0.25,
-   * the first quartile is returned.
-   */
   fun List<Double>.nTile(n: Double): Double {
     val sortedList = this.sorted()
     val position = sortedList.size * n
@@ -202,7 +230,11 @@ object MutantKilling {
     }
   }
 
-  fun writeCSVAndTeXFile(fileName: String, map: Map<Int, BoxPlotValues>) {
+  fun writeCSVAndTeXFile(
+      fileName: String,
+      selectedMonitors: Set<MonitorViolation>,
+      map: Map<Int, BoxPlotValues>
+  ) {
     val csvString =
         map.map { (coverage, boxPlotValues) ->
               "${coverage}, ${boxPlotValues.median}, ${boxPlotValues.firstQuartile}, ${boxPlotValues.thirdQuartile}, ${boxPlotValues.min}, ${boxPlotValues.max}"
@@ -210,87 +242,146 @@ object MutantKilling {
             .joinToString(
                 separator = "\n",
                 prefix = "coverage, median, firstQuartile, thirdQuartile, min, max\n")
-
-    val csvPath = Path.of(POST_EVALUATION_BASE_DIR, "mutant_killings", fileName, "$fileName.csv")
+    val csvPath =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "mutant_killings",
+            fileName,
+            selectedMonitors.toFileNameSuffix(),
+            "$fileName.csv")
     Files.createDirectories(csvPath.parent)
     csvPath.writeText(csvString)
-    writeTeXFile(fileName)
+
+    val fullDataCsvString =
+        map.map { (coverage, boxPlotValues) ->
+              "${coverage}, ${boxPlotValues.allData.joinToString(",")}"
+            }
+            .joinToString(separator = "\n", prefix = "coverage, dataPoints\n")
+
+    val fullDataCsvPath =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "mutant_killings",
+            fileName,
+            selectedMonitors.toFileNameSuffix(),
+            "${fileName}_full_data.csv")
+    Files.createDirectories(csvPath.parent)
+    fullDataCsvPath.writeText(fullDataCsvString)
+
+    writeTeXFile(fileName, selectedMonitors)
   }
 
-  fun writeCSVFiles(map: Map<Int, BoxPlotData>) {
+  fun writeCSVFiles(map: Map<Int, BoxPlotData>, selectedMonitors: Set<MonitorViolation>) {
     writeCSVAndTeXFile(
         "normalizedCountOfKilledMutants",
-        map.map { it.key to getBoxPlotValues(it.value.normalizedCountOfKilledMutants) }.toMap())
+        selectedMonitors,
+        map.map { it.key to getBoxPlotValues(it.value.normalizedCountOfKilledMutants) }.toMap(),
+    )
     writeCSVAndTeXFile(
         "countOfKilledMutants",
+        selectedMonitors,
         map.map { it.key to getBoxPlotValues(it.value.countOfKilledMutants) }.toMap())
     writeCSVAndTeXFile(
         "countOfFailedMonitors",
+        selectedMonitors,
         map.map { it.key to getBoxPlotValues(it.value.countOfFailedMonitors) }.toMap())
     writeCSVAndTeXFile(
         "countOfDistinctMonitorsFailed",
+        selectedMonitors,
         map.map { it.key to getBoxPlotValues(it.value.countOfDistinctMonitorsFailed) }.toMap())
     writeCSVAndTeXFile(
         "normalizedCountOfFailedMonitors",
+        selectedMonitors,
         map.map { it.key to getBoxPlotValues(it.value.normalizedCountOfFailedMonitors) }.toMap())
   }
 
   fun <T> Collection<T>.drawRandomElements(x: Int): Collection<T> {
     require(x >= 0) { "x must be non-negative" }
     require(x <= size) { "x must not be larger than list size" }
-
-    return shuffled().take(x)
+    return shuffled(RAND).take(x)
   }
 
-  fun writeTeXFile(fileName: String) {
+  fun writeTeXFile(fileName: String, selectedMonitors: Set<MonitorViolation>) {
     val teXCode =
         """
-        \documentclass[tikz,border=5pt]{standalone}
+\documentclass[tikz,border=5pt]{standalone}
 
-        \usepackage{pgfplots}
-        \usepackage{pgfplotstable}
-        \pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.8}
+\usepgfplotslibrary{statistics}
+\makeatletter
+\pgfplotsset{
+    boxplot prepared from table/.code={
+        \def\tikz@plot@handler{\pgfplotsplothandlerboxplotprepared}%
+        \pgfplotsset{
+            /pgfplots/boxplot prepared from table/.cd,
+            #1,
+        }
+    },
+    /pgfplots/boxplot prepared from table/.cd,
+    table/.code={\pgfplotstablecopy{#1}\to\boxplot@datatable},
+    row/.initial=0,
+    make style readable from table/.style={
+        #1/.code={
+            \pgfplotstablegetelem{\pgfkeysvalueof{/pgfplots/boxplot prepared from table/row}}{##1}\of\boxplot@datatable
+            \pgfplotsset{boxplot/#1/.expand once={\pgfplotsretval}}
+        }
+    },
+    make style readable from table=lower whisker,
+    make style readable from table=upper whisker,
+    make style readable from table=lower quartile,
+    make style readable from table=upper quartile,
+    make style readable from table=median,
+    make style readable from table=lower notch,
+    make style readable from table=upper notch
+}
+\makeatother
 
-        \newcommand{\boxplotcsv}{${fileName}.csv}
+\newcommand{\boxplotcsv}{${fileName}.csv}
 
-        \begin{document}
-
-        \begin{tikzpicture}
+\begin{document}
+    \begin{tikzpicture}
         \pgfplotstableread[col sep=comma]{\boxplotcsv}\datatable
-
+        \pgfplotstablegetrowsof{\datatable}
+        \pgfmathtruncatemacro{\NumRows}{\pgfplotsretval}
+        \pgfmathtruncatemacro{\TotalRows}{\NumRows-1}
+        
         \begin{axis}[
-            width=12cm,
-            height=7cm,
+            title={${selectedMonitors.toFileNameSuffix().replace("_", " + ")}},
             boxplot/draw direction=y,
-            xlabel={Coverage},
-            ylabel={Value},
-            xtick=data,
+            xlabel={\# TSC classes covered},
+            ylabel={\# mutants killed},
+            xtick={1,...,\NumRows},
             xticklabels from table={\datatable}{coverage},
-            grid=both,
-        ]
-
-        \addplot+[
-            boxplot prepared from table={
-                table=\datatable,
-                lower whisker=min,
-                lower quartile=firstQuartile,
-                median=median,
-                upper quartile=thirdQuartile,
-                upper whisker=max
-            },
-        ] table [
-            x expr=\coordindex + 1
-        ] {\datatable};
-
+            ]
+            \pgfplotsinvokeforeach{0,...,\TotalRows}{
+                \addplot[
+                boxplot prepared from table={
+                    table=\datatable,
+                    row=#1,
+                    lower whisker=min,
+                    lower quartile=firstQuartile,
+                    median=median,
+                    upper quartile=thirdQuartile,
+                    upper whisker=max,
+                },
+                boxplot prepared,
+                ]
+                coordinates {};
+            }
         \end{axis}
-        \end{tikzpicture}
+    \end{tikzpicture}
+\end{document}     
+        """
 
-        \end{document}        
-      """
-
-    val texPath = Path.of(POST_EVALUATION_BASE_DIR, "mutant_killings", fileName, "$fileName.tex")
+    val texPath =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "mutant_killings",
+            fileName,
+            selectedMonitors.toFileNameSuffix(),
+            "$fileName.tex")
     Files.createDirectories(texPath.parent)
-
     texPath.writeText(teXCode)
   }
 
@@ -341,5 +432,26 @@ object MutantKilling {
                 ScenarioInstanceFailures(scenarioInstanceId = scenarioInstanceId, mutants = mutants)
               })
     }
+  }
+
+  private fun Set<MonitorViolation>.toFileNameSuffix(): String =
+      this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }
+
+  private fun <T> List<T>.allNonEmptySubsets(): List<Set<T>> {
+    val result = mutableListOf<Set<T>>()
+    val n = size
+
+    for (mask in 1 until (1 shl n)) {
+      val subset = buildSet {
+        for (i in 0 until n) {
+          if ((mask and (1 shl i)) != 0) {
+            add(this@allNonEmptySubsets[i])
+          }
+        }
+      }
+      result += subset
+    }
+
+    return result
   }
 }
