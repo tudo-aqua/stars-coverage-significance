@@ -82,8 +82,6 @@ tasks.test { useJUnitPlatform() }
 
 application { mainClass.set("tools.aqua.stars.coverage.significance.RunEvaluationKt") }
 
-tasks.withType<JavaExec>().configureEach { jvmArgs("-Xms8g", "-Xmx56g", "-XX:+UseG1GC") }
-
 val prepareDatabaseAndSeedWithScenariosAndMutants by
     tasks.registering(JavaExec::class) {
       group = "application"
@@ -140,5 +138,19 @@ val startProgressMonitor by
       // jvmArgs = listOf("-Xmx64g")
       // args = listOf("--flag", "value")
     }
+
+val runPostEvaluation by
+tasks.registering(JavaExec::class) {
+  group = "application"
+  description = "Start the post evaluation process."
+  dependsOn(tasks.run.get().taskDependencies)
+
+  mainClass.set("tools.aqua.stars.coverage.significance.PostEvaluationKt")
+  classpath = sourceSets.main.get().runtimeClasspath
+
+  // optional
+   jvmArgs = listOf("-Xmx64g")
+  // args = listOf("--flag", "value")
+}
 
 kotlin { jvmToolchain(21) }
