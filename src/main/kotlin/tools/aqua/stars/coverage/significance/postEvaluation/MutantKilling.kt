@@ -119,20 +119,20 @@ object MutantKilling {
       monitorCombinations.forEach { monitorCombination ->
         println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
         createBoxPlot(
-            scenarioFailures = result, repetitions = 1_000, selectedMonitors = monitorCombination)
+            scenarioFailures = result, selectedMonitors = monitorCombination)
       }
     }
   }
 
   private fun createBoxPlot(
       scenarioFailures: List<ScenarioFailure>,
-      repetitions: Int,
+      repetitions: Int = 500,
       selectedMonitors: Set<MonitorViolation>,
-      scenarioInstancesPerRepetition: Int = 1_000
+      scenarioInstancesPerRepetition: Int = 200
   ) {
     val allScenarios = scenarioFailures.map { it.scenarioId }
 
-    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 80, 100, 120, 140, 160)
+    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 160)
 
     //    val coverageList = List(allScenarios.size) { it + 1 }
 
