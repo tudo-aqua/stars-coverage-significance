@@ -118,8 +118,7 @@ object MutantKilling {
 
       monitorCombinations.forEach { monitorCombination ->
         println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
-        createBoxPlot(
-            scenarioFailures = result, selectedMonitors = monitorCombination)
+        createBoxPlot(scenarioFailures = result, selectedMonitors = monitorCombination)
       }
     }
   }
@@ -154,17 +153,15 @@ object MutantKilling {
 
       repeat(repetitions) {
         val repetitionScenarioIds = allScenarios.drawRandomElements(coverage)
-        val filteredScenarioFailures =
-            scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
+        val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
 
-        val minAmountOfScenarioInstancesInRepetition =
-            filteredScenarioFailures.minOf { it.scenarios.size }
+        val minAmountOfScenarioInstancesInRepetition = drawnScenarios.minOf { it.scenarios.size }
 
         val scenarioInstancesToDrawPerScenario =
             min(scenarioInstancesPerRepetition / coverage, minAmountOfScenarioInstancesInRepetition)
 
         val drawnScenarioInstances =
-            filteredScenarioFailures.flatMap {
+            drawnScenarios.flatMap {
               it.scenarios.drawRandomElements(scenarioInstancesToDrawPerScenario)
             }
 
