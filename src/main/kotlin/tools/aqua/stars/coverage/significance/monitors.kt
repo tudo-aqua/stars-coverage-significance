@@ -346,10 +346,10 @@ val rightOvertaking =
       previous(tick) { previousTick ->
         isOnLeftLaneOf.holds(
             previousTick, previousTick.getVehicleById(other.vehicleId) to previousTick.ego) &&
-            previousTick.ego.frontBumperPositionOnLaneMeters < other.backBumperPositionOnLaneMeters
+            previousTick.ego.frontBumperPositionOnLaneMeters < previousTick.getVehicleById(other.vehicleId).backBumperPositionOnLaneMeters
       } &&
           isOnLeftLaneOf.holds(tick, tick.getVehicleById(other.vehicleId) to tick.ego) &&
-          tick.ego.frontBumperPositionOnLaneMeters >= other.backBumperPositionOnLaneMeters
+          tick.ego.frontBumperPositionOnLaneMeters >= tick.getVehicleById(other.vehicleId).backBumperPositionOnLaneMeters
     }
 // endregion
 
