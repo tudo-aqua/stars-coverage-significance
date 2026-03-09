@@ -17,9 +17,9 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Autopilot
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
-import tools.aqua.stars.sumo.Autopilot
 import tools.aqua.stars.sumo.Mutant
 
 /** AUTO-GENERATED: registry of all Autopilot mutants. */
@@ -233,7 +233,23 @@ object AutopilotMutants {
           204 to AutopilotMutant204::class,
           205 to AutopilotMutant205::class,
           206 to AutopilotMutant206::class,
-          207 to AutopilotMutant207::class)
+          207 to AutopilotMutant207::class,
+          208 to AutopilotMutant208::class,
+          209 to AutopilotMutant209::class,
+          210 to AutopilotMutant210::class,
+          211 to AutopilotMutant211::class,
+          212 to AutopilotMutant212::class,
+          213 to AutopilotMutant213::class,
+          214 to AutopilotMutant214::class,
+          215 to AutopilotMutant215::class,
+          216 to AutopilotMutant216::class,
+          217 to AutopilotMutant217::class,
+          218 to AutopilotMutant218::class,
+          219 to AutopilotMutant219::class,
+          220 to AutopilotMutant220::class,
+          221 to AutopilotMutant221::class,
+          222 to AutopilotMutant222::class,
+          223 to AutopilotMutant223::class)
 
   /**
    * Creates a new instance of the [Mutant] at the given [index].

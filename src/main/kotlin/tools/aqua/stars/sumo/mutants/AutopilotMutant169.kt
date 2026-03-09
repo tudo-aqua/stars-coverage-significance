@@ -30,19 +30,19 @@ class AutopilotMutant169 : Mutant() {
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
   /** The time headway to the leader in seconds. */
-  var timeHeadwayToLeaderInSeconds = 1.3
+  var timeHeadwayToLeaderInSeconds = 1.0
   /** The minimum gap to the leading vehicle in meters. */
-  var minGapToLeadingInMeters = 5.0
+  var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
-  var maxAccelerationInMps2 = 2.0
+  var maxAccelerationInMps2 = 2.6
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 
   /** Assumed maximum deceleration of the leader [m/s²] for kinematic safety checks. */
-  var leaderMaxDecelerationInMps2 = 4.5
+  var leaderMaxDecelerationInMps2 = 9.0
 
   /** Gain applied to the gap error term (`gap - desiredGap`) when computing ACC target speed. */
   var gapGain = 0.5
@@ -73,7 +73,18 @@ class AutopilotMutant169 : Mutant() {
   var neighborLookAheadInMeters = 150.0
 
   /** The distance ahead to look for the leader. */
-  var leaderLookAheadInMeters = 200.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 84 Id:
+   * 2053c60b-78a7-4de0-b756-773f88f14201, Old Operator: 200, New Operator: 0.56777394
+   */
+  var leaderLookAheadInMeters = 0.56777394
+
+  /** Required free distance ahead on all lanes on the chosen side before changing lanes. */
+  var laneChangeSideFrontGapInMeters = 20.0
+
+  /** Required free distance behind on all lanes on the chosen side before changing lanes. */
+  var laneChangeSideBackGapInMeters = 15.0
 
   /**
    * Whether to prefer a left lane change. If true, the ego vehicle will prefer left lane change. If
@@ -201,11 +212,7 @@ class AutopilotMutant169 : Mutant() {
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 212 Id:
-     * 49d616ea-9443-458e-9df3-8684e471107f, Old Operator: 0, New Operator: 0.67719877
-     */
-    return if (vSafe > 0.67719877) vSafe else 0.0
+    return if (vSafe > 0.0) vSafe else 0.0
   }
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
@@ -275,8 +282,11 @@ class AutopilotMutant169 : Mutant() {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 
-    val safe = isTargetDirectionFree(egoId, dir)
-    if (!safe) return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
+    val targetLaneSafe = isTargetDirectionFree(egoId, dir)
+    val sideCorridorSafe = areAllLanesOnSideFree(egoId, dir)
+    if (!targetLaneSafe || !sideCorridorSafe) {
+      return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
+    }
 
     val sideLeader = getSideLeaderAhead(egoId, dir)
     val vSideLeader =
@@ -286,9 +296,52 @@ class AutopilotMutant169 : Mutant() {
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus
-
     val feasible = stuck || (score > laneChangeMinGainInMps)
+
     return LaneEval(dir, feasible = feasible, score = score)
+  }
+
+  /**
+   * Conservative side-corridor check: a lane change is only allowed if all lanes on the chosen side
+   * of the ego are free within a local front/back window.
+   *
+   * This prevents simultaneous merges into the same middle lane, e.g.: ego on left lane, another
+   * vehicle on right lane, both trying to enter the middle lane.
+   */
+  private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
+    val wantRight = dir < 0
+    val wantLeft = dir > 0
+    if (!wantLeft && !wantRight) return false
+
+    val egoRoadId = SumoVehicle.getRoadID(egoId)
+    val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)
+    val egoLanePos = SumoVehicle.getLanePosition(egoId)
+
+    for (otherId in SumoVehicle.getIDList()) {
+      if (otherId == egoId) continue
+      if (SumoVehicle.getRoadID(otherId) != egoRoadId) continue
+
+      val otherLaneIndex = SumoVehicle.getLaneIndex(otherId)
+
+      val isOnChosenSide =
+          if (wantRight) {
+            otherLaneIndex < egoLaneIndex
+          } else {
+            otherLaneIndex > egoLaneIndex
+          }
+
+      if (!isOnChosenSide) continue
+
+      val otherPos = SumoVehicle.getLanePosition(otherId)
+      val delta = otherPos - egoLanePos
+
+      val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
+      val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
+
+      if (tooCloseBehind && tooCloseAhead) return false
+    }
+
+    return true
   }
 
   private fun chooseDirection(left: LaneEval, right: LaneEval): Int? {
