@@ -17,9 +17,9 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Autopilot
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
+import tools.aqua.stars.sumo.Autopilot
 import tools.aqua.stars.sumo.Mutant
 
 /** AUTO-GENERATED: registry of all Autopilot mutants. */
