@@ -138,7 +138,7 @@ fun main() {
     val failedMonitorsMetric = FailedMonitorsMetric(tscId = tscId, writeToDb = false)
 
     eval.registerMetricProviders(
-        failedMonitorsMetric, totalTickDifferenceMetric, StartingValidTSCInstancesPerTSCMetric())
+        failedMonitorsMetric, totalTickDifferenceMetric)
 
     eval.runEvaluation(tickSequences.asSequence())
   }
