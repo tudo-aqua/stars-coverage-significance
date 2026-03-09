@@ -37,7 +37,6 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.Spawn
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
-import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -55,12 +54,12 @@ fun main() {
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
   val runId = UUID.randomUUID()
-  val tscId = UUID.fromString("d5b2234a-726b-41c9-a3a8-fd414ab6064b")
-  val mutantId = UUID.fromString("516b92f5-45e8-4100-81ed-bbc199659a90")
+  val tscId = UUID.fromString("7f4faac3-08ad-45d2-ae3f-b1e08f4b77fb")
+  val mutantId = UUID.fromString("3dadcc41-74c0-47f1-b7e2-45ed79c51eee")
 
   val listOfScenarios =
       listOf(
-          "ca3d5fc7-bd46-4769-8f90-2c3cf6384c27",
+          "ed38d17a-d876-407d-ba96-e0d76dcbbf6d",
       )
   listOfScenarios.forEach { scenarioId ->
     val scenarioId = UUID.fromString(scenarioId)
@@ -137,8 +136,7 @@ fun main() {
 
     val failedMonitorsMetric = FailedMonitorsMetric(tscId = tscId, writeToDb = false)
 
-    eval.registerMetricProviders(
-        failedMonitorsMetric, totalTickDifferenceMetric)
+    eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
 
     eval.runEvaluation(tickSequences.asSequence())
   }
