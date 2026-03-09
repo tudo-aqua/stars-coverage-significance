@@ -250,10 +250,13 @@ val slowLeadingVehicle =
       }
     }
 
+/** The maximum speed limit: 130km/h in m/s. */
+const val HIGHWAY_SPEED_LIMIT_MPS: Float = 130.0f / 3.6f
+
 /** Predicate for checking whether the ego vehicle preserves the traffic flow. */
 val preservesFlow =
     predicate<TimeStep>("Preserves Flow") { startingTick ->
-      startingTick.ego.speedKmPerHour >= 130.0 - TRAFFIC_FLOW_DELTA_V_FL_MPS
+      startingTick.ego.speedMetersPerSecond >= HIGHWAY_SPEED_LIMIT_MPS - TRAFFIC_FLOW_DELTA_V_FL_MPS
       //            val egoStartingTick = startingTick.ego
       //
       //            // v_max_sl(egoStartingTick)
@@ -391,8 +394,10 @@ val i3DangerousCutIn =
     predicate<TimeStep>("I3 Dangerous Cut-In") { startingTick ->
       globally(startingTick) { globallyTick ->
         exists(globallyTick.nonEgoVehicles) { nonEgoVehicleGloballyTick ->
-          changedToSameLane.holds(globallyTick, globallyTick.ego to nonEgoVehicleGloballyTick) implies
-              keepSafeDistancePreceding.holds(globallyTick, nonEgoVehicleGloballyTick to globallyTick.ego)
+          changedToSameLane.holds(
+              globallyTick, globallyTick.ego to nonEgoVehicleGloballyTick) implies
+              keepSafeDistancePreceding.holds(
+                  globallyTick, nonEgoVehicleGloballyTick to globallyTick.ego)
         }
       }
     }
