@@ -47,8 +47,14 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
  *
  * @property dependsOn Optional dependency on another metric.
  * @property tscId UUID of the TSC being evaluated.
+ * @property writeToDb Decides, whether the monitor results should be written to the database, or
+ *   not.
  */
-class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID) :
+class FailedMonitorsMetric(
+    override val dependsOn: Any? = null,
+    val tscId: UUID,
+    val writeToDb: Boolean = true
+) :
     TSCAndTSCInstanceAndTickMetricProvider<
         Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
     PostEvaluationMetricProvider<
@@ -100,52 +106,56 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val tscId: UUID)
   }
 
   override fun postEvaluate() {
-    db {
-      failedMonitorsResult.keys.forEach { tsc ->
-        val map = failedMonitorsResult[tsc]
-        checkNotNull(map)
-        val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
-        checkNotNull(tscEntry) { "TSC not found in DB." }
-        val failedMonitorsEntries = map.values.toList()
-        MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries)
+    if (writeToDb) {
+      db {
+        failedMonitorsResult.keys.forEach { tsc ->
+          val map = failedMonitorsResult[tsc]
+          checkNotNull(map)
+          val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
+          checkNotNull(tscEntry) { "TSC not found in DB." }
+          val failedMonitorsEntries = map.values.toList()
+          MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries)
+        }
       }
     }
   }
 
   override fun printPostEvaluationResult() {
-    //    failedMonitorsResult.keys.forEach { tsc ->
-    //      val map = failedMonitorsResult[tsc]
-    //      checkNotNull(map)
-    //      map.forEach { (mutantId, scenarioConfigId), failedMetric ->
-    //        println("${g0Accidents.name}: ${if (failedMetric.monitorG0Failed) "failed" else
-    // "passed"}")
-    //        println(
-    //            "${g1SafeDistanceToPrecedingVehicle.name}: ${if (failedMetric.monitorG1Failed)
-    // "failed" else "passed"}")
-    //        println(
-    //            "${g2UnnecessaryBraking.name}: ${if (failedMetric.monitorG2Failed) "failed" else
-    // "passed"}")
-    //        println(
-    //            "${g5EmergencyBraking.name}: ${if (failedMetric.monitorG22Failed) "failed" else
-    // "passed"}")
-    //        println(
-    //            "${g3MaximumSpeedLimit.name}: ${if (failedMetric.monitorG3Failed) "failed" else
-    // "passed"}")
-    //        println(
-    //            "${g4TrafficFlow.name}: ${if (failedMetric.monitorG4Failed) "failed" else
-    // "passed"}")
-    //        println("${i1Stopping.name}: ${if (failedMetric.monitorI1Failed) "failed" else
-    // "passed"}")
-    //        println(
-    //            "${i2DrivingFasterThenLeftTraffic.name}: ${if (failedMetric.monitorI2Failed)
-    // "failed" else "passed"}")
-    //        println(
-    //            "${i3RightOvertaking.name}: ${if (failedMetric.monitorI3Failed) "failed" else
-    // "passed"}")
-    //        println("${i4KeepRight.name}: ${if (failedMetric.monitorI4Failed) "failed" else
-    // "passed"}")
-    //        println("----------------------------------------")
-    //      }
-    //    }
+    if (!writeToDb) {
+      failedMonitorsResult.keys.forEach { tsc ->
+        val map = failedMonitorsResult[tsc]
+        checkNotNull(map)
+        map.forEach { (mutantId, scenarioConfigId), failedMetric ->
+          println(
+              "${g0Accidents.name}: ${if (failedMetric.monitorG0Failed) "failed" else
+       "passed"}")
+          println(
+              "${g1SafeDistanceToPrecedingVehicle.name}: ${if (failedMetric.monitorG1Failed)
+       "failed" else "passed"}")
+          println(
+              "${g2UnnecessaryBraking.name}: ${if (failedMetric.monitorG2Failed) "failed" else
+       "passed"}")
+          println(
+              "${g3MaximumSpeedLimit.name}: ${if (failedMetric.monitorG3Failed) "failed" else
+       "passed"}")
+          println(
+              "${g4TrafficFlow.name}: ${if (failedMetric.monitorG4Failed) "failed" else
+       "passed"}")
+          println(
+              "${g5EmergencyBraking.name}: ${if (failedMetric.monitorG5Failed) "failed" else
+              "passed"}")
+          println(
+              "${i1Stopping.name}: ${if (failedMetric.monitorI1Failed) "failed" else
+       "passed"}")
+          println(
+              "${i2DrivingFasterThenLeftTraffic.name}: ${if (failedMetric.monitorI2Failed)
+       "failed" else "passed"}")
+          println(
+              "${i3DangerousCutIn.name}: ${if (failedMetric.monitorI3Failed) "failed" else
+       "passed"}")
+          println("----------------------------------------")
+        }
+      }
+    }
   }
 }
