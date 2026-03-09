@@ -38,9 +38,9 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 val g0Accidents =
     predicate<TimeStep>("G0 Accidents") { startingTick ->
       globally(startingTick) { tick ->
-        tick.nonEgoVehicles.all { otherVehicle ->
-          !collidesWith.holds(tick, tick.ego to otherVehicle) &&
-              !collidesWith.holds(tick, otherVehicle to tick.ego)
+        tick.nonEgoVehicles.all { otherVehicleGlobally ->
+          !collidesWith.holds(tick, tick.ego to otherVehicleGlobally) &&
+              !collidesWith.holds(tick, otherVehicleGlobally to tick.ego)
         }
       }
     }
@@ -64,26 +64,28 @@ const val TIME_CUT_IN: Long = 3_000L
 /** General Traffic Rules: G_1 Safe Distance To Preceding Vehicle - Predicate implementation. */
 val g1SafeDistanceToPrecedingVehicle =
     predicate<TimeStep>("G1 Safe Distance To Preceding Vehicle") { startingTick ->
-      globally(startingTick) { tick ->
-        tick.nonEgoVehicles.all { otherVehicle ->
-          (isOnSameLane.holds(tick, otherVehicle to tick.ego) &&
-              isInFrontOfAbsolute.holds(tick, otherVehicle to tick.ego) &&
+      globally(startingTick) { globallyTick ->
+        globallyTick.nonEgoVehicles.all { otherVehicleGlobally ->
+          (isOnSameLane.holds(globallyTick, otherVehicleGlobally to globallyTick.ego) &&
+              isInFrontOfAbsolute.holds(globallyTick, otherVehicleGlobally to globallyTick.ego) &&
               !once(
-                  tick,
+                  globallyTick,
                   interval =
                       Interval(
                           TickDifferenceMilliseconds(0L),
                           TickDifferenceMilliseconds(TIME_CUT_IN))) { onceTick ->
                     cutIn.holds(
                         onceTick,
-                        onceTick.getVehicleById(otherVehicle.vehicleId) to onceTick.ego) &&
+                        onceTick.getVehicleById(otherVehicleGlobally.vehicleId) to onceTick.ego) &&
                         previous(onceTick) { previousTick ->
                           !cutIn.holds(
                               previousTick,
-                              previousTick.getVehicleById(otherVehicle.vehicleId) to
+                              previousTick.getVehicleById(otherVehicleGlobally.vehicleId) to
                                   previousTick.ego)
                         }
-                  }) implies keepSafeDistancePreceding.holds(tick, tick.ego to otherVehicle)
+                  }) implies
+              keepSafeDistancePreceding.holds(
+                  globallyTick, globallyTick.ego to otherVehicleGlobally)
         }
       }
     }
@@ -94,17 +96,21 @@ val g1SafeDistanceToPrecedingVehicle =
  * ego vehicle.
  */
 val cutIn =
-    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Cut In") { startingTick, (ego, otherVehicle) ->
-      isOnSameLane.holds(startingTick, startingTick.ego to otherVehicle) &&
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Cut In") {
+        startingTick,
+        (egoStartingTick, otherVehicleStartingTick) ->
+      isOnSameLane.holds(startingTick, egoStartingTick to otherVehicleStartingTick) &&
           previous(startingTick) { previousTick ->
             !isOnSameLane.holds(
                 previousTick,
-                previousTick.ego to previousTick.getVehicleById(otherVehicle.vehicleId)) &&
+                previousTick.ego to
+                    previousTick.getVehicleById(otherVehicleStartingTick.vehicleId)) &&
                 isBesidesOf.holds(
                     previousTick,
-                    previousTick.ego to previousTick.getVehicleById(otherVehicle.vehicleId))
+                    previousTick.ego to
+                        previousTick.getVehicleById(otherVehicleStartingTick.vehicleId))
           } &&
-          isInFrontOfAbsolute.holds(startingTick, otherVehicle to ego)
+          isInFrontOfAbsolute.holds(startingTick, otherVehicleStartingTick to egoStartingTick)
     }
 
 /** Reaction time t_d used in the paper’s dsafe formula. */
@@ -160,22 +166,27 @@ val isBrakingAbruptly =
  * themselves).
  */
 val unnecessaryBraking =
-    predicate<TimeStep, Vehicle>("Unnecessary Braking") { tick, ego ->
-      isBrakingAbruptly.holds(tick, ego) &&
-          (!exists(tick.getOtherVehicles(ego)) { v -> isInFrontOnSameLane.holds(tick, v to ego) } ||
-              exists(tick.getOtherVehicles(ego)) { leader ->
-                isInFrontOnSameLane.holds(tick, leader to ego) &&
-                    keepSafeDistancePreceding.holds(tick, ego to leader) &&
-                    (ego.accelerationMetersPerSecondSquared -
-                        leader.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2)
+    predicate<TimeStep, Vehicle>("Unnecessary Braking") { startingTick, egoStartingTick ->
+      isBrakingAbruptly.holds(startingTick, egoStartingTick) &&
+          (!exists(startingTick.nonEgoVehicles) { nonEgoVehicleStartingTick ->
+            isInFrontOnSameLane.holds(startingTick, nonEgoVehicleStartingTick to egoStartingTick)
+          } ||
+              exists(startingTick.nonEgoVehicles) { nonEgoLeaderStartingTick ->
+                isInFrontOnSameLane.holds(
+                    startingTick, nonEgoLeaderStartingTick to egoStartingTick) &&
+                    keepSafeDistancePreceding.holds(
+                        startingTick, egoStartingTick to nonEgoLeaderStartingTick) &&
+                    (egoStartingTick.accelerationMetersPerSecondSquared -
+                        nonEgoLeaderStartingTick.accelerationMetersPerSecondSquared <
+                        ABRUPT_BRAKING_THRESHOLD_MPS2)
               })
     }
 // endregion
 
 /** General Traffic Rules: G_3 Maximum Speed Limit - Predicate implementation. */
 val g3MaximumSpeedLimit =
-    predicate<TimeStep>("G3 Maximum Speed Limit") { tick ->
-      globally(tick) { globallyTick ->
+    predicate<TimeStep>("G3 Maximum Speed Limit") { startingTick ->
+      globally(startingTick) { globallyTick ->
         keepLaneSpeedLimit.holds(globallyTick) && keepFovSpeedLimit.holds(globallyTick)
       }
     }
@@ -186,17 +197,18 @@ val g3MaximumSpeedLimit =
 
 /** Predicate for keeping the speed limit of the current lane. */
 val keepLaneSpeedLimit =
-    predicate<TimeStep>("Keep Lane Speed Limit") { tick ->
-      tick.ego.speedMetersPerSecond <= tick.ego.currentLane.speedLimitMetersPerSecond
+    predicate<TimeStep>("Keep Lane Speed Limit") { startingTick ->
+      startingTick.ego.speedMetersPerSecond <=
+          startingTick.ego.currentLane.speedLimitMetersPerSecond
     }
 
 /** Predicate for keeping the speed limit within the field of view (FOV) distance. */
 val keepFovSpeedLimit =
-    predicate<TimeStep>("Keep FOV Speed Limit") { tick ->
-      tick.ego.speedMetersPerSecond <=
+    predicate<TimeStep>("Keep FOV Speed Limit") { startingTick ->
+      startingTick.ego.speedMetersPerSecond <=
           39.812 // Solved for a=-9m/s^2, td=0.3s, s_fov=FIELD_OF_VIEW_DISTANCE_METERS
-      //      val v = max(0.0f, tick.ego.speedMetersPerSecond)
-      //      val a = max(1e-3f, tick.ego.emergencyDecelMetersPerSecondSquared)
+      //      val v = max(0.0f, startingTick.ego.speedMetersPerSecond)
+      //      val a = max(1e-3f, startingTick.ego.emergencyDecelMetersPerSecondSquared)
       //      val td = SAFE_DISTANCE_REACTION_TIME_SECONDS
       //
       //      val requiredStoppingDistance = v * td + (v * v) / (2.0f * a)
@@ -211,8 +223,8 @@ const val TRAFFIC_FLOW_PRESERVATION_MIN_ACCELERATION = 1.0f
 
 /** General Traffic Rules: G_4 Traffic Flow - Predicate implementation. */
 val g4TrafficFlow =
-    predicate<TimeStep>("G4 Traffic Flow") { tick ->
-      globally(tick) { globallyTick ->
+    predicate<TimeStep>("G4 Traffic Flow") { startingTick ->
+      globally(startingTick) { globallyTick ->
         !slowLeadingVehicle.holds(globallyTick) implies
             (globallyTick.ego.accelerationMetersPerSecondSquared >
                 TRAFFIC_FLOW_PRESERVATION_MIN_ACCELERATION || preservesFlow.holds(globallyTick))
@@ -226,40 +238,43 @@ const val TRAFFIC_FLOW_DELTA_V_FL_MPS: Float = 15.0f
 
 /** Predicate for checking whether there is a slow leading vehicle in front of the ego vehicle. */
 val slowLeadingVehicle =
-    predicate<TimeStep>("Slow Leading Vehicle") { tick ->
-      val ego = tick.ego
+    predicate<TimeStep>("Slow Leading Vehicle") { startingTick ->
+      val egoStartingTick = startingTick.ego
 
-      tick.nonEgoVehicles.any { other ->
-        isOnSameLane.holds(tick, other to ego) &&
-            isInFrontOfAbsolute.holds(tick, other to ego) &&
-            // v_max2(other) - v(other) >= Δv_fl
-            ((other.currentLane.speedLimitMetersPerSecond - other.speedMetersPerSecond) >=
-                TRAFFIC_FLOW_DELTA_V_FL_MPS)
+      startingTick.nonEgoVehicles.any { nonEgoVehicleStartingTick ->
+        isOnSameLane.holds(startingTick, nonEgoVehicleStartingTick to egoStartingTick) &&
+            isInFrontOfAbsolute.holds(startingTick, nonEgoVehicleStartingTick to egoStartingTick) &&
+            // v_max2(nonEgoVehicleStartingTick) - v(nonEgoVehicleStartingTick) >= Δv_fl
+            ((nonEgoVehicleStartingTick.currentLane.speedLimitMetersPerSecond -
+                nonEgoVehicleStartingTick.speedMetersPerSecond) >= TRAFFIC_FLOW_DELTA_V_FL_MPS)
       }
     }
 
 /** Predicate for checking whether the ego vehicle preserves the traffic flow. */
 val preservesFlow =
-    predicate<TimeStep>("Preserves Flow") { tick ->
-      tick.ego.speedKmPerHour >= 130.0 - TRAFFIC_FLOW_DELTA_V_FL_MPS
-      //      val ego = tick.ego
+    predicate<TimeStep>("Preserves Flow") { startingTick ->
+      startingTick.ego.speedKmPerHour >= 130.0 - TRAFFIC_FLOW_DELTA_V_FL_MPS
+      //            val egoStartingTick = startingTick.ego
       //
-      //      // v_max_sl(ego)
-      //      val vLaneMax = ego.currentLane.speedLimitMetersPerSecond
+      //            // v_max_sl(egoStartingTick)
+      //            val vLaneMax = egoStartingTick.currentLane.speedLimitMetersPerSecond
       //
-      //      // v_fov_max(ego): solve v*td + v^2/(2a) <= s_fov for v (positive root)
-      //      val v = max(0.0f, ego.speedMetersPerSecond)
-      //      val a = max(1e-3f, ego.emergencyDecelMetersPerSecondSquared) // magnitude |a_min|
-      //      val td = SAFE_DISTANCE_REACTION_TIME_SECONDS
-      //      val sFov = VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
+      //            // v_fov_max(egoStartingTick): solve v*td + v^2/(2a) <= s_fov for v (positive
+      // root)
+      //            val v = max(0.0f, egoStartingTick.speedMetersPerSecond)
+      //            val a = max(1e-3f, egoStartingTick.emergencyDecelMetersPerSecondSquared) //
+      // magnitude |a_min|
+      //            val td = SAFE_DISTANCE_REACTION_TIME_SECONDS
+      //            val sFov = VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
       //
-      //      val vFovMax = -a * td + sqrt(max(0.0f, (a * td) * (a * td) + 2.0f * a * sFov))
+      //            val vFovMax = -a * td + sqrt(max(0.0f, (a * td) * (a * td) + 2.0f * a * sFov))
       //
-      //      // v_max1(ego) = min(v_br, v_fov, v*_sl, v_type) -> here: min(vFovMax, vLaneMax)
-      //      val vMax1 = min(vFovMax, vLaneMax)
+      //            // v_max1(egoStartingTick) = min(v_br, v_fov, v*_sl, v_type) -> here:
+      // min(vFovMax, vLaneMax)
+      //            val vMax1 = min(vFovMax, vLaneMax)
       //
-      //      // preserves_flow: v_max1 - v < Δv_fl
-      //      (vMax1 - v) < TRAFFIC_FLOW_DELTA_V_FL_MPS
+      //            // preserves_flow: v_max1 - v < Δv_fl
+      //            (vMax1 - v) < TRAFFIC_FLOW_DELTA_V_FL_MPS
     }
 
 // endregion
@@ -269,8 +284,10 @@ val preservesFlow =
  * exceptions.)
  */
 val g5EmergencyBraking =
-    predicate<TimeStep>("G5 Emergency Braking") { tick ->
-      globally(tick) { globallyTick -> !isBrakingEmergently.holds(globallyTick, globallyTick.ego) }
+    predicate<TimeStep>("G5 Emergency Braking") { startingTick ->
+      globally(startingTick) { globallyTick ->
+        !isBrakingEmergently.holds(globallyTick, globallyTick.ego)
+      }
     }
 
 // region G_5 helpers
@@ -288,8 +305,8 @@ val isBrakingEmergently =
 
 /** General Traffic Rules: I_1 Stopping - Predicate implementation. */
 val i1Stopping =
-    predicate<TimeStep>("I1 Too Slow Driving") { tick ->
-      globally(tick) { globallyTick ->
+    predicate<TimeStep>("I1 Too Slow Driving") { startingTick ->
+      globally(startingTick) { globallyTick ->
         !existsSlowLeadingVehicle.holds(globallyTick) implies !egoTooSLow.holds(globallyTick)
       }
     }
@@ -308,30 +325,34 @@ const val MIN_SPEED_EGO_KMH: Float = 10.0f
  * which would be unjustified if there is no slow leading vehicle in front of it.
  */
 val egoTooSLow =
-    predicate<TimeStep>("In Stand Still") { tick -> tick.ego.speedKmPerHour <= MIN_SPEED_EGO_KMH }
+    predicate<TimeStep>("In Stand Still") { startingTick ->
+      startingTick.ego.speedKmPerHour <= MIN_SPEED_EGO_KMH
+    }
 
 /**
  * Predicate for checking whether there is a slow leading vehicle in front of the ego vehicle, which
  * would justify the ego vehicle driving very slowly.
  */
 val existsSlowLeadingVehicle =
-    predicate<TimeStep>("Exists Slow Leading Vehicle") { tick ->
-      exists(tick.nonEgoVehicles) { other ->
-        isOnSameLane.holds(tick, other to tick.ego) &&
-            isInFrontOfAbsolute.holds(tick, other to tick.ego) &&
-            other.speedKmPerHour <= SLOW_LEADING_VEHICLE_SPEED_KMH
+    predicate<TimeStep>("Exists Slow Leading Vehicle") { startingTick ->
+      exists(startingTick.nonEgoVehicles) { nonEgoVehicleStartingTick ->
+        isOnSameLane.holds(startingTick, nonEgoVehicleStartingTick to startingTick.ego) &&
+            isInFrontOfAbsolute.holds(
+                startingTick, nonEgoVehicleStartingTick to startingTick.ego) &&
+            nonEgoVehicleStartingTick.speedKmPerHour <= SLOW_LEADING_VEHICLE_SPEED_KMH
       }
     }
 // endregion
 
 /** General Traffic Rules: I_2 Driving Faster Than Left Traffic - Predicate implementation. */
 val i2DrivingFasterThenLeftTraffic =
-    predicate<TimeStep>("I2 Driving Faster Than Left Traffic") { tick ->
-      globally(tick) { globallyTick ->
-        !exists(globallyTick.nonEgoVehicles) { other ->
-          rightOvertaking.holds(globallyTick, globallyTick.ego to other) &&
-              (other.speedKmPerHour >= 60.0 ||
-                  (globallyTick.ego.speedKmPerHour - other.speedKmPerHour) >= 10.0)
+    predicate<TimeStep>("I2 Driving Faster Than Left Traffic") { startingTick ->
+      globally(startingTick) { globallyTick ->
+        !exists(globallyTick.nonEgoVehicles) { nonEgoVehicleGloballyTick ->
+          rightOvertaking.holds(globallyTick, globallyTick.ego to nonEgoVehicleGloballyTick) &&
+              (nonEgoVehicleGloballyTick.speedKmPerHour >= 60.0 ||
+                  (globallyTick.ego.speedKmPerHour - nonEgoVehicleGloballyTick.speedKmPerHour) >=
+                      10.0)
         }
       }
     }
@@ -342,24 +363,36 @@ val i2DrivingFasterThenLeftTraffic =
  * right side (i.e., was behind it in the previous tick, and is now alongside or in front of it).
  */
 val rightOvertaking =
-    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Right Overtaking") { tick, (ego, other) ->
-      previous(tick) { previousTick ->
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Right Overtaking") {
+        startingTick,
+        (egoStartingTick, otherVehicleStartingTick) ->
+      previous(startingTick) { previousTick ->
         isOnLeftLaneOf.holds(
-            previousTick, previousTick.getVehicleById(other.vehicleId) to previousTick.ego) &&
-            previousTick.ego.frontBumperPositionOnLaneMeters < previousTick.getVehicleById(other.vehicleId).backBumperPositionOnLaneMeters
+            previousTick,
+            previousTick.getVehicleById(otherVehicleStartingTick.vehicleId) to previousTick.ego) &&
+            previousTick.ego.frontBumperPositionOnLaneMeters <
+                previousTick
+                    .getVehicleById(otherVehicleStartingTick.vehicleId)
+                    .backBumperPositionOnLaneMeters
       } &&
-          isOnLeftLaneOf.holds(tick, tick.getVehicleById(other.vehicleId) to tick.ego) &&
-          tick.ego.frontBumperPositionOnLaneMeters >= tick.getVehicleById(other.vehicleId).backBumperPositionOnLaneMeters
+          isOnLeftLaneOf.holds(
+              startingTick,
+              startingTick.getVehicleById(otherVehicleStartingTick.vehicleId) to
+                  startingTick.ego) &&
+          startingTick.ego.frontBumperPositionOnLaneMeters >=
+              startingTick
+                  .getVehicleById(otherVehicleStartingTick.vehicleId)
+                  .backBumperPositionOnLaneMeters
     }
 // endregion
 
 /** Interstate Traffic Rule: I_3 Dangerous Cut-In - Predicate implementation. */
 val i3DangerousCutIn =
-    predicate<TimeStep>("I3 Dangerous Cut-In") { tick ->
-      globally(tick) { globallyTick ->
-        exists(globallyTick.nonEgoVehicles) { other ->
-          changedToSameLane.holds(globallyTick, globallyTick.ego to other) implies
-              keepSafeDistancePreceding.holds(globallyTick, other to globallyTick.ego)
+    predicate<TimeStep>("I3 Dangerous Cut-In") { startingTick ->
+      globally(startingTick) { globallyTick ->
+        exists(globallyTick.nonEgoVehicles) { nonEgoVehicleGloballyTick ->
+          changedToSameLane.holds(globallyTick, globallyTick.ego to nonEgoVehicleGloballyTick) implies
+              keepSafeDistancePreceding.holds(globallyTick, nonEgoVehicleGloballyTick to globallyTick.ego)
         }
       }
     }
@@ -372,13 +405,13 @@ val i3DangerousCutIn =
 val changedToSameLane =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Changed To Same Lane") {
         startingTick,
-        (ego, otherVehicle) ->
-      isOnSameLane.holds(startingTick, startingTick.ego to otherVehicle) &&
+        (egoStartingTick, otherVehicleStartingTick) ->
+      isOnSameLane.holds(startingTick, startingTick.ego to otherVehicleStartingTick) &&
           previous(startingTick) { previousTick ->
             !isOnSameLane.holds(
                 previousTick,
-                previousTick.ego to previousTick.getVehicleById(otherVehicle.vehicleId))
+                previousTick.ego to previousTick.getVehicleById(otherVehicleStartingTick.vehicleId))
           } &&
-          isInFrontOfAbsolute.holds(startingTick, ego to otherVehicle)
+          isInFrontOfAbsolute.holds(startingTick, egoStartingTick to otherVehicleStartingTick)
     }
 // endregion
