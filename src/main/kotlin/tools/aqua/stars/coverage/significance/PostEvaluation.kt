@@ -21,7 +21,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenarioInst
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.KilledMutantsPerMonitorPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKilling
-import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstancesLongTailDistributionPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerMonitorPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfMutantsKilledPerScenarioPostEvaluation
@@ -31,7 +31,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfScenar
 fun main() {
   CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
-  TSCInstancesLongTailDistributionPostEvaluation.evaluate()
+  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
   KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
   TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
   TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()

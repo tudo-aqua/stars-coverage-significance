@@ -32,7 +32,7 @@ import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
  * pgfplots file for plotting. It also generates a bar chart using the STARS core plotting
  * utilities.
  */
-object TSCInstancesLongTailDistributionPostEvaluation {
+object ScenarioInstancesLongTailDistributionPostEvaluation {
   /**
    * Main entry point for the evaluation. Connects to the database, retrieves valid TSC instances,
    * counts them per TSC instance ID, orders the counts, and writes the results to CSV and LaTeX
@@ -45,7 +45,7 @@ object TSCInstancesLongTailDistributionPostEvaluation {
     val orderedCounts = groupedByTSCInstance.values.sortedDescending()
 
     val folder = POST_EVALUATION_BASE_DIR
-    val subfolder = "tsc_instances_long_tail_distribution"
+    val subfolder = "scenario_instances_long_tail_distribution"
     val csvFileName = "${subfolder}.csv"
     val texFileName = "${subfolder}.tex"
     val plotName = "${subfolder}.png"
@@ -61,12 +61,12 @@ object TSCInstancesLongTailDistributionPostEvaluation {
 
     val plot =
         getPlot(
-            "Instance Count",
+            "Scenario Instances Count",
             xValues = orderedCounts.mapIndexed { index, _ -> index },
             yValues = orderedCounts)
     checkNotNull(plot) { "Plot could not be created: $subfolder." }
     plotDataAsBarChart(
-        plot, fileName = plotName, path = plotPath, title = "TSC Instances Long Tail Distribution")
+        plot, fileName = plotName, path = plotPath, title = "Scenario Long Tail Distribution")
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */
@@ -102,7 +102,7 @@ object TSCInstancesLongTailDistributionPostEvaluation {
         \begin{axis}[
             ybar,
             bar width=1pt,
-            title={Ordered counts per TSC instance},
+            title={Ordered counts per scenario},
             xlabel={TSC Instance Index},
             ylabel={Count},
             enlargelimits=0.02,
@@ -129,20 +129,4 @@ object TSCInstancesLongTailDistributionPostEvaluation {
     Files.createDirectories(csvPath.parent)
     Files.writeString(texPath, tex, StandardCharsets.UTF_8)
   }
-
-  /**
-   * Minimal LaTeX escaping for titles/labels/paths. Extend if you plan to include lots of special
-   * characters.
-   */
-  fun escapeLatex(s: String): String =
-      s.replace("\\", "\\textbackslash{}")
-          .replace("_", "\\_")
-          .replace("%", "\\%")
-          .replace("&", "\\&")
-          .replace("#", "\\#")
-          .replace("{", "\\{")
-          .replace("}", "\\}")
-          .replace("$", "\\$")
-          .replace("^", "\\^{}")
-          .replace("~", "\\~{}")
 }
