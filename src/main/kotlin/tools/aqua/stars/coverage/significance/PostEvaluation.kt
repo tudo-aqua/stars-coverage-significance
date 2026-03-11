@@ -26,31 +26,22 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.KilledMutantsPerMonitorPerScenarioPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerMonitorPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerScenarioPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfMutantsKilledPerScenarioPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.LongTailAwareMutantKilling
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantFailures
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantKilling
+import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantKillingWithoutDuplicates
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioInstanceFailures
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
-  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
-  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
-  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
-  KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
-  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
-  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
-  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
-  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
+  //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
+  //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
+  //  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
+  //  KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
+  //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
+  //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
+  //  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
+  //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   var failedMonitorMapping: List<ScenarioFailure> = emptyList()
@@ -84,14 +75,16 @@ fun main() {
                     MonitorViolation.I1Stopping,
                     MonitorViolation.I2FasterThanLeftTraffic))
           }
+  println("Finished loading data from DB: ${failedMonitorMapping.size}")
 
   //          .allNonEmptySubsets()
   //          .sortedWith(
   //              compareBy<Set<MonitorViolation>> { it.size }
   //                  .thenBy { set -> set.map { it.name }.sorted().joinToString("_") })
 
-  MutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantCount)
-  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantCount)
+  MutantKillingWithoutDuplicates.evaluate(failedMonitorMapping, monitorCombinations, mutantCount)
+  //  MutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantCount)
+  //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantCount)
 }
 
 fun Set<MonitorViolation>.toFileNameSuffix(): String =
