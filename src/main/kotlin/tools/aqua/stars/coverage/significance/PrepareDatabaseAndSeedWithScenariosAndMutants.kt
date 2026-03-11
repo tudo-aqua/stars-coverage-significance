@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance
 
 import java.util.UUID
 import kotlin.collections.map
-import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
@@ -115,9 +114,7 @@ private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
   tsc.possibleTSCInstances.forEach { tscInstance ->
     consoleProgress.step()
     TSCInstancesRepository.insertIfAbsentReturnId(
-        TSCInstanceEntry(
-            tscId = tscId,
-            instanceJson = SerializableTSCNode(tscInstance.rootNode).getJsonString()))
+        TSCInstanceEntry(tscId = tscId, instanceJson = tscInstance.getJsonString()))
   }
   println("Finished inserting TSCInstances.")
 }

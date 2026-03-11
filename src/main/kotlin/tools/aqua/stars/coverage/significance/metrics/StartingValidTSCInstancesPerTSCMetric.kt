@@ -27,7 +27,6 @@ import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.SerializableMetric
 import tools.aqua.stars.core.metrics.providers.Stateful
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceMetricProvider
-import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
@@ -122,12 +121,12 @@ class StartingValidTSCInstancesPerTSCMetric<
     db {
       val entries = mutableListOf<MetricStartingValidTSCInstancesEntry>()
       startingValidInstancesMap.forEach { (tsc, map) ->
-        val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
+        val tscEntry = TSCsRepository.getByJson(tsc.getJsonString())
         val tscEntryId = tscEntry?.id
         checkNotNull(tscEntryId) { "TSC entry not found in database" }
 
         map.forEach { (tscInstance, sourceIdentifiers) ->
-          val tscInstanceJsonString = SerializableTSCNode(tscInstance.rootNode).getJsonString()
+          val tscInstanceJsonString = tscInstance.getJsonString()
           val tscInstanceEntryId =
               TSCInstancesRepository.getByInstanceJson(tscInstanceJsonString, tscEntryId)?.id
           checkNotNull(tscInstanceEntryId) {

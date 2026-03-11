@@ -27,6 +27,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.intLiteral
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
@@ -41,6 +42,11 @@ val jsonConfiguration: Json = Json { isLenient = true }
  * @return JSON string representation of the [SerializableTSCNode].
  */
 fun SerializableTSCNode.getJsonString(): String = jsonConfiguration.encodeToString(this)
+
+fun TSCInstance<*, *, *, *>.getJsonString(): String =
+    SerializableTSCNode(this.rootNode).getJsonString()
+
+fun TSC<*, *, *, *>.getJsonString(): String = SerializableTSCNode(this.rootNode).getJsonString()
 
 /**
  * Splits the list into a specified number of buckets.

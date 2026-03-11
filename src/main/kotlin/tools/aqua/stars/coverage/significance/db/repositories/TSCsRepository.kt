@@ -20,11 +20,17 @@ package tools.aqua.stars.coverage.significance.db.repositories
 import java.util.UUID
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCEntry
+import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.createdAt
 import tools.aqua.stars.coverage.significance.db.tables.TSCsTable
+import tools.aqua.stars.coverage.significance.db.tables.TSCsTable.possibleTSCInstancesCount
+import tools.aqua.stars.coverage.significance.db.tables.TSCsTable.tscJson
 
 /** Repository for [TSCEntry]s. */
 object TSCsRepository {
@@ -65,6 +71,25 @@ object TSCsRepository {
       // Likely unique hash violation due to concurrent insert
       getByJson(entry.tscJson)?.id ?: throw e
     }
+  }
+
+  fun insertIfMissingAndReturnId(entry: TSCEntry): UUID = db {
+    require(entry.id == null) { "insert() expects entry.id == null." }
+
+    TSCsTable.insertIgnore { row ->
+      row[TSCsTable.tscJson] = entry.tscJson
+      row[TSCsTable.createdAt] = entry.createdAt
+      row[TSCsTable.possibleTSCInstancesCount] = entry.possibleTSCInstancesCount
+    }
+
+    TSCsTable.select(TSCsTable.id)
+        .where {
+          (tscJson eq entry.tscJson) and
+              (possibleTSCInstancesCount eq entry.possibleTSCInstancesCount)
+        }
+        .limit(1)
+        .single()[TSCsTable.id]
+        .value
   }
 
   /**
