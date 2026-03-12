@@ -20,7 +20,6 @@ package tools.aqua.stars.coverage.significance.metrics
 import java.util.UUID
 import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricProvider
-import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
@@ -111,7 +110,7 @@ class FailedMonitorsMetric(
         failedMonitorsResult.keys.forEach { tsc ->
           val map = failedMonitorsResult[tsc]
           checkNotNull(map)
-          val tscEntry = TSCsRepository.getByJson(SerializableTSCNode(tsc.rootNode).getJsonString())
+          val tscEntry = TSCsRepository.getByJson(tsc.getJsonString())
           checkNotNull(tscEntry) { "TSC not found in DB." }
           val failedMonitorsEntries = map.values.toList()
           MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries)
