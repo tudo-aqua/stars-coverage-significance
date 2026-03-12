@@ -153,4 +153,32 @@ val runPostEvaluation by
       // args = listOf("--flag", "value")
     }
 
+val createHighwayTrafficAnalysisChunkJobs by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Create highway traffic chunk jobs."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.CreateHighwayTrafficChunkJobsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
+val runHighwayTrafficAnalysis by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Run highway traffic analysis."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunHighwayTrafficAnalysisKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
 kotlin { jvmToolchain(21) }

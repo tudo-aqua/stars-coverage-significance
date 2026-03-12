@@ -55,3 +55,5 @@ const val MAX_LENGTH_OF_SCENARIO_IN_SECONDS = 4.2
 const val BUFFER_SIZE = ((BUFFER_SIZE_IN_SECONDS * 1000) / TAKE_ONLY_TICKS_AT_X_MILLIS).toInt()
 /** Base directory for post-evaluation data. */
 const val POST_EVALUATION_BASE_DIR = "postEvaluation"
+/** Base directory for highway traffic analysis data. */
+const val HIGHWAY_TRAFFIC_ANALYSIS_BASE_DIR = "highwayTrafficAnalysis"
