@@ -251,12 +251,12 @@ val slowLeadingVehicle =
     }
 
 /** The maximum speed limit: 130km/h in m/s. */
-const val HIGHWAY_SPEED_LIMIT_MPS: Float = 130.0f / 3.6f
+const val HIGHWAY_MIN_SPEED: Float = 60.0f / 3.6f
 
 /** Predicate for checking whether the ego vehicle preserves the traffic flow. */
 val preservesFlow =
     predicate<TimeStep>("Preserves Flow") { startingTick ->
-      startingTick.ego.speedMetersPerSecond >= HIGHWAY_SPEED_LIMIT_MPS - TRAFFIC_FLOW_DELTA_V_FL_MPS
+      startingTick.ego.speedMetersPerSecond >= HIGHWAY_MIN_SPEED // 60 km/h in m/s
       //            val egoStartingTick = startingTick.ego
       //
       //            // v_max_sl(egoStartingTick)
