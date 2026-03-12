@@ -71,7 +71,7 @@ object MutantKillingWithoutDuplicates {
           }
         }
 
-        println("${index}: Mutant $mutantUuid is unique")
+        println("${index}: Mutant $mutantUuid is new")
         behavioralDistinctMutants.add(mutableListOf(mutantUuid))
       }
 
