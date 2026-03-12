@@ -17,12 +17,98 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
 
+import java.util.UUID
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
+
+suspend fun createBoxPlot(
+    scenarioFailures: List<ScenarioFailure>,
+    repetitions: Int = 500,
+    selectedMonitors: Set<MonitorViolation>,
+    baseSeed: Long,
+    relevantMutants: List<UUID>
+) {
+  val allScenarios = scenarioFailures.map { it.scenarioId }
+  //    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 160)
+
+  val coverageList = List(allScenarios.size) { it + 1 }
+  val boxPlotData: Map<Int, BoxPlotData> = coroutineScope {
+    coverageList
+        .map { coverage ->
+          async(Dispatchers.Default) {
+            coverage to
+                evaluateCoverage(
+                    scenarioFailures = scenarioFailures,
+                    allScenarios = allScenarios,
+                    coverage = coverage,
+                    repetitions = repetitions,
+                    selectedMonitors = selectedMonitors,
+                    seed = baseSeed * 10_000 + coverage,
+                    relevantMutants = relevantMutants)
+          }
+        }
+        .awaitAll()
+        .toMap()
+  }
+
+  writeCSVAndTeXFiles(
+      metricName = "mutant_killing",
+      map = boxPlotData,
+      selectedMonitors = selectedMonitors,
+      numberOfMutants = relevantMutants.size)
+}
+
+private fun evaluateCoverage(
+    scenarioFailures: List<ScenarioFailure>,
+    allScenarios: List<UUID>,
+    coverage: Int,
+    repetitions: Int,
+    selectedMonitors: Set<MonitorViolation>,
+    seed: Long,
+    relevantMutants: List<UUID>
+): BoxPlotData {
+  val countOfKilledMutants = MutableList(repetitions) { 0 }
+  val countOfFailedMonitors = MutableList(repetitions) { 0 }
+  val countOfDistinctMonitorsFailed = MutableList(repetitions) { 0 }
+
+  repeat(repetitions) { repetition ->
+    val rng = Random(seed + repetition)
+
+    val repetitionScenarioIds = allScenarios.drawRandomElements(coverage, rng)
+    val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
+
+    val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
+
+    val relevantMonitors =
+        drawnScenarioInstances.flatMap { scenarioInstance ->
+          scenarioInstance.mutants.filter { mutant ->
+            mutant.mutantId in relevantMutants && mutant.violations.any { it in selectedMonitors }
+          }
+        }
+
+    val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
+    countOfKilledMutants[repetition] = mutantsKilled
+
+    val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
+    countOfFailedMonitors[repetition] = monitorsFailed
+
+    val distinctMonitorsFailed = relevantMonitors.flatMap { it.violations }.toSet().count()
+    countOfDistinctMonitorsFailed[repetition] = distinctMonitorsFailed
+  }
+
+  return BoxPlotData(
+      countOfKilledMutants = countOfKilledMutants,
+      countOfFailedMonitors = countOfFailedMonitors,
+      countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
+}
 
 fun List<Double>.nTile(n: Double): Double {
   val sortedList = this.sorted()
