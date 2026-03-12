@@ -18,9 +18,14 @@
 package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
 
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
+import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
 data class Failure(
     val startingScenarioConfigurationID: UUID,
@@ -32,11 +37,32 @@ object MutantKillingWithoutDuplicates {
 
   fun evaluate(
       failedMonitorMapping: List<ScenarioFailure>,
-      monitorCombinations: MutableList<Set<MonitorViolation>>,
-      numberOfMutants: Int
-  ) {
+      monitorCombinations: MutableList<Set<MonitorViolation>>
+  ) = runBlocking {
+    println("Finished loading data from DB: ${failedMonitorMapping.size}")
+
+    val mutantIdsToEvaluate = filter()
+
+    monitorCombinations
+        .mapIndexed { index, monitorCombination ->
+          async(Dispatchers.Default) {
+            println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
+            createBoxPlot(
+                scenarioFailures = failedMonitorMapping,
+                selectedMonitors = monitorCombination,
+                baseSeed = 42L + index,
+                relevantMutants = mutantIdsToEvaluate)
+          }
+        }
+        .awaitAll()
+
+    return@runBlocking failedMonitorMapping
+  }
+
+  fun filter(): List<UUID> {
+    var listOfFailures: List<Failure> = emptyList()
     db {
-      val data =
+      listOfFailures =
           MetricFailedMonitorsTable.select(
                   MetricFailedMonitorsTable.startingScenarioConfiguration,
                   MetricFailedMonitorsTable.mutant,
@@ -59,27 +85,27 @@ object MutantKillingWithoutDuplicates {
                             (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
               }
               .toList()
-
-      val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
-      val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
-      mutants.forEachIndexed { index, mutantUuid ->
-        for (existingMutant in behavioralDistinctMutants) {
-          if (mutantsIdentical(data, existingMutant.first(), mutantUuid)) {
-            println("${index}: Mutant $mutantUuid is identical to $existingMutant")
-            existingMutant.add(mutantUuid)
-            return@forEachIndexed
-          }
-        }
-
-        println("${index}: Mutant $mutantUuid is new")
-        behavioralDistinctMutants.add(mutableListOf(mutantUuid))
-      }
-
-      behavioralDistinctMutants.forEachIndexed { index, uUIDS ->
-        println("$index: ${uUIDS.joinToString(",")})")
-      }
-      println()
     }
+
+    val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
+    val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
+    mutants.forEachIndexed { index, mutantUuid ->
+      for (existingMutant in behavioralDistinctMutants) {
+        if (mutantsIdentical(listOfFailures, existingMutant.first(), mutantUuid)) {
+          println("${index}: Mutant $mutantUuid is identical to $existingMutant")
+          existingMutant.add(mutantUuid)
+          return@forEachIndexed
+        }
+      }
+
+      println("${index}: Mutant $mutantUuid is new")
+      behavioralDistinctMutants.add(mutableListOf(mutantUuid))
+    }
+
+    behavioralDistinctMutants.forEachIndexed { index, uUIDS ->
+      println("$index: ${uUIDS.joinToString(",")})")
+    }
+    return behavioralDistinctMutants.map { it.first() }
   }
 
   private fun mutantsIdentical(data: List<Failure>, mutant1ID: UUID, mutant2ID: UUID): Boolean {
