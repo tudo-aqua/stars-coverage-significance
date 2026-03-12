@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
 
 import java.util.UUID
+import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 
@@ -34,40 +35,42 @@ object MutantKillingWithoutDuplicates {
       monitorCombinations: MutableList<Set<MonitorViolation>>,
       numberOfMutants: Int
   ) {
-    val data =
-        MetricFailedMonitorsTable.select(
-                MetricFailedMonitorsTable.startingScenarioConfiguration,
-                MetricFailedMonitorsTable.mutant,
-                MetricFailedMonitorsTable.monitorG0Failed,
-                MetricFailedMonitorsTable.monitorG1Failed,
-                MetricFailedMonitorsTable.monitorG2Failed,
-                MetricFailedMonitorsTable.monitorG4Failed,
-                MetricFailedMonitorsTable.monitorI2Failed,
-            )
-            .map {
-              Failure(
-                  startingScenarioConfigurationID =
-                      it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
-                  mutantID = it[MetricFailedMonitorsTable.mutant].value,
-                  monitorBitmask =
-                      (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
-                          (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
-                          (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
-                          (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
-                          (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
-            }
-            .toList()
+    db {
+      val data =
+          MetricFailedMonitorsTable.select(
+                  MetricFailedMonitorsTable.startingScenarioConfiguration,
+                  MetricFailedMonitorsTable.mutant,
+                  MetricFailedMonitorsTable.monitorG0Failed,
+                  MetricFailedMonitorsTable.monitorG1Failed,
+                  MetricFailedMonitorsTable.monitorG2Failed,
+                  MetricFailedMonitorsTable.monitorG4Failed,
+                  MetricFailedMonitorsTable.monitorI2Failed,
+              )
+              .map {
+                Failure(
+                    startingScenarioConfigurationID =
+                        it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
+                    mutantID = it[MetricFailedMonitorsTable.mutant].value,
+                    monitorBitmask =
+                        (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
+                            (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
+                            (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
+                            (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
+                            (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
+              }
+              .toList()
 
-    val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
-    val behavioralDistinctMutants = mutableListOf<UUID>()
-    mutants.forEach { mutantUuid ->
-      if (behavioralDistinctMutants.none { existingMutant ->
-        mutantsIdentical(data, existingMutant, mutantUuid)
-      }) {
-        behavioralDistinctMutants.add(mutantUuid)
+      val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
+      val behavioralDistinctMutants = mutableListOf<UUID>()
+      mutants.forEach { mutantUuid ->
+        if (behavioralDistinctMutants.none { existingMutant ->
+          mutantsIdentical(data, existingMutant, mutantUuid)
+        }) {
+          behavioralDistinctMutants.add(mutantUuid)
+        }
       }
+      println()
     }
-    println()
   }
 
   private fun mutantsIdentical(data: List<Failure>, mutant1ID: UUID, mutant2ID: UUID): Boolean {
