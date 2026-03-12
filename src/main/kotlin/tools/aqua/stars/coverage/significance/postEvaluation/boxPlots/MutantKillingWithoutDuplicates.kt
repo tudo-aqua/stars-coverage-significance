@@ -61,13 +61,22 @@ object MutantKillingWithoutDuplicates {
               .toList()
 
       val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
-      val behavioralDistinctMutants = mutableListOf<UUID>()
-      mutants.forEach { mutantUuid ->
-        if (behavioralDistinctMutants.none { existingMutant ->
-          mutantsIdentical(data, existingMutant, mutantUuid)
-        }) {
-          behavioralDistinctMutants.add(mutantUuid)
+      val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
+      mutants.forEachIndexed { index, mutantUuid ->
+        for (existingMutant in behavioralDistinctMutants) {
+          if (mutantsIdentical(data, existingMutant.first(), mutantUuid)) {
+            println("${index}: Mutant $mutantUuid is identical to $existingMutant")
+            existingMutant.add(mutantUuid)
+            return@forEachIndexed
+          }
         }
+
+        println("${index}: Mutant $mutantUuid is unique")
+        behavioralDistinctMutants.add(mutableListOf(mutantUuid))
+      }
+
+      behavioralDistinctMutants.forEachIndexed { index, uUIDS ->
+        println("$index: ${uUIDS.joinToString(",")})")
       }
       println()
     }
