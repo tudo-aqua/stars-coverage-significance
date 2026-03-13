@@ -41,9 +41,21 @@ import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantKill
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantKillingWithoutDuplicates
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioInstanceFailures
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
+  //Write test file
+  val fullDataCsvPath =
+    Path.of(
+      POST_EVALUATION_BASE_DIR,
+      "TestMetric",
+      "test_data.csv")
+  Files.createDirectories(fullDataCsvPath.parent)
+  fullDataCsvPath.writeText("Test,Data\n1,2\n3,4\n")
+
   CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
@@ -92,7 +104,7 @@ fun main() {
   //              compareBy<Set<MonitorViolation>> { it.size }
   //                  .thenBy { set -> set.map { it.name }.sorted().joinToString("_") })
 
-  MutantKillingWithoutDuplicates.evaluate(failedMonitorMapping, monitorCombinations)
+//  MutantKillingWithoutDuplicates.evaluate(failedMonitorMapping, monitorCombinations)
   MutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds)
   LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
 }
