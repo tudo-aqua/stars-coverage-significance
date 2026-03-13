@@ -17,7 +17,10 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.UUID
+import kotlin.io.path.writeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -27,9 +30,6 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.writeText
 
 data class Failure(
     val startingScenarioConfigurationID: UUID,
@@ -51,6 +51,7 @@ object MutantKillingWithoutDuplicates {
           async(Dispatchers.Default) {
             println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
             createBoxPlot(
+                metricName = "mutant_killing_without_duplicates",
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
                 baseSeed = 42L + index,
@@ -118,10 +119,10 @@ object MutantKillingWithoutDuplicates {
 
     println("Saving behavioral distinct mutants to file...")
     val csvPath =
-      Path.of(
-        POST_EVALUATION_BASE_DIR,
-        "MutantKillingWithoutDuplicates",
-        "behavioral_distinct_mutants.csv")
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "MutantKillingWithoutDuplicates",
+            "behavioral_distinct_mutants.csv")
     Files.createDirectories(csvPath.parent)
     csvPath.writeText(behavioralDistinctMutants.joinToString("\n") { it.joinToString(",") })
 

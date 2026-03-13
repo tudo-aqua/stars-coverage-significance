@@ -38,6 +38,7 @@ object MutantKilling {
           async(Dispatchers.Default) {
             println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
             createBoxPlot(
+                metricName = "mutant_killing",
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
                 baseSeed = 42L + index,

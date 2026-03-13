@@ -30,6 +30,7 @@ import kotlinx.coroutines.coroutineScope
 import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
 
 suspend fun createBoxPlot(
+    metricName: String,
     scenarioFailures: List<ScenarioFailure>,
     repetitions: Int = 500,
     selectedMonitors: Set<MonitorViolation>,
@@ -60,7 +61,7 @@ suspend fun createBoxPlot(
   }
 
   writeCSVAndTeXFiles(
-      metricName = "mutant_killing",
+      metricName = metricName,
       map = boxPlotData,
       selectedMonitors = selectedMonitors,
       numberOfMutants = relevantMutants.size)
