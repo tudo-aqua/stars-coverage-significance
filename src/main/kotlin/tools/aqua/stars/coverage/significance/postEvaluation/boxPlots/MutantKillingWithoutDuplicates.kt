@@ -65,6 +65,7 @@ object MutantKillingWithoutDuplicates {
   fun filter(): List<UUID> {
     println("Start filtering mutants...")
     var listOfFailures: List<Failure> = emptyList()
+    var mutants: List<UUID> = emptyList()
     db {
       listOfFailures =
           MetricFailedMonitorsTable.select(
@@ -89,10 +90,13 @@ object MutantKillingWithoutDuplicates {
                             (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
               }
               .toList()
-    }
-    println("Finished loading failures. Start comparing mutants...")
+      println("Finished loading failures.")
 
-    val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
+      mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
+      println("Finished loading mutant UUIDs.")
+    }
+
+    println("Start comparing mutants...")
     val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
     mutants.forEachIndexed { index, mutantUuid ->
       print("$index: ")
