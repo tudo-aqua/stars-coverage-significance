@@ -22,10 +22,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 data class Failure(
     val startingScenarioConfigurationID: UUID,
@@ -39,9 +43,8 @@ object MutantKillingWithoutDuplicates {
       failedMonitorMapping: List<ScenarioFailure>,
       monitorCombinations: MutableList<Set<MonitorViolation>>
   ) = runBlocking {
-    println("Finished loading data from DB: ${failedMonitorMapping.size}")
-
     val mutantIdsToEvaluate = filter()
+    println("Finished filtering mutants. Start creating plot data...")
 
     monitorCombinations
         .mapIndexed { index, monitorCombination ->
@@ -60,6 +63,7 @@ object MutantKillingWithoutDuplicates {
   }
 
   fun filter(): List<UUID> {
+    println("Start filtering mutants...")
     var listOfFailures: List<Failure> = emptyList()
     db {
       listOfFailures =
@@ -86,25 +90,37 @@ object MutantKillingWithoutDuplicates {
               }
               .toList()
     }
+    println("Finished loading failures. Start comparing mutants...")
 
     val mutants = MutantsTable.select(MutantsTable.id).map { it[MutantsTable.id].value }
     val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
     mutants.forEachIndexed { index, mutantUuid ->
+      print("$index: ")
       for (existingMutant in behavioralDistinctMutants) {
         if (mutantsIdentical(listOfFailures, existingMutant.first(), mutantUuid)) {
-          println("${index}: Mutant $mutantUuid is identical to $existingMutant")
+          println("Mutant $mutantUuid is identical to $existingMutant")
           existingMutant.add(mutantUuid)
           return@forEachIndexed
         }
       }
 
-      println("${index}: Mutant $mutantUuid is new")
+      println("Mutant $mutantUuid is new")
       behavioralDistinctMutants.add(mutableListOf(mutantUuid))
     }
 
     behavioralDistinctMutants.forEachIndexed { index, uUIDS ->
       println("$index: ${uUIDS.joinToString(",")})")
     }
+
+    println("Saving behavioral distinct mutants to file...")
+    val csvPath =
+      Path.of(
+        POST_EVALUATION_BASE_DIR,
+        "MutantKillingWithoutDuplicates",
+        "behavioral_distinct_mutants.csv")
+    Files.createDirectories(csvPath.parent)
+    csvPath.writeText(behavioralDistinctMutants.joinToString("\n") { it.joinToString(",") })
+
     return behavioralDistinctMutants.map { it.first() }
   }
 
