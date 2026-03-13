@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.plots
 
 import java.util.UUID
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.random.Random
@@ -27,9 +25,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 
-suspend fun createBoxPlot(
+suspend fun createPlotData(
     metricName: String,
     scenarioFailures: List<ScenarioFailure>,
     repetitions: Int = 500,
@@ -38,10 +38,8 @@ suspend fun createBoxPlot(
     relevantMutants: List<UUID>
 ) {
   val allScenarios = scenarioFailures.map { it.scenarioId }
-  //    val coverageList = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 160)
-
   val coverageList = List(allScenarios.size) { it + 1 }
-  val boxPlotData: Map<Int, BoxPlotData> = coroutineScope {
+  val plotData: Map<Int, PlotData> = coroutineScope {
     coverageList
         .map { coverage ->
           async(Dispatchers.Default) {
@@ -62,7 +60,7 @@ suspend fun createBoxPlot(
 
   writeCSVAndTeXFiles(
       metricName = metricName,
-      map = boxPlotData,
+      map = plotData,
       selectedMonitors = selectedMonitors,
       numberOfMutants = relevantMutants.size)
 }
@@ -75,7 +73,7 @@ private fun evaluateCoverage(
     selectedMonitors: Set<MonitorViolation>,
     seed: Long,
     relevantMutants: List<UUID>
-): BoxPlotData {
+): PlotData {
   val countOfKilledMutants = MutableList(repetitions) { 0 }
   val countOfFailedMonitors = MutableList(repetitions) { 0 }
   val countOfDistinctMonitorsFailed = MutableList(repetitions) { 0 }
@@ -83,7 +81,7 @@ private fun evaluateCoverage(
   repeat(repetitions) { repetition ->
     val rng = Random(seed + repetition)
 
-    val repetitionScenarioIds = allScenarios.drawRandomElements(coverage, rng)
+    val repetitionScenarioIds = allScenarios.shuffled(rng).take(coverage)
     val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
 
     val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
@@ -105,7 +103,7 @@ private fun evaluateCoverage(
     countOfDistinctMonitorsFailed[repetition] = distinctMonitorsFailed
   }
 
-  return BoxPlotData(
+  return PlotData(
       countOfKilledMutants = countOfKilledMutants,
       countOfFailedMonitors = countOfFailedMonitors,
       countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
@@ -120,65 +118,3 @@ fun List<Double>.nTile(n: Double): Double {
     sortedList[position.toInt()]
   }
 }
-
-fun <T> Collection<T>.drawRandomElements(x: Int, rng: Random): List<T> {
-  require(x >= 0) { "x must be non-negative" }
-  require(x <= size) { "x must not be larger than list size" }
-  return shuffled(rng).take(x)
-}
-
-fun List<Number>.getBoxPlotValues(): BoxPlotValues {
-  val sortedDoubleList = this.map { it.toDouble() }.sorted()
-  val firstQuartile = sortedDoubleList.nTile(0.25)
-  val thirdQuartile = sortedDoubleList.nTile(0.75)
-
-  val iqr = thirdQuartile - firstQuartile
-  val lowerWhisker = maxOf(sortedDoubleList.min(), firstQuartile - 1.5 * iqr)
-  val upperWhisker = minOf(sortedDoubleList.max(), thirdQuartile + 1.5 * iqr)
-  val lowerMildOutlierBound = lowerWhisker - (1.5 * iqr)
-  val upperMildOutlierBound = upperWhisker + (1.5 * iqr)
-
-  val mildOutliers =
-      sortedDoubleList
-          .filter {
-            it in lowerMildOutlierBound..lowerWhisker || it in upperWhisker..upperMildOutlierBound
-          }
-          .distinct()
-  val extremeOutliers =
-      sortedDoubleList.filter { it !in lowerMildOutlierBound..upperMildOutlierBound }.distinct()
-
-  return BoxPlotValues(
-      median = median(sortedDoubleList),
-      firstQuartile = firstQuartile,
-      thirdQuartile = thirdQuartile,
-      lowerWhisker = lowerWhisker,
-      upperWhisker = upperWhisker,
-      mildOutliers = mildOutliers,
-      extremeOutliers = extremeOutliers,
-      allData = sortedDoubleList)
-}
-
-fun Map<Int, BoxPlotValues>.getBoxPlotCSVString() =
-    this.map { (coverage, boxPlotValues) ->
-          "${coverage}, ${boxPlotValues.median}, ${boxPlotValues.firstQuartile}, ${boxPlotValues.thirdQuartile}, ${boxPlotValues.lowerWhisker}, ${boxPlotValues.upperWhisker}"
-        }
-        .joinToString(
-            separator = "\n", prefix = "coverage, median, firstQuartile, thirdQuartile, min, max\n")
-
-fun Map<Int, BoxPlotValues>.getFullDataCSVString() =
-    this.map { (coverage, boxPlotValues) ->
-          "${coverage}, ${boxPlotValues.allData.joinToString(",")}"
-        }
-        .joinToString(separator = "\n", prefix = "coverage, dataPoints\n")
-
-fun Map<Int, BoxPlotValues>.getMildOutliersCSVString() =
-    this.flatMap { (coverage, boxPlotValues) ->
-          boxPlotValues.mildOutliers.map { "${coverage}, $it" }
-        }
-        .joinToString(separator = "\n", prefix = "coverage, outlier\n")
-
-fun Map<Int, BoxPlotValues>.getExtremeOutliersCSVString() =
-    this.flatMap { (coverage, boxPlotValues) ->
-          boxPlotValues.extremeOutliers.map { "${coverage}, $it" }
-        }
-        .joinToString(separator = "\n", prefix = "coverage, outlier\n")

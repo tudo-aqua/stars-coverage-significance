@@ -15,16 +15,8 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-enum class MonitorViolation {
-  G0Accidents,
-  G1SafeDistance,
-  G2UnnecessaryBraking,
-  G3MaximumSpeedLimit,
-  G4TrafficFlow,
-  G5EmergencyBraking,
-  I1Stopping,
-  I2FasterThanLeftTraffic,
-  I3DangerousCutIn,
-}
+import java.util.UUID
+
+data class MutantFailures(val mutantId: UUID, val violations: List<MonitorViolation>)

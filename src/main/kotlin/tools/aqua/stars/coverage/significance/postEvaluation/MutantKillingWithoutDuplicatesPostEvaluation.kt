@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -29,15 +29,13 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.plots.createPlotData
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
-data class Failure(
-    val startingScenarioConfigurationID: UUID,
-    val mutantID: UUID,
-    val monitorBitmask: Int
-)
-
-object MutantKillingWithoutDuplicates {
+object MutantKillingWithoutDuplicatesPostEvaluation {
 
   fun evaluate(
       failedMonitorMapping: List<ScenarioFailure>,
@@ -50,7 +48,7 @@ object MutantKillingWithoutDuplicates {
         .mapIndexed { index, monitorCombination ->
           async(Dispatchers.Default) {
             println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
-            createBoxPlot(
+            createPlotData(
                 metricName = "mutant_killing_without_duplicates",
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
@@ -65,7 +63,7 @@ object MutantKillingWithoutDuplicates {
 
   fun filter(): List<UUID> {
     println("Start filtering mutants...")
-    var listOfFailures: List<Failure> = emptyList()
+    var listOfFailures: List<MutantFailure> = emptyList()
     var mutants: List<UUID> = emptyList()
     db {
       listOfFailures =
@@ -79,7 +77,7 @@ object MutantKillingWithoutDuplicates {
                   MetricFailedMonitorsTable.monitorI2Failed,
               )
               .map {
-                Failure(
+                MutantFailure(
                     startingScenarioConfigurationID =
                         it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
                     mutantID = it[MetricFailedMonitorsTable.mutant].value,
@@ -129,7 +127,11 @@ object MutantKillingWithoutDuplicates {
     return behavioralDistinctMutants.map { it.first() }
   }
 
-  private fun mutantsIdentical(data: List<Failure>, mutant1ID: UUID, mutant2ID: UUID): Boolean {
+  private fun mutantsIdentical(
+      data: List<MutantFailure>,
+      mutant1ID: UUID,
+      mutant2ID: UUID
+  ): Boolean {
     val failuresMutant1 =
         data.filter { it.mutantID == mutant1ID }.sortedBy { it.startingScenarioConfigurationID }
     val failuresMutant2 =

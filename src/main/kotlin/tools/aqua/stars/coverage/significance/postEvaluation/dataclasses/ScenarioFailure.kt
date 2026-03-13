@@ -15,15 +15,11 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-data class BoxPlotValues(
-    val median: Double,
-    val firstQuartile: Double,
-    val thirdQuartile: Double,
-    val lowerWhisker: Double,
-    val upperWhisker: Double,
-    val mildOutliers: List<Double>,
-    val extremeOutliers: List<Double>,
-    val allData: List<Double>
+import java.util.UUID
+
+data class ScenarioFailure(
+    val scenarioId: UUID,
+    val scenarioInstanceFailures: List<ScenarioInstanceFailures>
 )

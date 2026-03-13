@@ -15,12 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.plots
 
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
+import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlotValues
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
 private fun writeCSVFiles(
@@ -77,7 +81,7 @@ private fun writeCSVFiles(
 
 fun writeCSVAndTeXFiles(
     metricName: String,
-    map: Map<Int, BoxPlotData>,
+    map: Map<Int, PlotData>,
     selectedMonitors: Set<MonitorViolation>,
     numberOfMutants: Int
 ) {
@@ -202,3 +206,59 @@ private fun writeTeXFile(
   Files.createDirectories(texPath.parent)
   texPath.writeText(teXCode)
 }
+
+private fun List<Number>.getBoxPlotValues(): BoxPlotValues {
+  val sortedDoubleList = this.map { it.toDouble() }.sorted()
+  val firstQuartile = sortedDoubleList.nTile(0.25)
+  val thirdQuartile = sortedDoubleList.nTile(0.75)
+
+  val iqr = thirdQuartile - firstQuartile
+  val lowerWhisker = maxOf(sortedDoubleList.min(), firstQuartile - 1.5 * iqr)
+  val upperWhisker = minOf(sortedDoubleList.max(), thirdQuartile + 1.5 * iqr)
+  val lowerMildOutlierBound = lowerWhisker - (1.5 * iqr)
+  val upperMildOutlierBound = upperWhisker + (1.5 * iqr)
+
+  val mildOutliers =
+      sortedDoubleList
+          .filter {
+            it in lowerMildOutlierBound..lowerWhisker || it in upperWhisker..upperMildOutlierBound
+          }
+          .distinct()
+  val extremeOutliers =
+      sortedDoubleList.filter { it !in lowerMildOutlierBound..upperMildOutlierBound }.distinct()
+
+  return BoxPlotValues(
+      median = median(sortedDoubleList),
+      firstQuartile = firstQuartile,
+      thirdQuartile = thirdQuartile,
+      lowerWhisker = lowerWhisker,
+      upperWhisker = upperWhisker,
+      mildOutliers = mildOutliers,
+      extremeOutliers = extremeOutliers,
+      allData = sortedDoubleList)
+}
+
+private fun Map<Int, BoxPlotValues>.getBoxPlotCSVString() =
+    this.map { (coverage, boxPlotValues) ->
+          "${coverage}, ${boxPlotValues.median}, ${boxPlotValues.firstQuartile}, ${boxPlotValues.thirdQuartile}, ${boxPlotValues.lowerWhisker}, ${boxPlotValues.upperWhisker}"
+        }
+        .joinToString(
+            separator = "\n", prefix = "coverage, median, firstQuartile, thirdQuartile, min, max\n")
+
+private fun Map<Int, BoxPlotValues>.getFullDataCSVString() =
+    this.map { (coverage, boxPlotValues) ->
+          "${coverage}, ${boxPlotValues.allData.joinToString(",")}"
+        }
+        .joinToString(separator = "\n", prefix = "coverage, dataPoints\n")
+
+private fun Map<Int, BoxPlotValues>.getMildOutliersCSVString() =
+    this.flatMap { (coverage, boxPlotValues) ->
+          boxPlotValues.mildOutliers.map { "${coverage}, $it" }
+        }
+        .joinToString(separator = "\n", prefix = "coverage, outlier\n")
+
+private fun Map<Int, BoxPlotValues>.getExtremeOutliersCSVString() =
+    this.flatMap { (coverage, boxPlotValues) ->
+          boxPlotValues.extremeOutliers.map { "${coverage}, $it" }
+        }
+        .joinToString(separator = "\n", prefix = "coverage, outlier\n")

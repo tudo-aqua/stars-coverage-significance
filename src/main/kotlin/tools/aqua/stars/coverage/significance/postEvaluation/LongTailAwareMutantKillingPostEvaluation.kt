@@ -15,10 +15,15 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation
 
-data class BoxPlotData(
-    val countOfKilledMutants: List<Int>,
-    val countOfFailedMonitors: List<Int>,
-    val countOfDistinctMonitorsFailed: List<Int>,
-)
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+
+object LongTailAwareMutantKillingPostEvaluation {
+  fun evaluate(
+      failedMonitorMapping: List<ScenarioFailure>,
+      monitorCombinations: MutableList<Set<MonitorViolation>>,
+      numberOfMutants: Int
+  ) {}
+}

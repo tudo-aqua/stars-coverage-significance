@@ -15,8 +15,15 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-import java.util.UUID
-
-data class MutantFailures(val mutantId: UUID, val violations: List<MonitorViolation>)
+data class BoxPlotValues(
+    val median: Double,
+    val firstQuartile: Double,
+    val thirdQuartile: Double,
+    val lowerWhisker: Double,
+    val upperWhisker: Double,
+    val mildOutliers: List<Double>,
+    val extremeOutliers: List<Double>,
+    val allData: List<Double>
+)

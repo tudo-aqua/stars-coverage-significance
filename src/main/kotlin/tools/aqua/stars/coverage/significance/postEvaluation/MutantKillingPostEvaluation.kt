@@ -15,16 +15,19 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.plots.createPlotData
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
-object MutantKilling {
+object MutantKillingPostEvaluation {
 
   fun evaluate(
       failedMonitorMapping: List<ScenarioFailure>,
@@ -37,7 +40,7 @@ object MutantKilling {
         .mapIndexed { index, monitorCombination ->
           async(Dispatchers.Default) {
             println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
-            createBoxPlot(
+            createPlotData(
                 metricName = "mutant_killing",
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,

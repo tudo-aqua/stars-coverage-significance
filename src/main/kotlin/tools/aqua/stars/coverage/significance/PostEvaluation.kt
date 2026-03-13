@@ -26,11 +26,11 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MonitorViolation
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantFailures
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.MutantKillingWithoutDuplicates
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioFailure
-import tools.aqua.stars.coverage.significance.postEvaluation.boxPlots.ScenarioInstanceFailures
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingWithoutDuplicatesPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
@@ -82,7 +82,7 @@ fun main() {
   //              compareBy<Set<MonitorViolation>> { it.size }
   //                  .thenBy { set -> set.map { it.name }.sorted().joinToString("_") })
 
-  MutantKillingWithoutDuplicates.evaluate(failedMonitorMapping, monitorCombinations)
+  MutantKillingWithoutDuplicatesPostEvaluation.evaluate(failedMonitorMapping, monitorCombinations)
   //  MutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds)
   //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
   println("Finished!")

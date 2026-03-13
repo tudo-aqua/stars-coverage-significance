@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 import java.util.UUID
 

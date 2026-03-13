@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.boxPlots
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-import java.util.UUID
-
-data class ScenarioFailure(
-    val scenarioId: UUID,
-    val scenarioInstanceFailures: List<ScenarioInstanceFailures>
+data class PlotData(
+    val countOfKilledMutants: List<Int>,
+    val countOfFailedMonitors: List<Int>,
+    val countOfDistinctMonitorsFailed: List<Int>,
 )
