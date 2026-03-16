@@ -47,7 +47,7 @@ fun main() {
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   var failedMonitorMapping: List<ScenarioFailure> = emptyList()
-  var failedMutantsMapping: List<MutantFailure> = emptyList()
+  var failedMutantsMapping: List<MutantFailure> = emptyList() // Only evaluations with at least one failed monitor
   var monitorCombinations: List<Set<MonitorViolation>> = emptyList()
   var mutantIds = emptyList<UUID>()
   var distinctMutantIds = emptyList<UUID>()
@@ -152,6 +152,7 @@ private fun buildFailedMonitorMapping(query: Query): List<ScenarioFailure> {
 
 private fun buildFailedMutantsMapping(): List<MutantFailure> =
     MetricFailedMonitorsTable.select(
+      MetricFailedMonitorsTable.tsc,
             MetricFailedMonitorsTable.startingScenarioConfiguration,
             MetricFailedMonitorsTable.mutant,
             MetricFailedMonitorsTable.monitorG0Failed,
@@ -160,17 +161,21 @@ private fun buildFailedMutantsMapping(): List<MutantFailure> =
             MetricFailedMonitorsTable.monitorG4Failed,
             MetricFailedMonitorsTable.monitorI2Failed,
         )
-        .map {
-          MutantFailure(
+        .mapNotNull {
+          val monitorBitmask = (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
+              (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
+              (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
+              (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
+              (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0)
+
+          if (monitorBitmask == 0) null
+          else MutantFailure(
+              startingScenario = it[MetricFailedMonitorsTable.tsc].value,
               startingScenarioConfigurationID =
                   it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
               mutantID = it[MetricFailedMonitorsTable.mutant].value,
-              monitorBitmask =
-                  (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
+              monitorBitmask = monitorBitmask)
+
         }
         .toList()
 

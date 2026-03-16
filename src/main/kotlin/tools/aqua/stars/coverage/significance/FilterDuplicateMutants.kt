@@ -102,6 +102,7 @@ private fun mutantsIdentical(data: List<MutantFailure>, mutant1ID: UUID, mutant2
 
 private fun buildFailedMutantsMapping(): List<MutantFailure> =
     MetricFailedMonitorsTable.select(
+      MetricFailedMonitorsTable.tsc,
             MetricFailedMonitorsTable.startingScenarioConfiguration,
             MetricFailedMonitorsTable.mutant,
             MetricFailedMonitorsTable.monitorG0Failed,
@@ -112,6 +113,7 @@ private fun buildFailedMutantsMapping(): List<MutantFailure> =
         )
         .map {
           MutantFailure(
+              startingScenario = it[MetricFailedMonitorsTable.tsc].value,
               startingScenarioConfigurationID =
                   it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
               mutantID = it[MetricFailedMonitorsTable.mutant].value,

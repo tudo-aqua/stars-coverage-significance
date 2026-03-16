@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 import java.util.UUID
 
 data class MutantFailure(
+    val startingScenario: UUID,
     val startingScenarioConfigurationID: UUID,
     val mutantID: UUID,
     val monitorBitmask: Int
