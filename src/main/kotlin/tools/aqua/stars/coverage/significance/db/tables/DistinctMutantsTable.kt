@@ -18,11 +18,14 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.javatime.timestamp
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 
 /** Table object for the [MutantEntry] data class. */
 object DistinctMutantsTable : UUIDTable("distinct_mutants") {
+  val createdAt = timestamp("created_at")
+
   init {
-    index(true)
+//    index(true)
   }
 }

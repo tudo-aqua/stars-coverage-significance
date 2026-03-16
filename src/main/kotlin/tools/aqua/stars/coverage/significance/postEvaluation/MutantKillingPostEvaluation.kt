@@ -31,7 +31,7 @@ object MutantKillingPostEvaluation {
 
   fun evaluate(
       failedMonitorMapping: List<ScenarioFailure>,
-      monitorCombinations: MutableList<Set<MonitorViolation>>,
+      monitorCombinations: List<Set<MonitorViolation>>,
       mutantIds: List<UUID>,
       identifier: String
   ) = runBlocking {

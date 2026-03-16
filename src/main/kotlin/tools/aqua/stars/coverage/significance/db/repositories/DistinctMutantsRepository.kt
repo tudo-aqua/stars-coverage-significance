@@ -23,32 +23,42 @@ import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
-import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 import tools.aqua.stars.coverage.significance.db.tables.DistinctMutantsTable
-import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
+import java.util.UUID
 
-/** Repository for [MutantEntry]s. */
+/** Repository for [DistinctMutantEntry]s. */
 object DistinctMutantsRepository {
 
   /** Removes all entries from the database. */
   fun cleanTable() = transaction { DistinctMutantsTable.deleteAll() }
 
   /**
-   * Retrieves all mutants.
+   * Retrieves all distinct mutants.
    *
-   * @return MutantEntry or null if not found.
+   * @return All distinct mutant entries.
    */
   fun getAll(): List<DistinctMutantEntry> = transaction {
     DistinctMutantsTable.selectAll().map { it.toEntry() }
   }
 
   /**
+   * Retrieves all mutant ids.
+   *
+   * @return All distinct mutant ids.
+   */
+  fun getAllIds(): List<UUID> = getAll().map { it.id!! }
+
+
+  /**
    * Inserts multiple mutants into the database.
    *
-   * @param mutants List of MutantEntry to insert.
+   * @param mutants List of [DistinctMutantEntry] to insert.
    */
   fun insertAll(mutants: List<DistinctMutantEntry>) = transaction {
-    DistinctMutantsTable.batchInsert(mutants, ignore = false) {}.map { it.toEntry() }
+    DistinctMutantsTable.batchInsert(mutants, ignore = false) { mutant ->
+      mutant.id?.let { this[DistinctMutantsTable.id] = it }
+      this[DistinctMutantsTable.createdAt] = mutant.createdAt
+    }.map { it.toEntry() }
   }
 
   /**
@@ -58,5 +68,8 @@ object DistinctMutantsRepository {
    * @receiver ResultRow to convert.
    */
   private fun ResultRow.toEntry(): DistinctMutantEntry =
-      DistinctMutantEntry(id = this[MutantsTable.id].value)
+      DistinctMutantEntry(
+        id = this[DistinctMutantsTable.id].value,
+        createdAt = this[DistinctMutantsTable.createdAt]
+      )
 }

@@ -44,13 +44,13 @@ fun main() {
   val filteredMutantIds = filter(failedMutantsMapping, mutantIds)
   //  val filteredMutantIds = failedMutantsMapping.map { it.mutantID }.toSet()
 
-  println("Cleaning table")
-  DistinctMutantsRepository.cleanTable()
-
-  println("Inserting into Database")
-  DistinctMutantsRepository.insertAll(filteredMutantIds.map { DistinctMutantEntry(it) })
-
-  println("Finished!")
+  db {
+    println("Cleaning table")
+    DistinctMutantsRepository.cleanTable()
+    println("Inserting into Database")
+    DistinctMutantsRepository.insertAll(filteredMutantIds.map { DistinctMutantEntry(it) })
+    println("Finished!")
+  }
 }
 
 fun filter(listOfFailures: List<MutantFailure>, mutants: List<UUID>): List<UUID> {
