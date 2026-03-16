@@ -125,6 +125,20 @@ val runEvaluation by
       // args = listOf("--flag", "value")
     }
 
+val filterDuplicateMutants by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Filters duplicate mutants."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.FilterDuplicateMutantsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
 val startProgressMonitor by
     tasks.registering(JavaExec::class) {
       group = "application"

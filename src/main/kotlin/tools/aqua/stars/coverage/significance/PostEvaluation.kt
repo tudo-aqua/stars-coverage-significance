@@ -26,8 +26,10 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingWithoutDuplicatesPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfMutantsKilledPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
@@ -37,7 +39,6 @@ fun main() {
   //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   //  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
-  //  KilledMutantsPerMonitorPerScenarioPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
   //  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
@@ -45,9 +46,11 @@ fun main() {
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   var failedMonitorMapping: List<ScenarioFailure> = emptyList()
+  var failedMutantsMapping: List<MutantFailure> = emptyList()
   var mutantIds = emptyList<UUID>()
   db {
     failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
+    failedMutantsMapping = buildFailedMutantsMapping()
     mutantIds = MutantsRepository.getAllIds()
   }
 
@@ -77,13 +80,11 @@ fun main() {
           }
   println("Finished loading MonitorViolations from DB: ${failedMonitorMapping.size}")
 
-  //          .allNonEmptySubsets()
-  //          .sortedWith(
-  //              compareBy<Set<MonitorViolation>> { it.size }
-  //                  .thenBy { set -> set.map { it.name }.sorted().joinToString("_") })
-
-  MutantKillingWithoutDuplicatesPostEvaluation.evaluate(failedMonitorMapping, monitorCombinations)
-  //  MutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds)
+  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
+  MutantKillingPostEvaluation.evaluate(
+      failedMonitorMapping, monitorCombinations, mutantIds, "mutant_killing")
+  //  MutantKillingPostEvaluation.evaluate(failedMonitorMapping, monitorCombinations,
+  // filteredMutantIds, "mutant_killing_without_duplicates")
   //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
   println("Finished!")
 }
@@ -159,6 +160,30 @@ private fun buildFailedMonitorMapping(query: Query): List<ScenarioFailure> {
             })
   }
 }
+
+private fun buildFailedMutantsMapping(): List<MutantFailure> =
+    MetricFailedMonitorsTable.select(
+            MetricFailedMonitorsTable.startingScenarioConfiguration,
+            MetricFailedMonitorsTable.mutant,
+            MetricFailedMonitorsTable.monitorG0Failed,
+            MetricFailedMonitorsTable.monitorG1Failed,
+            MetricFailedMonitorsTable.monitorG2Failed,
+            MetricFailedMonitorsTable.monitorG4Failed,
+            MetricFailedMonitorsTable.monitorI2Failed,
+        )
+        .map {
+          MutantFailure(
+              startingScenarioConfigurationID =
+                  it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
+              mutantID = it[MetricFailedMonitorsTable.mutant].value,
+              monitorBitmask =
+                  (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
+                      (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
+                      (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
+                      (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
+                      (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
+        }
+        .toList()
 
 private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {
   val violations = mutableListOf<MonitorViolation>()

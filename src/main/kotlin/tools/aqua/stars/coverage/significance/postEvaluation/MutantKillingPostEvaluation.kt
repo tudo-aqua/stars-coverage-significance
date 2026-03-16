@@ -32,7 +32,8 @@ object MutantKillingPostEvaluation {
   fun evaluate(
       failedMonitorMapping: List<ScenarioFailure>,
       monitorCombinations: MutableList<Set<MonitorViolation>>,
-      mutantIds: List<UUID>
+      mutantIds: List<UUID>,
+      identifier: String
   ) = runBlocking {
     println("Finished loading data from DB: ${failedMonitorMapping.size}")
 
@@ -41,7 +42,7 @@ object MutantKillingPostEvaluation {
           async(Dispatchers.Default) {
             println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
             createPlotData(
-                metricName = "mutant_killing",
+                metricName = identifier,
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
                 baseSeed = 42L + index,

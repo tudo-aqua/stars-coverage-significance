@@ -49,12 +49,12 @@ object TotalNumberOfMutantsKilledPerScenarioPostEvaluation {
                 (mfm.monitorG0Failed eq true) or
                     (mfm.monitorG1Failed eq true) or
                     (mfm.monitorG2Failed eq true) or
-                    (mfm.monitorG3Failed eq true) or
+                    //                    (mfm.monitorG3Failed eq true) or
                     (mfm.monitorG4Failed eq true) or
-                    (mfm.monitorG5Failed eq true) or
-                    (mfm.monitorI1Failed eq true) or
-                    (mfm.monitorI2Failed eq true) or
-                    (mfm.monitorI3Failed eq true)
+                    //                    (mfm.monitorG5Failed eq true) or
+                    //                    (mfm.monitorI1Failed eq true) or
+                    (mfm.monitorI2Failed eq true) // or
+                //                    (mfm.monitorI3Failed eq true)
               }
               .groupBy(mfm.startingScenarioConfiguration)
               .orderBy(killedMutants, SortOrder.DESC)
