@@ -22,24 +22,24 @@ import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import tools.aqua.stars.coverage.significance.db.dataclasses.DuplicateMutantEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
-import tools.aqua.stars.coverage.significance.db.tables.DuplicateMutantsTable
+import tools.aqua.stars.coverage.significance.db.tables.DistinctMutantsTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 
 /** Repository for [MutantEntry]s. */
-object DuplicateMutantsRepository {
+object DistinctMutantsRepository {
 
   /** Removes all entries from the database. */
-  fun cleanTable() = transaction { DuplicateMutantsTable.deleteAll() }
+  fun cleanTable() = transaction { DistinctMutantsTable.deleteAll() }
 
   /**
    * Retrieves all mutants.
    *
    * @return MutantEntry or null if not found.
    */
-  fun getAll(): List<DuplicateMutantEntry> = transaction {
-    DuplicateMutantsTable.selectAll().map { it.toEntry() }
+  fun getAll(): List<DistinctMutantEntry> = transaction {
+    DistinctMutantsTable.selectAll().map { it.toEntry() }
   }
 
   /**
@@ -47,16 +47,16 @@ object DuplicateMutantsRepository {
    *
    * @param mutants List of MutantEntry to insert.
    */
-  fun insertAll(mutants: List<DuplicateMutantEntry>) = transaction {
-    DuplicateMutantsTable.batchInsert(mutants, ignore = false) {}.map { it.toEntry() }
+  fun insertAll(mutants: List<DistinctMutantEntry>) = transaction {
+    DistinctMutantsTable.batchInsert(mutants, ignore = false) {}.map { it.toEntry() }
   }
 
   /**
-   * Converts a database [ResultRow] to a [DuplicateMutantEntry].
+   * Converts a database [ResultRow] to a [DistinctMutantEntry].
    *
    * @return Converted MutantEntry.
    * @receiver ResultRow to convert.
    */
-  private fun ResultRow.toEntry(): DuplicateMutantEntry =
-      DuplicateMutantEntry(id = this[MutantsTable.id].value)
+  private fun ResultRow.toEntry(): DistinctMutantEntry =
+      DistinctMutantEntry(id = this[MutantsTable.id].value)
 }

@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.db.dataclasses
+package tools.aqua.stars.coverage.significance.db.tables
 
-import java.util.UUID
+import org.jetbrains.exposed.dao.id.UUIDTable
+import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 
-/**
- * Data class representing a mutant entry in the database.
- *
- * @property id Unique identifier of the mutant entry.
- * @property createdAt Timestamp of when the mutant entry was created.
- */
-data class DuplicateMutantEntry(val id: UUID? = null)
+/** Table object for the [MutantEntry] data class. */
+object DistinctMutantsTable : UUIDTable("distinct_mutants") {
+  init {
+    index(true)
+  }
+}

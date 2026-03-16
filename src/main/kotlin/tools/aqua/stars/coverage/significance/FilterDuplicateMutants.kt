@@ -22,9 +22,9 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.db.dataclasses.DuplicateMutantEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
 import tools.aqua.stars.coverage.significance.db.db
-import tools.aqua.stars.coverage.significance.db.repositories.DuplicateMutantsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -45,10 +45,10 @@ fun main() {
   //  val filteredMutantIds = failedMutantsMapping.map { it.mutantID }.toSet()
 
   println("Cleaning table")
-  DuplicateMutantsRepository.cleanTable()
+  DistinctMutantsRepository.cleanTable()
 
   println("Inserting into Database")
-  DuplicateMutantsRepository.insertAll(filteredMutantIds.map { DuplicateMutantEntry(it) })
+  DistinctMutantsRepository.insertAll(filteredMutantIds.map { DistinctMutantEntry(it) })
 
   println("Finished!")
 }
