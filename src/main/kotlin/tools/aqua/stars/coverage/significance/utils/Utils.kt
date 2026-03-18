@@ -28,6 +28,7 @@ import org.jetbrains.exposed.sql.intLiteral
 import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
+import tools.aqua.stars.core.tsc.node.TSCNode
 import tools.aqua.stars.coverage.significance.COLLISION_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.EXPORT_FILE_EXTENSION
 import tools.aqua.stars.coverage.significance.SCENARIO_FILE_EXTENSION
@@ -47,6 +48,13 @@ fun TSCInstance<*, *, *, *>.getJsonString(): String =
     SerializableTSCNode(this.rootNode).getJsonString()
 
 fun TSC<*, *, *, *>.getJsonString(): String = SerializableTSCNode(this.rootNode).getJsonString()
+
+fun TSC<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
+    this.rootNode.getSetOfAllFeatureNames() - "CONST_TRUE"
+
+private fun TSCNode<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
+    this.edges.map { it.condition.name }.toSet() +
+        this.edges.flatMap { it.destination.getSetOfAllFeatureNames() }.toSet()
 
 /**
  * Splits the list into a specified number of buckets.
