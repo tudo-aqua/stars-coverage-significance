@@ -39,11 +39,16 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
 
     println("Found ${featureLabels.size} feature labels.")
     featureLabels.forEach { println(it) }
+    println()
 
     val longtail =
         allTSCInstances
             .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
             .sortedByDescending { it.second }
+
+    longtail.forEach {
+      println(it.first.scenarioId.toString() + " " + it.second + " " + it.first.scenarioJson)
+    }
 
     val featureToLongtailCountMap: Map<FeatureLabel, MutableList<Int>> =
         featureLabels.associateWith { mutableListOf() }
