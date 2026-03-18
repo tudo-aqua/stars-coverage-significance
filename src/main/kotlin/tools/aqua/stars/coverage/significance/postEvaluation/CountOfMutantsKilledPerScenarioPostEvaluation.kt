@@ -52,11 +52,12 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
 
     values.sortedByDescending { it.third }.take(5).forEach { println(it.first) }
 
+    val csvFileName = "countOfMutantsKilledPerScenario.csv"
     val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
             "count_of_mutants_killed_per_scenario",
-            "countOfMutantsKilledPerScenario.csv",
+            csvFileName,
         )
     Files.createDirectories(path.parent)
     path.writeText(
@@ -66,6 +67,114 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
             separator = "\n") {
               "${it.first},${it.second},${it.third},${it.fourth}"
             })
+    writePythonPlotFile(path.parent, csvFileName)
     println("Finished CountOfMutantsKilledPerScenarioPostEvaluation.")
+  }
+
+  private fun writePythonPlotFile(outputDirectory: Path, csvFileName: String) {
+    val pythonFile = outputDirectory.resolve("countOfMutantsKilledPerScenario.py")
+
+    val pythonScript =
+        """
+        #!/usr/bin/env python3
+        from __future__ import annotations
+
+        import argparse
+        from pathlib import Path
+
+        import matplotlib.pyplot as plt
+        import pandas as pd
+
+
+        CSV_PATH = Path(__file__).with_name("$csvFileName")
+
+
+        def load_data() -> pd.DataFrame:
+            df = pd.read_csv(CSV_PATH, skipinitialspace=True)
+            df.columns = [column.strip() for column in df.columns]
+            return df
+
+
+        def feature_column_name(df: pd.DataFrame) -> str:
+            for column in df.columns:
+                if column.startswith("Feature ") and column.endswith(" active"):
+                    return column
+            raise ValueError("Could not find feature flag column.")
+
+
+        def to_bool(series: pd.Series) -> pd.Series:
+            return series.astype(str).str.strip().str.lower().map(
+                {"true": True, "false": False}
+            )
+
+
+        def plot_combined(
+            df: pd.DataFrame,
+            output_path: Path,
+            feature_column: str,
+            dpi: int = 300,
+        ) -> None:
+            feature_active = to_bool(df[feature_column]).fillna(False)
+            x = range(len(df))
+
+            fig, ax_left = plt.subplots(figsize=(14, 6))
+            ax_right = ax_left.twinx()
+
+            ax_left.bar(x, df["Frequency in longtail"], alpha=0.6)
+            ax_left.set_xlabel("Scenario index (sorted by long-tail frequency)")
+            ax_left.set_ylabel("Frequency in longtail")
+            ax_left.set_title("Long-tail frequency and count of mutants killed per scenario")
+
+            ax_right.scatter(
+                df.loc[~feature_active].index,
+                df.loc[~feature_active, "Count of mutants killed"],
+                label="Feature inactive",
+            )
+            ax_right.scatter(
+                df.loc[feature_active].index,
+                df.loc[feature_active, "Count of mutants killed"],
+                label="Feature active",
+            )
+            ax_right.set_ylabel("Count of mutants killed")
+            ax_right.legend(loc="upper right")
+
+            fig.tight_layout()
+            fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+            plt.close(fig)
+
+
+        def parse_args() -> argparse.Namespace:
+            parser = argparse.ArgumentParser(
+                description="Create a single combined matplotlib plot for $csvFileName"
+            )
+            parser.add_argument(
+                "--output",
+                type=Path,
+                default=Path("countOfMutantsKilledPerScenario.png"),
+                help="Output path for the combined plot",
+            )
+            parser.add_argument(
+                "--dpi",
+                type=int,
+                default=300,
+                help="Output DPI",
+            )
+            return parser.parse_args()
+
+
+        def main() -> None:
+            args = parse_args()
+            df = load_data()
+            feature_column = feature_column_name(df)
+
+            plot_combined(df, args.output, feature_column, dpi=args.dpi)
+
+
+        if __name__ == "__main__":
+            main()
+        """
+            .trimIndent()
+
+    pythonFile.writeText(pythonScript)
   }
 }
