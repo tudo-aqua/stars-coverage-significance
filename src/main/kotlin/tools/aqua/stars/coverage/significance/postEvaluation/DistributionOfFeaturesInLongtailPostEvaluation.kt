@@ -23,6 +23,7 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.ScenarioIdAndJSON
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.getSetOfAllFeatureNames
 
@@ -32,6 +33,7 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
   fun evaluate(
       allTSCInstances: List<ScenarioIdAndJSON>,
       randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
+      filteredMutantFailures: List<MutantFailure>,
   ) {
     println("Starting DistributionOfFeaturesInLongtailPostEvaluation.")
 
@@ -41,22 +43,19 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
     featureLabels.forEach { println(it) }
     println()
 
-    val longtail =
-        allTSCInstances
-            .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
-            .sortedByDescending { it.second }
-
-    longtail.forEach {
-      println(it.first.scenarioId.toString() + " " + it.second + " " + it.first.scenarioJson)
-    }
-
     val featureToLongtailCountMap: Map<FeatureLabel, MutableList<Int>> =
         featureLabels.associateWith { mutableListOf() }
 
-    longtail.forEach { (scenarioIdAndJson, longtailCount) ->
+    allTSCInstances.forEach { scenarioIdAndJson ->
+      val mutantCount =
+          filteredMutantFailures
+              .filter { it.startingScenario == scenarioIdAndJson.scenarioId }
+              .map { it.mutantID }
+              .toSet()
+              .size
       featureLabels.forEach { featureLabel ->
-        if (scenarioIdAndJson.scenarioJson.contains(featureLabel)) {
-          featureToLongtailCountMap[featureLabel]!!.add(longtailCount)
+        if (scenarioIdAndJson.scenarioJson.contains("\"label\":\"$featureLabel\"")) {
+          featureToLongtailCountMap[featureLabel]!!.add(mutantCount)
         }
       }
     }
