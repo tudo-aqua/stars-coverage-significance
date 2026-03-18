@@ -35,8 +35,7 @@ object MutantKillingPostEvaluation {
       mutantIds: List<UUID>,
       identifier: String
   ) = runBlocking {
-    println("Finished loading data from DB: ${failedMonitorMapping.size}")
-
+    println("Starting MutantKillingPostEvaluation -$identifier.")
     monitorCombinations
         .mapIndexed { index, monitorCombination ->
           async(Dispatchers.Default) {
@@ -51,6 +50,7 @@ object MutantKillingPostEvaluation {
         }
         .awaitAll()
 
+    println("Finished MutantKillingPostEvaluation.")
     return@runBlocking failedMonitorMapping
   }
 }

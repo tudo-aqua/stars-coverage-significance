@@ -40,6 +40,7 @@ object TotalNumberOfFailedMonitorsPerScenarioPostEvaluation {
 
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
+    println("Start with TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.")
     DbBootstrap.connect()
     db {
       val t = MetricFailedMonitorsTable
@@ -69,6 +70,7 @@ object TotalNumberOfFailedMonitorsPerScenarioPostEvaluation {
               .sortedByDescending { it.second }
       writeResultFiles(points)
     }
+    println("Finished TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.")
   }
 
   private fun writeResultFiles(

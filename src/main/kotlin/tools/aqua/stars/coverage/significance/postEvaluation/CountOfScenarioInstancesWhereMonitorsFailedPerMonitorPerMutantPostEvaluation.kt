@@ -47,9 +47,13 @@ object CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluat
 
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
+    println(
+        "Start with CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.")
     DbBootstrap.connect()
     val result = scenarioCountWithAtLeastOneFailedMonitor()
     writeResultFiles(result)
+    println(
+        "Finished CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.")
   }
 
   private fun scenarioCountWithAtLeastOneFailedMonitor(): List<Pair<String, Map<String, Int>>> =

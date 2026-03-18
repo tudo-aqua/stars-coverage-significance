@@ -39,6 +39,7 @@ object ScenarioInstancesLongTailDistributionPostEvaluation {
    * files, as well as generating a bar chart.
    */
   fun evaluate() {
+    println("Start with ScenarioInstancesLongTailDistributionPostEvaluation.")
     DbBootstrap.connect()
     val validStartingTSCInstances = MetricStartingValidTSCInstancesRepository.getAll()
     val groupedByTSCInstance = validStartingTSCInstances.groupingBy { it.tscInstanceId }.eachCount()
@@ -67,6 +68,7 @@ object ScenarioInstancesLongTailDistributionPostEvaluation {
     checkNotNull(plot) { "Plot could not be created: $subfolder." }
     plotDataAsBarChart(
         plot, fileName = plotName, path = plotPath, title = "Scenario Long Tail Distribution")
+    println("Finished with ScenarioInstancesLongTailDistributionPostEvaluation.")
   }
 
   /** Writes a CSV with columns: index,count index starts at 1 (change to 0 if you prefer). */

@@ -28,7 +28,16 @@ import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScen
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerMonitorPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfFailedMonitorsPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
@@ -37,13 +46,12 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
-  //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
-  //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
-  //  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
-  //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
-  //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
-  //  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
-  //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
+  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
+  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
+  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
+  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
+  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
+  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   var failedMonitorMapping: List<ScenarioFailure> = emptyList()
@@ -56,6 +64,7 @@ fun main() {
   var randomTrafficAnalysis = emptyList<UUID>()
   var scenarioIds = emptyList<UUID>()
   db {
+    println("Start loading DB")
     //    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
     distinctMutantIds = DistinctMutantsRepository.getAllIds()
     val failedMutantsMapping = buildFailedMutantsMapping()
@@ -78,30 +87,29 @@ fun main() {
 
   println("Finished calculating filtered count of killing scenarios per mutant")
 
-  //  ScenarioByScenarioCrossTable.evaluate(
-  //      filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
+  ScenarioByScenarioCrossTable.evaluate(
+      filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
 
-  //  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
-  //      allTSCInstances = allScenarioInstances,
-  //      randomTrafficTSCInstances = randomTrafficAnalysis,
-  //      filteredMutantFailures = filteredMutantFailures,
-  //      featureToFlagActive = "Has Vehicle on Left Lane Besides")
+  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
+      allTSCInstances = allScenarioInstances,
+      randomTrafficTSCInstances = randomTrafficAnalysis,
+      filteredMutantFailures = filteredMutantFailures,
+      featureToFlagActive = "Has Vehicle on Left Lane Besides")
 
   CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
       countOfKillingScenariosPerMutantFiltered =
           countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios)
 
-  //  MutantKillingPostEvaluation.evaluate(
-  //    failedMonitorMapping = failedMonitorMapping,
-  //    monitorCombinations = monitorCombinations,
-  //    mutantIds = mutantIds,
-  //    identifier = "mutant_killing")
-  //  MutantKillingPostEvaluation.evaluate(
-  //    failedMonitorMapping = failedMonitorMapping,
-  //    monitorCombinations = monitorCombinations,
-  //    mutantIds = distinctMutantIds,
-  //    identifier = "mutant_killing_without_duplicates")
-  //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
+  MutantKillingPostEvaluation.evaluate(
+      failedMonitorMapping = failedMonitorMapping,
+      monitorCombinations = monitorCombinations,
+      mutantIds = mutantIds,
+      identifier = "mutant_killing")
+  MutantKillingPostEvaluation.evaluate(
+      failedMonitorMapping = failedMonitorMapping,
+      monitorCombinations = monitorCombinations,
+      mutantIds = distinctMutantIds,
+      identifier = "mutant_killing_without_duplicates")
   println("Finished!")
 }
 

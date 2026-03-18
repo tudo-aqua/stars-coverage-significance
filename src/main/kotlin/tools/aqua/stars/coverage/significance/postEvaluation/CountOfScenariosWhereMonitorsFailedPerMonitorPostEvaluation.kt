@@ -53,9 +53,11 @@ object CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation {
 
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
+    println("Start with CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.")
     DbBootstrap.connect()
     val result = evaluateAllMonitors().toList().sortedByDescending { it.second }
     writeResultFiles(result)
+    println("Finished CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.")
   }
 
   private fun killingsPerTscInstance(monitorColumn: Column<Boolean>): Long = db {

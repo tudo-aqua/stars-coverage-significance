@@ -39,6 +39,7 @@ import tools.aqua.stars.coverage.significance.utils.everyNth
 object TotalNumberOfFailedMonitorsPerMonitorPostEvaluation {
   /** Executes the evaluation and writes CSV and TeX files to [POST_EVALUATION_BASE_DIR]. */
   fun evaluate() {
+    println("Start with TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.")
     DbBootstrap.connect()
     db {
       val table =
@@ -74,6 +75,7 @@ object TotalNumberOfFailedMonitorsPerMonitorPostEvaluation {
               .map { row -> row[MutantsTable.className] to (row[countAlias] ?: 0) }
               .sortedByDescending { it.second }
       writeResultFiles(points)
+      println("Finished TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.")
     }
   }
 

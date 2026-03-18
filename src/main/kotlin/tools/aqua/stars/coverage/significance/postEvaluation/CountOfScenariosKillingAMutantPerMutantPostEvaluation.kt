@@ -25,6 +25,7 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 
 object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
   fun evaluate(countOfKillingScenariosPerMutantFiltered: List<Pair<UUID, Int>>) {
+    println("Starting CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
     val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
@@ -37,5 +38,6 @@ object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
             prefix = "Mutant, Count of scenarios killing mutant\n", separator = "\n") {
               "${it.first},${it.second}"
             })
+    println("Finished CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
   }
 }

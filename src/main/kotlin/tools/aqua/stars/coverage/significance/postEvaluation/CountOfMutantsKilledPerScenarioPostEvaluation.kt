@@ -31,7 +31,7 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
       filteredMutantFailures: List<MutantFailure>,
       featureToFlagActive: String
   ) {
-
+    println("Starting CountOfMutantsKilledPerScenarioPostEvaluation.")
     val longtail =
         allTSCInstances
             .map { it to randomTrafficTSCInstances.count { t -> t == it.first } }
@@ -66,5 +66,6 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
             separator = "\n") {
               "${it.first},${it.second},${it.third},${it.fourth}"
             })
+    println("Finished CountOfMutantsKilledPerScenarioPostEvaluation.")
   }
 }
