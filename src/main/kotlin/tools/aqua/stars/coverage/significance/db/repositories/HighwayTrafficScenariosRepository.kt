@@ -23,11 +23,16 @@ import org.jetbrains.exposed.sql.selectAll
 import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficScenariosEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
+import java.util.UUID
 
 object HighwayTrafficScenariosRepository {
 
   fun getAll(): List<HighwayTrafficScenariosEntry> = db {
     HighwayTrafficScenariosTable.selectAll().map { it.toEntry() }
+  }
+
+  fun getInstanceIds(): List<UUID> = db {
+    HighwayTrafficScenariosTable.select(HighwayTrafficScenariosTable.tscInstance).map { it[HighwayTrafficScenariosTable.tscInstance].value }
   }
 
   fun batchInsert(entries: List<HighwayTrafficScenariosEntry>) = db {

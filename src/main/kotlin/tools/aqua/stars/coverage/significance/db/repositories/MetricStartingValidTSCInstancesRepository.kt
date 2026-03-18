@@ -30,10 +30,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricStartingValidTSCInstancesEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.createdAt
-import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.scenarioConfig
-import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.tsc
-import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable.tscInstance
 
 /** Repository for [MetricStartingValidTSCInstancesEntry]s. */
 object MetricStartingValidTSCInstancesRepository {
@@ -47,6 +43,10 @@ object MetricStartingValidTSCInstancesRepository {
     MetricStartingValidTSCInstancesTable.selectAll().map { it.toEntry() }
   }
 
+  fun getAllScenarioInstanceIds(): List<UUID> = db {
+    MetricStartingValidTSCInstancesTable.select(MetricStartingValidTSCInstancesTable.tscInstance).withDistinct().map { it[MetricStartingValidTSCInstancesTable.tscInstance].value }
+  }
+
   /**
    * Returns the number of entries in the table.
    *
@@ -56,7 +56,7 @@ object MetricStartingValidTSCInstancesRepository {
 
   /** Returns the number of entries for a given TSC. */
   fun countByTSC(tscId: UUID): Long = transaction {
-    MetricStartingValidTSCInstancesTable.selectAll().where { tsc eq tscId }.count()
+    MetricStartingValidTSCInstancesTable.selectAll().where { MetricStartingValidTSCInstancesTable.tsc eq tscId }.count()
   }
 
   /** Clears the table. */
@@ -74,10 +74,10 @@ object MetricStartingValidTSCInstancesRepository {
    */
   fun batchInsert(entries: List<MetricStartingValidTSCInstancesEntry>) {
     MetricStartingValidTSCInstancesTable.batchInsert(entries) { entry ->
-      this[tsc] = entry.tscId
-      this[tscInstance] = entry.tscInstanceId
-      this[scenarioConfig] = entry.scenarioConfigId
-      this[createdAt] = entry.createdAt
+      this[MetricStartingValidTSCInstancesTable.tsc] = entry.tscId
+      this[MetricStartingValidTSCInstancesTable.tscInstance] = entry.tscInstanceId
+      this[MetricStartingValidTSCInstancesTable.scenarioConfig] = entry.scenarioConfigId
+      this[MetricStartingValidTSCInstancesTable.createdAt] = entry.createdAt
     }
   }
 

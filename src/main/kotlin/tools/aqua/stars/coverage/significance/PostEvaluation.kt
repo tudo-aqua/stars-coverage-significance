@@ -24,11 +24,12 @@ import org.jetbrains.exposed.sql.ResultRow
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
@@ -51,29 +52,38 @@ fun main() {
   var monitorCombinations: List<Set<MonitorViolation>> = emptyList()
   var mutantIds = emptyList<UUID>()
   var distinctMutantIds = emptyList<UUID>()
+  var allScenarioInstances = emptyList<UUID>()
+  var randomTrafficAnalysis = emptyList<UUID>()
   db {
-    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
+//    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
     failedMutantsMapping = buildFailedMutantsMapping()
-    monitorCombinations = buildMonitorCombinations()
-    mutantIds = MutantsRepository.getAllIds()
+//    monitorCombinations = buildMonitorCombinations()
+//    mutantIds = MutantsRepository.getAllIds()
     distinctMutantIds = DistinctMutantsRepository.getAllIds()
+    allScenarioInstances = MetricStartingValidTSCInstancesRepository.getAllScenarioInstanceIds()
+    randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
   }
   println("Finished loading DB")
 
 //  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
 
-  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(failedMutantsMapping, distinctMutantIds)
+  val countOfKillingScenariosPerMutant = CountOfScenariosKillingAMutantPerMutantPostEvaluation.calculateCountOfScenariosKillingMutant(failedMutantsMapping, distinctMutantIds)
+  val countOfKillingScenariosPerMutantFiltered = countOfKillingScenariosPerMutant.filter { it.second < 160 } // 160 = #TSC instances
+  val mutantsToConsider = countOfKillingScenariosPerMutantFiltered.map { it.first }.distinct()
 
-  MutantKillingPostEvaluation.evaluate(
-    failedMonitorMapping = failedMonitorMapping,
-    monitorCombinations = monitorCombinations,
-    mutantIds = mutantIds,
-    identifier = "mutant_killing")
-  MutantKillingPostEvaluation.evaluate(
-    failedMonitorMapping = failedMonitorMapping,
-    monitorCombinations = monitorCombinations,
-    mutantIds = distinctMutantIds,
-    identifier = "mutant_killing_without_duplicates")
+  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(allScenarioInstances, randomTrafficAnalysis, failedMutantsMapping, mutantsToConsider)
+  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(countOfKillingScenariosPerMutantFiltered)
+
+//  MutantKillingPostEvaluation.evaluate(
+//    failedMonitorMapping = failedMonitorMapping,
+//    monitorCombinations = monitorCombinations,
+//    mutantIds = mutantIds,
+//    identifier = "mutant_killing")
+//  MutantKillingPostEvaluation.evaluate(
+//    failedMonitorMapping = failedMonitorMapping,
+//    monitorCombinations = monitorCombinations,
+//    mutantIds = distinctMutantIds,
+//    identifier = "mutant_killing_without_duplicates")
   //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
   println("Finished!")
 }
@@ -150,9 +160,15 @@ private fun buildFailedMonitorMapping(query: Query): List<ScenarioFailure> {
   }
 }
 
-private fun buildFailedMutantsMapping(): List<MutantFailure> =
-    MetricFailedMonitorsTable.select(
-      MetricFailedMonitorsTable.tsc,
+fun buildFailedMutantsMapping(): List<MutantFailure> =
+    MetricFailedMonitorsTable
+      .join(
+          otherTable = MetricStartingValidTSCInstancesTable,
+          onColumn = MetricFailedMonitorsTable.startingScenarioConfiguration,
+          otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
+          joinType = JoinType.INNER)
+      .select(
+        MetricStartingValidTSCInstancesTable.tscInstance,
             MetricFailedMonitorsTable.startingScenarioConfiguration,
             MetricFailedMonitorsTable.mutant,
             MetricFailedMonitorsTable.monitorG0Failed,
@@ -170,7 +186,7 @@ private fun buildFailedMutantsMapping(): List<MutantFailure> =
 
           if (monitorBitmask == 0) null
           else MutantFailure(
-              startingScenario = it[MetricFailedMonitorsTable.tsc].value,
+              startingScenario = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
               startingScenarioConfigurationID =
                   it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
               mutantID = it[MetricFailedMonitorsTable.mutant].value,

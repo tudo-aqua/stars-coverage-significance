@@ -27,6 +27,7 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
+import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
 /** Post-evaluation of the coverage significance evaluation. */
@@ -99,29 +100,3 @@ private fun mutantsIdentical(data: List<MutantFailure>, mutant1ID: UUID, mutant2
   }
   return true
 }
-
-private fun buildFailedMutantsMapping(): List<MutantFailure> =
-    MetricFailedMonitorsTable.select(
-      MetricFailedMonitorsTable.tsc,
-            MetricFailedMonitorsTable.startingScenarioConfiguration,
-            MetricFailedMonitorsTable.mutant,
-            MetricFailedMonitorsTable.monitorG0Failed,
-            MetricFailedMonitorsTable.monitorG1Failed,
-            MetricFailedMonitorsTable.monitorG2Failed,
-            MetricFailedMonitorsTable.monitorG4Failed,
-            MetricFailedMonitorsTable.monitorI2Failed,
-        )
-        .map {
-          MutantFailure(
-              startingScenario = it[MetricFailedMonitorsTable.tsc].value,
-              startingScenarioConfigurationID =
-                  it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
-              mutantID = it[MetricFailedMonitorsTable.mutant].value,
-              monitorBitmask =
-                  (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
-                      (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0))
-        }
-        .toList()
