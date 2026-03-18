@@ -44,6 +44,17 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantF
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
+typealias ScenarioInstanceId = UUID
+
+typealias ScenarioInstanceJSON = String
+
+typealias HighwayTrafficScenarioInstanceId = UUID
+
+data class ScenarioIdAndJSON(
+    val scenarioId: ScenarioInstanceId,
+    val scenarioJson: ScenarioInstanceJSON
+)
+
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
@@ -60,8 +71,8 @@ fun main() {
   var monitorCombinations: List<Set<MonitorViolation>> = emptyList()
   var mutantIds = emptyList<UUID>()
   var distinctMutantIds = emptyList<UUID>()
-  var allScenarioInstances = emptyList<Pair<UUID, String>>()
-  var randomTrafficAnalysis = emptyList<UUID>()
+  var allScenarioInstances = emptyList<ScenarioIdAndJSON>()
+  var randomTrafficAnalysis = emptyList<HighwayTrafficScenarioInstanceId>()
   var scenarioIds = emptyList<UUID>()
   db {
     println("Start loading DB")
@@ -71,9 +82,9 @@ fun main() {
     filteredMutantFailures = failedMutantsMapping.filter { it.mutantID in distinctMutantIds }
     //    monitorCombinations = buildMonitorCombinations()
     //    mutantIds = MutantsRepository.getAllIds()
-    allScenarioInstances = TSCInstancesRepository.getAllTSCInstancesWithJSON()
+    allScenarioInstances = TSCInstancesRepository.getAllScenariosWithJSON()
     randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
-    scenarioIds = TSCInstancesRepository.getAllTSCInstancesWithJSON().map { it.first }
+    scenarioIds = TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId }
   }
   println("Finished loading DB")
 
@@ -90,12 +101,9 @@ fun main() {
   ScenarioByScenarioCrossTable.evaluate(
       filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
 
-  // Plot with long-tail and scatter-plot of two mutants corridors
-  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances,
-      randomTrafficTSCInstances = randomTrafficAnalysis,
-      filteredMutantFailures = filteredMutantFailures,
-      featureToFlagActive = "Has Vehicle on Left Lane Besides")
+  // Plots where the different TSC features are located in the scatter-plot
+  DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
+      allTSCInstances = allScenarioInstances, randomTrafficTSCInstances = randomTrafficAnalysis)
 
   CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
       countOfKillingScenariosPerMutantFiltered =

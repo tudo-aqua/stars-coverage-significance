@@ -22,9 +22,9 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insertIgnore
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.coverage.significance.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
@@ -111,8 +111,10 @@ object TSCInstancesRepository {
           instanceJson = this[TSCInstancesTable.instanceJson],
       )
 
-  fun getAllTSCInstancesWithJSON(): List<Pair<UUID, String>> =
+  fun getAllScenariosWithJSON(): List<ScenarioIdAndJSON> =
       TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
-        row[TSCInstancesTable.id].value to row[TSCInstancesTable.instanceJson]
+        ScenarioIdAndJSON(
+            scenarioId = row[TSCInstancesTable.id].value,
+            scenarioJson = row[TSCInstancesTable.instanceJson])
       }
 }

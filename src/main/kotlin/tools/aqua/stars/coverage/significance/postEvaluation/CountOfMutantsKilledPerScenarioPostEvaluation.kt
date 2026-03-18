@@ -21,33 +21,35 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
+import tools.aqua.stars.coverage.significance.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
 object CountOfMutantsKilledPerScenarioPostEvaluation {
   fun evaluate(
-      allTSCInstances: List<Pair<UUID, String>>,
-      randomTrafficTSCInstances: List<UUID>,
+      allTSCInstances: List<ScenarioIdAndJSON>,
+      randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
       filteredMutantFailures: List<MutantFailure>,
       featureToFlagActive: String
   ) {
     println("Starting CountOfMutantsKilledPerScenarioPostEvaluation.")
     val longtail =
         allTSCInstances
-            .map { it to randomTrafficTSCInstances.count { t -> t == it.first } }
+            .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
             .sortedByDescending { it.second }
 
     val values: List<Quadruple<UUID, Int, Int, Boolean>> =
         longtail.map { l ->
           Quadruple(
-              l.first.first,
+              l.first.scenarioId,
               l.second,
               filteredMutantFailures
-                  .filter { it.startingScenario == l.first.first }
+                  .filter { it.startingScenario == l.first.scenarioId }
                   .map { it.mutantID }
                   .toSet()
                   .size,
-              l.first.second.contains(featureToFlagActive))
+              l.first.scenarioJson.contains(featureToFlagActive))
         }
 
     values.sortedByDescending { it.third }.take(5).forEach { println(it.first) }
