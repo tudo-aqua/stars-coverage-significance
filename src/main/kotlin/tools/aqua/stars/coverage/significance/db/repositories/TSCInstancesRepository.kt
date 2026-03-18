@@ -112,7 +112,7 @@ object TSCInstancesRepository {
       )
 
   fun getAllTSCInstancesWithJSON(): List<Pair<UUID, String>> =
-    TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
-      row[TSCInstancesTable.id].value to row[TSCInstancesTable.instanceJson]
-    }
+      TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
+        row[TSCInstancesTable.id].value to row[TSCInstancesTable.instanceJson]
+      }
 }
