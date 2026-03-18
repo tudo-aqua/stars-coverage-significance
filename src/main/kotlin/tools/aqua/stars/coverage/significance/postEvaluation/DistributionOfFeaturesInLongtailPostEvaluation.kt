@@ -37,6 +37,9 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
 
     val featureLabels: Set<FeatureLabel> = smallStaticTsc().getSetOfAllFeatureNames()
 
+    println("Found ${featureLabels.size} feature labels.")
+    featureLabels.forEach { println(it) }
+
     val longtail =
         allTSCInstances
             .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
@@ -53,6 +56,10 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
       }
     }
 
+    featureToLongtailCountMap.forEach { (feature, counts) ->
+      println("$feature: ${counts.average()}")
+    }
+
     val sortedFeatureDistribution =
         featureToLongtailCountMap.entries
             .sortedByDescending { (_, counts) -> counts.average() }
@@ -66,7 +73,7 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
     val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
-            "count_of_mutants_killed_per_scenario",
+            "feature_distribution_in_longtail_scenarios",
             csvFileName,
         )
     Files.createDirectories(path.parent)
