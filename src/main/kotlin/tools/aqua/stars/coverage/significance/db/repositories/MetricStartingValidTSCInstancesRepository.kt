@@ -43,10 +43,6 @@ object MetricStartingValidTSCInstancesRepository {
     MetricStartingValidTSCInstancesTable.selectAll().map { it.toEntry() }
   }
 
-  fun getAllScenarioInstanceIds(): List<UUID> = db {
-    MetricStartingValidTSCInstancesTable.select(MetricStartingValidTSCInstancesTable.tscInstance).withDistinct().map { it[MetricStartingValidTSCInstancesTable.tscInstance].value }
-  }
-
   /**
    * Returns the number of entries in the table.
    *
@@ -56,7 +52,9 @@ object MetricStartingValidTSCInstancesRepository {
 
   /** Returns the number of entries for a given TSC. */
   fun countByTSC(tscId: UUID): Long = transaction {
-    MetricStartingValidTSCInstancesTable.selectAll().where { MetricStartingValidTSCInstancesTable.tsc eq tscId }.count()
+    MetricStartingValidTSCInstancesTable.selectAll()
+        .where { MetricStartingValidTSCInstancesTable.tsc eq tscId }
+        .count()
   }
 
   /** Clears the table. */

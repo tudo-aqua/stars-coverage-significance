@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
+import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteAll
@@ -24,7 +25,6 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
 import tools.aqua.stars.coverage.significance.db.tables.DistinctMutantsTable
-import java.util.UUID
 
 /** Repository for [DistinctMutantEntry]s. */
 object DistinctMutantsRepository {
@@ -48,7 +48,6 @@ object DistinctMutantsRepository {
    */
   fun getAllIds(): List<UUID> = getAll().map { it.id!! }
 
-
   /**
    * Inserts multiple mutants into the database.
    *
@@ -56,9 +55,10 @@ object DistinctMutantsRepository {
    */
   fun insertAll(mutants: List<DistinctMutantEntry>) = transaction {
     DistinctMutantsTable.batchInsert(mutants, ignore = false) { mutant ->
-      mutant.id?.let { this[DistinctMutantsTable.id] = it }
-      this[DistinctMutantsTable.createdAt] = mutant.createdAt
-    }.map { it.toEntry() }
+          mutant.id?.let { this[DistinctMutantsTable.id] = it }
+          this[DistinctMutantsTable.createdAt] = mutant.createdAt
+        }
+        .map { it.toEntry() }
   }
 
   /**
@@ -69,7 +69,6 @@ object DistinctMutantsRepository {
    */
   private fun ResultRow.toEntry(): DistinctMutantEntry =
       DistinctMutantEntry(
-        id = this[DistinctMutantsTable.id].value,
-        createdAt = this[DistinctMutantsTable.createdAt]
-      )
+          id = this[DistinctMutantsTable.id].value,
+          createdAt = this[DistinctMutantsTable.createdAt])
 }

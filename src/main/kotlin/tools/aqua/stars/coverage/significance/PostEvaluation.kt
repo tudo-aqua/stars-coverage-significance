@@ -25,7 +25,7 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MetricStartingValidTSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerScenarioPostEvaluation
@@ -48,42 +48,52 @@ fun main() {
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   var failedMonitorMapping: List<ScenarioFailure> = emptyList()
-  var failedMutantsMapping: List<MutantFailure> = emptyList() // Only evaluations with at least one failed monitor
+  var filteredMutantFailures: List<MutantFailure> =
+      emptyList() // Only evaluations with at least one failed monitor
   var monitorCombinations: List<Set<MonitorViolation>> = emptyList()
   var mutantIds = emptyList<UUID>()
   var distinctMutantIds = emptyList<UUID>()
-  var allScenarioInstances = emptyList<UUID>()
+  var allScenarioInstances = emptyList<Pair<UUID, String>>()
   var randomTrafficAnalysis = emptyList<UUID>()
   db {
-//    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
-    failedMutantsMapping = buildFailedMutantsMapping()
-//    monitorCombinations = buildMonitorCombinations()
-//    mutantIds = MutantsRepository.getAllIds()
+    //    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
     distinctMutantIds = DistinctMutantsRepository.getAllIds()
-    allScenarioInstances = MetricStartingValidTSCInstancesRepository.getAllScenarioInstanceIds()
+    val failedMutantsMapping = buildFailedMutantsMapping()
+    filteredMutantFailures = failedMutantsMapping.filter { it.mutantID in distinctMutantIds }
+    //    monitorCombinations = buildMonitorCombinations()
+    //    mutantIds = MutantsRepository.getAllIds()
+    allScenarioInstances = TSCInstancesRepository.getAllTSCInstancesWithJSON()
     randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
   }
   println("Finished loading DB")
 
-//  TotalNumberOfMutantsKilledPerScenarioPostEvaluation.evaluate()
+  val countOfKillingScenariosPerMutant =
+      CountOfScenariosKillingAMutantPerMutantPostEvaluation.calculateCountOfScenariosKillingMutant(
+          filteredFailedMutantsMapping = filteredMutantFailures,
+          distinctMutantIds = distinctMutantIds)
 
-  val countOfKillingScenariosPerMutant = CountOfScenariosKillingAMutantPerMutantPostEvaluation.calculateCountOfScenariosKillingMutant(failedMutantsMapping, distinctMutantIds)
-  val countOfKillingScenariosPerMutantFiltered = countOfKillingScenariosPerMutant.filter { it.second < 160 } // 160 = #TSC instances
-  val mutantsToConsider = countOfKillingScenariosPerMutantFiltered.map { it.first }.distinct()
+  val countOfKillingScenariosPerMutantFiltered =
+      countOfKillingScenariosPerMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(allScenarioInstances, randomTrafficAnalysis, failedMutantsMapping, mutantsToConsider)
-  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(countOfKillingScenariosPerMutantFiltered)
+  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
+      allTSCInstances = allScenarioInstances,
+      randomTrafficTSCInstances = randomTrafficAnalysis,
+      filteredMutantFailures = filteredMutantFailures,
+      featureToFlagActive = "Has Vehicle on Left Lane Besides")
 
-//  MutantKillingPostEvaluation.evaluate(
-//    failedMonitorMapping = failedMonitorMapping,
-//    monitorCombinations = monitorCombinations,
-//    mutantIds = mutantIds,
-//    identifier = "mutant_killing")
-//  MutantKillingPostEvaluation.evaluate(
-//    failedMonitorMapping = failedMonitorMapping,
-//    monitorCombinations = monitorCombinations,
-//    mutantIds = distinctMutantIds,
-//    identifier = "mutant_killing_without_duplicates")
+  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
+      countOfKillingScenariosPerMutantFiltered = countOfKillingScenariosPerMutantFiltered)
+
+  //  MutantKillingPostEvaluation.evaluate(
+  //    failedMonitorMapping = failedMonitorMapping,
+  //    monitorCombinations = monitorCombinations,
+  //    mutantIds = mutantIds,
+  //    identifier = "mutant_killing")
+  //  MutantKillingPostEvaluation.evaluate(
+  //    failedMonitorMapping = failedMonitorMapping,
+  //    monitorCombinations = monitorCombinations,
+  //    mutantIds = distinctMutantIds,
+  //    identifier = "mutant_killing_without_duplicates")
   //  LongTailAwareMutantKilling.evaluate(failedMonitorMapping, monitorCombinations, mutantIds.size)
   println("Finished!")
 }
@@ -161,14 +171,13 @@ private fun buildFailedMonitorMapping(query: Query): List<ScenarioFailure> {
 }
 
 fun buildFailedMutantsMapping(): List<MutantFailure> =
-    MetricFailedMonitorsTable
-      .join(
-          otherTable = MetricStartingValidTSCInstancesTable,
-          onColumn = MetricFailedMonitorsTable.startingScenarioConfiguration,
-          otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
-          joinType = JoinType.INNER)
-      .select(
-        MetricStartingValidTSCInstancesTable.tscInstance,
+    MetricFailedMonitorsTable.join(
+            otherTable = MetricStartingValidTSCInstancesTable,
+            onColumn = MetricFailedMonitorsTable.startingScenarioConfiguration,
+            otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
+            joinType = JoinType.INNER)
+        .select(
+            MetricStartingValidTSCInstancesTable.tscInstance,
             MetricFailedMonitorsTable.startingScenarioConfiguration,
             MetricFailedMonitorsTable.mutant,
             MetricFailedMonitorsTable.monitorG0Failed,
@@ -178,47 +187,48 @@ fun buildFailedMutantsMapping(): List<MutantFailure> =
             MetricFailedMonitorsTable.monitorI2Failed,
         )
         .mapNotNull {
-          val monitorBitmask = (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
-              (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
-              (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
-              (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
-              (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0)
+          val monitorBitmask =
+              (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0)
 
           if (monitorBitmask == 0) null
-          else MutantFailure(
-              startingScenario = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
-              startingScenarioConfigurationID =
-                  it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
-              mutantID = it[MetricFailedMonitorsTable.mutant].value,
-              monitorBitmask = monitorBitmask)
-
+          else
+              MutantFailure(
+                  startingScenario = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+                  startingScenarioConfigurationID =
+                      it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
+                  mutantID = it[MetricFailedMonitorsTable.mutant].value,
+                  monitorBitmask = monitorBitmask)
         }
         .toList()
 
-private fun buildMonitorCombinations() : MutableList<Set<MonitorViolation>> =
-  MonitorViolation.entries
-    .toList()
-    .map { setOf(it) }
-    .toMutableList()
-    .apply {
-      add(
-        setOf(
-          MonitorViolation.G0Accidents,
-          MonitorViolation.G1SafeDistance,
-          MonitorViolation.G2UnnecessaryBraking,
-          MonitorViolation.G4TrafficFlow,
-          MonitorViolation.I2FasterThanLeftTraffic))
-      add(
-        setOf(
-          MonitorViolation.G0Accidents,
-          MonitorViolation.G1SafeDistance,
-          MonitorViolation.G2UnnecessaryBraking,
-          MonitorViolation.G3MaximumSpeedLimit,
-          MonitorViolation.G4TrafficFlow,
-          MonitorViolation.G5EmergencyBraking,
-          MonitorViolation.I1Stopping,
-          MonitorViolation.I2FasterThanLeftTraffic))
-    }
+private fun buildMonitorCombinations(): MutableList<Set<MonitorViolation>> =
+    MonitorViolation.entries
+        .toList()
+        .map { setOf(it) }
+        .toMutableList()
+        .apply {
+          add(
+              setOf(
+                  MonitorViolation.G0Accidents,
+                  MonitorViolation.G1SafeDistance,
+                  MonitorViolation.G2UnnecessaryBraking,
+                  MonitorViolation.G4TrafficFlow,
+                  MonitorViolation.I2FasterThanLeftTraffic))
+          add(
+              setOf(
+                  MonitorViolation.G0Accidents,
+                  MonitorViolation.G1SafeDistance,
+                  MonitorViolation.G2UnnecessaryBraking,
+                  MonitorViolation.G3MaximumSpeedLimit,
+                  MonitorViolation.G4TrafficFlow,
+                  MonitorViolation.G5EmergencyBraking,
+                  MonitorViolation.I1Stopping,
+                  MonitorViolation.I2FasterThanLeftTraffic))
+        }
 
 private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {
   val violations = mutableListOf<MonitorViolation>()

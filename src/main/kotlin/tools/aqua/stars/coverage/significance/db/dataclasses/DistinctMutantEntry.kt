@@ -26,7 +26,4 @@ import java.util.UUID
  * @property id Unique identifier of the mutant entry.
  * @property createdAt Timestamp of when the mutant entry was created.
  */
-data class DistinctMutantEntry(
-  val id: UUID? = null,
-  val createdAt: Instant = Instant.now()
-)
+data class DistinctMutantEntry(val id: UUID? = null, val createdAt: Instant = Instant.now())

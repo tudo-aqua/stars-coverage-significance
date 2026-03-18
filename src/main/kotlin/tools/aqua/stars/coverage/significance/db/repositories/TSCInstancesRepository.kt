@@ -110,4 +110,9 @@ object TSCInstancesRepository {
           createdAt = this[TSCInstancesTable.createdAt],
           instanceJson = this[TSCInstancesTable.instanceJson],
       )
+
+  fun getAllTSCInstancesWithJSON(): List<Pair<UUID, String>> =
+    TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
+      row[TSCInstancesTable.id].value to row[TSCInstancesTable.instanceJson]
+    }
 }

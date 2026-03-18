@@ -26,8 +26,6 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
-import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
 /** Post-evaluation of the coverage significance evaluation. */

@@ -15,17 +15,6 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.db.tables
+package tools.aqua.stars.coverage.significance.postEvaluation
 
-import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.javatime.timestamp
-import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
-
-/** Table object for the [MutantEntry] data class. */
-object DistinctMutantsTable : UUIDTable("distinct_mutants") {
-  val createdAt = timestamp("created_at")
-
-  init {
-    //    index(true)
-  }
-}
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
