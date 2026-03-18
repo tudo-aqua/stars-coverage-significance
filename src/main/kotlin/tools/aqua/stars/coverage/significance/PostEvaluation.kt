@@ -101,7 +101,10 @@ fun main() {
 
   // Plots where the different TSC features are located in the scatter-plot
   DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances, randomTrafficTSCInstances = randomTrafficAnalysis)
+      allTSCInstances = allScenarioInstances,
+      randomTrafficTSCInstances = randomTrafficAnalysis,
+      filteredMutantFailures = filteredMutantFailures,
+  )
 
   //  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
   //      countOfKillingScenariosPerMutantFiltered =
