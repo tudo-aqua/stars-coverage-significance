@@ -22,7 +22,6 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
 object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
   fun evaluate(countOfKillingScenariosPerMutantFiltered: List<Pair<UUID, Int>>) {
@@ -38,19 +37,5 @@ object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
             prefix = "Mutant, Count of scenarios killing mutant\n", separator = "\n") {
               "${it.first},${it.second}"
             })
-  }
-
-  fun calculateCountOfScenariosKillingMutant(
-      filteredFailedMutantsMapping: List<MutantFailure>,
-      distinctMutantIds: List<UUID>
-  ): List<Pair<UUID, Int>> {
-    val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
-        distinctMutantIds
-            .map { id ->
-              id to filteredFailedMutantsMapping.map { it.startingScenario }.toSet().size
-            }
-            .sortedBy { it.second }
-
-    return countOfScenariosKillingMutant
   }
 }

@@ -28,7 +28,6 @@ import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScen
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerScenarioPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -55,6 +54,7 @@ fun main() {
   var distinctMutantIds = emptyList<UUID>()
   var allScenarioInstances = emptyList<Pair<UUID, String>>()
   var randomTrafficAnalysis = emptyList<UUID>()
+  var scenarioIds = emptyList<UUID>()
   db {
     //    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
     distinctMutantIds = DistinctMutantsRepository.getAllIds()
@@ -64,25 +64,32 @@ fun main() {
     //    mutantIds = MutantsRepository.getAllIds()
     allScenarioInstances = TSCInstancesRepository.getAllTSCInstancesWithJSON()
     randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
+    scenarioIds = TSCInstancesRepository.getAllTSCInstancesWithJSON().map { it.first }
   }
   println("Finished loading DB")
 
-  val countOfKillingScenariosPerMutant =
-      CountOfScenariosKillingAMutantPerMutantPostEvaluation.calculateCountOfScenariosKillingMutant(
+  val countOfScenariosKillingAMutant =
+      calculateCountOfScenariosKillingMutant(
           filteredFailedMutantsMapping = filteredMutantFailures,
           distinctMutantIds = distinctMutantIds)
 
-  val countOfKillingScenariosPerMutantFiltered =
-      countOfKillingScenariosPerMutant.filter { it.second < 160 } // 160 = #TSC instances
+  val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
+      countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances,
-      randomTrafficTSCInstances = randomTrafficAnalysis,
-      filteredMutantFailures = filteredMutantFailures,
-      featureToFlagActive = "Has Vehicle on Left Lane Besides")
+  println("Finished calculating filtered count of killing scenarios per mutant")
+
+  //  ScenarioByScenarioCrossTable.evaluate(
+  //      filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
+
+  //  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
+  //      allTSCInstances = allScenarioInstances,
+  //      randomTrafficTSCInstances = randomTrafficAnalysis,
+  //      filteredMutantFailures = filteredMutantFailures,
+  //      featureToFlagActive = "Has Vehicle on Left Lane Besides")
 
   CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
-      countOfKillingScenariosPerMutantFiltered = countOfKillingScenariosPerMutantFiltered)
+      countOfKillingScenariosPerMutantFiltered =
+          countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios)
 
   //  MutantKillingPostEvaluation.evaluate(
   //    failedMonitorMapping = failedMonitorMapping,
@@ -249,4 +256,23 @@ private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {
       violations += MonitorViolation.I3DangerousCutIn
 
   return violations
+}
+
+fun calculateCountOfScenariosKillingMutant(
+    filteredFailedMutantsMapping: List<MutantFailure>,
+    distinctMutantIds: List<UUID>
+): List<Pair<UUID, Int>> {
+  val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
+      distinctMutantIds
+          .map { id ->
+            id to
+                filteredFailedMutantsMapping
+                    .filter { it.mutantID == id }
+                    .map { it.startingScenario }
+                    .toSet()
+                    .size
+          }
+          .sortedBy { it.second }
+
+  return countOfScenariosKillingMutant
 }
