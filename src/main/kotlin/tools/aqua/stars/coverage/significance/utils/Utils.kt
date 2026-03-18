@@ -53,8 +53,7 @@ fun TSC<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
     this.rootNode.getSetOfAllFeatureNames() - "CONST_TRUE"
 
 private fun TSCNode<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
-    this.edges.map { it.condition.name }.toSet() +
-        this.edges.flatMap { it.destination.getSetOfAllFeatureNames() }.toSet()
+    setOf(this.label) + this.edges.flatMap { it.destination.getSetOfAllFeatureNames() }
 
 /**
  * Splits the list into a specified number of buckets.
