@@ -90,6 +90,7 @@ fun main() {
   ScenarioByScenarioCrossTable.evaluate(
       filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
 
+  // Plot with long-tail and scatter-plot of two mutants corridors
   CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
       allTSCInstances = allScenarioInstances,
       randomTrafficTSCInstances = randomTrafficAnalysis,
