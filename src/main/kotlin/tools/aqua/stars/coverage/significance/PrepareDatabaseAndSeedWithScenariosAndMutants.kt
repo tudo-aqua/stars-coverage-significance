@@ -50,7 +50,7 @@ fun main() {
   insertAllTSCInstance(tsc, tscId)
 
   // Seed scenarios
-  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true, enablePositionVariance = false)
+  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
 
   // Seed mutants
   seedMutants(seedBaseLine = true, seedMutants = true)
