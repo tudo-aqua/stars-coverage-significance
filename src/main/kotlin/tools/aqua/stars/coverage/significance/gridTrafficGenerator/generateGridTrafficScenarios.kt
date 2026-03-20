@@ -28,28 +28,20 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
  *
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
- * @param enablePositionVariance Whether to enable position variance sampling.
  * @param insertIntoDatabase Whether to insert the scenarios into the database.
  * @return List of generated scenarios.
  */
 fun seedGridTrafficScenarios(
     n: Int? = null,
     seed: Int = 1,
-    enablePositionVariance: Boolean = false,
     insertIntoDatabase: Boolean = true
 ): List<GeneratedScenario> {
   println("Generating scenarios...")
-  val rng = Random(seed)
-  val generator =
-      GridTrafficScenarioGenerator(
-          enablePositionVariance = enablePositionVariance,
-          positionVariantsPerOccupancy = 1,
-          seed = seed,
-      )
+  val generator = GridTrafficScenarioGenerator()
 
   var allScenarios = generator.generateAll().toList()
   if (n != null && n < allScenarios.size) {
-    allScenarios = allScenarios.shuffled(rng).take(n)
+    allScenarios = allScenarios.shuffled(Random(seed)).take(n)
   }
 
   val countOfScenarios =
@@ -75,27 +67,19 @@ fun seedGridTrafficScenarios(
  *
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
- * @param enablePositionVariance Whether to enable position variance sampling.
  * @param insertIntoDatabase Whether to insert the scenarios into the database.
  * @param cleanGenerationFiles Whether to clean the generation files directory before generating.
  */
 fun generateGridTrafficScenarios(
     n: Int? = null,
     seed: Int = 1,
-    enablePositionVariance: Boolean = false,
     insertIntoDatabase: Boolean = true,
     cleanGenerationFiles: Boolean = true
 ) {
   if (cleanGenerationFiles) {
     cleanGenerationFiles()
   }
-  val rng = Random(seed)
-  val generator =
-      GridTrafficScenarioGenerator(
-          enablePositionVariance = enablePositionVariance,
-          positionVariantsPerOccupancy = 3,
-          seed = seed,
-      )
+  val generator = GridTrafficScenarioGenerator()
 
   val existingFiles =
       Path("sumo_data/gridTrafficScenarios/scenarios")
@@ -113,7 +97,7 @@ fun generateGridTrafficScenarios(
   var done = 0
 
   if (n != null && n < allScenarios.size) {
-    allScenarios = allScenarios.shuffled(rng).take(n)
+    allScenarios = allScenarios.shuffled(Random(seed)).take(n)
   }
   val total = allScenarios.size
   println("Generating and writing ${allScenarios.size} scenarios...")

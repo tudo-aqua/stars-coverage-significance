@@ -115,8 +115,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     val parts =
         placements
             .sortedWith(
-                compareBy<Spawn>(
-                    { it.row }, { it.lane }, { it.type.sumoId }, { it.positionMeters }))
+                compareBy({ it.row }, { it.lane }, { it.type.sumoId }, { it.positionMeters }))
             .map { it.getHumanReadableString() }
 
     val base = parts.joinToString(separator = "__")
