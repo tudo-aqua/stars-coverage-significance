@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance.db.repositories
 import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.selectAll
 import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficScenariosEntry
 import tools.aqua.stars.coverage.significance.db.db
@@ -65,4 +66,6 @@ object HighwayTrafficScenariosRepository {
           tscInstanceId = this[HighwayTrafficScenariosTable.tscInstance].value,
           createdAt = this[HighwayTrafficScenariosTable.createdAt],
       )
+
+  fun clear() = db { HighwayTrafficScenariosTable.deleteAll() }
 }
