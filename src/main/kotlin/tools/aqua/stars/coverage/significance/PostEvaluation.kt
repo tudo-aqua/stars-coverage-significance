@@ -29,7 +29,6 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -81,7 +80,7 @@ fun main() {
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  HighwayTrafficAnalysis.evaluate(longtailDistribution)
+//  HighwayTrafficAnalysis.evaluate(longtailDistribution)
 
   //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
   // filteredMutantFailures)
