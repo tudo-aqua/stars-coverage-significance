@@ -21,6 +21,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 import tools.aqua.stars.coverage.significance.scenarioIds
@@ -28,31 +32,38 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
 object ScenarioByScenarioCrossTable {
 
-  fun evaluate() {
+  fun evaluate() = runBlocking {
     val consoleProgress = ConsoleProgress(total = scenarioIds.size * scenarioIds.size)
     println("Starting ScenarioByScenarioCrossTable.")
     val heatmap =
         Array(scenarioIds.size) { Array<Triple<UUID, UUID, Int>?>(scenarioIds.size) { null } }
 
-    scenarioIds.forEachIndexed { outerIndex, outerScenarioId ->
-      val distinctMutantsKilledByOuterScenario =
-          distinctMutantFailuresFiltered
-              .filter { it.tscInstance == outerScenarioId }
-              .map { it.mutantID }
-              .toSet()
+    scenarioIds
+        .mapIndexed { outerIndex, outerScenarioId ->
+          async(Dispatchers.Default) {
+            val distinctMutantsKilledByOuterScenario =
+                distinctMutantFailuresFiltered
+                    .filter { it.tscInstance == outerScenarioId }
+                    .map { it.mutantID }
+                    .toSet()
 
-      scenarioIds.forEachIndexed { innerIndex, innerScenarioId ->
-        consoleProgress.step("Running scenario $outerIndex in $innerIndex")
-        val distinctMutantsKilledByInnerScenario =
-            distinctMutantFailuresFiltered
-                .filter { it.tscInstance == innerScenarioId }
-                .map { it.mutantID }
-                .toSet()
+            scenarioIds.forEachIndexed { innerIndex, innerScenarioId ->
+              val distinctMutantsKilledByInnerScenario =
+                  distinctMutantFailuresFiltered
+                      .filter { it.tscInstance == innerScenarioId }
+                      .map { it.mutantID }
+                      .toSet()
 
-        val difference = distinctMutantsKilledByOuterScenario - distinctMutantsKilledByInnerScenario
-        heatmap[outerIndex][innerIndex] = Triple(outerScenarioId, innerScenarioId, difference.size)
-      }
-    }
+              val difference =
+                  distinctMutantsKilledByOuterScenario - distinctMutantsKilledByInnerScenario
+              heatmap[outerIndex][innerIndex] =
+                  Triple(outerScenarioId, innerScenarioId, difference.size)
+
+              consoleProgress.step("Running scenario $outerIndex in $innerIndex")
+            }
+          }
+        }
+        .awaitAll()
 
     val rowSortedHeatmap = heatmap.sortedBy { row -> row.sumOf { it!!.third } }
 
