@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+    <vType id="ego"
+           vClass="passenger"
+           color="white"/>
+
+    <!-- Calm car: slightly below the limit, large gaps, strong keep-right discipline -->
+    <vType id="car_calm"
+           vClass="passenger"
+           maxSpeed="19.44"
+           speedFactor="0.96"
+           speedDev="0.04"
+           sigma="0.45"
+           tau="1.15"
+           minGap="2.8"
+           lcKeepRight="4.0"
+           lcStrategic="0.7"
+           lcCooperative="0.9"
+           lcSpeedGain="0.7"
+           lcAssertive="0.8"
+           color="0,255,0"/>
+
+    <!-- Normal car: moderate spread around the nominal speed with balanced lane-changing -->
+    <vType id="car_normal"
+           vClass="passenger"
+           maxSpeed="27.78"
+           speedFactor="1.00"
+           speedDev="0.10"
+           sigma="0.5"
+           tau="1.0"
+           minGap="2.5"
+           lcKeepRight="2.0"
+           lcStrategic="1.0"
+           lcCooperative="1.0"
+           lcSpeedGain="1.0"
+           lcAssertive="1.0"
+           color="255,255,0"/>
+
+    <!-- Speedy car: faster desired speed, slightly smaller gaps, weaker keep-right pressure -->
+    <vType id="car_speedy"
+           vClass="passenger"
+           maxSpeed="36.11"
+           speedFactor="1.06"
+           speedDev="0.08"
+           sigma="0.55"
+           tau="0.9"
+           minGap="2.2"
+           lcKeepRight="1.5"
+           lcStrategic="1.5"
+           lcCooperative="0.75"
+           lcSpeedGain="1.25"
+           lcAssertive="1.25"
+           color="255,0,0"/>
+</additional>
