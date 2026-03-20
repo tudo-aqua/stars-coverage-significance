@@ -29,7 +29,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.AccidentsKillingPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -68,7 +68,6 @@ fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
-  //  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
   //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
@@ -81,7 +80,10 @@ fun main() {
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution, filteredMutantFailures)
+  HighwayTrafficAnalysis.evaluate(longtailDistribution)
+
+  //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
+  // filteredMutantFailures)
   //  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures)
 
   //    ScenarioByScenarioCrossTable.evaluate(

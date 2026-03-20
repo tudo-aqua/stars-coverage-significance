@@ -32,8 +32,7 @@ object AccidentsKillingPerScenarioPostEvaluation {
   ) {
     val mutantsKilledByAccident =
         filteredMutantFailures.filter {
-          it.monitorBitmask and 1 shl Monitors.G0Accidents.ordinal ==
-              1 shl Monitors.G0Accidents.ordinal
+          it.monitorBitmask and Monitors.G0Accidents.mask == Monitors.G0Accidents.mask
         }
     val mutantsKilled = mutantsKilledByAccident.map { it.mutantID }.toSet()
     println("Total mutants killed: " + mutantsKilled.size)

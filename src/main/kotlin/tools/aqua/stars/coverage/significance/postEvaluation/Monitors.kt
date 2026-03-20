@@ -26,5 +26,8 @@ enum class Monitors {
   G5EmergencyBraking,
   I1Stopping,
   I2FasterThanLeftTraffic,
-  I3DangerousCutin
+  I3DangerousCutin;
+
+  val mask: Int
+    get() = 1 shl ordinal
 }

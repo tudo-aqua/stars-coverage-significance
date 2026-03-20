@@ -27,7 +27,7 @@ object CountOfMutantsKilledPerMonitor {
 
     filteredMutantFailures.forEach { failure ->
       Monitors.entries.forEach { m ->
-        if (failure.monitorBitmask and 1 shl m.ordinal == m.ordinal)
+        if (failure.monitorBitmask and m.mask == m.mask)
             monitorToFailedMutantsMap[m.name]!!.add(failure.mutantID)
       }
     }
