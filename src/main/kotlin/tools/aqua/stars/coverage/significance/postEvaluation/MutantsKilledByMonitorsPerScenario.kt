@@ -21,20 +21,19 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
+import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 object MutantsKilledByMonitorsPerScenario {
-  fun evaluate(
-      longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
-      filteredMutantFailures: List<MutantFailure>
-  ) {
+  fun evaluate() {
     println("Starting MutantsKilledByMonitorsPerScenario.")
 
     val values: List<Triple<ScenarioIdAndJSON, Int, Map<String, Int>>> =
         longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
-              filteredMutantFailures.filter {
+              distinctMutantFailuresFiltered.filter {
                 it.tscInstance == scenarioAndLongtailCount.first.scenarioId
               }
           Triple(

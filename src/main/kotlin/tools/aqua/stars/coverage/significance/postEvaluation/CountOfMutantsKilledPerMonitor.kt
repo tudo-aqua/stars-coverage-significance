@@ -22,15 +22,15 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
+import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 
 object CountOfMutantsKilledPerMonitor {
-  fun evaluate(filteredMutantFailures: List<MutantFailure>) {
+  fun evaluate() {
     println("Starting CountOfMutantsKilledPerMonitor.")
     val monitorToFailedMutantsMap =
         Monitors.entries.associate { m -> m.name to mutableSetOf<UUID>() }
 
-    filteredMutantFailures.forEach { failure ->
+    distinctMutantFailuresFiltered.forEach { failure ->
       Monitors.entries.forEach { m ->
         if (failure.monitorBitmask and m.mask == m.mask)
             monitorToFailedMutantsMap[m.name]!!.add(failure.mutantID)

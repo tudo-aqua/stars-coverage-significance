@@ -29,7 +29,11 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerMonitor
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -103,22 +107,16 @@ fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
 
   /** Evaluate longtail distribution from random highway traffic */
-  //  HighwayTrafficAnalysis.evaluate(longtailDistribution = longtailDistribution)
+  HighwayTrafficAnalysis.evaluate()
 
   /** Evaluate how many mutants have been killed by different values for scenario coverage. */
-  //  MutantKillingPostEvaluation.evaluate(
-  //      failedMonitorMapping = failedMonitorMapping,
-  //      monitorCombinations = monitorCombinations,
-  //      mutantIds = distinctMutantIds,
-  //      identifier = "MutantKilling")
+  MutantKillingPostEvaluation.evaluate()
 
   /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
-  //  MutantsKilledByMonitorsPerScenario.evaluate(
-  //      filteredMutantFailures = distinctMutantFailuresFiltered,
-  //      longtailDistribution = longtailDistribution)
+  MutantsKilledByMonitorsPerScenario.evaluate()
 
   /** Evaluate how many mutants can be killed by each monitor. */
-  //  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures = mutantFailuresFiltered)
+  CountOfMutantsKilledPerMonitor.evaluate()
 
   /** Plot for each mutant how many scenarios are capable of killing it. */
   CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()

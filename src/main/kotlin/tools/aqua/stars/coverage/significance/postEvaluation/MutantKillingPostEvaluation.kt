@@ -24,6 +24,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import tools.aqua.stars.coverage.significance.distinctMutantIds
+import tools.aqua.stars.coverage.significance.failedMonitorMapping
+import tools.aqua.stars.coverage.significance.monitorCombinations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
@@ -32,12 +35,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTe
 
 object MutantKillingPostEvaluation {
 
-  fun evaluate(
-      failedMonitorMapping: List<ScenarioFailure>,
-      monitorCombinations: List<Set<MonitorViolation>>,
-      mutantIds: List<UUID>,
-      identifier: String
-  ) = runBlocking {
+  fun evaluate() = runBlocking {
+    val identifier = "MutantKilling"
     println("Starting MutantKillingPostEvaluation -$identifier.")
     monitorCombinations
         .mapIndexed { index, monitorCombination ->
@@ -48,7 +47,8 @@ object MutantKillingPostEvaluation {
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
                 baseSeed = 42L + index,
-                relevantMutants = mutantIds)
+                relevantMutants = distinctMutantIds
+            )
           }
         }
         .awaitAll()
