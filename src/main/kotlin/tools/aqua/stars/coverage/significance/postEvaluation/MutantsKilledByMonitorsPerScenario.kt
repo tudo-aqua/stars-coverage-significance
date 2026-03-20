@@ -23,7 +23,6 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 import tools.aqua.stars.coverage.significance.longtailDistribution
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 object MutantsKilledByMonitorsPerScenario {

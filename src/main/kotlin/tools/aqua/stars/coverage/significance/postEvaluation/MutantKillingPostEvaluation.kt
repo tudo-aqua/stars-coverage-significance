@@ -47,8 +47,7 @@ object MutantKillingPostEvaluation {
                 scenarioFailures = failedMonitorMapping,
                 selectedMonitors = monitorCombination,
                 baseSeed = 42L + index,
-                relevantMutants = distinctMutantIds
-            )
+                relevantMutants = distinctMutantIds)
           }
         }
         .awaitAll()

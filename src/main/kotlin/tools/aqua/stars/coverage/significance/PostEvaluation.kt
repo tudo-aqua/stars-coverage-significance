@@ -34,6 +34,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKil
 import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -121,6 +122,9 @@ fun main() {
   /** Plot for each mutant how many scenarios are capable of killing it. */
   CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
 
+  /** Heatmap of how many mutants are killed by a scenario that are not killed by the other */
+  ScenarioByScenarioCrossTable.evaluate()
+
   //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
   //    filteredMutantFailures)
   /**
@@ -157,17 +161,6 @@ fun main() {
   //      filteredMutantFailures = filteredMutantFailures,
   //  )
 
-  //  MutantKillingPostEvaluation.evaluate(
-  //      failedMonitorMapping = failedMonitorMapping,
-  //      monitorCombinations = monitorCombinations,
-  //      mutantIds = mutantIds,
-  //      identifier = "mutant_killing")
-
-  //  MutantKillingPostEvaluation.evaluate(
-  //      failedMonitorMapping = failedMonitorMapping,
-  //      monitorCombinations = monitorCombinations,
-  //      mutantIds = distinctMutantIds,
-  //      identifier = "mutant_killing_without_duplicates")
   println("Finished!")
 }
 
