@@ -44,7 +44,7 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
               l.first,
               l.second,
               filteredMutantFailures
-                  .filter { it.tscInstance == l.first.scenarioId }
+                  .filter { it.tscInstance == l.first.scenarioInstanceId }
                   .map { it.mutantID }
                   .toSet()
                   .size)
@@ -64,7 +64,7 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
         values.joinToString(
             prefix = "Scenario, Frequency in longtail, Count of mutants killed\n",
             separator = "\n") {
-              "${it.first.scenarioId},${it.second},${it.third}"
+              "${it.first.scenarioInstanceId},${it.second},${it.third}"
             })
     writePythonPlotFile(path.parent, csvFileName)
     println("Finished CountOfMutantsKilledPerScenarioPostEvaluation.")

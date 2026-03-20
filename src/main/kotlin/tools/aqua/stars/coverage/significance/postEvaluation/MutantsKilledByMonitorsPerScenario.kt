@@ -33,7 +33,7 @@ object MutantsKilledByMonitorsPerScenario {
         longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               distinctMutantFailuresFiltered.filter {
-                it.tscInstance == scenarioAndLongtailCount.first.scenarioId
+                it.tscInstance == scenarioAndLongtailCount.first.scenarioInstanceId
               }
           Triple(
               scenarioAndLongtailCount.first,
@@ -61,7 +61,7 @@ object MutantsKilledByMonitorsPerScenario {
             prefix =
                 "Scenario, Frequency in longtail, ${Monitors.entries.joinToString(",") { it.name }}\n",
             separator = "\n") {
-              "${it.first.scenarioId},${it.second},${Monitors.entries.joinToString(",") { m -> "${it.third[m.name]}" }}"
+              "${it.first.scenarioInstanceId},${it.second},${Monitors.entries.joinToString(",") { m -> "${it.third[m.name]}" }}"
             })
     println("Finished MutantsKilledByMonitorsPerScenario.")
   }

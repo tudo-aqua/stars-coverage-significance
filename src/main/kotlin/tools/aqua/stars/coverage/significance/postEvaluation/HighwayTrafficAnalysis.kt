@@ -38,7 +38,7 @@ object HighwayTrafficAnalysis {
     csvPath.writeText(
         longtailDistribution.joinToString(
             prefix = "Scenario, Frequency in longtail\n", separator = "\n") {
-              "${it.first.scenarioId},${it.second}"
+              "${it.first.scenarioInstanceId},${it.second}"
             })
     println("Finished HighwayTrafficAnalysis.")
   }

@@ -35,7 +35,7 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitor
         longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               filteredMutantFailures.filter {
-                it.tscInstance == scenarioAndLongtailCount.first.scenarioId
+                it.tscInstance == scenarioAndLongtailCount.first.scenarioInstanceId
               }
           Triple(
               scenarioAndLongtailCount.first,

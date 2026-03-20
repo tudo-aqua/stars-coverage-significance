@@ -42,7 +42,7 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation
         longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               filteredMutantFailures.filter {
-                it.tscInstance == scenarioAndLongtailCount.first.scenarioId
+                it.tscInstance == scenarioAndLongtailCount.first.scenarioInstanceId
               }
           Triple(
               scenarioAndLongtailCount.first,
@@ -75,7 +75,7 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation
             prefix =
                 "Scenario, Frequency in longtail, Count of mutants killed by G0Accidents, Count of mutants killed by G1SafeDistance, Count of mutants killed by G4TrafficFlow, Count of mutants killed by I2FasterThanLeftTraffic\n",
             separator = "\n") {
-              "${it.first.scenarioId},${it.second},${it.third["G0Accidents"]},${it.third["G1SafeDistance"]},${it.third["G4TrafficFlow"]},${it.third["I2FasterThanLeftTraffic"]}"
+              "${it.first.scenarioInstanceId},${it.second},${it.third["G0Accidents"]},${it.third["G1SafeDistance"]},${it.third["G4TrafficFlow"]},${it.third["I2FasterThanLeftTraffic"]}"
             })
     writePythonPlotFile(path.parent, csvFileName)
     println("Finished CountOfMutantsKilledPerScenarioPostEvaluation.")

@@ -18,7 +18,15 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.javatime.timestamp
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.toMonitorViolations
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
+import java.util.UUID
 
 /**
  * Table for storing the failed monitors for a mutant in a scenario starting configuration and
@@ -83,4 +91,94 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
     index(false, startingScenarioConfiguration)
     index(false, mutant)
   }
+
+  fun buildFailedMonitorMapping(): List<ScenarioFailure> {
+    val failedMonitors = MetricFailedMonitorsTable
+    val joinedWithTSCInstances =
+      failedMonitors.join(
+        otherTable = MetricStartingValidTSCInstancesTable,
+        onColumn = startingScenarioConfiguration,
+        otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
+        joinType = JoinType.LEFT)
+
+    val query =
+      joinedWithTSCInstances.select(
+        mutant,
+        MetricStartingValidTSCInstancesTable.tscInstance,
+        startingScenarioConfiguration,
+        monitorG0Failed,
+        monitorG1Failed,
+        monitorG2Failed,
+        monitorG3Failed,
+        monitorG4Failed,
+        monitorG5Failed,
+        monitorI1Failed,
+        monitorI2Failed,
+        monitorI3Failed
+      )
+
+    val result = mutableMapOf<UUID, MutableMap<UUID, MutableList<MutantFailures>>>()
+
+    for (row in query) {
+      val tscInstanceId = row[MetricStartingValidTSCInstancesTable.tscInstance].value
+      val scenarioInstanceId = row[startingScenarioConfiguration].value
+      val mutantId = row[mutant].value
+      val violations = row.toMonitorViolations()
+
+      val scenarios = result.getOrPut(tscInstanceId) { mutableMapOf() }
+      val mutants = scenarios.getOrPut(scenarioInstanceId) { mutableListOf() }
+
+      mutants += MutantFailures(mutantId = mutantId, violations = violations)
+    }
+
+    return result.map { (tscInstanceId, scenarios) ->
+      ScenarioFailure(
+        scenarioId = tscInstanceId,
+        scenarioInstanceFailures =
+          scenarios.map { (scenarioInstanceId, mutants) ->
+            ScenarioInstanceFailures(scenarioInstanceId = scenarioInstanceId, mutants = mutants)
+          })
+    }
+  }
+
+  fun buildFailedMutantsMapping(): List<MutantFailure> =
+    join(
+      otherTable = MetricStartingValidTSCInstancesTable,
+      onColumn = startingScenarioConfiguration,
+      otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
+      joinType = JoinType.INNER)
+      .select(
+        MetricStartingValidTSCInstancesTable.tscInstance,
+        startingScenarioConfiguration,
+        mutant,
+        monitorG0Failed,
+        monitorG1Failed,
+        monitorG2Failed,
+        monitorG3Failed,
+        monitorG4Failed,
+        monitorG5Failed,
+        monitorI1Failed,
+        monitorI2Failed,
+        monitorI3Failed
+      )
+      .mapNotNull {
+        val monitorBitmask =
+          (if (it[monitorG0Failed]) 1 else 0) +
+              (if (it[monitorG1Failed]) 2 else 0) +
+              (if (it[monitorG2Failed]) 4 else 0) +
+              (if (it[monitorG3Failed]) 8 else 0) +
+              (if (it[monitorG4Failed]) 16 else 0) +
+              (if (it[monitorG5Failed]) 32 else 0) +
+              (if (it[monitorI1Failed]) 64 else 0) +
+              (if (it[monitorI2Failed]) 128 else 0) +
+              (if (it[monitorI3Failed]) 256 else 0)
+
+        MutantFailure(
+          tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+          startingScenarioConfigurationID =
+            it[startingScenarioConfiguration].value,
+          mutantID = it[mutant].value,
+          monitorBitmask = monitorBitmask)
+      }
+      .toList()
 }

@@ -19,40 +19,41 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
+import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
+import tools.aqua.stars.coverage.significance.longtailDistribution
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceId
 
-object AccidentsKillingPerScenarioPostEvaluation {
-  fun evaluate(
-      longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
-      filteredMutantFailures: List<MutantFailure>
-  ) {
-    println("Starting AccidentsKillingPerScenarioPostEvaluation.")
-    val mutantsKilledByAccident =
-        filteredMutantFailures.filter {
-          it.monitorBitmask and Monitors.G0Accidents.mask == Monitors.G0Accidents.mask
-        }
-    val mutantsKilled = mutantsKilledByAccident.map { it.mutantID }.toSet()
+object ScenarioByMonitorCrossTable {
+  fun evaluate() {
+    println("Starting ScenarioByMonitorCrossTable.")
+    Monitors.entries.forEach { monitor -> evaluateForMonitor(monitor) }
+    println("Finished ScenarioByMonitorCrossTable.")
+  }
+
+  private fun evaluateForMonitor(monitor: Monitors) {
+    val mutantsKilledByMonitor =
+        distinctMutantFailuresFiltered.filter { it.monitorBitmask and monitor.mask == monitor.mask }
+    val mutantsKilled = mutantsKilledByMonitor.map { it.mutantID }.toSet()
 
     // 160 x 14: Scenario -> Map<MutantID, Killed?>
-    val killingMatrix: Map<UUID, MutableMap<UUID, Boolean>> =
+    val killingMatrix: Map<ScenarioInstanceId, MutableMap<MutantId, Boolean>> =
         longtailDistribution.associate {
           it.first.scenarioInstanceId to
-              mutantsKilledByAccident.associate { t -> t.mutantID to false }.toMutableMap()
+              mutantsKilledByMonitor.associate { t -> t.mutantID to false }.toMutableMap()
         }
 
-    mutantsKilledByAccident.forEach { mutantFailure ->
+    mutantsKilledByMonitor.forEach { mutantFailure ->
       killingMatrix[mutantFailure.tscInstance]!![mutantFailure.mutantID] = true
     }
 
-    val csvFileName = "accidentsKillingPerScenario.csv"
+    val csvFileName = "scenarioByMonitorCrossTable_${monitor.name}.csv"
     val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
-            "accidentsKillingPerScenario",
+            "scenario_by_monitor_cross_table",
             csvFileName,
         )
     Files.createDirectories(path.parent)
@@ -62,6 +63,5 @@ object AccidentsKillingPerScenarioPostEvaluation {
                 (scenarioUUID, killingList) ->
               "$scenarioUUID,${killingList.toList().joinToString(",") { it.second.toString() }}"
             })
-    println("Finished AccidentsKillingPerScenarioPostEvaluation.")
   }
 }

@@ -114,7 +114,7 @@ object TSCInstancesRepository {
   fun getAllScenariosWithJSON(): List<ScenarioIdAndJSON> =
       TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
         ScenarioIdAndJSON(
-            scenarioId = row[TSCInstancesTable.id].value,
-            scenarioJson = row[TSCInstancesTable.instanceJson])
+            scenarioInstanceId = row[TSCInstancesTable.id].value,
+            scenarioInstanceJson = row[TSCInstancesTable.instanceJson])
       }
 }

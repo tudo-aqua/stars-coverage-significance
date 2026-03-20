@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 data class ScenarioIdAndJSON(
-    val scenarioId: ScenarioInstanceId,
-    val scenarioJson: ScenarioInstanceJSON
+    val scenarioInstanceId: ScenarioInstanceId,
+    val scenarioInstanceJson: ScenarioInstanceJSON
 ) {
-  fun hasFeature(feature: String): Boolean = scenarioJson.contains("\"label\":\"$feature\"")
+  fun hasFeature(feature: String): Boolean = scenarioInstanceJson.contains("\"label\":\"$feature\"")
 }

@@ -49,12 +49,12 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
     allTSCInstances.forEach { scenarioIdAndJson ->
       val mutantCount =
           filteredMutantFailures
-              .filter { it.tscInstance == scenarioIdAndJson.scenarioId }
+              .filter { it.tscInstance == scenarioIdAndJson.scenarioInstanceId }
               .map { it.mutantID }
               .toSet()
               .size
       featureLabels.forEach { featureLabel ->
-        if (scenarioIdAndJson.scenarioJson.contains("\"label\":\"$featureLabel\"")) {
+        if (scenarioIdAndJson.scenarioInstanceJson.contains("\"label\":\"$featureLabel\"")) {
           featureToLongtailCountMap[featureLabel]!!.add(mutantCount)
         }
       }
