@@ -279,7 +279,8 @@ private fun buildMonitorCombinations(): MutableList<Set<MonitorViolation>> =
                   MonitorViolation.G4TrafficFlow,
                   MonitorViolation.G5EmergencyBraking,
                   MonitorViolation.I1Stopping,
-                  MonitorViolation.I2FasterThanLeftTraffic))
+                  MonitorViolation.I2FasterThanLeftTraffic,
+                  MonitorViolation.I1Stopping))
         }
 
 private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {

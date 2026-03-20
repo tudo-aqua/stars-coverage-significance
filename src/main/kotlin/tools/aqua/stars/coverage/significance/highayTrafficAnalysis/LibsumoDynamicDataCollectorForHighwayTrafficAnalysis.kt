@@ -80,10 +80,10 @@ fun main() {
   }
 
   tscInstances
-    .groupingBy { it }
-    .eachCount()
-    .toList()
-    .sortedByDescending { (_, count) -> count }
+      .groupingBy { it }
+      .eachCount()
+      .toList()
+      .sortedByDescending { (_, count) -> count }
       .forEach { (tscInstance, instances) ->
         println("TSCInstance: ${tscInstance}")
         println("Instances: ${instances}")
