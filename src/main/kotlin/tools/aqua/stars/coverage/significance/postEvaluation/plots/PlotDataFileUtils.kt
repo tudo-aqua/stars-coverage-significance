@@ -27,7 +27,6 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlotValues
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
-import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
 private fun writeCSVFiles(
     metricName: String,
@@ -281,3 +280,7 @@ private fun List<Double>.nTile(n: Double): Double {
     sortedList[position.toInt()]
   }
 }
+
+fun Set<MonitorViolation>.toFileNameSuffix(): String =
+  this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }
+

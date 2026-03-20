@@ -27,8 +27,8 @@ import kotlinx.coroutines.runBlocking
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
-import tools.aqua.stars.coverage.significance.toFileNameSuffix
 
 object MutantKillingPostEvaluation {
 

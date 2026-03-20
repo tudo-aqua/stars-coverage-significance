@@ -29,8 +29,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -39,48 +38,109 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
-val failedMonitorMapping: List<ScenarioFailure> by lazy {
-  db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
-}
-val mutantFailuresMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
-val failedMutantsMapping: List<MutantFailure> by lazy {
-  failedMutantsMapping.filter { it.monitorBitmask > 0 }
-}
-val filteredMutantFailures: List<MutantFailure> by lazy {
-  db { failedMutantsMapping.filter { it.mutantID in distinctMutantIds } }
-}
-val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
+//region Mutants
+//----------------------------------------------------------------------------------------------------
+/**
+ * All Mutant IDs
+ */
 val mutantIds: List<UUID> by lazy { db { MutantsRepository.getAllIds() } }
+
+/**
+ * All behavioral distinct Mutant IDs.
+ */
 val distinctMutantIds: List<UUID> by lazy { db { DistinctMutantsRepository.getAllIds() } }
+//----------------------------------------------------------------------------------------------------
+//endregion
+
+//region Mutant Failures
+//----------------------------------------------------------------------------------------------------
+/**
+ * Mutant failures as they come from the DB.
+ * Still contains entries with no failures.
+ */
+val mutantFailuresFromDB: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
+
+/**
+ * All mutant failures with at least one failing monitor.
+ */
+val mutantFailuresFiltered: List<MutantFailure> by lazy {
+  mutantFailuresFromDB.filter { it.monitorBitmask > 0 }
+}
+
+/**
+ * Distinct mutant failures with at least one failing monitor.
+ */
+val distinctMutantFailuresFiltered: List<MutantFailure> by lazy {
+  db { mutantFailuresFiltered.filter { it.mutantID in distinctMutantIds } }
+}
+//----------------------------------------------------------------------------------------------------
+//endregion
+
+//region Scenarios
+//----------------------------------------------------------------------------------------------------
+/**
+ * All possible scenario instances based on the TSC.
+ */
 val allScenarioInstances: List<ScenarioIdAndJSON> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON() }
 }
+//----------------------------------------------------------------------------------------------------
+//endregion
+
+//region Random Highway Traffic
+//----------------------------------------------------------------------------------------------------
+/**
+ * Data from the random highway experiment from DB.
+ */
 val randomTrafficAnalysis: List<HighwayTrafficScenarioInstanceId> by lazy {
   db { HighwayTrafficScenariosRepository.getInstanceIds() }
 }
+
+/**
+ * Distribution of scenario instances from the random highway experiment.
+ */
+val longtailDistribution by lazy {
+  allScenarioInstances
+    .map { it to randomTrafficAnalysis.count { t -> t == it.scenarioId } }
+    .sortedByDescending { it.second }
+}
+//----------------------------------------------------------------------------------------------------
+//endregion
+
+
+val failedMonitorMapping: List<ScenarioFailure> by lazy {
+  db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
+}
+val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
 val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId } }
 }
-val longtailDistribution by lazy {
-  allScenarioInstances
-      .map { it to randomTrafficAnalysis.count { t -> t == it.scenarioId } }
-      .sortedByDescending { it.second }
-}
+
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
 
   /** Evaluate longtail distribution from random highway traffic */
-  HighwayTrafficAnalysis.evaluate(longtailDistribution = longtailDistribution)
+  //  HighwayTrafficAnalysis.evaluate(longtailDistribution = longtailDistribution)
 
   /** Evaluate how many mutants have been killed by different values for scenario coverage. */
-  MutantKillingPostEvaluation.evaluate(
-      failedMonitorMapping = failedMonitorMapping,
-      monitorCombinations = monitorCombinations,
-      mutantIds = distinctMutantIds,
-      identifier = "MutantKilling")
+  //  MutantKillingPostEvaluation.evaluate(
+  //      failedMonitorMapping = failedMonitorMapping,
+  //      monitorCombinations = monitorCombinations,
+  //      mutantIds = distinctMutantIds,
+  //      identifier = "MutantKilling")
 
+  /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
+  MutantsKilledByMonitorsPerScenario.evaluate(
+      filteredMutantFailures = distinctMutantFailuresFiltered,
+      longtailDistribution = longtailDistribution)
+
+  /**
+   * ==========
+   * OLD
+   * ==========
+   */
   //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
@@ -114,13 +174,6 @@ fun main() {
   //      randomTrafficTSCInstances = randomTrafficAnalysis,
   //      filteredMutantFailures = filteredMutantFailures)
 
-  // Plot with long-tail and scatter-plot of two mutants corridors (All monitors separately colored)
-  //
-  // CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitorsPostEvaluation.evaluate(
-  //      allTSCInstances = allScenarioInstances,
-  //      randomTrafficTSCInstances = randomTrafficAnalysis,
-  //      filteredMutantFailures = filteredMutantFailures)
-  //
   //  // Plots where the different TSC features are located in the scatter-plot
   //  DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
   //      allTSCInstances = allScenarioInstances,
@@ -145,26 +198,23 @@ fun main() {
   println("Finished!")
 }
 
-fun Set<MonitorViolation>.toFileNameSuffix(): String =
-    this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }
-
-private fun <T> List<T>.allNonEmptySubsets(): List<Set<T>> {
-  val result = mutableListOf<Set<T>>()
-  val n = size
-
-  for (mask in 1 until (1 shl n)) {
-    val subset = buildSet {
-      for (i in 0 until n) {
-        if ((mask and (1 shl i)) != 0) {
-          add(this@allNonEmptySubsets[i])
-        }
-      }
-    }
-    result += subset
-  }
-
-  return result
-}
+//private fun <T> List<T>.allNonEmptySubsets(): List<Set<T>> {
+//  val result = mutableListOf<Set<T>>()
+//  val n = size
+//
+//  for (mask in 1 until (1 shl n)) {
+//    val subset = buildSet {
+//      for (i in 0 until n) {
+//        if ((mask and (1 shl i)) != 0) {
+//          add(this@allNonEmptySubsets[i])
+//        }
+//      }
+//    }
+//    result += subset
+//  }
+//
+//  return result
+//}
 
 private fun buildFailedMonitorMappingQuery(): Query {
   val failedMonitors = MetricFailedMonitorsTable
@@ -304,21 +354,21 @@ private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {
   return violations
 }
 
-fun calculateCountOfScenariosKillingMutant(
-    filteredFailedMutantsMapping: List<MutantFailure>,
-    distinctMutantIds: List<UUID>
-): List<Pair<UUID, Int>> {
-  val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
-      distinctMutantIds
-          .map { id ->
-            id to
-                filteredFailedMutantsMapping
-                    .filter { it.mutantID == id }
-                    .map { it.tscInstance }
-                    .toSet()
-                    .size
-          }
-          .sortedBy { it.second }
-
-  return countOfScenariosKillingMutant
-}
+//fun calculateCountOfScenariosKillingMutant(
+//    filteredFailedMutantsMapping: List<MutantFailure>,
+//    distinctMutantIds: List<UUID>
+//): List<Pair<UUID, Int>> {
+//  val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
+//      distinctMutantIds
+//          .map { id ->
+//            id to
+//                filteredFailedMutantsMapping
+//                    .filter { it.mutantID == id }
+//                    .map { it.tscInstance }
+//                    .toSet()
+//                    .size
+//          }
+//          .sortedBy { it.second }
+//
+//  return countOfScenariosKillingMutant
+//}
