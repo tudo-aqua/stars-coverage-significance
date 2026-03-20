@@ -25,23 +25,13 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
-/** Post-evaluation of the coverage significance evaluation. */
+/** Filters mutants that are behavioral equivalent and writes the results back to the database */
 fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
-  var failedMutantsMapping: List<MutantFailure> = emptyList()
-  var mutantIds = emptyList<UUID>()
-  println("Start loading database")
-  db {
-    failedMutantsMapping = buildFailedMutantsMapping()
-    mutantIds = MutantsRepository.getAllIds()
-  }
-  println("Finished loading database")
 
-  val filteredMutantIds = filter(failedMutantsMapping, mutantIds)
-  //  val filteredMutantIds = failedMutantsMapping.map { it.mutantID }.toSet()
+  val filteredMutantIds = filter(mutantFailuresFromDB, mutantIds)
 
   db {
     println("Cleaning table")
