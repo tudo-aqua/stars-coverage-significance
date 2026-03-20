@@ -28,7 +28,8 @@ import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScen
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.DistributionOfFeaturesInLongtailPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.AccidentsKillingPerScenarioPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
@@ -44,7 +45,9 @@ typealias HighwayTrafficScenarioInstanceId = UUID
 data class ScenarioIdAndJSON(
     val scenarioId: ScenarioInstanceId,
     val scenarioJson: ScenarioInstanceJSON
-)
+) {
+  fun hasFeature(feature: String): Boolean = scenarioJson.contains("\"label\":\"$feature\"")
+}
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
@@ -56,18 +59,18 @@ fun main() {
   //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
 
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
-  var failedMonitorMapping: List<ScenarioFailure> = emptyList()
-  var filteredMutantFailures: List<MutantFailure> =
-      emptyList() // Only evaluations with at least one failed monitor
-  var monitorCombinations: List<Set<MonitorViolation>> = emptyList()
-  var mutantIds = emptyList<UUID>()
-  var distinctMutantIds = emptyList<UUID>()
-  var allScenarioInstances = emptyList<ScenarioIdAndJSON>()
-  var randomTrafficAnalysis = emptyList<HighwayTrafficScenarioInstanceId>()
-  var scenarioIds = emptyList<UUID>()
+//  var failedMonitorMapping: List<ScenarioFailure>? = null
+  var filteredMutantFailures: List<MutantFailure>? = null
+  // Only evaluations with at least one failed monitor
+//  var monitorCombinations: List<Set<MonitorViolation>>? = null
+//  var mutantIds : List<UUID>? = null
+  var distinctMutantIds : List<UUID>? = null
+  var allScenarioInstances : List<ScenarioIdAndJSON>? = null
+  var randomTrafficAnalysis : List<HighwayTrafficScenarioInstanceId>? = null
+//  var scenarioIds = emptyList<UUID>()
   db {
     println("Start loading DB")
-    //    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
+//    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
     distinctMutantIds = DistinctMutantsRepository.getAllIds()
     val failedMutantsMapping = buildFailedMutantsMapping()
     filteredMutantFailures = failedMutantsMapping.filter { it.mutantID in distinctMutantIds }
@@ -75,36 +78,52 @@ fun main() {
     //    mutantIds = MutantsRepository.getAllIds()
     allScenarioInstances = TSCInstancesRepository.getAllScenariosWithJSON()
     randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
-    scenarioIds = TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId }
+//    scenarioIds = TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId }
   }
   println("Finished loading DB")
 
-  //  val countOfScenariosKillingAMutant =
-  //      calculateCountOfScenariosKillingMutant(
-  //          filteredFailedMutantsMapping = filteredMutantFailures,
-  //          distinctMutantIds = distinctMutantIds)
+  //    val countOfScenariosKillingAMutant =
+  //        calculateCountOfScenariosKillingMutant(
+  //            filteredFailedMutantsMapping = filteredMutantFailures,
+  //            distinctMutantIds = distinctMutantIds)
+
+  //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
+  //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
+
+  println("Finished calculating filtered count of killing scenarios per mutant")
+  AccidentsKillingPerScenarioPostEvaluation.evaluate(
+      allTSCInstances = allScenarioInstances!!,
+      randomTrafficTSCInstances = randomTrafficAnalysis!!,
+      filteredMutantFailures = filteredMutantFailures!!)
+//  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures)
+
+  //    ScenarioByScenarioCrossTable.evaluate(
+  //        filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
+
+  //    // Plot with long-tail and scatter-plot of two mutants corridors
+  //    CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
+  //        allTSCInstances = allScenarioInstances,
+  //        randomTrafficTSCInstances = randomTrafficAnalysis,
+  //        filteredMutantFailures = filteredMutantFailures)
+  //    // Plot with long-tail and scatter-plot of two mutants corridors (Four monitors separately
+  // //colored)
+  //  CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation.evaluate(
+  //      allTSCInstances = allScenarioInstances,
+  //      randomTrafficTSCInstances = randomTrafficAnalysis,
+  //      filteredMutantFailures = filteredMutantFailures)
+
+  // Plot with long-tail and scatter-plot of two mutants corridors (All monitors separately colored)
+//  CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitorsPostEvaluation.evaluate(
+//      allTSCInstances = allScenarioInstances,
+//      randomTrafficTSCInstances = randomTrafficAnalysis,
+//      filteredMutantFailures = filteredMutantFailures)
   //
-  //  val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
-  //      countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
-  //
-  //  println("Finished calculating filtered count of killing scenarios per mutant")
-  //
-  //  ScenarioByScenarioCrossTable.evaluate(
-  //      filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
-  //
-  //  // Plot with long-tail and scatter-plot of two mutants corridors
-  //  CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
+  //  // Plots where the different TSC features are located in the scatter-plot
+  //  DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
   //      allTSCInstances = allScenarioInstances,
   //      randomTrafficTSCInstances = randomTrafficAnalysis,
   //      filteredMutantFailures = filteredMutantFailures,
-  //      featureToFlagActive = "Has Vehicle on Left Lane Besides")
-
-  // Plots where the different TSC features are located in the scatter-plot
-  DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances,
-      randomTrafficTSCInstances = randomTrafficAnalysis,
-      filteredMutantFailures = filteredMutantFailures,
-  )
+  //  )
 
   //  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
   //      countOfKillingScenariosPerMutantFiltered =
@@ -115,11 +134,11 @@ fun main() {
   //      monitorCombinations = monitorCombinations,
   //      mutantIds = mutantIds,
   //      identifier = "mutant_killing")
-  //  MutantKillingPostEvaluation.evaluate(
-  //      failedMonitorMapping = failedMonitorMapping,
-  //      monitorCombinations = monitorCombinations,
-  //      mutantIds = distinctMutantIds,
-  //      identifier = "mutant_killing_without_duplicates")
+//  MutantKillingPostEvaluation.evaluate(
+//      failedMonitorMapping = failedMonitorMapping,
+//      monitorCombinations = monitorCombinations,
+//      mutantIds = distinctMutantIds,
+//      identifier = "mutant_killing_without_duplicates")
   println("Finished!")
 }
 
@@ -208,21 +227,28 @@ fun buildFailedMutantsMapping(): List<MutantFailure> =
             MetricFailedMonitorsTable.monitorG0Failed,
             MetricFailedMonitorsTable.monitorG1Failed,
             MetricFailedMonitorsTable.monitorG2Failed,
+            MetricFailedMonitorsTable.monitorG3Failed,
             MetricFailedMonitorsTable.monitorG4Failed,
+            MetricFailedMonitorsTable.monitorG5Failed,
+            MetricFailedMonitorsTable.monitorI1Failed,
             MetricFailedMonitorsTable.monitorI2Failed,
-        )
+            MetricFailedMonitorsTable.monitorI3Failed)
         .mapNotNull {
           val monitorBitmask =
-              (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 16 else 0) +
-                  (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 8 else 0) +
+              (if (it[MetricFailedMonitorsTable.monitorG0Failed]) 1 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG1Failed]) 2 else 0) +
                   (if (it[MetricFailedMonitorsTable.monitorG2Failed]) 4 else 0) +
-                  (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 2 else 0) +
-                  (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 1 else 0)
+                  (if (it[MetricFailedMonitorsTable.monitorG3Failed]) 8 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG4Failed]) 16 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorG5Failed]) 32 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorI1Failed]) 64 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 128 else 0) +
+                  (if (it[MetricFailedMonitorsTable.monitorI3Failed]) 256 else 0)
 
           if (monitorBitmask == 0) null
           else
               MutantFailure(
-                  startingScenario = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+                  tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
                   startingScenarioConfigurationID =
                       it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
                   mutantID = it[MetricFailedMonitorsTable.mutant].value,
@@ -286,7 +312,7 @@ fun calculateCountOfScenariosKillingMutant(
             id to
                 filteredFailedMutantsMapping
                     .filter { it.mutantID == id }
-                    .map { it.startingScenario }
+                    .map { it.tscInstance }
                     .toSet()
                     .size
           }

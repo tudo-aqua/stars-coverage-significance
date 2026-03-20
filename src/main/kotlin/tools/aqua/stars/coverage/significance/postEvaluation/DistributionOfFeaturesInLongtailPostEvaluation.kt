@@ -49,7 +49,7 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
     allTSCInstances.forEach { scenarioIdAndJson ->
       val mutantCount =
           filteredMutantFailures
-              .filter { it.startingScenario == scenarioIdAndJson.scenarioId }
+              .filter { it.tscInstance == scenarioIdAndJson.scenarioId }
               .map { it.mutantID }
               .toSet()
               .size

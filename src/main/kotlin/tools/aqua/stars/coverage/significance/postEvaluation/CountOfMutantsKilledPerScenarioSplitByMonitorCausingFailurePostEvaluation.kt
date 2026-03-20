@@ -28,7 +28,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantF
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.getSetOfAllFeatureNames
 
-object CountOfMutantsKilledPerScenarioPostEvaluation {
+object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation {
 
   val FEATURES = smallStaticTsc().getSetOfAllFeatureNames()
 
@@ -39,74 +39,65 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
       randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
       filteredMutantFailures: List<MutantFailure>
   ) {
-    println("Starting CountOfMutantsKilledPerScenarioPostEvaluation.")
+    println("Starting CountOfMutantsKilledPerScenarioPostEvaluationSplitByMonitorCausingFailure.")
     val longtail =
         allTSCInstances
             .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
             .sortedByDescending { it.second }
 
-    val values: List<Triple<ScenarioIdAndJSON, Int, Int>> =
-        longtail.map { l ->
+    val values: List<Triple<ScenarioIdAndJSON, Int, Map<String, Int>>> =
+        longtail.map { scenarioAndLongtailCount ->
+          val mutantFailuresInScenario =
+              filteredMutantFailures.filter {
+                it.tscInstance == scenarioAndLongtailCount.first.scenarioId
+              }
           Triple(
-              l.first,
-              l.second,
-              filteredMutantFailures
-                  .filter { it.tscInstance == l.first.scenarioId }
-                  .map { it.mutantID }
-                  .toSet()
-                  .size)
+              scenarioAndLongtailCount.first,
+              scenarioAndLongtailCount.second,
+              mapOf(
+                  "G0Accidents" to
+                      mutantFailuresInScenario
+                          .filter { (it.monitorBitmask and 1) == 1 }
+                          .map { it.mutantID }
+                          .toSet()
+                          .size,
+                  "G1SafeDistance" to
+                      mutantFailuresInScenario
+                          .filter { (it.monitorBitmask and 2) == 2 }
+                          .map { it.mutantID }
+                          .toSet()
+                          .size,
+                  "G4TrafficFlow" to
+                      mutantFailuresInScenario
+                          .filter { (it.monitorBitmask and 16) == 16 }
+                          .map { it.mutantID }
+                          .toSet()
+                          .size,
+                  "I2FasterThanLeftTraffic" to
+                      mutantFailuresInScenario
+                          .filter { (it.monitorBitmask and 128) == 128 }
+                          .map { it.mutantID }
+                          .toSet()
+                          .size))
         }
 
-    values.sortedByDescending { it.third }.take(5).forEach { println(it.first) }
-
-    var csvFileName = "countOfMutantsKilledPerScenario.csv"
-    var path: Path =
+    val csvFileName = "countOfMutantsKilledPerScenarioSplitByMonitorCausingFailure.csv"
+    val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
-            "count_of_mutants_killed_per_scenario",
+            "count_of_mutants_killed_per_scenario_split_by_monitor_causing_failure",
             csvFileName,
         )
     Files.createDirectories(path.parent)
     path.writeText(
         values.joinToString(
-            prefix = "Scenario, Frequency in longtail, Count of mutants killed\n",
+            prefix =
+                "Scenario, Frequency in longtail, Count of mutants killed by G0Accidents, Count of mutants killed by G1SafeDistance, Count of mutants killed by G4TrafficFlow, Count of mutants killed by I2FasterThanLeftTraffic\n",
             separator = "\n") {
-              "${it.first.scenarioId},${it.second},${it.third}"
+              "${it.first.scenarioId},${it.second},${it.third["G0Accidents"]},${it.third["G1SafeDistance"]},${it.third["G4TrafficFlow"]},${it.third["I2FasterThanLeftTraffic"]}"
             })
     writePythonPlotFile(path.parent, csvFileName)
     println("Finished CountOfMutantsKilledPerScenarioPostEvaluation.")
-
-    // --------------------------------------------------
-    // Cluster the two corridors
-    // --------------------------------------------------
-
-    val corridors = FEATURES.associateWith { 0 to 0 }.toMutableMap()
-
-    values.forEach { (scenarioAndJSON, _, killedMutants) ->
-      FEATURES.forEach { feature ->
-        if (scenarioAndJSON.hasFeature(feature)) {
-          val value = corridors[feature]!!
-
-          corridors[feature] =
-              if (killedMutants > CORRIDOR_DIVIDER) value.first + 1 to value.second
-              else value.first to value.second + 1
-        }
-      }
-    }
-    csvFileName = "countOfMutantsKilledPerScenarioCorridors.csv"
-    path =
-        Path.of(
-            POST_EVALUATION_BASE_DIR,
-            "count_of_mutants_killed_per_scenario_corridors",
-            csvFileName,
-        )
-    Files.createDirectories(path.parent)
-    path.writeText(
-        corridors.toList().joinToString(
-            prefix = "Feature, Count in upper corridor, Count in lower corridor\n",
-            separator = "\n") {
-              "${it.first},${it.second.first},${it.second.second}"
-            })
   }
 
   private fun writePythonPlotFile(outputDirectory: Path, csvFileName: String) {
@@ -149,10 +140,8 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
         def plot_combined(
             df: pd.DataFrame,
             output_path: Path,
-            feature_column: str,
             dpi: int = 300,
         ) -> None:
-            feature_active = to_bool(df[feature_column]).fillna(False)
             x = range(len(df))
 
             fig, ax_left = plt.subplots(figsize=(14, 6))
@@ -164,15 +153,31 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
             ax_left.set_title("Long-tail frequency and count of mutants killed per scenario")
 
             ax_right.scatter(
-                df.loc[~feature_active].index,
-                df.loc[~feature_active, "Count of mutants killed"],
-                label="Feature inactive",
+                x=df["Scenario"],
+                y=df["Count of mutants killed by G0Accidents"],
+                color="red",
+                label="G0Accidents",
             )
             ax_right.scatter(
-                df.loc[feature_active].index,
-                df.loc[feature_active, "Count of mutants killed"],
-                label="Feature active",
+                x=df["Scenario"],
+                y=df["Count of mutants killed by G1SafeDistance"],
+                color="red",
+                label="G1SafeDistance",
             )
+            ax_right.scatter(
+                x=df["Scenario"],
+                y=df["Count of mutants killed by G4TrafficFlow"],
+                color="red",
+                label="G4TrafficFlow",
+            )
+            ax_right.scatter(
+                x=df["Scenario"],
+                y=df["Count of mutants killed by I2FasterThanLeftTraffic"],
+                color="red",
+                label="I2FasterThanLeftTraffic",
+            )
+            
+            
             ax_right.set_ylabel("Count of mutants killed")
             ax_right.legend(loc="upper right")
 
@@ -203,9 +208,8 @@ object CountOfMutantsKilledPerScenarioPostEvaluation {
         def main() -> None:
             args = parse_args()
             df = load_data()
-            feature_column = feature_column_name(df)
 
-            plot_combined(df, args.output, feature_column, dpi=args.dpi)
+            plot_combined(df, args.output, dpi=args.dpi)
 
 
         if __name__ == "__main__":

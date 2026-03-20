@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
+package tools.aqua.stars.coverage.significance.postEvaluation
 
-import java.util.UUID
-
-data class MutantFailure(
-    val tscInstance: UUID,
-    val startingScenarioConfigurationID: UUID,
-    val mutantID: UUID,
-    val monitorBitmask: Int
-)
+enum class Monitors(val mask: Int) {
+  G0Accidents(1),
+  G1SafeDistance(2),
+  G2UnnecessaryBraking(4),
+  G3MaximumSpeed(8),
+  G4TrafficFlow(16),
+  G5EmergencyBraking(32),
+  I1Stopping(64),
+  I2FasterThanLeftTraffic(128),
+  I3DangerousCutin(256)
+}

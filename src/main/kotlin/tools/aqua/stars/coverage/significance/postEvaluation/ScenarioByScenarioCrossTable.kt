@@ -36,7 +36,7 @@ object ScenarioByScenarioCrossTable {
     scenarioIds.forEachIndexed { outerIndex, outerScenarioId ->
       val distinctMutantsKilledByOuterScenario =
           filteredMutantFailures
-              .filter { it.startingScenario == outerScenarioId }
+              .filter { it.tscInstance == outerScenarioId }
               .map { it.mutantID }
               .toSet()
 
@@ -44,7 +44,7 @@ object ScenarioByScenarioCrossTable {
         consoleProgress.step("Running scenario $outerIndex in $innerIndex")
         val distinctMutantsKilledByInnerScenario =
             filteredMutantFailures
-                .filter { it.startingScenario == innerScenarioId }
+                .filter { it.tscInstance == innerScenarioId }
                 .map { it.mutantID }
                 .toSet()
 
