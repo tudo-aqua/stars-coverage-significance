@@ -30,12 +30,12 @@ object AccidentsKillingPerScenarioPostEvaluation {
       longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
       filteredMutantFailures: List<MutantFailure>
   ) {
+    println("Starting AccidentsKillingPerScenarioPostEvaluation.")
     val mutantsKilledByAccident =
         filteredMutantFailures.filter {
           it.monitorBitmask and Monitors.G0Accidents.mask == Monitors.G0Accidents.mask
         }
     val mutantsKilled = mutantsKilledByAccident.map { it.mutantID }.toSet()
-    println("Total mutants killed: " + mutantsKilled.size)
 
     // 160 x 14: Scenario -> Map<MutantID, Killed?>
     val killingMatrix: Map<UUID, MutableMap<UUID, Boolean>> =
@@ -62,5 +62,6 @@ object AccidentsKillingPerScenarioPostEvaluation {
                 (scenarioUUID, killingList) ->
               "$scenarioUUID,${killingList.toList().joinToString(",") { it.second.toString() }}"
             })
+    println("Finished AccidentsKillingPerScenarioPostEvaluation.")
   }
 }

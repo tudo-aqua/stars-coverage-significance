@@ -282,5 +282,4 @@ private fun List<Double>.nTile(n: Double): Double {
 }
 
 fun Set<MonitorViolation>.toFileNameSuffix(): String =
-  this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }
-
+    this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }

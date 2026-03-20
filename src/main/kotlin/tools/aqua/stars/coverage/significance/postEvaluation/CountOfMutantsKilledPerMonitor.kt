@@ -17,11 +17,16 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.UUID
+import kotlin.io.path.writeText
+import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
 object CountOfMutantsKilledPerMonitor {
   fun evaluate(filteredMutantFailures: List<MutantFailure>) {
+    println("Starting CountOfMutantsKilledPerMonitor.")
     val monitorToFailedMutantsMap =
         Monitors.entries.associate { m -> m.name to mutableSetOf<UUID>() }
 
@@ -32,8 +37,22 @@ object CountOfMutantsKilledPerMonitor {
       }
     }
 
-    monitorToFailedMutantsMap.forEach { (monitor, failedMutantIDs) ->
-      println("$monitor:${failedMutantIDs.size}")
-    }
+    //    monitorToFailedMutantsMap.forEach { (monitor, failedMutantIDs) ->
+    //      println("$monitor:${failedMutantIDs.size}")
+    //    }
+
+    val csvFileName = "countOfMutantsKilledPerMonitor.csv"
+    val path: Path =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "count_of_mutants_killed_per_monitor",
+            csvFileName,
+        )
+    Files.createDirectories(path.parent)
+    path.writeText(
+        monitorToFailedMutantsMap.keys.joinToString(separator = ",") { it } +
+            "\n" +
+            monitorToFailedMutantsMap.values.joinToString(separator = ",") { "${it.size}" })
+    println("Finished CountOfMutantsKilledPerMonitor.")
   }
 }
