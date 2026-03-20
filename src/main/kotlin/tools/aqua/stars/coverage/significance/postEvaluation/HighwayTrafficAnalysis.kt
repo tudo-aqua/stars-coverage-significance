@@ -17,30 +17,29 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation
 
-import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
+import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 object HighwayTrafficAnalysis {
   fun evaluate(longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>) {
     println("Starting HighwayTrafficAnalysis.")
 
     val csvPath: Path =
-      Path.of(
-        POST_EVALUATION_BASE_DIR,
-        "highway_traffic_analysis",
-        "highwayTrafficAnalysisValues.csv",
-      )
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "highway_traffic_analysis",
+            "highwayTrafficAnalysisValues.csv",
+        )
     Files.createDirectories(csvPath.parent)
 
     csvPath.writeText(
-      longtailDistribution.joinToString(
-        prefix = "Scenario, Frequency in longtail\n",
-        separator = "\n") {
-        "${it.first.scenarioId},${it.second}"
-      })
+        longtailDistribution.joinToString(
+            prefix = "Scenario, Frequency in longtail\n", separator = "\n") {
+              "${it.first.scenarioId},${it.second}"
+            })
     println("Finished HighwayTrafficAnalysis.")
   }
 }

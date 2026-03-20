@@ -26,6 +26,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlot
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
+import kotlin.math.ceil
+import kotlin.math.floor
 
 private fun writeCSVFiles(
     metricName: String,
@@ -262,3 +264,13 @@ private fun Map<Int, BoxPlotValues>.getExtremeOutliersCSVString() =
           boxPlotValues.extremeOutliers.map { "${coverage}, $it" }
         }
         .joinToString(separator = "\n", prefix = "coverage, outlier\n")
+
+private fun List<Double>.nTile(n: Double): Double {
+  val sortedList = this.sorted()
+  val position = sortedList.size * n
+  return if (position % 1 != 0.0) {
+    (sortedList[floor(position).toInt()] + sortedList[ceil(position).toInt()]) / 2
+  } else {
+    sortedList[position.toInt()]
+  }
+}

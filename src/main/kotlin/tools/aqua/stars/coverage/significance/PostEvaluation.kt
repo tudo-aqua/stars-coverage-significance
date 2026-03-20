@@ -30,6 +30,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -41,9 +42,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 val failedMonitorMapping: List<ScenarioFailure> by lazy {
   db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
 }
-val mutantFailuresMapping: List<MutantFailure> by lazy {
-  db { buildFailedMutantsMapping() }
-}
+val mutantFailuresMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
 val failedMutantsMapping: List<MutantFailure> by lazy {
   failedMutantsMapping.filter { it.monitorBitmask > 0 }
 }
@@ -71,6 +70,17 @@ val longtailDistribution by lazy {
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
+
+  /** Evaluate longtail distribution from random highway traffic */
+  HighwayTrafficAnalysis.evaluate(longtailDistribution = longtailDistribution)
+
+  /** Evaluate how many mutants have been killed by different values for scenario coverage. */
+  MutantKillingPostEvaluation.evaluate(
+      failedMonitorMapping = failedMonitorMapping,
+      monitorCombinations = monitorCombinations,
+      mutantIds = distinctMutantIds,
+      identifier = "MutantKilling")
+
   //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
@@ -84,8 +94,6 @@ fun main() {
 
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
-
-  HighwayTrafficAnalysis.evaluate(longtailDistribution)
 
   //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
   // filteredMutantFailures)
