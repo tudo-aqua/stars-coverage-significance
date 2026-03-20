@@ -21,11 +21,14 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
-import tools.aqua.stars.coverage.significance.postEvaluation.plots.createPlotData
+import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
 import tools.aqua.stars.coverage.significance.toFileNameSuffix
+import kotlin.random.Random
 
 object MutantKillingPostEvaluation {
 
@@ -52,5 +55,85 @@ object MutantKillingPostEvaluation {
 
     println("Finished MutantKillingPostEvaluation.")
     return@runBlocking failedMonitorMapping
+  }
+
+  private suspend fun createPlotData(
+    metricName: String,
+    scenarioFailures: List<ScenarioFailure>,
+    repetitions: Int = 500,
+    selectedMonitors: Set<MonitorViolation>,
+    baseSeed: Long,
+    relevantMutants: List<UUID>
+  ) {
+    val allScenarios = scenarioFailures.map { it.scenarioId }
+    val coverageList = List(allScenarios.size) { it + 1 }
+    val plotData: Map<Int, PlotData> = coroutineScope {
+      coverageList
+        .map { coverage ->
+          async(Dispatchers.Default) {
+            coverage to
+                evaluateCoverage(
+                  scenarioFailures = scenarioFailures,
+                  allScenarios = allScenarios,
+                  coverage = coverage,
+                  repetitions = repetitions,
+                  selectedMonitors = selectedMonitors,
+                  seed = baseSeed * 10_000 + coverage,
+                  relevantMutants = relevantMutants)
+          }
+        }
+        .awaitAll()
+        .toMap()
+    }
+
+    writeCSVAndTeXFiles(
+      metricName = metricName,
+      map = plotData,
+      selectedMonitors = selectedMonitors,
+      numberOfMutants = relevantMutants.size)
+  }
+
+  private fun evaluateCoverage(
+    scenarioFailures: List<ScenarioFailure>,
+    allScenarios: List<UUID>,
+    coverage: Int,
+    repetitions: Int,
+    selectedMonitors: Set<MonitorViolation>,
+    seed: Long,
+    relevantMutants: List<UUID>
+  ): PlotData {
+    val countOfKilledMutants = MutableList(repetitions) { 0 }
+    val countOfFailedMonitors = MutableList(repetitions) { 0 }
+    val countOfDistinctMonitorsFailed = MutableList(repetitions) { 0 }
+
+    repeat(repetitions) { repetition ->
+      val rng = Random(seed + repetition)
+
+      val repetitionScenarioIds = allScenarios.shuffled(rng).take(coverage)
+      val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
+
+      val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
+
+      val relevantMonitors =
+        drawnScenarioInstances.flatMap { scenarioInstance ->
+          scenarioInstance.mutants.filter { mutant ->
+            mutant.mutantId in relevantMutants && mutant.violations.any { it in selectedMonitors }
+          }
+        }
+
+      val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
+      countOfKilledMutants[repetition] = mutantsKilled
+
+      val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
+      countOfFailedMonitors[repetition] = monitorsFailed
+
+      val distinctMonitorsFailed = relevantMonitors.flatMap { it.violations }.toSet().count()
+      countOfDistinctMonitorsFailed[repetition] = distinctMonitorsFailed
+    }
+
+    return PlotData(
+      countOfKilledMutants = countOfKilledMutants,
+      countOfFailedMonitors = countOfFailedMonitors,
+      countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
   }
 }
