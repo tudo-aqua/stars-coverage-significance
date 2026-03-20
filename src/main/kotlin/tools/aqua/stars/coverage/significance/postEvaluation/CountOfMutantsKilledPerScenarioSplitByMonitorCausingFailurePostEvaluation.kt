@@ -48,18 +48,18 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation
               scenarioAndLongtailCount.first,
               scenarioAndLongtailCount.second,
               listOf(
-                Monitors.G0Accidents,
-                Monitors.G1SafeDistance,
-                Monitors.G4TrafficFlow,
-                Monitors.I2FasterThanLeftTraffic
-              ).associate { monitor ->
-                monitor.name to
-                    mutantFailuresInScenario
-                      .filter { (it.monitorBitmask and monitor.mask) == 1 shl monitor.mask }
-                      .map { it.mutantID }
-                      .toSet()
-                      .size
-              })
+                      Monitors.G0Accidents,
+                      Monitors.G1SafeDistance,
+                      Monitors.G4TrafficFlow,
+                      Monitors.I2FasterThanLeftTraffic)
+                  .associate { monitor ->
+                    monitor.name to
+                        mutantFailuresInScenario
+                            .filter { (it.monitorBitmask and monitor.mask) == 1 shl monitor.mask }
+                            .map { it.mutantID }
+                            .toSet()
+                            .size
+                  })
         }
 
     val csvFileName = "countOfMutantsKilledPerScenarioSplitByMonitorCausingFailure.csv"

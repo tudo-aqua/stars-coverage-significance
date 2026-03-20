@@ -40,13 +40,13 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitor
           Triple(
               scenarioAndLongtailCount.first,
               scenarioAndLongtailCount.second,
-            Monitors.entries.associate { monitor ->
-              monitor.name to
-                  mutantFailuresInScenario
-                    .filter { (it.monitorBitmask and monitor.mask) == 1 shl monitor.mask }
-                    .map { it.mutantID }
-                    .toSet()
-            })
+              Monitors.entries.associate { monitor ->
+                monitor.name to
+                    mutantFailuresInScenario
+                        .filter { (it.monitorBitmask and monitor.mask) == 1 shl monitor.mask }
+                        .map { it.mutantID }
+                        .toSet()
+              })
         }
   }
 }

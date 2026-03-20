@@ -41,7 +41,9 @@ val failedMonitorMapping: List<ScenarioFailure> by lazy {
   db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
 }
 val mutantFailuresMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
-val failedMutantsMapping: List<MutantFailure> by lazy { failedMutantsMapping.filter { it.monitorBitmask > 0 } }
+val failedMutantsMapping: List<MutantFailure> by lazy {
+  failedMutantsMapping.filter { it.monitorBitmask > 0 }
+}
 val filteredMutantFailures: List<MutantFailure> by lazy {
   db { failedMutantsMapping.filter { it.mutantID in distinctMutantIds } }
 }
@@ -80,7 +82,7 @@ fun main() {
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-//  HighwayTrafficAnalysis.evaluate(longtailDistribution)
+  //  HighwayTrafficAnalysis.evaluate(longtailDistribution)
 
   //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
   // filteredMutantFailures)
