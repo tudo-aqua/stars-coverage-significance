@@ -22,21 +22,14 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 object AccidentsKillingPerScenarioPostEvaluation {
   fun evaluate(
-      allTSCInstances: List<ScenarioIdAndJSON>,
-      randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
+      longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
       filteredMutantFailures: List<MutantFailure>
   ) {
-    val longtail =
-        allTSCInstances
-            .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
-            .sortedByDescending { it.second }
-
     val mutantsKilledByAccident =
         filteredMutantFailures.filter {
           it.monitorBitmask and 1 shl Monitors.G0Accidents.ordinal ==
@@ -47,7 +40,7 @@ object AccidentsKillingPerScenarioPostEvaluation {
 
     // 160 x 14: Scenario -> Map<MutantID, Killed?>
     val killingMatrix: Map<UUID, MutableMap<UUID, Boolean>> =
-        longtail.associate {
+        longtailDistribution.associate {
           it.first.scenarioId to
               mutantsKilledByAccident.associate { t -> t.mutantID to false }.toMutableMap()
         }

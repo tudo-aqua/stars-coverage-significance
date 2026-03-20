@@ -57,6 +57,11 @@ val randomTrafficAnalysis: List<HighwayTrafficScenarioInstanceId> by lazy {
 val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId } }
 }
+val longtailDistribution by lazy {
+  allScenarioInstances
+      .map { it to randomTrafficAnalysis.count { t -> t == it.scenarioId } }
+      .sortedByDescending { it.second }
+}
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
@@ -76,10 +81,7 @@ fun main() {
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  AccidentsKillingPerScenarioPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances,
-      randomTrafficTSCInstances = randomTrafficAnalysis,
-      filteredMutantFailures = filteredMutantFailures)
+  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution, filteredMutantFailures)
   //  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures)
 
   //    ScenarioByScenarioCrossTable.evaluate(

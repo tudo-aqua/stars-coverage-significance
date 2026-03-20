@@ -19,10 +19,8 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.collections.sortedByDescending
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.smallStaticTsc
@@ -35,18 +33,13 @@ object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation
   const val CORRIDOR_DIVIDER = 70
 
   fun evaluate(
-      allTSCInstances: List<ScenarioIdAndJSON>,
-      randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
+      longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
       filteredMutantFailures: List<MutantFailure>
   ) {
     println("Starting CountOfMutantsKilledPerScenarioPostEvaluationSplitByMonitorCausingFailure.")
-    val longtail =
-        allTSCInstances
-            .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
-            .sortedByDescending { it.second }
 
     val values: List<Triple<ScenarioIdAndJSON, Int, Map<String, Int>>> =
-        longtail.map { scenarioAndLongtailCount ->
+        longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               filteredMutantFailures.filter {
                 it.tscInstance == scenarioAndLongtailCount.first.scenarioId

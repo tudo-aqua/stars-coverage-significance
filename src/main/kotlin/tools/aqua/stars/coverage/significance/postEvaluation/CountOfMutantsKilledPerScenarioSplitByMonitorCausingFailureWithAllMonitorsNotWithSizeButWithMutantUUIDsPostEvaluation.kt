@@ -19,27 +19,20 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.util.UUID
 import kotlin.collections.map
-import kotlin.collections.sortedByDescending
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitorsNotWithSizeButWithMutantUUIDsPostEvaluation {
 
   fun evaluate(
-      allTSCInstances: List<ScenarioIdAndJSON>,
-      randomTrafficTSCInstances: List<HighwayTrafficScenarioInstanceId>,
-      filteredMutantFailures: List<MutantFailure>
+      longtailDistribution: List<Pair<ScenarioIdAndJSON, Int>>,
+      filteredMutantFailures: List<MutantFailure>,
   ) {
     println(
         "Starting CountOfMutantsKilledPerScenarioPostEvaluationSplitByMonitorCausingFailureWithAllMonitorsNotWithSizeButWithUUIDs.")
-    val longtail =
-        allTSCInstances
-            .map { it to randomTrafficTSCInstances.count { t -> t == it.scenarioId } }
-            .sortedByDescending { it.second }
 
     val values: List<Triple<ScenarioIdAndJSON, Int, Map<String, Set<UUID>>>> =
-        longtail.map { scenarioAndLongtailCount ->
+        longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               filteredMutantFailures.filter {
                 it.tscInstance == scenarioAndLongtailCount.first.scenarioId
