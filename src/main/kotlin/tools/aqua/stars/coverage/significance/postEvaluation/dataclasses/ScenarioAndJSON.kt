@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+data class ScenarioIdAndJSON(
+    val scenarioId: ScenarioInstanceId,
+    val scenarioJson: ScenarioInstanceJSON
+) {
+  fun hasFeature(feature: String): Boolean = scenarioJson.contains("\"label\":\"$feature\"")
+}

@@ -25,62 +25,48 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.postEvaluation.AccidentsKillingPerScenarioPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
-typealias ScenarioInstanceId = UUID
-
-typealias ScenarioInstanceJSON = String
-
-typealias HighwayTrafficScenarioInstanceId = UUID
-
-data class ScenarioIdAndJSON(
-    val scenarioId: ScenarioInstanceId,
-    val scenarioJson: ScenarioInstanceJSON
-) {
-  fun hasFeature(feature: String): Boolean = scenarioJson.contains("\"label\":\"$feature\"")
+val failedMonitorMapping: List<ScenarioFailure> by lazy {
+  db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
+}
+val failedMutantsMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
+val filteredMutantFailures: List<MutantFailure> by lazy {
+  db { failedMutantsMapping.filter { it.mutantID in distinctMutantIds } }
+}
+val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
+val mutantIds: List<UUID> by lazy { db { MutantsRepository.getAllIds() } }
+val distinctMutantIds: List<UUID> by lazy { db { DistinctMutantsRepository.getAllIds() } }
+val allScenarioInstances: List<ScenarioIdAndJSON> by lazy {
+  db { TSCInstancesRepository.getAllScenariosWithJSON() }
+}
+val randomTrafficAnalysis: List<HighwayTrafficScenarioInstanceId> by lazy {
+  db { HighwayTrafficScenariosRepository.getInstanceIds() }
+}
+val scenarioIds: List<UUID> by lazy {
+  db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId } }
 }
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
+  DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
   //  CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluation.evaluate()
   //  CountOfScenariosWhereMonitorsFailedPerMonitorPostEvaluation.evaluate()
   //  ScenarioInstancesLongTailDistributionPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerMonitorPostEvaluation.evaluate()
   //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
   //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
-
-  DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
-//  var failedMonitorMapping: List<ScenarioFailure>? = null
-  var filteredMutantFailures: List<MutantFailure>? = null
-  // Only evaluations with at least one failed monitor
-//  var monitorCombinations: List<Set<MonitorViolation>>? = null
-//  var mutantIds : List<UUID>? = null
-  var distinctMutantIds : List<UUID>? = null
-  var allScenarioInstances : List<ScenarioIdAndJSON>? = null
-  var randomTrafficAnalysis : List<HighwayTrafficScenarioInstanceId>? = null
-//  var scenarioIds = emptyList<UUID>()
-  db {
-    println("Start loading DB")
-//    failedMonitorMapping = buildFailedMonitorMapping(buildFailedMonitorMappingQuery())
-    distinctMutantIds = DistinctMutantsRepository.getAllIds()
-    val failedMutantsMapping = buildFailedMutantsMapping()
-    filteredMutantFailures = failedMutantsMapping.filter { it.mutantID in distinctMutantIds }
-    //    monitorCombinations = buildMonitorCombinations()
-    //    mutantIds = MutantsRepository.getAllIds()
-    allScenarioInstances = TSCInstancesRepository.getAllScenariosWithJSON()
-    randomTrafficAnalysis = HighwayTrafficScenariosRepository.getInstanceIds()
-//    scenarioIds = TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioId }
-  }
-  println("Finished loading DB")
 
   //    val countOfScenariosKillingAMutant =
   //        calculateCountOfScenariosKillingMutant(
@@ -90,12 +76,11 @@ fun main() {
   //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
   //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
 
-  println("Finished calculating filtered count of killing scenarios per mutant")
   AccidentsKillingPerScenarioPostEvaluation.evaluate(
-      allTSCInstances = allScenarioInstances!!,
-      randomTrafficTSCInstances = randomTrafficAnalysis!!,
-      filteredMutantFailures = filteredMutantFailures!!)
-//  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures)
+      allTSCInstances = allScenarioInstances,
+      randomTrafficTSCInstances = randomTrafficAnalysis,
+      filteredMutantFailures = filteredMutantFailures)
+  //  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures)
 
   //    ScenarioByScenarioCrossTable.evaluate(
   //        filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
@@ -113,10 +98,11 @@ fun main() {
   //      filteredMutantFailures = filteredMutantFailures)
 
   // Plot with long-tail and scatter-plot of two mutants corridors (All monitors separately colored)
-//  CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitorsPostEvaluation.evaluate(
-//      allTSCInstances = allScenarioInstances,
-//      randomTrafficTSCInstances = randomTrafficAnalysis,
-//      filteredMutantFailures = filteredMutantFailures)
+  //
+  // CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailureWithAllMonitorsPostEvaluation.evaluate(
+  //      allTSCInstances = allScenarioInstances,
+  //      randomTrafficTSCInstances = randomTrafficAnalysis,
+  //      filteredMutantFailures = filteredMutantFailures)
   //
   //  // Plots where the different TSC features are located in the scatter-plot
   //  DistributionOfFeaturesInLongtailPostEvaluation.evaluate(
@@ -134,11 +120,11 @@ fun main() {
   //      monitorCombinations = monitorCombinations,
   //      mutantIds = mutantIds,
   //      identifier = "mutant_killing")
-//  MutantKillingPostEvaluation.evaluate(
-//      failedMonitorMapping = failedMonitorMapping,
-//      monitorCombinations = monitorCombinations,
-//      mutantIds = distinctMutantIds,
-//      identifier = "mutant_killing_without_duplicates")
+  //  MutantKillingPostEvaluation.evaluate(
+  //      failedMonitorMapping = failedMonitorMapping,
+  //      monitorCombinations = monitorCombinations,
+  //      mutantIds = distinctMutantIds,
+  //      identifier = "mutant_killing_without_duplicates")
   println("Finished!")
 }
 

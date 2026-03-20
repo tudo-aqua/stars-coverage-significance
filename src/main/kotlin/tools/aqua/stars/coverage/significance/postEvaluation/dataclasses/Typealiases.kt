@@ -15,16 +15,14 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance.postEvaluation
+package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-enum class Monitors {
-  G0Accidents,
-  G1SafeDistance,
-  G2UnnecessaryBraking,
-  G3MaximumSpeed,
-  G4TrafficFlow,
-  G5EmergencyBraking,
-  I1Stopping,
-  I2FasterThanLeftTraffic,
-  I3DangerousCutin
-}
+import java.util.UUID
+
+typealias MutantId = UUID
+
+typealias ScenarioInstanceId = UUID
+
+typealias ScenarioInstanceJSON = String
+
+typealias HighwayTrafficScenarioInstanceId = UUID

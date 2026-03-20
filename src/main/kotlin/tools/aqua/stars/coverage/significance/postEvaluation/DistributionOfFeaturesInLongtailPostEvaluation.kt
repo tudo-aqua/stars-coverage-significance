@@ -20,10 +20,10 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
-import tools.aqua.stars.coverage.significance.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.ScenarioIdAndJSON
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.getSetOfAllFeatureNames
 

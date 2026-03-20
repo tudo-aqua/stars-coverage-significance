@@ -24,10 +24,10 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import tools.aqua.stars.coverage.significance.ScenarioIdAndJSON
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
 /** Repository for [TSCInstanceEntry]s. */
 object TSCInstancesRepository {
