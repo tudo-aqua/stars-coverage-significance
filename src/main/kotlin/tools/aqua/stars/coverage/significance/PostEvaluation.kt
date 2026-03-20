@@ -29,7 +29,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerMonitor
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -118,7 +118,10 @@ fun main() {
   //      longtailDistribution = longtailDistribution)
 
   /** Evaluate how many mutants can be killed by each monitor. */
-  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures = mutantFailuresFiltered)
+  //  CountOfMutantsKilledPerMonitor.evaluate(filteredMutantFailures = mutantFailuresFiltered)
+
+  /** Plot for each mutant how many scenarios are capable of killing it. */
+  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
 
   //  AccidentsKillingPerScenarioPostEvaluation.evaluate(longtailDistribution,
   //    filteredMutantFailures)
@@ -133,16 +136,8 @@ fun main() {
   //  TotalNumberOfFailedMonitorsPerScenarioPostEvaluation.evaluate()
   //  TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation.evaluate()
 
-  //    val countOfScenariosKillingAMutant =
-  //        calculateCountOfScenariosKillingMutant(
-  //            filteredFailedMutantsMapping = filteredMutantFailures,
-  //            distinctMutantIds = distinctMutantIds)
-
-  //    val countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios =
-  //        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
-
-  //    ScenarioByScenarioCrossTable.evaluate(
-  //        filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
+  // ScenarioByScenarioCrossTable.evaluate(
+  //          filteredMutantFailures = filteredMutantFailures, scenarioIds = scenarioIds)
 
   //    // Plot with long-tail and scatter-plot of two mutants corridors
   //    CountOfMutantsKilledPerScenarioPostEvaluation.evaluate(
@@ -164,9 +159,6 @@ fun main() {
   //      filteredMutantFailures = filteredMutantFailures,
   //  )
 
-  //  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate(
-  //      countOfKillingScenariosPerMutantFiltered =
-  //          countOfScenariosKillingAMutantThatIsNotKilledByAllScenarios)
   //  MutantKillingPostEvaluation.evaluate(
   //      failedMonitorMapping = failedMonitorMapping,
   //      monitorCombinations = monitorCombinations,
@@ -336,22 +328,3 @@ private fun ResultRow.toMonitorViolations(): List<MonitorViolation> {
 
   return violations
 }
-
-// fun calculateCountOfScenariosKillingMutant(
-//    filteredFailedMutantsMapping: List<MutantFailure>,
-//    distinctMutantIds: List<UUID>
-// ): List<Pair<UUID, Int>> {
-//  val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
-//      distinctMutantIds
-//          .map { id ->
-//            id to
-//                filteredFailedMutantsMapping
-//                    .filter { it.mutantID == id }
-//                    .map { it.tscInstance }
-//                    .toSet()
-//                    .size
-//          }
-//          .sortedBy { it.second }
-//
-//  return countOfScenariosKillingMutant
-// }

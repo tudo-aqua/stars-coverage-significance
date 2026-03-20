@@ -22,10 +22,17 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.distinctMutantIds
+import tools.aqua.stars.coverage.significance.mutantFailuresFiltered
 
 object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
-  fun evaluate(countOfKillingScenariosPerMutantFiltered: List<Pair<UUID, Int>>) {
+  fun evaluate() {
     println("Starting CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
+    val countOfScenariosKillingAMutant = calculateCountOfScenariosKillingMutant()
+
+    val countOfKillingScenariosPerMutantFiltered =
+        countOfScenariosKillingAMutant.filter { it.second < 160 } // 160 = #TSC instances
+
     val path: Path =
         Path.of(
             POST_EVALUATION_BASE_DIR,
@@ -39,5 +46,21 @@ object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
               "${it.first},${it.second}"
             })
     println("Finished CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
+  }
+
+  private fun calculateCountOfScenariosKillingMutant(): List<Pair<UUID, Int>> {
+    val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
+        distinctMutantIds
+            .map { id ->
+              id to
+                  mutantFailuresFiltered
+                      .filter { it.mutantID == id }
+                      .map { it.tscInstance }
+                      .toSet()
+                      .size
+            }
+            .sortedBy { it.second }
+
+    return countOfScenariosKillingMutant
   }
 }
