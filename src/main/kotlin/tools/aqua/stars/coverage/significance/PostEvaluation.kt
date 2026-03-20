@@ -41,7 +41,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 val failedMonitorMapping: List<ScenarioFailure> by lazy {
   db { buildFailedMonitorMapping(buildFailedMonitorMappingQuery()) }
 }
-val failedMutantsMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
+val mutantFailuresMapping: List<MutantFailure> by lazy { db { buildFailedMutantsMapping() } }
+val failedMutantsMapping: List<MutantFailure> by lazy { failedMutantsMapping.filter { it.monitorBitmask > 0 } }
 val filteredMutantFailures: List<MutantFailure> by lazy {
   db { failedMutantsMapping.filter { it.mutantID in distinctMutantIds } }
 }
@@ -235,14 +236,12 @@ fun buildFailedMutantsMapping(): List<MutantFailure> =
                   (if (it[MetricFailedMonitorsTable.monitorI2Failed]) 128 else 0) +
                   (if (it[MetricFailedMonitorsTable.monitorI3Failed]) 256 else 0)
 
-          if (monitorBitmask == 0) null
-          else
-              MutantFailure(
-                  tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
-                  startingScenarioConfigurationID =
-                      it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
-                  mutantID = it[MetricFailedMonitorsTable.mutant].value,
-                  monitorBitmask = monitorBitmask)
+          MutantFailure(
+              tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+              startingScenarioConfigurationID =
+                  it[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
+              mutantID = it[MetricFailedMonitorsTable.mutant].value,
+              monitorBitmask = monitorBitmask)
         }
         .toList()
 

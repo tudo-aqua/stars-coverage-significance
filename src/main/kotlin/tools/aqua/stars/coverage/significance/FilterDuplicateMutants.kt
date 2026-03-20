@@ -91,6 +91,8 @@ private fun mutantsIdentical(data: List<MutantFailure>, mutant1ID: UUID, mutant2
   val failuresMutant2 =
       data.filter { it.mutantID == mutant2ID }.sortedBy { it.startingScenarioConfigurationID }
 
+  check(failuresMutant1.size == failuresMutant2.size)
+
   for (index in failuresMutant1.indices) {
     if (failuresMutant1[index].monitorBitmask != failuresMutant2[index].monitorBitmask) {
       return false
