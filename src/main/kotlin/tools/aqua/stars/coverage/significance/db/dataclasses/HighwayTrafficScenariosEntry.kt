@@ -26,6 +26,7 @@ data class HighwayTrafficScenariosEntry(
     val crowdiness: Int,
     val vehicleId: String,
     val vehicleType: String,
+    val tick: Long,
     val lane: Int,
     val position: Double,
     val speed: Double,

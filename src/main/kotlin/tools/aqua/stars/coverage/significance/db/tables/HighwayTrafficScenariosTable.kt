@@ -26,6 +26,7 @@ object HighwayTrafficScenariosTable : UUIDTable("highway_traffic_scenarios") {
   val crowdiness = integer("crowdiness")
   val vehicleId = varchar("vehicle_id", 1024)
   val vehicleType = varchar("vehicle_type", 1024)
+  val tick = long("tick")
   val lane = integer("lane")
   val position = double("position")
   val speed = double("speed")
@@ -38,7 +39,7 @@ object HighwayTrafficScenariosTable : UUIDTable("highway_traffic_scenarios") {
   val createdAt = timestamp("created_at").default(Instant.now())
 
   init {
-    index(true, seed, crowdiness, vehicleId, vehicleType, tscInstance)
+    index(true, seed, crowdiness, vehicleId, vehicleType, tick, tscInstance)
 
     index(false, tscInstance)
     index(false, vehicleId)

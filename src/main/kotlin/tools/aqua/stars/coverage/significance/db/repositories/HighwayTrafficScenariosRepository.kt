@@ -46,6 +46,7 @@ object HighwayTrafficScenariosRepository {
       this[HighwayTrafficScenariosTable.crowdiness] = e.crowdiness
       this[HighwayTrafficScenariosTable.vehicleId] = e.vehicleId
       this[HighwayTrafficScenariosTable.vehicleType] = e.vehicleType
+      this[HighwayTrafficScenariosTable.tick] = e.tick
       this[HighwayTrafficScenariosTable.lane] = e.lane
       this[HighwayTrafficScenariosTable.speed] = e.speed
       this[HighwayTrafficScenariosTable.position] = e.position
@@ -60,6 +61,7 @@ object HighwayTrafficScenariosRepository {
           crowdiness = this[HighwayTrafficScenariosTable.crowdiness],
           vehicleId = this[HighwayTrafficScenariosTable.vehicleId],
           vehicleType = this[HighwayTrafficScenariosTable.vehicleType],
+          tick = this[HighwayTrafficScenariosTable.tick],
           lane = this[HighwayTrafficScenariosTable.lane],
           speed = this[HighwayTrafficScenariosTable.speed],
           position = this[HighwayTrafficScenariosTable.position],
