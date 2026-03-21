@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-01-07T15:46:06.354174+01:00 by Eclipse SUMO netedit 1.25.0
+<neteditConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/neteditConfiguration.xsd">
+
+    <input>
+        <sumo-net-file value="C:\Users\Till\Desktop\sumo_experiments\grid_highway.net.xml"/>
+    </input>
+
+    <output>
+        <output-file value="C:\Users\Till\Desktop\sumo_experiments\grid_highway.net.xml"/>
+    </output>
+
+    <processing>
+        <offset.disable-normalization value="true"/>
+    </processing>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+    <netedit>
+        <new-network value="false"/>
+    </netedit>
+
+</neteditConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,10000.00,0.00" origBoundary="10000000000.00,10000000000.00,-10000000000.00,-10000000000.00" projParameter="!"/>
+
+    <edge id="highway" from="J0" to="J1" priority="-1">
+        <lane id="highway_0" index="0" speed="36.11" length="10000.00" shape="0.00,-8.00 10000.00,-8.00"/>
+        <lane id="highway_1" index="1" speed="36.11" length="10000.00" shape="0.00,-4.80 10000.00,-4.80"/>
+        <lane id="highway_2" index="2" speed="36.11" length="10000.00" shape="0.00,-1.60 10000.00,-1.60"/>
+    </edge>
+
+    <junction id="J0" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-9.60"/>
+    <junction id="J1" type="dead_end" x="10000.00" y="0.00" incLanes="highway_0 highway_1 highway_2" intLanes="" shape="10000.00,-9.60 10000.00,0.00"/>
+
+</net>
