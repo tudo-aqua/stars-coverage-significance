@@ -17,19 +17,66 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
+import java.time.Instant
 import java.util.UUID
+import org.jetbrains.exposed.sql.Count
+import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.selectAll
+import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficLongTailEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficScenariosEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
+import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 
 object HighwayTrafficScenariosRepository {
 
   fun getAll(): List<HighwayTrafficScenariosEntry> = db {
     HighwayTrafficScenariosTable.selectAll().map { it.toEntry() }
+  }
+
+  fun loadHighwayTrafficLongTailEntries(): List<HighwayTrafficLongTailEntry> = db {
+    val countExpr: Count = HighwayTrafficScenariosTable.id.count()
+
+    val list =
+        HighwayTrafficScenariosTable.join(
+                otherTable = TSCInstancesTable,
+                joinType = JoinType.INNER,
+                onColumn = HighwayTrafficScenariosTable.tscInstance,
+                otherColumn = TSCInstancesTable.id)
+            .select(
+                HighwayTrafficScenariosTable.tscInstance, TSCInstancesTable.instanceJson, countExpr)
+            .groupBy(HighwayTrafficScenariosTable.tscInstance, TSCInstancesTable.instanceJson)
+            .map { row ->
+              HighwayTrafficLongTailEntry(
+                  tscInstanceId = row[HighwayTrafficScenariosTable.tscInstance].value,
+                  tscInstanceJson = row[TSCInstancesTable.instanceJson],
+                  longTailValue = row[countExpr],
+                  createdAt = Instant.now())
+            }
+            .toMutableList()
+
+    val tscInstances = TSCInstancesRepository.getAll()
+
+    // Add entries with count 0 for tscInstances that are not present in the result
+    val missingInstances =
+        tscInstances.filterNot { tscInstance ->
+          list.any { longTailEntry -> tscInstance.id == longTailEntry.tscInstanceId }
+        }
+
+    list.addAll(
+        missingInstances.map { tscInstance ->
+          HighwayTrafficLongTailEntry(
+              tscInstanceId = tscInstance.id!!,
+              tscInstanceJson = tscInstance.instanceJson,
+              longTailValue = 0,
+              createdAt = Instant.now())
+        })
+
+    return@db list
   }
 
   fun getInstanceIds(): List<UUID> = db {

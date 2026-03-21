@@ -17,18 +17,20 @@
 
 package tools.aqua.stars.coverage.significance
 
+import java.util.*
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficLongTailRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByMonitorCrossTable
+import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.PopulateHighwayTrafficLongTailTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.buildMonitorCombinations
-import java.util.*
 
 // region Mutants
 // ----------------------------------------------------------------------------------------------------
@@ -75,16 +77,12 @@ val randomTrafficAnalysis: List<HighwayTrafficScenarioInstanceId> by lazy {
 
 /** Distribution of scenario instances from the random highway experiment. */
 val longtailDistribution by lazy {
-  allScenarioInstances
-      .map { it to randomTrafficAnalysis.count { t -> t == it.scenarioInstanceId } }
-      .sortedByDescending { it.second }
+  db { HighwayTrafficLongTailRepository.getAll().sortedByDescending { it.longTailValue } }
 }
 // ----------------------------------------------------------------------------------------------------
 // endregion
 
-val failedMonitorMapping: List<ScenarioFailure> by lazy {
-  db { buildFailedMonitorMapping() }
-}
+val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
 val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioInstanceId } }
@@ -92,10 +90,13 @@ val scenarioIds: List<UUID> by lazy {
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
-  DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
+  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
-  //  /** Evaluate longtail distribution from random highway traffic */
-  //  HighwayTrafficAnalysis.evaluate()
+  /** Populate database with longtail distribution from random highway traffic */
+  PopulateHighwayTrafficLongTailTable.populate()
+
+  /** Evaluate longtail distribution from random highway traffic */
+  HighwayTrafficAnalysis.evaluate()
   //
   //  /** Evaluate how many mutants have been killed by different values for scenario coverage. */
   //  MutantKillingPostEvaluation.evaluate()
@@ -111,9 +112,9 @@ fun main() {
   //
   //  /** Heatmap of how many mutants are killed by a scenario that are not killed by the other */
   //  ScenarioByScenarioCrossTable.evaluate()
-
-  /** Heatmap of which mutants are killed by which scenario */
-  ScenarioByMonitorCrossTable.evaluate()
+  //
+  //  /** Heatmap of which mutants are killed by which scenario */
+  //  ScenarioByMonitorCrossTable.evaluate()
 
   println("Finished!")
 }

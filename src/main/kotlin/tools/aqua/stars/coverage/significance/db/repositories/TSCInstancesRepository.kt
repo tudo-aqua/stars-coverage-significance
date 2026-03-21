@@ -117,4 +117,6 @@ object TSCInstancesRepository {
             scenarioInstanceId = row[TSCInstancesTable.id].value,
             scenarioInstanceJson = row[TSCInstancesTable.instanceJson])
       }
+
+  fun getAll(): List<TSCInstanceEntry> = db { TSCInstancesTable.selectAll().map { it.toEntry() } }
 }

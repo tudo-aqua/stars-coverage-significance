@@ -17,22 +17,19 @@
 
 package tools.aqua.stars.coverage.significance
 
+import java.lang.management.ManagementFactory
 import kotlin.math.roundToInt
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficAnalysisJobsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
-import java.lang.management.ManagementFactory
 
 private fun currentPidString(): String {
   // Prefer Java 9+ ProcessHandle; fall back to RuntimeMXBean parsing for older runtimes.
   val pid = runCatching { ProcessHandle.current().pid().toString() }.getOrNull()
   if (pid != null) return pid
 
-  return runCatching {
-        ManagementFactory.getRuntimeMXBean().name.substringBefore('@')
-      }
+  return runCatching { ManagementFactory.getRuntimeMXBean().name.substringBefore('@') }
       .getOrElse { "unknown" }
 }
 

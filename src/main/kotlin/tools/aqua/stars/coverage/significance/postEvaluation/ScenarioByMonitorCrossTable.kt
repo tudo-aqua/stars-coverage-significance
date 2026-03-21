@@ -41,7 +41,7 @@ object ScenarioByMonitorCrossTable {
     // 160 x 14: Scenario -> Map<MutantID, Killed?>
     val killingMatrix: Map<ScenarioInstanceId, MutableMap<MutantId, Boolean>> =
         longtailDistribution.associate {
-          it.first.scenarioInstanceId to
+          it.tscInstanceId to
               mutantsKilledByMonitor.associate { t -> t.mutantID to false }.toMutableMap()
         }
 

@@ -33,11 +33,12 @@ object MutantsKilledByMonitorsPerScenario {
         longtailDistribution.map { scenarioAndLongtailCount ->
           val mutantFailuresInScenario =
               distinctMutantFailuresFiltered.filter {
-                it.tscInstance == scenarioAndLongtailCount.first.scenarioInstanceId
+                it.tscInstance == scenarioAndLongtailCount.tscInstanceId
               }
           Triple(
-              scenarioAndLongtailCount.first,
-              scenarioAndLongtailCount.second,
+              ScenarioIdAndJSON(
+                  scenarioAndLongtailCount.tscInstanceId, scenarioAndLongtailCount.tscInstanceJson),
+              scenarioAndLongtailCount.longTailValue.toInt(),
               Monitors.entries.associate { monitor ->
                 monitor.name to
                     mutantFailuresInScenario
