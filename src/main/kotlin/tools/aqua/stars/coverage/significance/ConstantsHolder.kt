@@ -21,6 +21,8 @@ package tools.aqua.stars.coverage.significance
 const val BASE_DIR = "sumoData"
 /** Directory paths for grid traffic scenarios. */
 const val EXPERIMENT_DIR = "$BASE_DIR/experiment"
+/** Directory path for highway traffic scenarios. */
+const val HIGHWAY_TRAFFIC_EXPERIMENT_DIR = "$BASE_DIR/highwayTraffic"
 /** Directory path for FCD replay files. */
 const val FCD_DIR = "$BASE_DIR/fcdReplay"
 /** Sub-directory for scenario files. */
