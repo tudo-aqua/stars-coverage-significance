@@ -69,13 +69,13 @@ fun main() {
       )
 
   val tscInstances = mutableListOf<TSCInstance<*, *, *, *>>()
-  val seedCap = 1_000
+  val seedCap = 100
   val consoleProgress = ConsoleProgress(total = seedCap)
   for (seed in 1..seedCap) {
     tscInstances.addAll(
         collector.runHighwayTraffic(
             seed = seed,
-            crowdiness = 100,
+            crowdiness = 400,
         ))
     consoleProgress.step()
   }
