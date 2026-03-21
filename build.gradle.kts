@@ -196,17 +196,17 @@ val runHighwayTrafficAnalysis by
     }
 
 val startHighwayAnalysisProgressMonitor by
-tasks.registering(JavaExec::class) {
-  group = "application"
-  description = "Start the progress monitor for highway analysis."
-  dependsOn(tasks.run.get().taskDependencies)
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Start the progress monitor for highway analysis."
+      dependsOn(tasks.run.get().taskDependencies)
 
-  mainClass.set("tools.aqua.stars.coverage.significance.StartHighwayAnalysisProgressMonitorKt")
-  classpath = sourceSets.main.get().runtimeClasspath
+      mainClass.set("tools.aqua.stars.coverage.significance.StartHighwayAnalysisProgressMonitorKt")
+      classpath = sourceSets.main.get().runtimeClasspath
 
-  // optional
-  // jvmArgs = listOf("-Xmx64g")
-  // args = listOf("--flag", "value")
-}
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
 
 kotlin { jvmToolchain(21) }
