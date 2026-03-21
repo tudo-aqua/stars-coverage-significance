@@ -32,8 +32,8 @@ fun main() {
 
   HighwayTrafficAnalysisJobsRepository.clearTable()
 
-  val crowdinessRange = 4..40
-  val repetitions = 2000
+  val crowdinessRange = 1..50
+  val repetitions = 20_000
   val seedChunkSize = 500
 
   val jobs =
