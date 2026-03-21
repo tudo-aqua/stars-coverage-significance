@@ -21,11 +21,11 @@ import java.sql.SQLException
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficAnalysisJobsRepository
+import tools.aqua.stars.coverage.significance.highayTrafficAnalysis.LibsumoDynamicDataCollectorForHighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.smallStaticTsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
-import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollectorForHighwayTrafficAnalysis
 
 fun main(args: Array<String>) {
   installParentDeathWatcher(args)
