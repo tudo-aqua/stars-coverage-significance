@@ -27,6 +27,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.tables.DistinctMutantsTable
 import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficAnalysisJobsTable
+import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficLongTailTable
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceChangeTable
@@ -172,7 +173,8 @@ object DbBootstrap {
           MetricFailedMonitorsTable,
           MutantScenarioChunkJobsTable,
           MetricTotalTickDifferenceTable,
-          DistinctMutantsTable)
+          DistinctMutantsTable,
+          HighwayTrafficLongTailTable)
     }
   }
 
