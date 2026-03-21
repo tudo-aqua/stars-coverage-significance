@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.data.sumo.libSumo
+package tools.aqua.stars.coverage.significance.highayTrafficAnalysis
 
 import java.nio.file.Path
 import java.util.ArrayList
 import java.util.UUID
 import kotlin.io.path.Path
+import kotlin.math.ln
 import kotlin.random.Random
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
@@ -28,9 +29,9 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
-import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.FCD_DIR
 import tools.aqua.stars.coverage.significance.FCD_REPLAY_FILE_NAME
+import tools.aqua.stars.coverage.significance.HIGHWAY_TRAFFIC_EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficScenariosEntry
@@ -68,13 +69,13 @@ fun main() {
       )
 
   val tscInstances = mutableListOf<TSCInstance<*, *, *, *>>()
-  val totalSeeds = 1000
-  val consoleProgress = ConsoleProgress(total = totalSeeds)
-  for (seed in 1..totalSeeds) {
+  val seedCap = 1_000
+  val consoleProgress = ConsoleProgress(total = seedCap)
+  for (seed in 1..seedCap) {
     tscInstances.addAll(
         collector.runHighwayTraffic(
             seed = seed,
-            crowdiness = 400,
+            crowdiness = 100,
         ))
     consoleProgress.step()
   }
@@ -85,8 +86,8 @@ fun main() {
       .toList()
       .sortedByDescending { (_, count) -> count }
       .forEach { (tscInstance, instances) ->
-        println("TSCInstance: ${tscInstance}")
-        println("Instances: ${instances}")
+        println("TSCInstance: $tscInstance")
+        println("Instances: $instances")
         println("-----------")
       }
 }
@@ -94,22 +95,24 @@ fun main() {
 /**
  * Minimal libsumo runner for the 3-lane highway scenario.
  *
- * It reproduces the behavior of the .rou.xml directly in Kotlin:
+ * Current behavior:
  * - one route on edge "highway"
- * - stochastic total-demand arrivals with platoons/headways
+ * - stochastic total-demand arrivals with simple inter-arrival headways
  * - density-dependent lane assignment with keep-right bias
- * - configurable density via vehicles-per-hour baseline
- * - configurable random seed
+ * - spawn only on right and middle lane; left lane emerges from overtaking only
+ * - the simulation runs longer and snapshots are evaluated every fixed interval
+ * - only vehicles that have already progressed a minimum distance are considered for TSC analysis
  */
 class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
-    baseDir: Path = Path(EXPERIMENT_DIR),
+    baseDir: Path = Path(HIGHWAY_TRAFFIC_EXPERIMENT_DIR),
     netFileName: String = NETWORK_FILE_NAME,
     vTypeAdditionalFile: String = "vTypesHighway.add.xml",
     val tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> =
         smallStaticTsc(),
     val tscId: UUID,
     val stepLength: Double = 0.1,
-    val simulationDurationSeconds: Double = 20.0,
+    val simulationDurationSeconds: Double = 120.0,
+    val snapshotIntervalSeconds: Double = 20.0,
     val minAnalysisDistanceMeters: Float = 150.0f,
 ) {
   private val netFilePath: Path = baseDir.resolve(netFileName)
@@ -126,13 +129,11 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
   }
 
   private data class LaneWeights(
-      val left: Double,
       val center: Double,
       val right: Double,
   ) {
     fun toWeightedLanes(): List<Pair<Int, Double>> =
         listOf(
-            LEFT_LANE to left,
             CENTER_LANE to center,
             RIGHT_LANE to right,
         )
@@ -147,24 +148,18 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
 
   private val freeFlowLaneWeightsByArchetype =
       mapOf(
-          DriverArchetype.CALM to LaneWeights(left = 0.00, center = 0.08, right = 0.92),
-          DriverArchetype.NORMAL to LaneWeights(left = 0.02, center = 0.20, right = 0.78),
-          DriverArchetype.SPEEDY to LaneWeights(left = 0.10, center = 0.35, right = 0.55),
+          DriverArchetype.CALM to LaneWeights(center = 0.06, right = 0.94),
+          DriverArchetype.NORMAL to LaneWeights(center = 0.16, right = 0.84),
+          DriverArchetype.SPEEDY to LaneWeights(center = 0.30, right = 0.70),
       )
 
   private val denseLaneWeightsByArchetype =
       mapOf(
-          DriverArchetype.CALM to LaneWeights(left = 0.02, center = 0.18, right = 0.80),
-          DriverArchetype.NORMAL to LaneWeights(left = 0.08, center = 0.34, right = 0.58),
-          DriverArchetype.SPEEDY to LaneWeights(left = 0.18, center = 0.44, right = 0.38),
+          DriverArchetype.CALM to LaneWeights(center = 0.14, right = 0.86),
+          DriverArchetype.NORMAL to LaneWeights(center = 0.28, right = 0.72),
+          DriverArchetype.SPEEDY to LaneWeights(center = 0.42, right = 0.58),
       )
 
-  /**
-   * Runs the highway traffic scenario.
-   *
-   * SUMO itself handles the actual car-following and lane changes after insertion. This code only
-   * decides when a vehicle is spawned, on which lane, and of which type.
-   */
   fun runHighwayTraffic(seed: Int, crowdiness: Int): List<TSCInstance<*, *, *, *>> {
     Simulation.preloadLibraries()
 
@@ -195,14 +190,14 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     val totalArrivalRateVehPerHour = crowdiness * 3.0
 
     var nextVehicleNumber = 0L
-    var platoonVehiclesRemaining = 0
     var nextSpawnTimeSeconds =
         sampleInterArrivalSeconds(
             rng = rng,
             totalArrivalRateVehPerHour = totalArrivalRateVehPerHour,
-            normalizedDensity = normalizedDensity,
-            isFollowingPlatoonVehicle = false,
         )
+
+    val tickToTscInstancesMap = mutableListOf<Pair<TimeStep, TSCInstance<*, *, *, *>>>()
+    var nextSnapshotTimeSeconds = snapshotIntervalSeconds
 
     while (Simulation.getTime() <= simulationDurationSeconds) {
       val now = Simulation.getTime()
@@ -214,49 +209,50 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
         val vehicleId = "veh_${seed}_${laneIndex}_${nextVehicleNumber++}"
 
         runCatching {
-              SumoVehicle.add(
-                  vehicleId,
-                  "r_highway",
-                  vehicleType,
-                  nextSpawnTimeSeconds.toString(),
-                  laneIndex.toString(),
-                  "base",
-                  "max",
-              )
-            }
-            .onFailure {
-              // SUMO occasionally rejects insertions when there is no feasible gap. In that case,
-              // skip the arrival and continue with the stochastic process instead of forcing the
-              // lane.
-            }
-
-        if (platoonVehiclesRemaining > 0) {
-          platoonVehiclesRemaining--
-        } else if (rng.nextDouble() < platoonProbability(normalizedDensity)) {
-          platoonVehiclesRemaining = samplePlatoonSize(rng) - 1
+          SumoVehicle.add(
+              vehicleId,
+              "r_highway",
+              vehicleType,
+              nextSpawnTimeSeconds.toString(),
+              laneIndex.toString(),
+              "base",
+              "max",
+          )
         }
 
         nextSpawnTimeSeconds +=
             sampleInterArrivalSeconds(
                 rng = rng,
                 totalArrivalRateVehPerHour = totalArrivalRateVehPerHour,
-                normalizedDensity = normalizedDensity,
-                isFollowingPlatoonVehicle = platoonVehiclesRemaining > 0,
             )
       }
 
       Simulation.step()
-    }
 
-    val vehicleIds = SumoVehicle.getIDList()
-    val eligibleVehicleIds =
-        vehicleIds.filter { vehId ->
-          runCatching { SumoVehicle.getLanePosition(vehId).toFloat() }.getOrDefault(0.0f) >=
-              minAnalysisDistanceMeters
+      val simTimeSeconds = Simulation.getTime()
+      while (simTimeSeconds >= nextSnapshotTimeSeconds &&
+          nextSnapshotTimeSeconds <= simulationDurationSeconds) {
+        val eligibleVehicleIds =
+            SumoVehicle.getIDList().filter { vehId ->
+              runCatching { SumoVehicle.getLanePosition(vehId).toFloat() }.getOrDefault(0.0f) >=
+                  minAnalysisDistanceMeters
+            }
+
+        eligibleVehicleIds.forEach { vehId ->
+          val tick =
+              getCurrentTimeStep(
+                  egoId = vehId,
+                  seed = seed,
+                  crowdiness = crowdiness,
+                  snapshotTimeSeconds = nextSnapshotTimeSeconds,
+              )
+          tickToTscInstancesMap += tick to tsc.evaluate(tick)
         }
 
-    val ticks = eligibleVehicleIds.map { vehId -> getCurrentTimeStep(vehId, seed, crowdiness) }
-    val tickToTscInstancesMap = ticks.map { it to tsc.evaluate(it) }
+        nextSnapshotTimeSeconds += snapshotIntervalSeconds
+      }
+    }
+
     var tickToTscInstanceIdMap: Map<TimeStep, UUID?> = emptyMap()
     db {
       tickToTscInstanceIdMap =
@@ -279,21 +275,18 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
               crowdiness = crowdiness,
               vehicleId = tick.ego.vehicleId,
               vehicleType = tick.ego.vehicleType.toString(),
+              tick = tick.tickTimeMillis,
               lane = tick.ego.currentLane.laneIndex,
               speed = tick.ego.speedKmPerHour.toDouble(),
               position = tick.ego.positionOnLaneMeters.toDouble(),
-              tscInstanceId = tscInstanceId ?: error("TSC Instance not found"))
+              tscInstanceId = tscInstanceId ?: error("TSC Instance not found"),
+          )
         })
 
     Simulation.close()
-    return tickToTscInstancesMap.map { (_, instance) -> instance }.toList()
+    return tickToTscInstancesMap.map { (_, instance) -> instance }
   }
 
-  /**
-   * Only evaluate vehicles that have actually developed into highway traffic instead of freshly
-   * inserted vehicles near the origin. Since all vehicles depart at the beginning of the route,
-   * lane position is an adequate proxy for travelled distance here.
-   */
   private fun sampleDriverArchetype(rng: Random, normalizedDensity: Double): DriverArchetype {
     val calmProbability = lerp(start = 0.48, end = 0.28, fraction = normalizedDensity)
     val normalProbability = lerp(start = 0.40, end = 0.47, fraction = normalizedDensity)
@@ -319,7 +312,6 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     val denseWeights = denseLaneWeightsByArchetype.getValue(archetype)
     val interpolatedWeights =
         LaneWeights(
-            left = lerp(freeFlowWeights.left, denseWeights.left, normalizedDensity),
             center = lerp(freeFlowWeights.center, denseWeights.center, normalizedDensity),
             right = lerp(freeFlowWeights.right, denseWeights.right, normalizedDensity),
         )
@@ -327,7 +319,8 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     val weightedLanes =
         interpolatedWeights.toWeightedLanes().map { (laneIndex, baseWeight) ->
           val occupancyPenalty = 1.0 - 0.45 * laneOccupancy.getOrElse(laneIndex) { 0.0 }
-          laneIndex to (baseWeight * occupancyPenalty).coerceAtLeast(0.0)
+          val extraRightBias = if (laneIndex == RIGHT_LANE) 1.08 else 1.0
+          laneIndex to (baseWeight * occupancyPenalty * extraRightBias).coerceAtLeast(0.0)
         }
 
     return sampleWeighted(rng, weightedLanes)
@@ -353,70 +346,39 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
   private fun sampleInterArrivalSeconds(
       rng: Random,
       totalArrivalRateVehPerHour: Double,
-      normalizedDensity: Double,
-      isFollowingPlatoonVehicle: Boolean,
   ): Double {
-    if (isFollowingPlatoonVehicle) {
-      return rng.nextDouble(
-          from = lerp(start = 0.8, end = 0.5, fraction = normalizedDensity),
-          until = lerp(start = 2.4, end = 1.4, fraction = normalizedDensity),
-      )
-    }
-
-    val meanHeadwaySeconds = 3600.0 / totalArrivalRateVehPerHour.coerceAtLeast(1.0)
-    val exponentialGap =
-        -kotlin.math.ln((1.0 - rng.nextDouble()).coerceAtLeast(1e-9)) * meanHeadwaySeconds
-    val sparseTrafficGap =
-        rng.nextDouble(
-            from = meanHeadwaySeconds * 0.8,
-            until = meanHeadwaySeconds * (2.1 - 0.5 * normalizedDensity),
-        )
-    val burstMix = lerp(start = 0.30, end = 0.55, fraction = normalizedDensity)
-
-    return if (rng.nextDouble() < burstMix) {
-          0.55 * exponentialGap + 0.45 * sparseTrafficGap
-        } else {
-          sparseTrafficGap
-        }
-        .coerceAtLeast(stepLength)
+    val meanInterArrivalSeconds = 3600.0 / totalArrivalRateVehPerHour.coerceAtLeast(1.0)
+    return sampleExponentialSeconds(rng, meanInterArrivalSeconds)
   }
 
-  private fun platoonProbability(normalizedDensity: Double): Double =
-      lerp(start = 0.18, end = 0.45, fraction = normalizedDensity)
+  private fun sampleExponentialSeconds(rng: Random, meanSeconds: Double): Double {
+    val u = rng.nextDouble().coerceIn(1e-12, 1.0 - 1e-12)
+    return -meanSeconds * ln(1.0 - u)
+  }
 
-  private fun samplePlatoonSize(rng: Random): Int =
-      sampleWeighted(
-          rng,
-          listOf(
-              2 to 0.50,
-              3 to 0.30,
-              4 to 0.15,
-              5 to 0.05,
-          ),
-      )
+  private fun <T> sampleWeighted(rng: Random, weightedValues: List<Pair<T, Double>>): T {
+    val sanitizedWeights = weightedValues.map { it.first to it.second.coerceAtLeast(0.0) }
+    val totalWeight = sanitizedWeights.sumOf { it.second }
+    check(totalWeight > 0.0) { "At least one positive weight is required." }
+
+    var draw = rng.nextDouble() * totalWeight
+    for ((value, weight) in sanitizedWeights) {
+      draw -= weight
+      if (draw <= 0.0) return value
+    }
+    return sanitizedWeights.last().first
+  }
 
   private fun lerp(start: Double, end: Double, fraction: Double): Double =
       start + (end - start) * fraction.coerceIn(0.0, 1.0)
 
-  private fun <T> sampleWeighted(rng: Random, weightedValues: List<Pair<T, Double>>): T {
-    val totalWeight = weightedValues.sumOf { (_, weight) -> weight.coerceAtLeast(0.0) }
-    require(totalWeight > 0.0) { "Weighted sampling requires positive total weight." }
-
-    val x = rng.nextDouble() * totalWeight
-    var cumulative = 0.0
-    for ((value, weight) in weightedValues) {
-      cumulative += weight.coerceAtLeast(0.0)
-      if (x <= cumulative) {
-        return value
-      }
-    }
-
-    return weightedValues.last().first
-  }
-
-  private fun getCurrentTimeStep(egoId: String, seed: Int, crowdiness: Int): TimeStep {
-    val simTimeSeconds = Simulation.getTime()
-    val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
+  private fun getCurrentTimeStep(
+      egoId: String,
+      seed: Int,
+      crowdiness: Int,
+      snapshotTimeSeconds: Double = Simulation.getTime(),
+  ): TimeStep {
+    val tickTimeMillis = (snapshotTimeSeconds * 1000.0).toLong()
 
     val vehIds = SumoVehicle.getIDList()
     val vehiclesInTick = ArrayList<Vehicle>(vehIds.size)
@@ -428,16 +390,15 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
       val lane = laneById[laneId] ?: error("Unknown lane $laneId")
 
       val typeId = SumoVehicle.getTypeID(vehId)
-      var vehicleType: VehicleType
+      val vehicleType =
+          if (vehId == egoId) {
+            VehicleType(vehicleTypesById["ego"] ?: error("Unknown vehicle type ego"))
+          } else {
+            VehicleType(vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId"))
+          }
       val speedMs = SumoVehicle.getSpeed(vehId).toFloat()
       val frontPos = SumoVehicle.getLanePosition(vehId).toFloat()
       val accelMs2: Float = SumoVehicle.getAcceleration(vehId).toFloat()
-
-      if (vehId == egoId) {
-        vehicleType = VehicleType(vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId"))
-      } else {
-        vehicleType = VehicleType(vehicleTypesById[typeId] ?: error("Unknown vehicle type $typeId"))
-      }
 
       val decelMs2 = 4.5f
       val emergencyDecelMs2 = 9.0f
@@ -452,7 +413,7 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
                   vehicleType = vehicleType,
                   currentLane = lane,
                   currentEdge = lane.parentEdge,
-                  positionOnLaneMeters = frontPos, // keep existing semantics (front bumper)
+                  positionOnLaneMeters = frontPos,
                   speedMetersPerSecond = speedMs,
                   accelerationMetersPerSecondSquared = accelMs2,
                   frontBumperPositionOnLaneMeters = frontPos,
@@ -468,11 +429,12 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
         runId = UUID.randomUUID(),
         identifier = "",
         scenarioConfigId = UUID.randomUUID(),
-        sourceIdentifier = "$seed $crowdiness ${ego.vehicleId}",
+        sourceIdentifier = "$seed $crowdiness ${ego.vehicleId} t=$tickTimeMillis",
         tickTimeMillis = tickTimeMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = emptyList(),
         mutantId = UUID.randomUUID(),
-        ego = ego)
+        ego = ego,
+    )
   }
 }
