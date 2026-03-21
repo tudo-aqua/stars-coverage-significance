@@ -16,6 +16,7 @@
 /postEvaluation/*
 
 !/sumoData/experiment
+!/sumoData/highwayTraffic
 !/sumoData/manualTesting/
 !/sumoData/fcdReplay/fcdReplay.add.xml
 !/sumoData/fcdReplay/fcdReplay.rou.xml
