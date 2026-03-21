@@ -27,8 +27,14 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerMonitor
+import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
 import tools.aqua.stars.coverage.significance.postEvaluation.PopulateHighwayTrafficLongTailTable
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByMonitorCrossTable
+import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.buildMonitorCombinations
 
@@ -97,24 +103,24 @@ fun main() {
 
   /** Evaluate longtail distribution from random highway traffic */
   HighwayTrafficAnalysis.evaluate()
-  //
-  //  /** Evaluate how many mutants have been killed by different values for scenario coverage. */
-  //  MutantKillingPostEvaluation.evaluate()
-  //
-  //  /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
-  //  MutantsKilledByMonitorsPerScenario.evaluate()
-  //
-  //  /** Evaluate how many mutants can be killed by each monitor. */
-  //  CountOfMutantsKilledPerMonitor.evaluate()
-  //
-  //  /** Plot for each mutant how many scenarios are capable of killing it. */
-  //  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
-  //
-  //  /** Heatmap of how many mutants are killed by a scenario that are not killed by the other */
-  //  ScenarioByScenarioCrossTable.evaluate()
-  //
-  //  /** Heatmap of which mutants are killed by which scenario */
-  //  ScenarioByMonitorCrossTable.evaluate()
+
+  /** Evaluate how many mutants have been killed by different values for scenario coverage. */
+  MutantKillingPostEvaluation.evaluate()
+
+  /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
+  MutantsKilledByMonitorsPerScenario.evaluate()
+
+  /** Evaluate how many mutants can be killed by each monitor. */
+  CountOfMutantsKilledPerMonitor.evaluate()
+
+  /** Plot for each mutant how many scenarios are capable of killing it. */
+  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
+
+  /** Heatmap of how many mutants are killed by a scenario that are not killed by the other */
+  ScenarioByScenarioCrossTable.evaluate()
+
+  /** Heatmap of which mutants are killed by which scenario */
+  ScenarioByMonitorCrossTable.evaluate()
 
   println("Finished!")
 }
