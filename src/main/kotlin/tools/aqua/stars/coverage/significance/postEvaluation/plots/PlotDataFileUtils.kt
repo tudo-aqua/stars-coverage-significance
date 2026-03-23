@@ -82,14 +82,26 @@ private fun writeCSVFiles(
 fun writeCSVAndTeXFiles(
     metricName: String,
     map: Map<Int, PlotData>,
-    selectedMonitors: Set<MonitorViolation>,
-    numberOfMutants: Int
+    selectedMonitors: Set<MonitorViolation>
 ) {
   writeCSVFiles(
       metricName = metricName,
       fileName = "countOfKilledMutants",
       selectedMonitors,
       map.map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }.toMap())
+
+  writeCSVFiles(
+    metricName = metricName,
+    fileName = "countOfMutantsKilledWithMonitors",
+    selectedMonitors,
+    map.map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }.toMap())
+
+  writeCSVFiles(
+    metricName = metricName,
+    fileName = "countOfViolations",
+    selectedMonitors,
+    map.map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }.toMap())
+
   //  writeTeXFile(metricName = metricName, "countOfKilledMutants", selectedMonitors,
   // numberOfMutants)
   //  writeCSVFiles(

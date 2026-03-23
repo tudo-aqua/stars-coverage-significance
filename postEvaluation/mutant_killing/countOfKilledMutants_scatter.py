@@ -1,13 +1,8 @@
 import csv
-import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-INPUT_CSV = "countOfKilledMutants_full_data.csv"
-OUTPUT_PNG = "countOfKilledMutants_scatter.png"
-
 
 def read_full_data(csv_path: Path):
     groups = []
@@ -21,8 +16,8 @@ def read_full_data(csv_path: Path):
     return groups
 
 
-def main(monitorCombination: Path):
-    groups = read_full_data(monitorCombination / INPUT_CSV)
+def main(base_dir: Path, input_csv: str, output_dir: str):
+    groups = read_full_data(base_dir / input_csv)
 
     fig, ax = plt.subplots(figsize=(30, 10))
 
@@ -40,7 +35,7 @@ def main(monitorCombination: Path):
     positions = [coverage for coverage, _ in groups]
     max_y = max(np.max(values) for _, values in groups)
 
-    ax.set_title(monitorCombination.suffix)
+    ax.set_title(base_dir.name)
     ax.set_xlabel("# TSC classes covered")
     ax.set_ylabel("# mutants killed")
     ax.set_xlim(min(positions) - 1, max(positions) + 2)
@@ -49,11 +44,20 @@ def main(monitorCombination: Path):
     ax.grid(True, axis="y", alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig(monitorCombination / OUTPUT_PNG, dpi=200, bbox_inches="tight")
+    fig.savefig(base_dir / output_dir, dpi=200, bbox_inches="tight")
     plt.close(fig)
+    print(f"Saved scatter plot to {base_dir / output_dir}")
 
 
 if __name__ == "__main__":
-    for monitorCombination in Path(__file__).resolve().parent.iterdir():
-        if monitorCombination.is_dir():
-            main(monitorCombination)
+    for evaluation in Path(__file__).resolve().parent.iterdir():
+        if evaluation.is_dir():
+            for monitorCombination in evaluation.iterdir():
+                if monitorCombination.is_dir():
+                    csv_files = sorted(monitorCombination.glob("*.csv"))
+                    if not csv_files:
+                        continue
+
+                    main(monitorCombination, csv_files[0].name, "scatter.png")
+
+    print("Finished.")

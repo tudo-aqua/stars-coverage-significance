@@ -88,8 +88,7 @@ object MutantKillingPostEvaluation {
     writeCSVAndTeXFiles(
         metricName = metricName,
         map = plotData,
-        selectedMonitors = selectedMonitors,
-        numberOfMutants = relevantMutants.size)
+        selectedMonitors = selectedMonitors)
   }
 
   private fun evaluateCoverage(
@@ -102,6 +101,7 @@ object MutantKillingPostEvaluation {
       relevantMutants: List<UUID>
   ): PlotData {
     val countOfKilledMutants = MutableList(repetitions) { 0 }
+    val countOfMutantsKilledWithMonitors = MutableList(repetitions) { 0 }
     val countOfFailedMonitors = MutableList(repetitions) { 0 }
     val countOfDistinctMonitorsFailed = MutableList(repetitions) { 0 }
 
@@ -123,6 +123,9 @@ object MutantKillingPostEvaluation {
       val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
       countOfKilledMutants[repetition] = mutantsKilled
 
+      val mutantsKilledWithMonitors = relevantMonitors.map { it.mutantId to it.violations }.toSet().count()
+      countOfMutantsKilledWithMonitors[repetition] = mutantsKilledWithMonitors
+
       val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
       countOfFailedMonitors[repetition] = monitorsFailed
 
@@ -132,7 +135,9 @@ object MutantKillingPostEvaluation {
 
     return PlotData(
         countOfKilledMutants = countOfKilledMutants,
+        countOfMutantsKilledWithMonitors = countOfMutantsKilledWithMonitors,
         countOfFailedMonitors = countOfFailedMonitors,
-        countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
+        countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed
+      )
   }
 }

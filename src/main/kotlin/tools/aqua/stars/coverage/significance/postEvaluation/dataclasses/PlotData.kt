@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 data class PlotData(
     val countOfKilledMutants: List<Int>,
+    val countOfMutantsKilledWithMonitors: List<Int>,
     val countOfFailedMonitors: List<Int>,
-    val countOfDistinctMonitorsFailed: List<Int>,
+    val countOfDistinctMonitorsFailed: List<Int>
 )
