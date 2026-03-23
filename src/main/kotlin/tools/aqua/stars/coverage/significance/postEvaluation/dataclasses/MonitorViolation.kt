@@ -42,14 +42,12 @@ enum class MonitorViolation {
                   setOf(
                       G0Accidents,
                       G1SafeDistance,
-                      G2UnnecessaryBraking,
                       G4TrafficFlow,
                       I2FasterThanLeftTraffic))
               add(
                   setOf(
                       G0Accidents,
                       G1SafeDistance,
-                      G2UnnecessaryBraking,
                       G3MaximumSpeedLimit,
                       G4TrafficFlow,
                       G5EmergencyBraking,
