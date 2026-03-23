@@ -14,16 +14,17 @@ def exponential_linearity_test(data):
 
     ranks = np.arange(1, len(data_sorted) + 1)
     log_y = np.log(data_sorted)
-    slope, intercept, r_value, p_value, std_err = linregress(ranks, log_y)
 
-    return {
-        "slope": slope,
-        "intercept": intercept,
-        "r_squared": r_value ** 2,
-        "correlation": r_value,
-        "p_value": p_value,
-        "std_err": std_err
-    }
+    print(ranks)
+    print(data_sorted)
+    print(log_y)
+
+    result = linregress(ranks, log_y)
+    log_y_pred = result.intercept + result.slope * ranks
+    print(result)
+
+    rmse = float(np.sqrt(np.mean((log_y - log_y_pred) ** 2)))
+    print("RMSE: " + str(rmse))
 
 
 def plot(df, barplot: bool, x_scale: str, y_scale: str, file: Path):
@@ -69,8 +70,5 @@ if __name__ == '__main__':
     plot(df_nonzero, False, 'log', 'log', csv_path.parent / "highwayTrafficAnalysis_xlog_ylog.png")
 
     values = df_nonzero.iloc[:, 1].to_numpy()
-    result = exponential_linearity_test(values)
-
-    print(result)
-
+    exponential_linearity_test(values)
 
