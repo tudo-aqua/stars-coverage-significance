@@ -36,7 +36,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTe
 object MutantKillingPostEvaluation {
 
   fun evaluate() = runBlocking {
-    val identifier = "MutantKilling"
+    val identifier = "mutant_killing"
     println("Starting MutantKillingPostEvaluation -$identifier.")
     monitorCombinations
         .mapIndexed { index, monitorCombination ->
