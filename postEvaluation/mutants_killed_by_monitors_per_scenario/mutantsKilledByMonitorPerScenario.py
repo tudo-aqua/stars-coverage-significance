@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -23,8 +24,8 @@ def to_bool(series: pd.Series) -> pd.Series:
     )
 
 
-def plot_combined(df: DataFrame, monitor: str) -> None:
-    x = range(len(df))
+def plot_combined(df: DataFrame, monitors: List[str]) -> None:
+    x = df.index
 
     fig, ax_left = plt.subplots(figsize=(14, 6))
     ax_right = ax_left.twinx()
@@ -34,18 +35,20 @@ def plot_combined(df: DataFrame, monitor: str) -> None:
     ax_left.set_ylabel("Frequency in longtail")
     ax_left.set_title("Long-tail frequency and count of mutants killed per scenario")
 
-    ax_right.scatter(
-        x=df["Scenario"],
-        y=df[monitor],
-        color="red",
-        label=monitor,
-    )
+    markers = ["o", "^", "1", "*"]
+    for idx, monitor in enumerate(monitors):
+        ax_right.scatter(
+            x=x,
+            y=df[monitor],
+            label=monitor,
+            marker=markers[idx % len(markers)],
+        )
 
     ax_right.set_ylabel("Count of mutants killed")
     ax_right.legend(loc="upper right")
 
     fig.tight_layout()
-    fig.savefig(f"mutantsKilledByMonitorPerScenario_{monitor}.png")
+    fig.savefig(f"mutantsKilledByMonitorPerScenario_{monitors}.png")
     plt.close(fig)
 
 
@@ -53,4 +56,6 @@ if __name__ == "__main__":
     df = pd.read_csv(CSV_PATH, skipinitialspace=True)
 
     for monitor in df.columns[2:]:
-        plot_combined(df, monitor)
+        plot_combined(df, [monitor])
+
+    plot_combined(df, ['G0Accidents', 'G1SafeDistance', 'G4TrafficFlow', 'I2FasterThanLeftTraffic'])
