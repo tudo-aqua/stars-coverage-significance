@@ -50,7 +50,8 @@ def plot(df, barplot: bool, x_scale: str, y_scale: str, file: Path):
     ax.legend()
     fig.tight_layout()
 
-    fig.savefig(file, dpi=150)
+    fig.savefig(file.with_suffix('.png'))
+    fig.savefig(file.with_suffix('.pdf'))
     print(f'Saved plot to: {file}')
 
 

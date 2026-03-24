@@ -3,11 +3,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.pyplot import ylim
 
-TITLE_FONTSIZE = 22
-AXIS_FONTSIZE = 18
-TICK_FONTSIZE = 14
+TICK_FONTSIZE = 75
+AXES_LINEWIDTH = 2.5
 
 def read_full_data(csv_path: Path):
     groups = []
@@ -40,16 +38,17 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
 
 
     positions = [coverage for coverage, _ in groups]
-    max_y = max(np.max(values) for _, values in groups)
 
-    ax.set_title(base_dir.name, fontsize=TITLE_FONTSIZE)
-    ax.set_xlabel("TSC classes covered", fontsize=AXIS_FONTSIZE)
-    ax.set_ylabel("mutants killed", fontsize=AXIS_FONTSIZE)
+    # ax.set_xlabel("TSC classes covered", fontsize=AXIS_FONTSIZE)
+    # ax.set_ylabel("mutants killed", fontsize=AXIS_FONTSIZE)
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    for spine in ax.spines.values():
+        spine.set_linewidth(AXES_LINEWIDTH)
     ax.set_xlim(min(positions) - 1, max(positions) + 2)
-    ax.set_ylim(0, 250)#max_y + 5)
-    ax.set_xticks(np.arange(0, max(positions) + 1, 10))
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_ylim(0, 250)
+    ax.set_xticks(np.arange(0, max(positions) + 1, 20))
+    ax.set_yticks(np.arange(0, max(positions) + 1, 20))
+    # ax.grid(True, axis="y", alpha=0.3)
 
     fig.tight_layout()
     fig.savefig(base_dir / (output_dir + ".png"), bbox_inches="tight")

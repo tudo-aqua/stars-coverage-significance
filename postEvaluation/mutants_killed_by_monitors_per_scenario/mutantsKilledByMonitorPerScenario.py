@@ -49,6 +49,7 @@ def plot_combined(df: DataFrame, monitors: List[str]) -> None:
 
     fig.tight_layout()
     fig.savefig(f"mutantsKilledByMonitorPerScenario_{monitors}.png")
+    fig.savefig(f"mutantsKilledByMonitorPerScenario_{monitors}.pdf")
     plt.close(fig)
 
 

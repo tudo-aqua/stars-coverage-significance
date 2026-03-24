@@ -2,17 +2,13 @@
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
-matplotlib.use("pgf")
-matplotlib.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False,
-})
+TICK_FONTSIZE = 20
+AXES_LINEWIDTH = 1.5
 
 def main(csv_path: Path) -> None:
     stem_parts = csv_path.stem.split("_")
@@ -32,43 +28,34 @@ def main(csv_path: Path) -> None:
         }
     )
 
-    column_order = first_true_pos.sort_values(kind="stable").index
+    column_order = first_true_pos.sort_values(ascending=False, kind="stable").index
     df = df.loc[:, column_order]
+    df = df.transpose()
 
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     cmap = ListedColormap(["white", "black"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
 
     heatmap = ax.imshow(df.values, cmap=cmap, norm=norm, aspect="auto")
 
+    ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    for spine in ax.spines.values():
+        spine.set_linewidth(AXES_LINEWIDTH)
     ax.set_title(f"Scenario-by-Monitor Heatmap (Monitor: {monitor_name})")
-    ax.set_xlabel("Mutant (killed/not-killed)")
-    ax.set_ylabel("Scenario (sorted by long-tail)")
+    ax.set_ylabel("Mutant (killed/not-killed)")
+    ax.set_xlabel("Scenario (sorted by long-tail)")
 
     cbar = fig.colorbar(heatmap, ax=ax, label="Value", ticks=[0, 1])
     cbar.ax.set_yticklabels(["not killed", "killed"])
 
-    # X axis: show simple counting indices
-    x_tick_positions = list(range(len(df.columns)))
-    ax.set_xticks(x_tick_positions)
-    ax.set_xticklabels(
-        [str(i) for i in x_tick_positions],
-        rotation=90,
-        ha="right",
-        rotation_mode="anchor",
-        fontsize=8
-    )
-
-    # Y axis: show only every 10th index
-    y_tick_positions = list(range(0, len(df.index), 10))
-    ax.set_yticks(y_tick_positions)
-    ax.set_yticklabels([str(i) for i in y_tick_positions], fontsize=8)
+    ax.set_xticks(np.arange(0, len(df.columns), 20))
+    ax.set_yticks(np.arange(0, len(df.index), 1))
+    ax.set_yticklabels(np.arange(0, len(df.index), 1)[::-1])
 
     fig.tight_layout()
     fig.savefig(csv_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     fig.savefig(csv_path.with_suffix(".pdf"), dpi=300, bbox_inches="tight")
-    fig.savefig(csv_path.with_suffix(".pgf"), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved plot to {csv_path}")
