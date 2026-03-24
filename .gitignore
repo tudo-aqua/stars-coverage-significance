@@ -15,6 +15,7 @@
 /sumoData/*
 /postEvaluation/*
 
+!/sumoData/paperExample
 !/sumoData/experiment
 !/sumoData/highwayTraffic
 !/sumoData/manualTesting/
