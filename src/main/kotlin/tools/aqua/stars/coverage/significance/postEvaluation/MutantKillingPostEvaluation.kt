@@ -91,6 +91,7 @@ object MutantKillingPostEvaluation {
           }
           .awaitAll()
     }
+    println()
 
     writeCSVAndTeXFiles(
         metricName = "mutant_killing", map = plotData, selectedMonitors = selectedMonitors)
