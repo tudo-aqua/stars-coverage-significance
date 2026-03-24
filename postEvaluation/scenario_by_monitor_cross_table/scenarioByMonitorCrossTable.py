@@ -16,12 +16,9 @@ def main(csv_path: Path) -> None:
     df.index = df.index.astype(str).str.strip()
     df.columns = df.columns.astype(str).str.strip()
 
-    fig_width = max(12, len(df.columns) * 0.35)
-    fig_height = max(10, len(df.index) * 0.12)
+    fig, ax = plt.subplots(figsize=(10, 10))
 
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-
-    cmap = ListedColormap(["green", "red"])
+    cmap = ListedColormap(["white", "black"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
 
     heatmap = ax.imshow(df.values, cmap=cmap, norm=norm, aspect="auto")

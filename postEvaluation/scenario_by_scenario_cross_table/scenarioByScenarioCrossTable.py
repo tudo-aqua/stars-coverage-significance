@@ -16,7 +16,7 @@ def main() -> None:
     df.columns = df.columns.str.strip()
 
     fig, ax = plt.subplots(figsize=(12, 10))
-    heatmap = ax.imshow(df.values, cmap="viridis", aspect="auto")
+    heatmap = ax.imshow(df.values, cmap="Greys", aspect="auto")
     ax.set_title("Scenario-by-Scenario Heatmap")
     ax.set_xlabel("Scenario")
     ax.set_ylabel("Scenario")

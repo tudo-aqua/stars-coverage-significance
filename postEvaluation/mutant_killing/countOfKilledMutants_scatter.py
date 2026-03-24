@@ -19,7 +19,7 @@ def read_full_data(csv_path: Path):
 def main(base_dir: Path, input_csv: str, output_dir: str):
     groups = read_full_data(base_dir / input_csv)
 
-    fig, ax = plt.subplots(figsize=(30, 10))
+    fig, ax = plt.subplots(figsize=(15, 10))
 
     rng = np.random.default_rng(42)
     for coverage, values in groups:
@@ -30,6 +30,7 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
             s=10,
             alpha=0.35,
             linewidths=0,
+            c="black",
         )
 
     positions = [coverage for coverage, _ in groups]
@@ -52,12 +53,13 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
 if __name__ == "__main__":
     for evaluation in Path(__file__).resolve().parent.iterdir():
         if evaluation.is_dir():
+            sampleSize = evaluation.name.split("_")[-1]
             for monitorCombination in evaluation.iterdir():
                 if monitorCombination.is_dir():
                     csv_files = sorted(monitorCombination.glob("*.csv"))
                     if not csv_files:
                         continue
 
-                    main(monitorCombination, csv_files[0].name, "scatter.png")
+                    main(monitorCombination, csv_files[0].name, f"scatter_n={sampleSize}.png")
 
     print("Finished.")
