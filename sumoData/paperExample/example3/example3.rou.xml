@@ -3,7 +3,7 @@
   <route id="route" edges="highway"/>
   <vehicle id="veh_calm_1" type="car_calm" route="route" depart="0.00" departLane="1" departPos="50"/>
   <vehicle id="veh_calm_2" type="car_calm" route="route" depart="0.00" departLane="1" departPos="90"/>
-  <vehicle id="veh_normal_1" type="car_speedy" route="route" depart="0.00" departLane="1" departPos="130"/>
+  <vehicle id="veh_normal_1" type="car_normal" route="route" depart="0.00" departLane="1" departPos="130"/>
   <vehicle id="veh_EGO" type="manualTesting" route="route" depart="0.00" departLane="0" departPos="90"/>
   <vehicle id="veh_speedy_1" type="car_speedy" route="route" depart="0.00" departLane="2" departPos="90"/>
   <vehicle id="veh_speedy_2" type="car_speedy" route="route" depart="0.00" departLane="2" departPos="130"/>
