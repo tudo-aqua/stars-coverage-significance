@@ -38,12 +38,7 @@ enum class MonitorViolation {
             .map { setOf(it) }
             .toMutableList()
             .apply {
-              add(
-                  setOf(
-                      G0Accidents,
-                      G1SafeDistance,
-                      G4TrafficFlow,
-                      I2FasterThanLeftTraffic))
+              add(setOf(G0Accidents, G1SafeDistance, G4TrafficFlow, I2FasterThanLeftTraffic))
               add(
                   setOf(
                       G0Accidents,

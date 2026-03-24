@@ -24,6 +24,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlotValues
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
@@ -81,26 +82,37 @@ private fun writeCSVFiles(
 
 fun writeCSVAndTeXFiles(
     metricName: String,
-    map: Map<Int, PlotData>,
+    map:
+        Map<
+            MutantKillingPostEvaluation.Repetitions,
+            Map<MutantKillingPostEvaluation.Coverage, PlotData>>,
     selectedMonitors: Set<MonitorViolation>
 ) {
-  writeCSVFiles(
-      metricName = metricName,
-      fileName = "countOfKilledMutants",
-      selectedMonitors,
-      map.map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }.toMap())
+  map.forEach { (repetitions, coverageToBoxPlotValuesMap) ->
+    writeCSVFiles(
+        metricName = metricName,
+        fileName = "countOfKilledMutants_$repetitions",
+        selectedMonitors,
+        coverageToBoxPlotValuesMap
+            .map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }
+            .toMap())
 
-  writeCSVFiles(
-    metricName = metricName,
-    fileName = "countOfMutantsKilledWithMonitors",
-    selectedMonitors,
-    map.map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }.toMap())
+    writeCSVFiles(
+        metricName = metricName,
+        fileName = "countOfMutantsKilledWithMonitors_$repetitions",
+        selectedMonitors,
+        coverageToBoxPlotValuesMap
+            .map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }
+            .toMap())
 
-  writeCSVFiles(
-    metricName = metricName,
-    fileName = "countOfViolations",
-    selectedMonitors,
-    map.map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }.toMap())
+    writeCSVFiles(
+        metricName = metricName,
+        fileName = "countOfViolations_$repetitions",
+        selectedMonitors,
+        coverageToBoxPlotValuesMap
+            .map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }
+            .toMap())
+  }
 
   //  writeTeXFile(metricName = metricName, "countOfKilledMutants", selectedMonitors,
   // numberOfMutants)
