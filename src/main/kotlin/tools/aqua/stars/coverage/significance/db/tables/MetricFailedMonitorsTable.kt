@@ -71,7 +71,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
-  val monitorG2Failed = bool("monitor_g2_EmergencyBraking_failed").default(false)
+  val monitorG2Failed = bool("monitor_g2_emergencybraking_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_MaximumSpeedLimit_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
