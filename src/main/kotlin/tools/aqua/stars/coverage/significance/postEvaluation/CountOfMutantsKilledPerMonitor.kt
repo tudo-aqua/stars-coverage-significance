@@ -37,10 +37,6 @@ object CountOfMutantsKilledPerMonitor {
       }
     }
 
-    //    monitorToFailedMutantsMap.forEach { (monitor, failedMutantIDs) ->
-    //      println("$monitor:${failedMutantIDs.size}")
-    //    }
-
     val csvFileName = "countOfMutantsKilledPerMonitor.csv"
     val path: Path =
         Path.of(
