@@ -1,0 +1,7 @@
+Position:
+  x: 0
+  y: 188
+
+Size:
+  x: 5062
+  y: 617
