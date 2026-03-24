@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <routes>
   <route id="route" edges="highway"/>
-  <vehicle id="veh_EGO" type="manualTesting" route="route" depart="0.00" departLane="0" departPos="90"/>
+  <vehicle id="veh_EGO" type="manualTesting" route="route" depart="0.00" departLane="0" departPos="15"/>
 </routes>
