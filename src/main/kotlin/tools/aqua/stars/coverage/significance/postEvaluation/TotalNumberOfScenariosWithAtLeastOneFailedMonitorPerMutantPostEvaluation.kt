@@ -63,10 +63,8 @@ object TotalNumberOfScenariosWithAtLeastOneFailedMonitorPerMutantPostEvaluation 
                     (mfm.monitorG2Failed eq true) or
                     (mfm.monitorG3Failed eq true) or
                     (mfm.monitorG4Failed eq true) or
-                    (mfm.monitorG5Failed eq true) or
                     (mfm.monitorI1Failed eq true) or
-                    (mfm.monitorI2Failed eq true) or
-                    (mfm.monitorI3Failed eq true)
+                    (mfm.monitorI2Failed eq true)
               }
               .groupBy(MutantsTable.className)
               .orderBy(failedScenarioConfigCount, SortOrder.DESC)

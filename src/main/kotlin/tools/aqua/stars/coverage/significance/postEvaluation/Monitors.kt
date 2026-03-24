@@ -20,13 +20,11 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 enum class Monitors {
   G0Accidents,
   G1SafeDistance,
-  G2UnnecessaryBraking,
+  G2EmergencyBraking,
   G3MaximumSpeed,
   G4TrafficFlow,
-  G5EmergencyBraking,
   I1Stopping,
-  I2FasterThanLeftTraffic,
-  I3DangerousCutin;
+  I2FasterThanLeftTraffic;
 
   val mask: Int
     get() = 1 shl ordinal

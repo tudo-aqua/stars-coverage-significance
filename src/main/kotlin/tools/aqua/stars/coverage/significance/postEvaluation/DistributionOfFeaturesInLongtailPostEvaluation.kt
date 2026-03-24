@@ -24,7 +24,7 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.HighwayTrafficScenarioInstanceId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.getSetOfAllFeatureNames
 
 typealias FeatureLabel = String
@@ -37,7 +37,7 @@ object DistributionOfFeaturesInLongtailPostEvaluation {
   ) {
     println("Starting DistributionOfFeaturesInLongtailPostEvaluation.")
 
-    val featureLabels: Set<FeatureLabel> = smallStaticTsc().getSetOfAllFeatureNames()
+    val featureLabels: Set<FeatureLabel> = tsc().getSetOfAllFeatureNames()
 
     println("Found ${featureLabels.size} feature labels.")
     featureLabels.forEach { println(it) }

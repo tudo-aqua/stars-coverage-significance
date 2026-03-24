@@ -34,10 +34,8 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG2Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG3Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG4Failed
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorG5Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI1Failed
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI2Failed
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.monitorI3Failed
 import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
 import tools.aqua.stars.coverage.significance.utils.boolToInt
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
@@ -63,10 +61,8 @@ object CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluat
         val monitorG2SumAlias: Sum<Int> = boolToInt(monitorG2Failed).sum()
         val monitorG3SumAlias: Sum<Int> = boolToInt(monitorG3Failed).sum()
         val monitorG4SumAlias: Sum<Int> = boolToInt(monitorG4Failed).sum()
-        val monitorG5SumAlias: Sum<Int> = boolToInt(monitorG5Failed).sum()
         val monitorI1SumAlias: Sum<Int> = boolToInt(monitorI1Failed).sum()
         val monitorI2SumAlias: Sum<Int> = boolToInt(monitorI2Failed).sum()
-        val monitorI3SumAlias: Sum<Int> = boolToInt(monitorI3Failed).sum()
 
         val metricFailedMonitorsTable = MetricFailedMonitorsTable
         val joined =
@@ -83,10 +79,8 @@ object CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluat
                 monitorG2SumAlias,
                 monitorG3SumAlias,
                 monitorG4SumAlias,
-                monitorG5SumAlias,
                 monitorI1SumAlias,
-                monitorI2SumAlias,
-                monitorI3SumAlias)
+                monitorI2SumAlias)
             .groupBy(MutantsTable.className)
             .map { row ->
               row[MutantsTable.className] to
@@ -96,10 +90,8 @@ object CountOfScenarioInstancesWhereMonitorsFailedPerMonitorPerMutantPostEvaluat
                       monitorG2Failed.name to (row[monitorG2SumAlias] ?: -1),
                       monitorG3Failed.name to (row[monitorG3SumAlias] ?: -1),
                       monitorG4Failed.name to (row[monitorG4SumAlias] ?: -1),
-                      monitorG5Failed.name to (row[monitorG5SumAlias] ?: -1),
                       monitorI1Failed.name to (row[monitorI1SumAlias] ?: -1),
-                      monitorI2Failed.name to (row[monitorI2SumAlias] ?: -1),
-                      monitorI3Failed.name to (row[monitorI3SumAlias] ?: -1))
+                      monitorI2Failed.name to (row[monitorI2SumAlias] ?: -1))
             }
       }
 

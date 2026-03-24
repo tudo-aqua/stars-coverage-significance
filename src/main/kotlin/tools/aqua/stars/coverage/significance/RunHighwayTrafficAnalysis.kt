@@ -47,7 +47,7 @@ fun main(args: Array<String>) {
           ?: error("No highway traffic evaluation run found; cannot start workers.")
 
   val tscEntryId =
-      TSCsRepository.getByJson(SerializableTSCNode(smallStaticTsc().rootNode).getJsonString())?.id
+      TSCsRepository.getByJson(SerializableTSCNode(tsc().rootNode).getJsonString())?.id
           ?: error("Static TSC not found in database; cannot start workers.")
 
   val processes: List<NamedProcess> =

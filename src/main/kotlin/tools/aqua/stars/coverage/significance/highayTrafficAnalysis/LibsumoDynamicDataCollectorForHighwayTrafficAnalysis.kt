@@ -41,7 +41,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.LEFT_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
@@ -60,7 +60,7 @@ fun main() {
 
   HighwayTrafficScenariosRepository.clear()
 
-  val tsc = smallStaticTsc()
+  val tsc = tsc()
 
   val collector =
       LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
@@ -107,8 +107,7 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     baseDir: Path = Path(HIGHWAY_TRAFFIC_EXPERIMENT_DIR),
     netFileName: String = NETWORK_FILE_NAME,
     vTypeAdditionalFile: String = "vTypesHighway.add.xml",
-    val tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> =
-        smallStaticTsc(),
+    val tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> = tsc(),
     val tscId: UUID,
     val stepLength: Double = 0.1,
     val simulationDurationSeconds: Double = 120.0,

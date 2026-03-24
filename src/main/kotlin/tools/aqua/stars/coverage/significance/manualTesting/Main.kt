@@ -37,7 +37,7 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.Spawn
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -115,7 +115,7 @@ fun main() {
     python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k fcdReplay.sumocfg -f fcdReplay.fcd.xml
   """
             .trimIndent())
-    val staticTsc = smallStaticTsc()
+    val staticTsc = tsc()
 
     val eval =
         TSCEvaluation(

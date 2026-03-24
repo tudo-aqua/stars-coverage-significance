@@ -31,11 +31,11 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotDat
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 
 object MutantKillingPostEvaluation {
 
-  val TSC_SIZE = smallStaticTsc().instanceCount.toInt()
+  val TSC_SIZE = tsc().instanceCount.toInt()
   val REPETITIONS: List<Int> = listOf(1, 2, 3, 4, 5, 8, 10) * TSC_SIZE
 
   typealias Repetitions = Int

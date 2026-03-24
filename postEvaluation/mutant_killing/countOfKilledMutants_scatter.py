@@ -3,6 +3,11 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.pyplot import ylim
+
+TITLE_FONTSIZE = 22
+AXIS_FONTSIZE = 18
+TICK_FONTSIZE = 14
 
 def read_full_data(csv_path: Path):
     groups = []
@@ -19,7 +24,7 @@ def read_full_data(csv_path: Path):
 def main(base_dir: Path, input_csv: str, output_dir: str):
     groups = read_full_data(base_dir / input_csv)
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, ax = plt.subplots(figsize=(24, 25)) # 1.5*16 : 1*25
 
     rng = np.random.default_rng(42)
     for coverage, values in groups:
@@ -33,19 +38,22 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
             c="black",
         )
 
+
     positions = [coverage for coverage, _ in groups]
     max_y = max(np.max(values) for _, values in groups)
 
-    ax.set_title(base_dir.name)
-    ax.set_xlabel("# TSC classes covered")
-    ax.set_ylabel("# mutants killed")
+    ax.set_title(base_dir.name, fontsize=TITLE_FONTSIZE)
+    ax.set_xlabel("TSC classes covered", fontsize=AXIS_FONTSIZE)
+    ax.set_ylabel("mutants killed", fontsize=AXIS_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     ax.set_xlim(min(positions) - 1, max(positions) + 2)
-    ax.set_ylim(0, max_y + 5)
+    ax.set_ylim(0, 250)#max_y + 5)
     ax.set_xticks(np.arange(0, max(positions) + 1, 10))
     ax.grid(True, axis="y", alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig(base_dir / output_dir, dpi=200, bbox_inches="tight")
+    fig.savefig(base_dir / (output_dir + ".png"), bbox_inches="tight")
+    fig.savefig(base_dir / (output_dir + ".pdf"), bbox_inches="tight")
     plt.close(fig)
     print(f"Saved scatter plot to {base_dir / output_dir}")
 
@@ -60,6 +68,6 @@ if __name__ == "__main__":
                     if not csv_files:
                         continue
 
-                    main(monitorCombination, csv_files[0].name, f"scatter_n={sampleSize}.png")
+                    main(monitorCombination, csv_files[0].name, f"scatter_n={sampleSize}")
 
     print("Finished.")

@@ -42,7 +42,7 @@ import tools.aqua.stars.sumo.mutants.AutopilotMutants
 fun main() {
   DbBootstrap.connectAndCreateSchema()
 
-  val tsc = smallStaticTsc()
+  val tsc = tsc()
 
   // Add TSC to db
   val tscId = TSCsRepository.upsertAndGetId(entry = tsc.toTSCEntry())

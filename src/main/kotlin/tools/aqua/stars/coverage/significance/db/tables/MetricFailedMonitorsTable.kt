@@ -38,12 +38,10 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
- * @property monitorG5Failed Whether monitor G2.2 failed.
  * @property monitorG3Failed Whether monitor G3 failed.
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
  * @property monitorI2Failed Whether monitor I2 failed.
- * @property monitorI3Failed Whether monitor I3 failed.
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
@@ -73,13 +71,11 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
-  val monitorG2Failed = bool("monitor_g2_UnnecessaryBraking_failed").default(false)
+  val monitorG2Failed = bool("monitor_g2_EmergencyBraking_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_MaximumSpeedLimit_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
-  val monitorG5Failed = bool("monitor_g5_EmergencyBraking_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
   val monitorI2Failed = bool("monitor_i2_DrivingFasterThenLeftTraffic_failed").default(false)
-  val monitorI3Failed = bool("monitor_i3_DangerousCutIn_failed").default(false)
   val createdAt = timestamp("created_at")
 
   init {
@@ -110,10 +106,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
             monitorG2Failed,
             monitorG3Failed,
             monitorG4Failed,
-            monitorG5Failed,
             monitorI1Failed,
-            monitorI2Failed,
-            monitorI3Failed)
+            monitorI2Failed)
 
     val result = mutableMapOf<UUID, MutableMap<UUID, MutableList<MutantFailures>>>()
 
@@ -154,10 +148,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
               monitorG2Failed,
               monitorG3Failed,
               monitorG4Failed,
-              monitorG5Failed,
               monitorI1Failed,
-              monitorI2Failed,
-              monitorI3Failed)
+              monitorI2Failed)
           .mapNotNull {
             val monitorBitmask =
                 (if (it[monitorG0Failed]) 1 else 0) +
@@ -165,10 +157,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
                     (if (it[monitorG2Failed]) 4 else 0) +
                     (if (it[monitorG3Failed]) 8 else 0) +
                     (if (it[monitorG4Failed]) 16 else 0) +
-                    (if (it[monitorG5Failed]) 32 else 0) +
-                    (if (it[monitorI1Failed]) 64 else 0) +
-                    (if (it[monitorI2Failed]) 128 else 0) +
-                    (if (it[monitorI3Failed]) 256 else 0)
+                    (if (it[monitorI1Failed]) 32 else 0) +
+                    (if (it[monitorI2Failed]) 64 else 0)
 
             MutantFailure(
                 tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,

@@ -24,7 +24,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficAnal
 import tools.aqua.stars.coverage.significance.highayTrafficAnalysis.LibsumoDynamicDataCollectorForHighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 fun main(args: Array<String>) {
@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
 
   DbBootstrap.connect()
 
-  val tsc = smallStaticTsc()
+  val tsc = tsc()
 
   while (true) {
     val job = HighwayTrafficAnalysisJobsRepository.claimNextJob(runId, workerId) ?: break

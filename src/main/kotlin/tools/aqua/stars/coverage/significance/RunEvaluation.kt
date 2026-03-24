@@ -42,7 +42,7 @@ fun main(args: Array<String>) {
           ?: error("No evaluation run found; cannot start evaluation workers.")
 
   val tscEntryId =
-      TSCsRepository.getByJson(SerializableTSCNode(smallStaticTsc().rootNode).getJsonString())?.id
+      TSCsRepository.getByJson(SerializableTSCNode(tsc().rootNode).getJsonString())?.id
           ?: error("Static TSC not found in database; cannot start evaluation workers.")
 
   val processes: List<NamedProcess> =

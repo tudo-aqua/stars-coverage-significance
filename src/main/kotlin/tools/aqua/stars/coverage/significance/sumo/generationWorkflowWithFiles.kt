@@ -39,7 +39,7 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridT
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.parallelism
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.baseKey
 import tools.aqua.stars.coverage.significance.utils.buckets
@@ -74,7 +74,7 @@ fun generationWorkflowWithFiles() {
   require(exportByKey.isNotEmpty()) { "No export files found." }
   require(collisionByKey.isNotEmpty()) { "No collision files found." }
 
-  val staticTsc = smallStaticTsc()
+  val staticTsc = tsc()
   val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
 
   val bucketCount = minOf(parallelism, scenarioFiles.size.coerceAtLeast(1))

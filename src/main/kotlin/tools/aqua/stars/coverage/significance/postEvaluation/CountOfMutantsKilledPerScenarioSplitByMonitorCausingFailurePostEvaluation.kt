@@ -23,12 +23,12 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.getSetOfAllFeatureNames
 
 object CountOfMutantsKilledPerScenarioSplitByMonitorCausingFailurePostEvaluation {
 
-  val FEATURES = smallStaticTsc().getSetOfAllFeatureNames()
+  val FEATURES = tsc().getSetOfAllFeatureNames()
 
   const val CORRIDOR_DIVIDER = 70
 

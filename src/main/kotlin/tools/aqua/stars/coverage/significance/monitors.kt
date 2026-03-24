@@ -144,45 +144,26 @@ val keepSafeDistancePreceding =
 
 // endregion
 
-/** General Traffic Rules: G_2 Unnecessary Braking - Predicate implementation. */
-val g2UnnecessaryBraking =
-    predicate<TimeStep>("G2 Unnecessary Braking") { tick ->
-      globally(tick) { globallyTick -> !unnecessaryBraking.holds(globallyTick, globallyTick.ego) }
+/** General Traffic Rules: G_2 Abrupt Braking - Predicate implementation. */
+val g2EmergencyBraking =
+    predicate<TimeStep>("G2 Emergency Braking") { startingTick ->
+      globally(startingTick) { globallyTick ->
+        !isBrakingEmergently.holds(globallyTick, globallyTick.ego)
+      }
     }
 
 // region G_2 helpers
-/** Paper parameter a_abrupt (Table II): -2.0 m/s^2. */
-const val ABRUPT_BRAKING_THRESHOLD_MPS2: Float = -2.0f
 
-/** Helper: ego brakes abruptly. (More negative acceleration than the abrupt threshold.) */
-val isBrakingAbruptly =
-    predicate<TimeStep, Vehicle>("Is Braking Abruptly") { _, vehicle ->
-      vehicle.accelerationMetersPerSecondSquared < ABRUPT_BRAKING_THRESHOLD_MPS2
+/** Emergency braking parameter: -7.0 m/s^2. */
+const val EMERGENCY_BRAKING_THRESHOLD_MPS2: Float = -7.0f
+
+/** Helper: ego brakes emergently. (More negative acceleration than the abrupt threshold.) */
+val isBrakingEmergently =
+    predicate<TimeStep, Vehicle>("Is Braking Emergently") { _, vehicle ->
+      vehicle.accelerationMetersPerSecondSquared < EMERGENCY_BRAKING_THRESHOLD_MPS2
     }
 
-/**
- * Helper: unnecessary braking: ego brakes abruptly, but there is no need to brake (no preceding
- * vehicle on same lane, or all preceding vehicles on same lane are at safe distance and not braking
- * themselves).
- */
-val unnecessaryBraking =
-    predicate<TimeStep, Vehicle>("Unnecessary Braking") { startingTick, egoStartingTick ->
-      isBrakingAbruptly.holds(startingTick, egoStartingTick) &&
-          (!exists(startingTick.nonEgoVehicles) { nonEgoVehicleStartingTick ->
-            isInFrontOnSameLane.holds(startingTick, nonEgoVehicleStartingTick to egoStartingTick)
-          } ||
-              exists(startingTick.nonEgoVehicles) { nonEgoLeaderStartingTick ->
-                isInFrontOnSameLane.holds(
-                    startingTick, nonEgoLeaderStartingTick to egoStartingTick) &&
-                    keepSafeDistancePreceding.holds(
-                        startingTick, egoStartingTick to nonEgoLeaderStartingTick) &&
-                    (egoStartingTick.accelerationMetersPerSecondSquared -
-                        nonEgoLeaderStartingTick.accelerationMetersPerSecondSquared <
-                        ABRUPT_BRAKING_THRESHOLD_MPS2)
-              })
-    }
 // endregion
-
 /** General Traffic Rules: G_3 Maximum Speed Limit - Predicate implementation. */
 val g3MaximumSpeedLimit =
     predicate<TimeStep>("G3 Maximum Speed Limit") { startingTick ->
@@ -192,9 +173,6 @@ val g3MaximumSpeedLimit =
     }
 
 // region G_3 helpers
-/// ** Maximum distance to a vehicle in front to consider for FOV speed limit checking. */
-// const val FIELD_OF_VIEW_DISTANCE_METERS: Float = VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
-
 /** Predicate for keeping the speed limit of the current lane. */
 val keepLaneSpeedLimit =
     predicate<TimeStep>("Keep Lane Speed Limit") { startingTick ->
@@ -207,12 +185,6 @@ val keepFovSpeedLimit =
     predicate<TimeStep>("Keep FOV Speed Limit") { startingTick ->
       startingTick.ego.speedMetersPerSecond <=
           39.812 // Solved for a=-9m/s^2, td=0.3s, s_fov=FIELD_OF_VIEW_DISTANCE_METERS
-      //      val v = max(0.0f, startingTick.ego.speedMetersPerSecond)
-      //      val a = max(1e-3f, startingTick.ego.emergencyDecelMetersPerSecondSquared)
-      //      val td = SAFE_DISTANCE_REACTION_TIME_SECONDS
-      //
-      //      val requiredStoppingDistance = v * td + (v * v) / (2.0f * a)
-      //      requiredStoppingDistance <= FIELD_OF_VIEW_DISTANCE_METERS
     }
 // endregion
 /**
@@ -257,53 +229,7 @@ const val HIGHWAY_MIN_SPEED: Float = 60.0f / 3.6f
 val preservesFlow =
     predicate<TimeStep>("Preserves Flow") { startingTick ->
       startingTick.ego.speedMetersPerSecond >= HIGHWAY_MIN_SPEED // 60 km/h in m/s
-      //            val egoStartingTick = startingTick.ego
-      //
-      //            // v_max_sl(egoStartingTick)
-      //            val vLaneMax = egoStartingTick.currentLane.speedLimitMetersPerSecond
-      //
-      //            // v_fov_max(egoStartingTick): solve v*td + v^2/(2a) <= s_fov for v (positive
-      // root)
-      //            val v = max(0.0f, egoStartingTick.speedMetersPerSecond)
-      //            val a = max(1e-3f, egoStartingTick.emergencyDecelMetersPerSecondSquared) //
-      // magnitude |a_min|
-      //            val td = SAFE_DISTANCE_REACTION_TIME_SECONDS
-      //            val sFov = VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
-      //
-      //            val vFovMax = -a * td + sqrt(max(0.0f, (a * td) * (a * td) + 2.0f * a * sFov))
-      //
-      //            // v_max1(egoStartingTick) = min(v_br, v_fov, v*_sl, v_type) -> here:
-      // min(vFovMax, vLaneMax)
-      //            val vMax1 = min(vFovMax, vLaneMax)
-      //
-      //            // preserves_flow: v_max1 - v < Δv_fl
-      //            (vMax1 - v) < TRAFFIC_FLOW_DELTA_V_FL_MPS
     }
-
-// endregion
-
-/**
- * General Traffic Rules: G_5 Abrupt Braking - Predicate implementation. (Stricter than G_2, no
- * exceptions.)
- */
-val g5EmergencyBraking =
-    predicate<TimeStep>("G5 Emergency Braking") { startingTick ->
-      globally(startingTick) { globallyTick ->
-        !isBrakingEmergently.holds(globallyTick, globallyTick.ego)
-      }
-    }
-
-// region G_5 helpers
-
-/** Emergency braking parameter: -7.0 m/s^2. */
-const val EMERGENCY_BRAKING_THRESHOLD_MPS2: Float = -7.0f
-
-/** Helper: ego brakes emergently. (More negative acceleration than the abrupt threshold.) */
-val isBrakingEmergently =
-    predicate<TimeStep, Vehicle>("Is Braking Emergently") { _, vehicle ->
-      vehicle.accelerationMetersPerSecondSquared < EMERGENCY_BRAKING_THRESHOLD_MPS2
-    }
-
 // endregion
 
 /** General Traffic Rules: I_1 Stopping - Predicate implementation. */
@@ -386,37 +312,5 @@ val rightOvertaking =
               startingTick
                   .getVehicleById(otherVehicleStartingTick.vehicleId)
                   .backBumperPositionOnLaneMeters
-    }
-// endregion
-
-/** Interstate Traffic Rule: I_3 Dangerous Cut-In - Predicate implementation. */
-val i3DangerousCutIn =
-    predicate<TimeStep>("I3 Dangerous Cut-In") { startingTick ->
-      globally(startingTick) { globallyTick ->
-        exists(globallyTick.nonEgoVehicles) { nonEgoVehicleGloballyTick ->
-          changedToSameLane.holds(
-              globallyTick, globallyTick.ego to nonEgoVehicleGloballyTick) implies
-              keepSafeDistancePreceding.holds(
-                  globallyTick, nonEgoVehicleGloballyTick to globallyTick.ego)
-        }
-      }
-    }
-
-// region I3 Helper
-/**
- * Helper: changed to same lane: another vehicle was not on the same lane as the ego vehicle in the
- * previous tick, but is now on the same lane and in front of the ego vehicle.
- */
-val changedToSameLane =
-    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Changed To Same Lane") {
-        startingTick,
-        (egoStartingTick, otherVehicleStartingTick) ->
-      isOnSameLane.holds(startingTick, startingTick.ego to otherVehicleStartingTick) &&
-          previous(startingTick) { previousTick ->
-            !isOnSameLane.holds(
-                previousTick,
-                previousTick.ego to previousTick.getVehicleById(otherVehicleStartingTick.vehicleId))
-          } &&
-          isInFrontOfAbsolute.holds(startingTick, egoStartingTick to otherVehicleStartingTick)
     }
 // endregion

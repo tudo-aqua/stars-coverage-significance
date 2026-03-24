@@ -39,7 +39,7 @@ import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.smallStaticTsc
+import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -68,7 +68,7 @@ fun main(args: Array<String>) {
     checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
 
     try {
-      val staticTsc = smallStaticTsc()
+      val staticTsc = tsc()
 
       val eval =
           TSCEvaluation(
