@@ -36,7 +36,7 @@ import tools.aqua.stars.coverage.significance.tsc
 object MutantKillingPostEvaluation {
 
   val TSC_SIZE = tsc().instanceCount.toInt()
-  val REPETITIONS: List<Int> = listOf(1, 2, 3, 4, 5, 8, 10) * TSC_SIZE
+  val REPETITIONS: List<Int> = listOf(1, 2, 4, 8, 16) * TSC_SIZE
 
   typealias Repetitions = Int
 

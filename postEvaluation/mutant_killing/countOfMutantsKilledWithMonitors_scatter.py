@@ -22,7 +22,7 @@ def read_full_data(csv_path: Path):
 def main(base_dir: Path, input_csv: str, output_dir: str):
     groups = read_full_data(base_dir / input_csv)
 
-    fig, ax = plt.subplots(figsize=(24, 14)) # 1.5*16 : 2*7
+    fig, ax = plt.subplots(figsize=(24, 24)) # 1.5*16 : 1.5*16
 
     rng = np.random.default_rng(42)
     for coverage, values in groups:
@@ -44,8 +44,10 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
+    ax.set_xlim(min(positions) - 1, max(positions) + 2)
+    ax.set_ylim(0, 150)
     ax.set_xticks(np.arange(0, max(positions) + 1, 20))
-    ax.set_yticks(np.arange(0, 70, 20))
+    ax.set_yticks(np.arange(0, max(positions) + 1, 20))
     # ax.grid(True, axis="y", alpha=0.3)
 
     fig.tight_layout()
@@ -58,7 +60,7 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
 if __name__ == "__main__":
     for evaluation in Path(__file__).resolve().parent.iterdir():
         if evaluation.is_dir():
-            if evaluation.name.split("_")[0] == "countOfKilledMutants":
+            if evaluation.name.split("_")[0] == "countOfMutantsKilledWithMonitors":
                 sampleSize = evaluation.name.split("_")[-1]
                 for monitorCombination in evaluation.iterdir():
                     if monitorCombination.is_dir():
@@ -66,6 +68,6 @@ if __name__ == "__main__":
                         if not csv_files:
                             continue
 
-                        main(monitorCombination, csv_files[0].name, f"scatter_n={sampleSize}")
+                        main(monitorCombination, csv_files[0].name, f"scatterWithMonitors_n={sampleSize}")
 
     print("Finished.")
