@@ -9,6 +9,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 
 TICK_FONTSIZE = 20
 AXES_LINEWIDTH = 1.5
+n0 = 129
 
 def main(csv_path: Path) -> None:
     stem_parts = csv_path.stem.split("_")
@@ -37,7 +38,7 @@ def main(csv_path: Path) -> None:
     cmap = ListedColormap(["white", "black"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
 
-    heatmap = ax.imshow(df.values, cmap=cmap, norm=norm, aspect="auto")
+    heatmap = ax.imshow(df, cmap=cmap, norm=norm, aspect="auto")
 
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     for spine in ax.spines.values():
@@ -46,12 +47,33 @@ def main(csv_path: Path) -> None:
     ax.set_ylabel("Mutant (killed/not-killed)")
     ax.set_xlabel("Scenario (sorted by long-tail)")
 
+    ax.axvline(
+        x=n0,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Long-tail frequency = 0",
+    )
+
+    # Label unterhalb der x-Achse bei der vertikalen Linie
+    ax.text(
+        n0,
+        -.02,
+        f"{n0}",
+        color="red",
+        fontsize=TICK_FONTSIZE,
+        ha="center",
+        va="top",
+        transform=ax.get_xaxis_transform(),
+        clip_on=False,
+    )
+
     cbar = fig.colorbar(heatmap, ax=ax, label="Value", ticks=[0, 1])
     cbar.ax.set_yticklabels(["not killed", "killed"])
 
-    ax.set_xticks(np.arange(0, len(df.columns), 20))
-    ax.set_yticks(np.arange(0, len(df.index), 1))
-    ax.set_yticklabels(np.arange(0, len(df.index), 1)[::-1])
+    ax.set_xticks([0,20,40,60,80,100,160])
+    # ax.set_yticks(np.arange(0, len(df.index), 1))
+    # ax.set_yticklabels(np.arange(0, len(df.index), 1)[::-1])
 
     fig.tight_layout()
     fig.savefig(csv_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
