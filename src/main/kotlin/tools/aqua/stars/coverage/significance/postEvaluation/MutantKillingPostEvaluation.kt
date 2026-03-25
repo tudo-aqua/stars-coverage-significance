@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
 import tools.aqua.stars.coverage.significance.monitorCombinations
@@ -31,12 +32,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotDat
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
-import tools.aqua.stars.coverage.significance.tsc
 
 object MutantKillingPostEvaluation {
-
-  val TSC_SIZE = tsc().instanceCount.toInt()
-  val REPETITIONS: List<Int> = listOf(1, 2, 4, 8, 16) * TSC_SIZE
 
   typealias Repetitions = Int
 
@@ -152,6 +149,4 @@ object MutantKillingPostEvaluation {
           countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed[it]!!)
     }
   }
-
-  private operator fun List<Int>.times(other: Int) = this.map { it * other }
 }

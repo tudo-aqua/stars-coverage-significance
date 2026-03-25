@@ -27,12 +27,13 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
+import tools.aqua.stars.coverage.significance.postEvaluation.BaselinePostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerMonitor
 import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
-import tools.aqua.stars.coverage.significance.postEvaluation.PopulateHighwayTrafficLongTailTable
+import tools.aqua.stars.coverage.significance.postEvaluation.RedundantMonitorPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByMonitorCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
@@ -94,12 +95,21 @@ val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioInstanceId } }
 }
 
+val TSC_SIZE = tsc().instanceCount.toInt()
+val REPETITIONS: List<Int> = listOf(1, 2, 4, 8, 16) * TSC_SIZE
+
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
   /** Populate database with longtail distribution from random highway traffic */
-  PopulateHighwayTrafficLongTailTable.populate()
+  //  PopulateHighwayTrafficLongTailTable.populate()
+
+  /**
+   * Baseline comparing TSC approach with purely random draw and draw from generated starting
+   * scenarios
+   */
+  BaselinePostEvaluation.evaluate()
 
   /** Evaluate longtail distribution from random highway traffic */
   HighwayTrafficAnalysis.evaluate()
@@ -109,6 +119,9 @@ fun main() {
 
   /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
   MutantsKilledByMonitorsPerScenario.evaluate()
+
+  /** Analyze redundant monitors */
+  RedundantMonitorPostEvaluation.evaluate()
 
   /** Evaluate how many mutants can be killed by each monitor. */
   CountOfMutantsKilledPerMonitor.evaluate()
@@ -124,3 +137,5 @@ fun main() {
 
   println("Finished!")
 }
+
+private operator fun List<Int>.times(other: Int) = this.map { it * other }
