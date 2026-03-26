@@ -82,37 +82,33 @@ private fun writeCSVFiles(
 
 fun writeCSVAndTeXFiles(
     metricName: String,
-    map:
-        Map<
-            MutantKillingPostEvaluation.Repetitions,
-            Map<MutantKillingPostEvaluation.Coverage, PlotData>>,
+    map: Map<MutantKillingPostEvaluation.Coverage, PlotData>,
     selectedMonitors: Set<MonitorViolation>
 ) {
-  map.forEach { (repetitions, coverageToBoxPlotValuesMap) ->
-    writeCSVFiles(
-        metricName = metricName,
-        fileName = "countOfKilledMutants_$repetitions",
-        selectedMonitors,
-        coverageToBoxPlotValuesMap
-            .map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }
-            .toMap())
+  writeCSVFiles(
+      metricName = metricName,
+      fileName = "countOfKilledMutants",
+      selectedMonitors,
+      map
+          .map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }
+          .toMap())
 
-    writeCSVFiles(
-        metricName = metricName,
-        fileName = "countOfMutantsKilledWithMonitors_$repetitions",
-        selectedMonitors,
-        coverageToBoxPlotValuesMap
-            .map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }
-            .toMap())
+  writeCSVFiles(
+      metricName = metricName,
+      fileName = "countOfMutantsKilledWithMonitors",
+      selectedMonitors,
+    map
+          .map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }
+          .toMap())
 
-    writeCSVFiles(
-        metricName = metricName,
-        fileName = "countOfViolations_$repetitions",
-        selectedMonitors,
-        coverageToBoxPlotValuesMap
-            .map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }
-            .toMap())
-  }
+  writeCSVFiles(
+      metricName = metricName,
+      fileName = "countOfViolations",
+      selectedMonitors,
+    map
+          .map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }
+          .toMap())
+
 
   //  writeTeXFile(metricName = metricName, "countOfKilledMutants", selectedMonitors,
   // numberOfMutants)

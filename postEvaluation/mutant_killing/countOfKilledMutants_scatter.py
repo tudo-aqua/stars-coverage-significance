@@ -4,8 +4,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-TICK_FONTSIZE = 75
-AXES_LINEWIDTH = 2.5
+TICK_FONTSIZE = 60
+AXES_LINEWIDTH = 4
+HEIGHT = 9
+WIDTH = 16
 
 def read_full_data(csv_path: Path):
     groups = []
@@ -22,7 +24,7 @@ def read_full_data(csv_path: Path):
 def main(base_dir: Path, input_csv: str, output_dir: str):
     groups = read_full_data(base_dir / input_csv)
 
-    fig, ax = plt.subplots(figsize=(24, 14)) # 1.5*16 : 2*7
+    fig, ax = plt.subplots(figsize=(WIDTH, HEIGHT))
 
     rng = np.random.default_rng(42)
     for coverage, values in groups:
@@ -36,17 +38,36 @@ def main(base_dir: Path, input_csv: str, output_dir: str):
             c="black",
         )
 
+    # mean_points = [
+    #     (coverage, float(np.mean(values)))
+    #     for coverage, values in groups
+    #     if len(values) > 0
+    # ]
+    # mean_points.sort(key=lambda t: t[0])
+    #
+    # if mean_points:
+    #     mean_x = [p[0] for p in mean_points]
+    #     mean_y = [p[1] for p in mean_points]
+    #     ax.plot(
+    #         mean_x,
+    #         mean_y,
+    #         color="red",
+    #         linewidth=4,
+    #         marker="o",
+    #         markersize=8,
+    #         label="mean",
+    #         zorder=5,
+    #     )
 
     positions = [coverage for coverage, _ in groups]
 
-    # ax.set_xlabel("TSC classes covered", fontsize=AXIS_FONTSIZE)
-    # ax.set_ylabel("mutants killed", fontsize=AXIS_FONTSIZE)
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
-    ax.set_xticks(np.arange(0, max(positions) + 1, 20))
-    ax.set_yticks(np.arange(0, 70, 20))
-    # ax.grid(True, axis="y", alpha=0.3)
+
+    ax.set_xlim(-1,161)
+    ax.set_xticks([1,20,40,60,80,100,120,140,160])
+    ax.set_yticks([0,20,40,60])
 
     fig.tight_layout()
     fig.savefig(base_dir / (output_dir + ".png"), bbox_inches="tight")

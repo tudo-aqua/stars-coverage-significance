@@ -24,31 +24,30 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import tools.aqua.stars.coverage.significance.REPETITIONS
+import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
 import tools.aqua.stars.coverage.significance.monitorCombinations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
 
 object MutantKillingPostEvaluation {
 
-  typealias Repetitions = Int
-
   typealias Coverage = Int
 
   fun evaluate() {
     println("Starting MutantKillingPostEvaluation.")
-    monitorCombinations.mapIndexed { index, monitorCombination ->
-      println("Evaluating monitor combination: ${monitorCombination.toFileNameSuffix()}")
-      createPlotData(
-          scenarioFailures = failedMonitorMapping,
-          selectedMonitors = monitorCombination,
-          baseSeed = 42L + index,
-          relevantMutants = distinctMutantIds)
-    }
+
+
+    createPlotData(
+        scenarioFailures = failedMonitorMapping,
+        selectedMonitors = setOf(MonitorViolation.G0Accidents, MonitorViolation.G1SafeDistance, MonitorViolation.G2EmergencyBraking, MonitorViolation.G4TrafficFlow, MonitorViolation.I2FasterThanLeftTraffic),
+        baseSeed = 42L)
+
 
     println("Finished MutantKillingPostEvaluation.")
   }
@@ -56,16 +55,14 @@ object MutantKillingPostEvaluation {
   private fun createPlotData(
       scenarioFailures: List<ScenarioFailure>,
       selectedMonitors: Set<MonitorViolation>,
-      baseSeed: Long,
-      relevantMutants: List<UUID>
+      baseSeed: Long
   ) {
     print("Filtering scenarios...")
     val allScenarios = scenarioFailures.map { it.scenarioId }
     println("Finished.")
 
     val coverageList = List(allScenarios.size) { it + 1 }
-    val plotData: Map<Repetitions, MutableMap<Coverage, PlotData>> =
-        REPETITIONS.associateWith { mutableMapOf() }
+    val plotData: MutableMap<Coverage, PlotData> = mutableMapOf()
 
     runBlocking {
       coverageList
@@ -78,12 +75,9 @@ object MutantKillingPostEvaluation {
                       allScenarios = allScenarios,
                       coverage = coverage,
                       selectedMonitors = selectedMonitors,
-                      seed = baseSeed * 10_000 + coverage,
-                      relevantMutants = relevantMutants)
+                      seed = baseSeed * 10_000 + coverage)
 
-              REPETITIONS.forEach { repetition ->
-                plotData[repetition]!![coverage] = values[repetition]!!
-              }
+                plotData[coverage] = values
             }
           }
           .awaitAll()
@@ -99,30 +93,36 @@ object MutantKillingPostEvaluation {
       allScenarios: List<UUID>,
       coverage: Int,
       selectedMonitors: Set<MonitorViolation>,
-      seed: Long,
-      relevantMutants: List<UUID>
-  ): Map<Repetitions, PlotData> {
-    val countOfKilledMutants = REPETITIONS.associateWith { MutableList(it) { 0 } }
-    val countOfMutantsKilledWithMonitors = REPETITIONS.associateWith { MutableList(it) { 0 } }
-    val countOfFailedMonitors = REPETITIONS.associateWith { MutableList(it) { 0 } }
-    val countOfDistinctMonitorsFailed = REPETITIONS.associateWith { MutableList(it) { 0 } }
+      seed: Long
+  ): PlotData {
+    val countOfKilledMutants = MutableList(REPETITIONS) { 0 }
+    val countOfMutantsKilledWithMonitors = MutableList(REPETITIONS) { 0 }
+    val countOfFailedMonitors = MutableList(REPETITIONS) { 0 }
+    val countOfDistinctMonitorsFailed = MutableList(REPETITIONS) { 0 }
 
-    repeat(REPETITIONS.last()) { repetition ->
+    repeat(REPETITIONS) { repetition ->
       val rng = Random(seed + repetition)
 
       // Select #coverage many random scenarioIDs
       val repetitionScenarioIds = allScenarios.shuffled(rng).take(coverage)
 
       // Filter all failures for the selected
-      val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }
+      val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }.map { it.scenarioInstanceFailures.shuffled(rng).toMutableList() }
 
       // From each scenarioID draw one random instance
-      val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
+//      val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
+      val testSuite = mutableListOf< ScenarioInstanceFailures>()
+      for (i in 0 .. TEST_SUITE_SIZE) {
+        val drawnScenario = drawnScenarios[i % drawnScenarios.size].removeFirst()
+        drawnScenarios[i % drawnScenarios.size] += drawnScenario
+        testSuite += drawnScenario
+      }
 
       val relevantMonitors =
-          drawnScenarioInstances.flatMap { scenarioInstance ->
+        testSuite.flatMap { scenarioInstance ->
             scenarioInstance.mutants.filter { mutant ->
-              mutant.mutantId in relevantMutants && mutant.violations.any { it in selectedMonitors }
+              mutant.mutantId in distinctMutantIds &&
+                  mutant.violations.any { it in selectedMonitors }
             }
           }
 
@@ -132,21 +132,17 @@ object MutantKillingPostEvaluation {
       val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
       val distinctMonitorsFailed = relevantMonitors.flatMap { it.violations }.toSet().count()
 
-      REPETITIONS.filter { repetition < it }
-          .forEach {
-            countOfKilledMutants[it]!![repetition] = mutantsKilled
-            countOfMutantsKilledWithMonitors[it]!![repetition] = mutantsKilledWithMonitors
-            countOfFailedMonitors[it]!![repetition] = monitorsFailed
-            countOfDistinctMonitorsFailed[it]!![repetition] = distinctMonitorsFailed
-          }
+
+      countOfKilledMutants[repetition] = mutantsKilled
+      countOfMutantsKilledWithMonitors[repetition] = mutantsKilledWithMonitors
+      countOfFailedMonitors[repetition] = monitorsFailed
+      countOfDistinctMonitorsFailed[repetition] = distinctMonitorsFailed
     }
 
-    return REPETITIONS.associateWith {
-      PlotData(
-          countOfKilledMutants = countOfKilledMutants[it]!!,
-          countOfMutantsKilledWithMonitors = countOfMutantsKilledWithMonitors[it]!!,
-          countOfFailedMonitors = countOfFailedMonitors[it]!!,
-          countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed[it]!!)
-    }
+    return PlotData(
+          countOfKilledMutants = countOfKilledMutants,
+          countOfMutantsKilledWithMonitors = countOfMutantsKilledWithMonitors,
+          countOfFailedMonitors = countOfFailedMonitors,
+          countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
   }
 }

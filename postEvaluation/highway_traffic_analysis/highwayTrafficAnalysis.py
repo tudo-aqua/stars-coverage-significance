@@ -9,6 +9,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+LABEL_FONTSIZE = 40
+TICK_FONTSIZE = 50
+AXES_LINEWIDTH = 3
+HEIGHT = 10
+WIDTH = 10
 
 def exponential_linearity_test(data):
     data_sorted = np.sort(data)[::-1]
@@ -135,26 +140,42 @@ def fitExponential(data):
     print()
 
 
-def plot(df, barplot: bool, x_scale: str, y_scale: str, file: Path):
+def plot(df, barplot: bool, x_scale: str, y_scale: str, title: str, file: Path):
     labels = df.iloc[:, 0].astype(str)
     values = pd.to_numeric(df.iloc[:, 1], errors='coerce').fillna(0)
 
-    fig, ax = plt.subplots(figsize=(10,10))
+    height = HEIGHT
+    if y_scale == 'linear':
+        height += 0.55
+
+    fig, ax = plt.subplots(figsize=(WIDTH,height))
     x = list(range(len(labels)))
     if barplot:
         ax.bar(x, values, color='C0', label='Highway Traffic')
     else:
         ax.plot(x, values, marker='o', color='C0', label='Highway Traffic')
 
+    for spine in ax.spines.values():
+        spine.set_linewidth(AXES_LINEWIDTH)
+
     ax.set_xticks(x)
-    # Replace x labels by their index, only show every 10th label
-    tick_labels = [str(i) if (i % 10 == 0) else '' for i in x]
-    ax.set_xticklabels(tick_labels, rotation=90, fontsize=8)
     ax.set_ylabel(df.columns[1] if len(df.columns) > 1 else 'Value')
     ax.set_xscale(x_scale)
     ax.set_yscale(y_scale)
-    ax.set_title('Highway traffic - frequency')
-    ax.legend()
+    ax.set_title(title, fontsize=LABEL_FONTSIZE, pad=40)
+
+    ylabel = "Observed frequency"
+    if y_scale == 'log':
+        ylabel = ""
+
+    ax.set_ylabel(ylabel, fontsize=LABEL_FONTSIZE)
+    ax.set_xlabel("Scenario index", fontsize=LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    ax.yaxis.get_offset_text().set_fontsize(TICK_FONTSIZE)
+
+    if y_scale == 'linear':
+        ax.set_yticks([0,20000000,40000000,60000000,80000000])
+
     fig.tight_layout()
 
     fig.savefig(file.with_suffix('.png'))
@@ -170,12 +191,9 @@ if __name__ == '__main__':
     df = pd.read_csv(csv_path)
     df_nonzero = df[pd.to_numeric(df.iloc[:, 1], errors='coerce') != 0]
 
-    # plot(df, True, 'linear', 'linear', csv_path.parent / "highwayTrafficAnalysis_xlin_ylin_all.png")
-    # plot(df, False,'linear', 'log', csv_path.parent / "highwayTrafficAnalysis_xlin_ylog_all.png")
-    # plot(df, False,'log', 'log', csv_path.parent / "highwayTrafficAnalysis_xlog_ylog_all.png")
-    plot(df_nonzero, True, 'linear', 'linear', csv_path.parent / "highwayTrafficAnalysis_xlin_ylin.png")
-    plot(df_nonzero, False, 'linear', 'log', csv_path.parent / "highwayTrafficAnalysis_xlin_ylog.png")
-    plot(df_nonzero, False, 'log', 'log', csv_path.parent / "highwayTrafficAnalysis_xlog_ylog.png")
+    plot(df_nonzero, True, 'linear', 'linear', 'Scenario frequency', csv_path.parent / "highwayTrafficAnalysis_xlin_ylin.png")
+    plot(df_nonzero, False, 'linear', 'log', 'Semi-Log-Scale', csv_path.parent / "highwayTrafficAnalysis_xlin_ylog.png")
+    plot(df_nonzero, False, 'log', 'log', 'Log-Log-Scale', csv_path.parent / "highwayTrafficAnalysis_xlog_ylog.png")
 
     values = df_nonzero.iloc[:, 1].to_numpy()
     exponential_linearity_test(values)

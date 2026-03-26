@@ -9,8 +9,12 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-TICK_FONTSIZE = 30
+LEGEND_FONTSIZE = 14
+LABEL_FONTSIZE = 18
+TICK_FONTSIZE = 16
 AXES_LINEWIDTH = 1.5
+HEIGHT = 6
+WIDTH = 10
 
 # y = a * e ^ (b * x)
 a = 82443573.838401
@@ -32,14 +36,16 @@ def to_bool(series: pd.Series) -> pd.Series:
 def plot_combined(df: DataFrame, monitors: List[str]) -> None:
     x = df.index
 
-    fig, ax_left = plt.subplots(figsize=(10, 6))
+    fig, ax_left = plt.subplots(figsize=(WIDTH, HEIGHT))
     ax_right = ax_left.twinx()
 
     ax_left.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    ax_right.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    ax_left.yaxis.get_offset_text().set_fontsize(TICK_FONTSIZE)
     for spine in ax_left.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
 
-    ax_left.bar(x, df["Frequency in longtail"], alpha=0.6, label="Frequency in longtail")
+    ax_left.bar(x, df["Frequency in longtail"], alpha=0.6, label="Frequency in long-tail")
 
     x_values = np.asarray(x, dtype=float)
     exponential_curve = a * np.exp(b * x_values)
@@ -60,13 +66,12 @@ def plot_combined(df: DataFrame, monitors: List[str]) -> None:
             color="red",
             linestyle="--",
             linewidth=2,
-            label="Long-tail frequency = 0",
+            label="Frequency in long-tail = 0",
         )
 
-        # Label unterhalb der x-Achse bei der vertikalen Linie
         ax_left.text(
             zero_x,
-            -.011,
+            -.019,
             f"{zero_x}",
             color="red",
             fontsize=TICK_FONTSIZE,
@@ -76,13 +81,21 @@ def plot_combined(df: DataFrame, monitors: List[str]) -> None:
             clip_on=False,
         )
 
-    ax_left.set_xlabel("Scenario index (sorted by long-tail frequency)")
-    ax_left.set_ylabel("Frequency in longtail")
+    ax_left.set_xlabel("Scenario index (sorted by long-tail frequency)", fontsize=LABEL_FONTSIZE)
+    ax_left.set_ylabel("Frequency in long-tail", fontsize=LABEL_FONTSIZE)
     ax_left.set_xlim(-1,160)
-    ax_left.set_title("Long-tail frequency and count of mutants killed per scenario")
-    ax_left.legend(loc="upper left")
+    ax_left.set_title(
+        "Long-tail frequency and count of mutants killed per scenario",
+        fontsize=LABEL_FONTSIZE,
+        pad=20,
+    )
+    ax_left.legend(
+        loc="upper left",
+        bbox_to_anchor=(0.02, 0.94),
+        fontsize=LEGEND_FONTSIZE,
+    )
 
-    markers = [".", "^", "1", "*", "+", "d", "s"]
+    markers = [".", "^", "+", "1", "*"]
     for idx, monitor in enumerate(monitors):
         ax_right.scatter(
             x=x,
@@ -91,8 +104,12 @@ def plot_combined(df: DataFrame, monitors: List[str]) -> None:
             marker=markers[idx % len(markers)],
         )
 
-    ax_right.set_ylabel("Count of mutants killed")
-    ax_right.legend(loc="upper right")
+    ax_right.set_ylabel("Count of mutants killed", fontsize=LABEL_FONTSIZE)
+    ax_right.legend(
+        loc="upper right",
+        bbox_to_anchor=(0.98, 0.94),
+        fontsize=LEGEND_FONTSIZE,
+    )
 
     fig.tight_layout()
     fig.savefig(Path(__file__).parent / f"mutantsKilledByMonitorPerScenario_{monitors}.png")
@@ -106,5 +123,5 @@ if __name__ == "__main__":
     for monitor in df.columns[2:]:
         plot_combined(df, [monitor])
 
-    plot_combined(df, ['G0Accidents', 'G1SafeDistance', 'G4TrafficFlow', 'I2FasterThanLeftTraffic'])
+    plot_combined(df, ['G0Accidents', 'G1SafeDistance', 'G2EmergencyBraking', 'G4TrafficFlow', 'I2FasterThanLeftTraffic'])
     plot_combined(df, ['G0Accidents', 'G1SafeDistance', 'G2EmergencyBraking', 'G3MaximumSpeed', 'G4TrafficFlow', 'I1Stopping', 'I2FasterThanLeftTraffic'])

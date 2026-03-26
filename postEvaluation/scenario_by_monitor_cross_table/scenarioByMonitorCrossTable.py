@@ -7,8 +7,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
-TICK_FONTSIZE = 20
+LEGEND_FONTSIZE = 14
+LABEL_FONTSIZE = 18
+TICK_FONTSIZE = 16
 AXES_LINEWIDTH = 1.5
+HEIGHT = 6
+WIDTH = 10
+
 n0 = 129
 
 def main(csv_path: Path) -> None:
@@ -33,7 +38,7 @@ def main(csv_path: Path) -> None:
     df = df.loc[:, column_order]
     df = df.transpose()
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(WIDTH, HEIGHT))
 
     cmap = ListedColormap(["white", "black"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
@@ -43,9 +48,13 @@ def main(csv_path: Path) -> None:
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
-    ax.set_title(f"Scenario-by-Monitor Heatmap (Monitor: {monitor_name})")
-    ax.set_ylabel("Mutant (killed/not-killed)")
-    ax.set_xlabel("Scenario (sorted by long-tail)")
+    ax.set_title(
+        f"Scenario-by-Monitor Heatmap (Monitor: {monitor_name})",
+        fontsize=LABEL_FONTSIZE,
+        pad=20,
+    )
+    ax.set_ylabel("Mutant (killed/not-killed)", fontsize=LABEL_FONTSIZE)
+    ax.set_xlabel("Scenario (sorted by long-tail)", fontsize=LABEL_FONTSIZE)
 
     ax.axvline(
         x=n0,
@@ -68,10 +77,10 @@ def main(csv_path: Path) -> None:
         clip_on=False,
     )
 
-    cbar = fig.colorbar(heatmap, ax=ax, label="Value", ticks=[0, 1])
-    cbar.ax.set_yticklabels(["not killed", "killed"])
+    cbar = fig.colorbar(heatmap, ax=ax, label="", ticks=[0, 1])
+    cbar.ax.set_yticklabels(["missed", "killed"], fontsize=LABEL_FONTSIZE)
 
-    ax.set_xticks([0,20,40,60,80,100,160])
+    ax.set_xticks([0,20,40,60,80,100,120,140,160])
     # ax.set_yticks(np.arange(0, len(df.index), 1))
     # ax.set_yticklabels(np.arange(0, len(df.index), 1)[::-1])
 

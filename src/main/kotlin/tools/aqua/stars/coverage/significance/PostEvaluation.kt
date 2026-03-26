@@ -28,14 +28,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselinePostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfMutantsKilledPerMonitor
-import tools.aqua.stars.coverage.significance.postEvaluation.CountOfScenariosKillingAMutantPerMutantPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.HighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantsKilledByMonitorsPerScenario
-import tools.aqua.stars.coverage.significance.postEvaluation.RedundantMonitorPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByMonitorCrossTable
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.buildMonitorCombinations
 
@@ -96,7 +89,8 @@ val scenarioIds: List<UUID> by lazy {
 }
 
 val TSC_SIZE = tsc().instanceCount.toInt()
-val REPETITIONS: List<Int> = listOf(1, 2, 4, 8, 16) * TSC_SIZE
+val REPETITIONS: Int = 100
+val TEST_SUITE_SIZE : Int = 160
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
@@ -110,30 +104,31 @@ fun main() {
    * scenarios
    */
   BaselinePostEvaluation.evaluate()
+//  BaselinePostEvaluation2.evaluate()
 
   /** Evaluate longtail distribution from random highway traffic */
-  HighwayTrafficAnalysis.evaluate()
+  //  HighwayTrafficAnalysis.evaluate()
 
   /** Evaluate how many mutants have been killed by different values for scenario coverage. */
-  MutantKillingPostEvaluation.evaluate()
+//    MutantKillingPostEvaluation.evaluate()
 
   /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
-  MutantsKilledByMonitorsPerScenario.evaluate()
+  //  MutantsKilledByMonitorsPerScenario.evaluate()
 
   /** Analyze redundant monitors */
-  RedundantMonitorPostEvaluation.evaluate()
+  //  RedundantMonitorPostEvaluation.evaluate()
 
   /** Evaluate how many mutants can be killed by each monitor. */
-  CountOfMutantsKilledPerMonitor.evaluate()
+  //  CountOfMutantsKilledPerMonitor.evaluate()
 
   /** Plot for each mutant how many scenarios are capable of killing it. */
-  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
+  //  CountOfScenariosKillingAMutantPerMutantPostEvaluation.evaluate()
 
   /** Heatmap of how many mutants are killed by a scenario that are not killed by the other */
-  ScenarioByScenarioCrossTable.evaluate()
+  //  ScenarioByScenarioCrossTable.evaluate()
 
   /** Heatmap of which mutants are killed by which scenario */
-  ScenarioByMonitorCrossTable.evaluate()
+  //  ScenarioByMonitorCrossTable.evaluate()
 
   println("Finished!")
 }

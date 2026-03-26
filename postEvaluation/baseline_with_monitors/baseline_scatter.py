@@ -1,0 +1,66 @@
+import csv
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+TICK_FONTSIZE = 75
+AXES_LINEWIDTH = 2.5
+
+def read_full_data(csv_path: Path):
+    groups = []
+    with csv_path.open(newline="") as f:
+        reader = csv.reader(f, skipinitialspace=True)
+        next(reader)  # header
+        for row in reader:
+            coverage = int(row[0])
+            values = np.array([float(x) for x in row[1:] if x.strip() != ""], dtype=float)
+            groups.append((coverage, values))
+    return groups
+
+
+def main(input_csv: Path):
+    groups = read_full_data(input_csv)
+
+    fig, ax = plt.subplots(figsize=(24, 24)) # 1.5*16 : 1.5*16
+
+    rng = np.random.default_rng(42)
+    for coverage, values in groups:
+        jitter = rng.uniform(-0.22, 0.22, size=len(values))
+        ax.scatter(
+            np.full(len(values), coverage, dtype=float) + jitter,
+            values,
+            s=10,
+            alpha=0.35,
+            linewidths=0,
+            c="black",
+        )
+
+
+    positions = [coverage for coverage, _ in groups]
+
+    # ax.set_xlabel("TSC classes covered", fontsize=AXIS_FONTSIZE)
+    # ax.set_ylabel("mutants killed", fontsize=AXIS_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
+    for spine in ax.spines.values():
+        spine.set_linewidth(AXES_LINEWIDTH)
+    ax.set_xlim(min(positions) - 1, max(positions) + 2)
+    ax.set_ylim(0, 150)
+    ax.set_xticks(np.arange(0, max(positions) + 1, 20))
+    ax.set_yticks(np.arange(0, max(positions) + 1, 20))
+    # ax.grid(True, axis="y", alpha=0.3)
+
+    fig.tight_layout()
+    fig.savefig(csv_path.with_suffix(".png"), bbox_inches="tight")
+    fig.savefig(csv_path.with_suffix(".pdf"), bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved scatter plot to {csv_path.with_suffix(".pdf")}")
+
+
+if __name__ == "__main__":
+    csv_files = sorted(Path(__file__).resolve().parent.glob("*.csv"))
+
+    for csv_path in csv_files:
+        main(csv_path)
+
+    print("Finished.")
