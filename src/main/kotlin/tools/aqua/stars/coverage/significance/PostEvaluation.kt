@@ -37,11 +37,12 @@ import tools.aqua.stars.coverage.significance.postEvaluation.RedundantMonitorPos
 import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByMonitorCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioByScenarioCrossTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.buildMonitorCombinations
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.buildMonitorCombinations
 
 // region Mutants
 // ----------------------------------------------------------------------------------------------------
-/** All Mutant IDs */
+/** All Mutant IDs. */
 val mutantIds: List<UUID> by lazy { db { MutantsRepository.getAllIds() } }
 
 /** All behavioral distinct Mutant IDs. */
@@ -89,20 +90,28 @@ val longtailDistribution by lazy {
 // ----------------------------------------------------------------------------------------------------
 // endregion
 
+/** Mapping of scenario failures to monitors. */
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
+
+/** All possible combinations of monitors. */
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
+
+/** All scenario IDs. */
 val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioInstanceId } }
 }
 
+/** The size of the TSC. */
 val TSC_SIZE = tsc().instanceCount.toInt()
+
+/** The number of repetitions of the evaluation. */
 val REPETITIONS: List<Int> = listOf(1, 2, 4, 8, 16) * TSC_SIZE
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
-  /** Populate database with longtail distribution from random highway traffic */
+  /** Populate the database with longtail distribution from random highway traffic */
   //  PopulateHighwayTrafficLongTailTable.populate()
 
   /**

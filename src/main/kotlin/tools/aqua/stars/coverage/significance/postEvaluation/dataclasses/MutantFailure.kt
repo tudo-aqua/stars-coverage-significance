@@ -18,10 +18,19 @@
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 import java.util.UUID
+import tools.aqua.stars.coverage.significance.utils.MonitorViolationBitmask
 
+/**
+ * Data class for storing a mutant failure.
+ *
+ * @property tscInstance TSC instance.
+ * @property startingScenarioConfigurationID Starting scenario configuration ID.
+ * @property mutantID Mutant ID.
+ * @property monitorBitmask Monitor bitmask.
+ */
 data class MutantFailure(
     val tscInstance: UUID,
     val startingScenarioConfigurationID: UUID,
     val mutantID: UUID,
-    val monitorBitmask: Int
+    val monitorBitmask: MonitorViolationBitmask
 )
