@@ -28,15 +28,8 @@ import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.MIDDLE_ROW
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.Spawn
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
-import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
+import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsPerTickMetric
 import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -54,12 +47,11 @@ fun main() {
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
   val runId = UUID.randomUUID()
-  val tscId = UUID.fromString("7f4faac3-08ad-45d2-ae3f-b1e08f4b77fb")
-  val mutantId = UUID.fromString("3dadcc41-74c0-47f1-b7e2-45ed79c51eee")
+  val mutantId = UUID.fromString("e564db3a-0e52-4c1a-b002-b841502c7eec")
 
   val listOfScenarios =
       listOf(
-          "ed38d17a-d876-407d-ba96-e0d76dcbbf6d",
+          "6ca2c4a6-55ab-49cb-b487-43ca766c9a6c",
       )
   listOfScenarios.forEach { scenarioId ->
     val scenarioId = UUID.fromString(scenarioId)
@@ -68,30 +60,33 @@ fun main() {
     checkNotNull(scenario) {
       "Scenario with id $scenarioId not found in database. Please make sure to insert a scenario with this id before running the manual testing main function."
     }
-    val mutantEntry = checkNotNull(MutantsRepository.getById(mutantId))
+    val mutantEntry =
+        checkNotNull(MutantsRepository.getById(mutantId)) {
+          "Mutant with id $mutantId not found in database. Please make sure to insert a mutant with this id before running the manual testing main function."
+        }
     val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
 
-    val manualScenario =
-        GeneratedScenario(
-                spawns =
-                    listOf(
-                        Spawn(
-                            row = MIDDLE_ROW,
-                            lane = RIGHT_LANE,
-                            positionMeters = 100.0f,
-                            type = GridVehicleType.EGO),
-                        Spawn(
-                            row = MIDDLE_ROW,
-                            lane = CENTER_LANE,
-                            positionMeters = 100.0f,
-                            type = GridVehicleType.CALM),
-                        Spawn(
-                            row = TOP_ROW,
-                            lane = RIGHT_LANE,
-                            positionMeters = 130.0f,
-                            type = GridVehicleType.CALM),
-                    ))
-            .toScenarioStartingConfigurationEntry(id = UUID.randomUUID())
+    //    val manualScenario =
+    //        GeneratedScenario(
+    //                spawns =
+    //                    listOf(
+    //                        Spawn(
+    //                            row = MIDDLE_ROW,
+    //                            lane = RIGHT_LANE,
+    //                            positionMeters = 100.0f,
+    //                            type = GridVehicleType.EGO),
+    //                        Spawn(
+    //                            row = MIDDLE_ROW,
+    //                            lane = CENTER_LANE,
+    //                            positionMeters = 100.0f,
+    //                            type = GridVehicleType.CALM),
+    //                        Spawn(
+    //                            row = TOP_ROW,
+    //                            lane = RIGHT_LANE,
+    //                            positionMeters = 130.0f,
+    //                            type = GridVehicleType.CALM),
+    //                    ))
+    //            .toScenarioStartingConfigurationEntry(id = UUID.randomUUID())
 
     val libSumoTicks =
         libsumoDynamicDataCollector.runGeneratedScenario(
@@ -134,7 +129,9 @@ fun main() {
         TotalTickDifferenceMetric<
             Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
 
-    val failedMonitorsMetric = FailedMonitorsMetric(tscId = tscId, writeToDb = false)
+    val failedMonitorsMetric =
+        FailedMonitorsPerTickMetric(
+            writeToDb = false, writeVehicleStateImages = true, writeVehicleStateVideo = true)
 
     eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
 
