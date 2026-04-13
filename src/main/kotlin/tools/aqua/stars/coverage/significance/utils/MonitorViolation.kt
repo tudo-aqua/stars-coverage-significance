@@ -80,5 +80,9 @@ enum class MonitorViolation(val bit: Int) {
     /** Converts a bitmask to a set of monitor violations. */
     fun MonitorViolationBitmask.toSetOfMonitorViolations(): Set<MonitorViolation> =
         entries.filter { this and 2.0.pow(it.bit.toDouble()).toInt() != 0 }.toSet()
+
+    /** Converts a [MonitorViolationBitmask] to a readable [String]. */
+    fun MonitorViolationBitmask.toReadableString(): String =
+        this.toSetOfMonitorViolations().joinToString(separator = ", ")
   }
 }
