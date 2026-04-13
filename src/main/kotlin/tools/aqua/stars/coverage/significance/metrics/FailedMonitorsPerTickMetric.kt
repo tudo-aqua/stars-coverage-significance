@@ -98,35 +98,8 @@ class FailedMonitorsPerTickMetric(
     val monitorFailuresPerTSC = monitorFailuresPerTick.groupBy { it.tsc }
     if (!writeToDb) {
       monitorFailuresPerTSC.forEach { (tsc, failedMonitors) ->
-        println("TSC: $tsc")
-        val monitorFailuresForTSCSorted =
-            failedMonitors.sortedWith(
-                compareBy<FailedMonitorsPerTick> { it.tick.sourceIdentifier }
-                    .thenBy { it.tick.mutantId.toString() }
-                    .thenBy { it.tick.tickTimeMillis })
-
-        monitorFailuresForTSCSorted.forEach {
-          println(
-              "Tick: ${it.tick.tickTimeMillis}, Failed Monitors: ${it.failedMonitors.toReadableString()}")
-          println("Instance: ${it.tscInstance} ")
-          println("----------------------------------------")
-        }
-
+        println("TSC:\n $tsc")
         printJoinedTimelineVisualization(failedMonitors)
-
-        println("")
-        println("----------------------------------------")
-        println("-------------Statistics-----------------")
-        println("----------------------------------------")
-        println("")
-
-        val failedMonitorsInTotal =
-            failedMonitors.flatMap { it.failedMonitors.toSetOfMonitorViolations() }.toSet()
-        println("Total Failed Monitors (${failedMonitorsInTotal.size}): $failedMonitorsInTotal")
-
-        val countOfTSCInstances = failedMonitors.map { it.tscInstance }.toSet()
-        println("Total TSC Instances: ${countOfTSCInstances.size}")
-        countOfTSCInstances.forEach { println(it) }
       }
     }
   }
@@ -216,6 +189,13 @@ class FailedMonitorsPerTickMetric(
         .groupBy { TimelineSource(it.tick.sourceIdentifier, it.tick.mutantId.toString()) }
         .forEach { (source, ticksForSource) ->
           println("Source: ${source.sourceIdentifier}, Mutant: ${source.mutantId}")
+          println("TSC instance legend:")
+          ticksForSource
+              .distinctBy { it.tscInstanceId }
+              .sortedBy { it.tscInstanceId.counterValue() }
+              .forEach { tick -> println("${tick.tscInstanceId}: ${tick.tscInstance}") }
+
+          println("")
           println("TSC instance ranges:")
           relevantRanges
               .filter { range ->
@@ -255,6 +235,8 @@ class FailedMonitorsPerTickMetric(
           ticks = this)
 
   private fun MonitorViolationBitmask.toTimelineLabel(): String = toReadableString().ifBlank { "-" }
+
+  private fun String.counterValue(): Int = substringAfter("TSC-", "").toIntOrNull() ?: Int.MAX_VALUE
 }
 
 data class FailedMonitorsPerTick(
