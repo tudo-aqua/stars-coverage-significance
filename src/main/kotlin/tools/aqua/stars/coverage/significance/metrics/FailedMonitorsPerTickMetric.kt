@@ -174,6 +174,13 @@ class FailedMonitorsPerTickMetric(
             val sortedTicks = ticksForExecution.sortedBy { it.tick.tickTimeMillis }
             sortedTicks.withIndex().flatMap { (index, tick) ->
               val previousTick = sortedTicks.getOrNull(index - 1)
+              val lastChangedFromTickIndex =
+                  (index - 1 downTo 0).firstOrNull {
+                    sortedTicks[it].tscInstanceId != tick.tscInstanceId
+                  }
+              val lastChangedFromTick = lastChangedFromTickIndex?.let { sortedTicks[it] }
+              val lastChangedToTick =
+                  lastChangedFromTickIndex?.let { sortedTicks.getOrNull(it + 1) }
               tick.failedMonitors.toSetOfMonitorViolations().map { monitor ->
                 MonitorViolationTSCInstanceTransition(
                     monitor = monitor,
@@ -185,6 +192,10 @@ class FailedMonitorsPerTickMetric(
                     violatingTSCInstance = tick.tscInstance,
                     previousTSCInstanceId = previousTick?.tscInstanceId,
                     previousTSCInstance = previousTick?.tscInstance,
+                    lastChangedFromTSCInstanceId = lastChangedFromTick?.tscInstanceId,
+                    lastChangedFromTSCInstance = lastChangedFromTick?.tscInstance,
+                    lastChangeFromTickMillis = lastChangedFromTick?.tick?.tickTimeMillis,
+                    lastChangeToTickMillis = lastChangedToTick?.tick?.tickTimeMillis,
                 )
               }
             }
@@ -360,9 +371,15 @@ class FailedMonitorsPerTickMetric(
   ): String = buildString {
     val violatingInstances = monitorTransitions.groupBy { it.violatingTSCInstanceId }
     val previousInstances = monitorTransitions.groupBy { it.previousTSCInstanceId ?: "none" }
+    val lastChangedFromInstances =
+        monitorTransitions.groupBy { it.lastChangedFromTSCInstanceId ?: "none" }
     val transitionCounts =
         monitorTransitions
             .groupingBy { (it.previousTSCInstanceId ?: "none") to it.violatingTSCInstanceId }
+            .eachCount()
+    val lastChangeTransitionCounts =
+        monitorTransitions
+            .groupingBy { (it.lastChangedFromTSCInstanceId ?: "none") to it.violatingTSCInstanceId }
             .eachCount()
     val sameInstanceTransitions =
         transitionCounts.filterKeys { (previousInstance, violatingInstance) ->
@@ -377,6 +394,7 @@ class FailedMonitorsPerTickMetric(
     appendLine("Violation ticks: ${monitorTransitions.size}")
     appendLine("Different violating TSC instances: ${violatingInstances.size}")
     appendLine("Different previous TSC instances: ${previousInstances.size}")
+    appendLine("Different last-changed-from TSC instances: ${lastChangedFromInstances.size}")
     appendLine("")
     appendLine("Violating TSC instances:")
     violatingInstances.entries
@@ -414,6 +432,26 @@ class FailedMonitorsPerTickMetric(
     appendLine("")
     appendLine("Transitions where the instance changed:")
     appendTransitionCounts(changedInstanceTransitions, monitorTransitions)
+    appendLine("")
+    appendLine("TSC instances before the last change into the violating instance:")
+    lastChangedFromInstances.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<String, List<MonitorViolationTSCInstanceTransition>>> {
+                  it.value.size
+                }
+                .thenBy { it.key.counterValue() })
+        .forEach { (instanceId, entries) ->
+          appendLine("- $instanceId: ${entries.size} violation ticks")
+          val lastChangedFromInstance = entries.first().lastChangedFromTSCInstance
+          if (lastChangedFromInstance == null) {
+            appendLine("  No earlier TSC instance change in this execution.")
+          } else {
+            appendLine(lastChangedFromInstance.toString().prependIndent("  "))
+          }
+        }
+    appendLine("")
+    appendLine("Last changed TSC instance transitions before violation:")
+    appendLastChangeTransitionCounts(lastChangeTransitionCounts, monitorTransitions)
     appendLine("----------------------------------------")
     appendLine("")
   }
@@ -448,6 +486,41 @@ class FailedMonitorsPerTickMetric(
                     "  - mutant=${detail.mutantId}, scenario=${detail.sourceIdentifier}, " +
                         "fromTick=${detail.fromTickMillis?.let { "$it ms" } ?: "none"}, " +
                         "toTick=${detail.toTickMillis} ms")
+              }
+        }
+  }
+
+  private fun StringBuilder.appendLastChangeTransitionCounts(
+      transitionCounts: Map<Pair<String, String>, Int>,
+      monitorTransitions: List<MonitorViolationTSCInstanceTransition>
+  ) {
+    if (transitionCounts.isEmpty()) {
+      appendLine("- none")
+      return
+    }
+
+    transitionCounts.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<Pair<String, String>, Int>> { it.value }
+                .thenBy { it.key.first.counterValue() }
+                .thenBy { it.key.second.counterValue() })
+        .forEach { (transition, count) ->
+          appendLine("- ${transition.first} -> ${transition.second}: $count violation ticks")
+          monitorTransitions
+              .filter {
+                (it.lastChangedFromTSCInstanceId ?: "none") == transition.first &&
+                    it.violatingTSCInstanceId == transition.second
+              }
+              .sortedWith(
+                  compareBy<MonitorViolationTSCInstanceTransition> { it.mutantId }
+                      .thenBy { it.sourceIdentifier }
+                      .thenBy { it.toTickMillis })
+              .forEach { detail ->
+                appendLine(
+                    "  - mutant=${detail.mutantId}, scenario=${detail.sourceIdentifier}, " +
+                        "changeFromTick=${detail.lastChangeFromTickMillis?.let { "$it ms" } ?: "none"}, " +
+                        "changeToTick=${detail.lastChangeToTickMillis?.let { "$it ms" } ?: "none"}, " +
+                        "violationTick=${detail.toTickMillis} ms")
               }
         }
   }
@@ -918,6 +991,10 @@ data class MonitorViolationTSCInstanceTransition(
     val violatingTSCInstance: TSCInstance<*, *, *, *>,
     val previousTSCInstanceId: String?,
     val previousTSCInstance: TSCInstance<*, *, *, *>?,
+    val lastChangedFromTSCInstanceId: String?,
+    val lastChangedFromTSCInstance: TSCInstance<*, *, *, *>?,
+    val lastChangeFromTickMillis: Long?,
+    val lastChangeToTickMillis: Long?,
 )
 
 private class GifSequenceWriter(
