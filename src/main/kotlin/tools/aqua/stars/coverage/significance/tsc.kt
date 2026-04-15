@@ -25,6 +25,53 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
+fun tscTTC() =
+    tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("TTC Highway TSC") {
+      all("Root") {
+        monitors {
+          monitor(g0Accidents.name, g0Accidents)
+          monitor(g1SafeDistanceToPrecedingVehicle.name, g1SafeDistanceToPrecedingVehicle)
+          monitor(g2EmergencyBraking.name, g2EmergencyBraking)
+          monitor(g3MaximumSpeedLimit.name, g3MaximumSpeedLimit)
+          monitor(g4TrafficFlow.name, g4TrafficFlow)
+          monitor(i1Stopping.name, i1Stopping)
+          monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
+        }
+        exclusive("Lane") {
+          // Left lane (index 2): only right adjacent lane exists
+          optional("Left Lane") {
+            condition(isOnLeftLane)
+            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
+            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
+            leaf("Critical Lateral Conflict Right") { condition(hasCriticalLateralConflictRight) }
+            leaf("Critical TTC Front Right Lane") { condition(hasCriticalTTCFrontRightLane) }
+            leaf("Critical TTC Rear Right Lane") { condition(hasCriticalTTCRearRightLane) }
+          }
+          // Middle lane (index 1): both adjacent lanes exist
+          optional("Middle Lane") {
+            condition(isOnMiddleLane)
+            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
+            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
+            leaf("Critical Lateral Conflict Left") { condition(hasCriticalLateralConflictLeft) }
+            leaf("Critical Lateral Conflict Right") { condition(hasCriticalLateralConflictRight) }
+            leaf("Critical TTC Front Left Lane") { condition(hasCriticalTTCFrontLeftLane) }
+            leaf("Critical TTC Front Right Lane") { condition(hasCriticalTTCFrontRightLane) }
+            leaf("Critical TTC Rear Left Lane") { condition(hasCriticalTTCRearLeftLane) }
+            leaf("Critical TTC Rear Right Lane") { condition(hasCriticalTTCRearRightLane) }
+          }
+          // Right lane (index 0): only left adjacent lane exists
+          optional("Right Lane") {
+            condition(isOnRightLane)
+            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
+            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
+            leaf("Critical Lateral Conflict Left") { condition(hasCriticalLateralConflictLeft) }
+            leaf("Critical TTC Front Left Lane") { condition(hasCriticalTTCFrontLeftLane) }
+            leaf("Critical TTC Rear Left Lane") { condition(hasCriticalTTCRearLeftLane) }
+          }
+        }
+      }
+    }
+
 /** TSC for static starting configurations. */
 fun tsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Small Static TSC") {

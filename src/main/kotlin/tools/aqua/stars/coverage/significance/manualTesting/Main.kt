@@ -35,6 +35,8 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsPerTickMetric
 import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tscTTC
+import tools.aqua.stars.coverage.significance.utils.TSCTikzRenderer
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -47,6 +49,9 @@ import tools.aqua.stars.sumo.mutants.AutopilotMutants
  * evaluation logic or metrics without running the entire evaluation pipeline.
  */
 fun main() {
+  val tscTTC = tscTTC()
+  val tscTikz = TSCTikzRenderer.render(tscTTC)
+
   DbBootstrap.connect()
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
