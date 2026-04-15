@@ -25,6 +25,7 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.Locale
 import javax.imageio.ImageIO
 import javax.imageio.ImageTypeSpecifier
@@ -47,6 +48,7 @@ import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toReadableString
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toSetOfMonitorViolations
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G0Accidents
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G1SafeDistance
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G2EmergencyBraking
@@ -118,9 +120,13 @@ class FailedMonitorsPerTickMetric(
     val monitorFailuresPerTSC = monitorFailuresPerTick.groupBy { it.tsc }
     if (!writeToDb) {
       monitorFailuresPerTSC.forEach { (tsc, failedMonitors) ->
-        println("TSC:\n $tsc")
-        printJoinedTimelineVisualization(failedMonitors)
+        val output = buildJoinedTimelineVisualization(tsc, failedMonitors)
+        println(output)
+        writeTextualMetricOutput(tsc, failedMonitors)
       }
+      val analysis = buildMonitorViolationTSCInstanceAnalysis()
+      println(analysis)
+      writeMonitorViolationTSCInstanceAnalysis()
     }
   }
 
@@ -129,17 +135,7 @@ class FailedMonitorsPerTickMetric(
    * was active at that tick.
    */
   fun joinedTimeline(): List<TSCInstanceTimelineTick> {
-    val instanceIds =
-        monitorFailuresPerTick
-            .sortedWith(
-                compareBy<FailedMonitorsPerTick> { it.tick.sourceIdentifier }
-                    .thenBy { it.tick.mutantId.toString() }
-                    .thenBy { it.tick.tickTimeMillis })
-            .distinctBy { it.tscInstance.getJsonString() }
-            .mapIndexed { index, failure ->
-              failure.tscInstance.getJsonString() to "Instance-${index + 1}"
-            }
-            .toMap()
+    val instanceIds = globalTSCInstanceIds()
 
     return monitorFailuresPerTick
         .sortedWith(
@@ -156,12 +152,52 @@ class FailedMonitorsPerTickMetric(
         }
   }
 
+  private fun globalTSCInstanceIds(): Map<String, String> =
+      monitorFailuresPerTick
+          .map { it.tscInstance.getJsonString() }
+          .distinct()
+          .sorted()
+          .mapIndexed { index, instanceJson -> instanceJson to "Instance-${index + 1}" }
+          .toMap()
+
+  /**
+   * Creates one row for every monitor violation tick, joined with the active TSC instance and the
+   * TSC instance from the previous tick of the same mutant/scenario/TSC execution.
+   */
+  fun monitorViolationTSCInstanceTransitions(): List<MonitorViolationTSCInstanceTransition> =
+      joinedTimeline()
+          .groupBy {
+            TimelineExecution(
+                it.tsc, it.tick.scenarioConfigId.toString(), it.tick.mutantId.toString())
+          }
+          .flatMap { (_, ticksForExecution) ->
+            val sortedTicks = ticksForExecution.sortedBy { it.tick.tickTimeMillis }
+            sortedTicks.withIndex().flatMap { (index, tick) ->
+              val previousTick = sortedTicks.getOrNull(index - 1)
+              tick.failedMonitors.toSetOfMonitorViolations().map { monitor ->
+                MonitorViolationTSCInstanceTransition(
+                    monitor = monitor,
+                    sourceIdentifier = tick.tick.scenarioConfigId.toString(),
+                    mutantId = tick.tick.mutantId.toString(),
+                    fromTickMillis = previousTick?.tick?.tickTimeMillis,
+                    toTickMillis = tick.tick.tickTimeMillis,
+                    violatingTSCInstanceId = tick.tscInstanceId,
+                    violatingTSCInstance = tick.tscInstance,
+                    previousTSCInstanceId = previousTick?.tscInstanceId,
+                    previousTSCInstance = previousTick?.tscInstance,
+                )
+              }
+            }
+          }
+
   /** Creates contiguous ranges for each TSC instance in the joined timeline. */
   fun tscInstanceRanges(): List<TSCInstanceTimelineRange> {
     val ranges = mutableListOf<TSCInstanceTimelineRange>()
 
     joinedTimeline()
-        .groupBy { TimelineSource(it.tick.sourceIdentifier, it.tick.mutantId.toString()) }
+        .groupBy {
+          TimelineSource(it.tick.scenarioConfigId.toString(), it.tick.mutantId.toString())
+        }
         .forEach { (_, ticksForSource) ->
           ticksForSource
               .groupBy { it.tsc }
@@ -192,7 +228,12 @@ class FailedMonitorsPerTickMetric(
     return ranges
   }
 
-  private fun printJoinedTimelineVisualization(failedMonitors: List<FailedMonitorsPerTick>) {
+  private fun buildJoinedTimelineVisualization(
+      tsc: TSC<*, *, *, *>,
+      failedMonitors: List<FailedMonitorsPerTick>,
+      sourceFilter: TimelineSource? = null,
+      includeArtifacts: Boolean = true
+  ): String = buildString {
     val relevantTSCs = failedMonitors.map { it.tsc }.toSet()
     val relevantTicks = joinedTimeline().filter { it.tsc in relevantTSCs }
     val relevantRanges =
@@ -200,66 +241,230 @@ class FailedMonitorsPerTickMetric(
           range.tsc in relevantTSCs && relevantTicks.any { it in range.ticks }
         }
 
-    println("")
-    println("----------------------------------------")
-    println("------Joined TSC Instance Timeline------")
-    println("----------------------------------------")
+    appendLine("TSC:")
+    appendLine(tsc)
+    appendLine("")
+    appendLine("----------------------------------------")
+    appendLine("------Joined TSC Instance Timeline------")
+    appendLine("----------------------------------------")
 
     relevantTicks
-        .groupBy { TimelineSource(it.tick.sourceIdentifier, it.tick.mutantId.toString()) }
+        .groupBy {
+          TimelineSource(it.tick.scenarioConfigId.toString(), it.tick.mutantId.toString())
+        }
+        .filterKeys { sourceFilter == null || it == sourceFilter }
         .forEach { (source, ticksForSource) ->
-          println("Source: ${source.sourceIdentifier}, Mutant: ${source.mutantId}")
-          println("TSC instance legend:")
+          appendLine("Source: ${source.sourceIdentifier}, Mutant: ${source.mutantId}")
+          appendLine("TSC instance legend:")
           ticksForSource
               .distinctBy { it.tscInstanceId }
               .sortedBy { it.tscInstanceId.counterValue() }
-              .forEach { tick -> println("${tick.tscInstanceId}: ${tick.tscInstance}") }
+              .forEach { tick -> appendLine("${tick.tscInstanceId}: ${tick.tscInstance}") }
 
-          println("")
-          println("TSC instance ranges:")
+          appendLine("")
+          appendLine("TSC instance ranges:")
           relevantRanges
               .filter { range ->
                 range.sourceIdentifier == source.sourceIdentifier &&
                     range.mutantId == source.mutantId
               }
               .forEach { range ->
-                println(
+                appendLine(
                     "${range.tscInstanceId}: ${range.fromTickMillis}..${range.toTickMillis} ms " +
                         "(${range.ticks.size} ticks)")
               }
 
-          println("")
-          println("Failed monitors by tick:")
-          println("tick(ms) | tscInstance | failed monitors")
+          appendLine("")
+          appendLine("Failed monitors by tick:")
+          appendLine("tick(ms) | tscInstance | failed monitors")
           ticksForSource
               .sortedBy { it.tick.tickTimeMillis }
               .forEach { tick ->
-                println(
+                appendLine(
                     "${tick.tick.tickTimeMillis.toString().padStart(8)} | " +
                         "${tick.tscInstanceId.padEnd(11)} | " +
                         tick.failedMonitors.toTimelineLabel())
               }
 
-          println("")
-          println("Vehicle states by tick:")
+          appendLine("")
+          appendLine("Vehicle states by tick:")
           ticksForSource
               .sortedBy { it.tick.tickTimeMillis }
-              .forEach { tick -> println(tick.toVehicleStateAscii()) }
-          if (writeVehicleStateImages) {
+              .forEach { tick -> appendLine(tick.toVehicleStateAscii()) }
+          if (includeArtifacts && writeVehicleStateImages) {
+            val outputFolder = outputFolderFor(source)
             val imagePaths =
                 ticksForSource
                     .sortedBy { it.tick.tickTimeMillis }
-                    .map { tick -> tick.writeVehicleStateImage(vehicleStateImagesFolder) }
-            println("Vehicle state images:")
-            imagePaths.forEach { println(it.toAbsolutePath()) }
+                    .mapIndexed { index, tick -> tick.writeVehicleStateImage(outputFolder, index) }
+            appendLine("Vehicle state images:")
+            imagePaths.forEach { appendLine(it.toAbsolutePath()) }
 
             if (writeVehicleStateVideo) {
-              val videoPath = writeVehicleStateVideo(imagePaths, source)
-              println("Vehicle state video: ${videoPath.toAbsolutePath()}")
+              val videoPath = writeVehicleStateVideo(imagePaths, source, outputFolder)
+              appendLine("Vehicle state video: ${videoPath.toAbsolutePath()}")
             }
           }
-          println("----------------------------------------")
+          appendLine("----------------------------------------")
         }
+  }
+
+  private fun writeTextualMetricOutput(
+      tsc: TSC<*, *, *, *>,
+      failedMonitors: List<FailedMonitorsPerTick>,
+  ) {
+    failedMonitors
+        .map { TimelineSource(it.tick.scenarioConfigId.toString(), it.tick.mutantId.toString()) }
+        .distinct()
+        .forEach { source ->
+          val outputFolder = outputFolderFor(source)
+          val sourceSpecificOutput =
+              buildJoinedTimelineVisualization(
+                  tsc = tsc,
+                  failedMonitors = failedMonitors,
+                  sourceFilter = source,
+                  includeArtifacts = false)
+          Files.createDirectories(outputFolder)
+          outputFolder
+              .resolve("failed-monitors-per-tick.txt")
+              .toFile()
+              .writeText(sourceSpecificOutput)
+        }
+  }
+
+  private fun outputFolderFor(source: TimelineSource): Path =
+      vehicleStateImagesFolder
+          .resolve("mutant-${source.mutantId.sanitizeFilePart()}")
+          .resolve("scenario-${source.sourceIdentifier.sanitizeFilePart()}")
+
+  private fun buildMonitorViolationTSCInstanceAnalysis(): String = buildString {
+    val transitions = monitorViolationTSCInstanceTransitions()
+    appendLine("")
+    appendLine("========================================")
+    appendLine("TSC Instance Monitor Violation Analysis")
+    appendLine("========================================")
+    appendLine("Total monitor violation ticks: ${transitions.size}")
+    appendLine("")
+
+    MonitorViolation.entries.forEach { monitor ->
+      val monitorTransitions = transitions.filter { it.monitor == monitor }
+      if (monitorTransitions.isEmpty()) return@forEach
+
+      append(buildMonitorViolationTSCInstanceAnalysisForMonitor(monitor, monitorTransitions))
+    }
+  }
+
+  private fun buildMonitorViolationTSCInstanceAnalysisForMonitor(
+      monitor: MonitorViolation,
+      monitorTransitions: List<MonitorViolationTSCInstanceTransition>
+  ): String = buildString {
+    val violatingInstances = monitorTransitions.groupBy { it.violatingTSCInstanceId }
+    val previousInstances = monitorTransitions.groupBy { it.previousTSCInstanceId ?: "none" }
+    val transitionCounts =
+        monitorTransitions
+            .groupingBy { (it.previousTSCInstanceId ?: "none") to it.violatingTSCInstanceId }
+            .eachCount()
+    val sameInstanceTransitions =
+        transitionCounts.filterKeys { (previousInstance, violatingInstance) ->
+          previousInstance == violatingInstance
+        }
+    val changedInstanceTransitions =
+        transitionCounts.filterKeys { (previousInstance, violatingInstance) ->
+          previousInstance != violatingInstance
+        }
+
+    appendLine("Monitor: $monitor")
+    appendLine("Violation ticks: ${monitorTransitions.size}")
+    appendLine("Different violating TSC instances: ${violatingInstances.size}")
+    appendLine("Different previous TSC instances: ${previousInstances.size}")
+    appendLine("")
+    appendLine("Violating TSC instances:")
+    violatingInstances.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<String, List<MonitorViolationTSCInstanceTransition>>> {
+                  it.value.size
+                }
+                .thenBy { it.key.counterValue() })
+        .forEach { (instanceId, entries) ->
+          appendLine("- $instanceId: ${entries.size} violation ticks")
+          appendLine(entries.first().violatingTSCInstance.toString().prependIndent("  "))
+        }
+
+    appendLine("")
+    appendLine("TSC instances present one tick before violation:")
+    previousInstances.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<String, List<MonitorViolationTSCInstanceTransition>>> {
+                  it.value.size
+                }
+                .thenBy { it.key.counterValue() })
+        .forEach { (instanceId, entries) ->
+          appendLine("- $instanceId: ${entries.size} preceding ticks")
+          val previousInstance = entries.first().previousTSCInstance
+          if (previousInstance == null) {
+            appendLine("  No previous tick in this execution.")
+          } else {
+            appendLine(previousInstance.toString().prependIndent("  "))
+          }
+        }
+
+    appendLine("")
+    appendLine("Transitions where the instance stayed the same:")
+    appendTransitionCounts(sameInstanceTransitions, monitorTransitions)
+    appendLine("")
+    appendLine("Transitions where the instance changed:")
+    appendTransitionCounts(changedInstanceTransitions, monitorTransitions)
+    appendLine("----------------------------------------")
+    appendLine("")
+  }
+
+  private fun StringBuilder.appendTransitionCounts(
+      transitionCounts: Map<Pair<String, String>, Int>,
+      monitorTransitions: List<MonitorViolationTSCInstanceTransition>
+  ) {
+    if (transitionCounts.isEmpty()) {
+      appendLine("- none")
+      return
+    }
+
+    transitionCounts.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<Pair<String, String>, Int>> { it.value }
+                .thenBy { it.key.first.counterValue() }
+                .thenBy { it.key.second.counterValue() })
+        .forEach { (transition, count) ->
+          appendLine("- ${transition.first} -> ${transition.second}: $count violation ticks")
+          monitorTransitions
+              .filter {
+                (it.previousTSCInstanceId ?: "none") == transition.first &&
+                    it.violatingTSCInstanceId == transition.second
+              }
+              .sortedWith(
+                  compareBy<MonitorViolationTSCInstanceTransition> { it.mutantId }
+                      .thenBy { it.sourceIdentifier }
+                      .thenBy { it.toTickMillis })
+              .forEach { detail ->
+                appendLine(
+                    "  - mutant=${detail.mutantId}, scenario=${detail.sourceIdentifier}, " +
+                        "fromTick=${detail.fromTickMillis?.let { "$it ms" } ?: "none"}, " +
+                        "toTick=${detail.toTickMillis} ms")
+              }
+        }
+  }
+
+  private fun writeMonitorViolationTSCInstanceAnalysis() {
+    val transitions = monitorViolationTSCInstanceTransitions()
+    Files.createDirectories(vehicleStateImagesFolder)
+    MonitorViolation.entries.forEach { monitor ->
+      val monitorTransitions = transitions.filter { it.monitor == monitor }
+      if (monitorTransitions.isEmpty()) return@forEach
+
+      val analysis = buildMonitorViolationTSCInstanceAnalysisForMonitor(monitor, monitorTransitions)
+      vehicleStateImagesFolder
+          .resolve("tsc-instance-monitor-violation-analysis-${monitor.name.sanitizeFilePart()}.txt")
+          .toFile()
+          .writeText(analysis)
+    }
   }
 
   private fun List<TSCInstanceTimelineTick>.toTimelineRange(): TSCInstanceTimelineRange =
@@ -267,7 +472,7 @@ class FailedMonitorsPerTickMetric(
           tsc = first().tsc,
           tscInstance = first().tscInstance,
           tscInstanceId = first().tscInstanceId,
-          sourceIdentifier = first().tick.sourceIdentifier,
+          sourceIdentifier = first().tick.scenarioConfigId.toString(),
           mutantId = first().tick.mutantId.toString(),
           fromTickMillis = first().tick.tickTimeMillis,
           toTickMillis = last().tick.tickTimeMillis,
@@ -324,15 +529,9 @@ class FailedMonitorsPerTickMetric(
   private fun formatOneDecimal(value: Float, unit: String): String =
       String.format(Locale.US, "%.1f%s", value, unit)
 
-  private fun TSCInstanceTimelineTick.writeVehicleStateImage(folder: Path): Path {
+  private fun TSCInstanceTimelineTick.writeVehicleStateImage(folder: Path, frameIndex: Int): Path {
     Files.createDirectories(folder)
-    val fileName =
-        listOf(
-                tick.sourceIdentifier.sanitizeFilePart(),
-                tick.mutantId.toString().sanitizeFilePart(),
-                "${tick.tickTimeMillis}ms",
-                tscInstanceId.sanitizeFilePart())
-            .joinToString("_") + ".png"
+    val fileName = "frame_${frameIndex.toString().padStart(5, '0')}.png"
     val path = folder.resolve(fileName)
     ImageIO.write(renderVehicleStateImage(), "png", path.toFile())
     return path
@@ -341,18 +540,18 @@ class FailedMonitorsPerTickMetric(
   private fun writeVehicleStateVideo(
       imagePaths: List<Path>,
       source: TimelineSource,
+      outputFolder: Path,
   ): Path {
     require(imagePaths.isNotEmpty()) { "Cannot create a video without vehicle-state images." }
     println("Write vehicle state video.")
-    val videoBaseName =
-        "${source.sourceIdentifier.sanitizeFilePart()}_${source.mutantId.sanitizeFilePart()}"
-    val mp4Path = vehicleStateImagesFolder.resolve("$videoBaseName.mp4")
-    val gifPath = vehicleStateImagesFolder.resolve("$videoBaseName.gif")
+    val videoBaseName = "vehicle-state-timeline"
+    val mp4Path = outputFolder.resolve("$videoBaseName.mp4")
+    val gifPath = outputFolder.resolve("$videoBaseName.gif")
 
     val ffmpegExecutable = findFfmpegExecutable()
     println("Found FFmpeg executable: $ffmpegExecutable")
     return if (ffmpegExecutable != null) {
-      writeMp4WithFfmpeg(imagePaths, mp4Path, ffmpegExecutable)
+      writeMp4WithFfmpeg(imagePaths.withHeldFinalFrame(), mp4Path, ffmpegExecutable)
     } else {
       writeAnimatedGif(imagePaths, gifPath)
     }
@@ -403,29 +602,25 @@ class FailedMonitorsPerTickMetric(
       ffmpegExecutable: String
   ): Path {
     Files.createDirectories(outputPath.parent)
-    val frameList = outputPath.parent.resolve("${outputPath.fileName}.frames.txt")
-    val frameDurationSeconds = 1.0 / vehicleStateVideoFramesPerSecond.coerceAtLeast(1)
-    Files.writeString(
-        frameList,
-        imagePaths.joinToString(System.lineSeparator()) { path ->
-          "file '${path.toAbsolutePath().toString().replace("'", "'\\''")}'" +
-              System.lineSeparator() +
-              "duration ${String.format(Locale.US, "%.3f", frameDurationSeconds)}"
-        } + System.lineSeparator() + "file '${imagePaths.last().toAbsolutePath()}'")
-
+    check(imagePaths.all { it.parent == outputPath.parent }) {
+      "All frames must be in the same folder as the output video."
+    }
     val process =
         ProcessBuilder(
                 ffmpegExecutable,
                 "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
+                "-framerate",
+                vehicleStateVideoFramesPerSecond.coerceAtLeast(1).toString(),
                 "-i",
-                frameList.toAbsolutePath().toString(),
+                "frame_%05d.png",
+                "-c:v",
+                "libx264",
                 "-pix_fmt",
                 "yuv420p",
-                outputPath.toAbsolutePath().toString())
+                "-movflags",
+                "+faststart",
+                outputPath.fileName.toString())
+            .directory(outputPath.parent.toFile())
             .redirectError(ProcessBuilder.Redirect.DISCARD)
             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
             .start()
@@ -433,6 +628,23 @@ class FailedMonitorsPerTickMetric(
     check(exitCode == 0) { "ffmpeg failed while creating $outputPath" }
 
     return outputPath
+  }
+
+  private fun List<Path>.withHeldFinalFrame(): List<Path> {
+    if (isEmpty()) return this
+
+    val finalFrameHoldCount =
+        (vehicleStateVideoFramesPerSecond.coerceAtLeast(1) * 2).coerceAtLeast(2)
+    val lastFrame = last()
+    val heldFrames =
+        (0 until finalFrameHoldCount).map { holdIndex ->
+          val heldFrame =
+              lastFrame.parent.resolve(
+                  "frame_${(size + holdIndex).toString().padStart(5, '0')}.png")
+          Files.copy(lastFrame, heldFrame, StandardCopyOption.REPLACE_EXISTING)
+          heldFrame
+        }
+    return this + heldFrames
   }
 
   private fun writeAnimatedGif(imagePaths: List<Path>, outputPath: Path): Path {
@@ -472,16 +684,18 @@ class FailedMonitorsPerTickMetric(
       graphics.color = Color(25, 28, 32)
       graphics.font = Font(Font.SANS_SERIF, Font.BOLD, 24)
       graphics.drawString("Tick ${tick.tickTimeMillis} ms", 30, 40)
+      graphics.font = Font(Font.SANS_SERIF, Font.PLAIN, 14)
+      graphics.drawString("Mutant: ${tick.mutantId} | Scenario: ${tick.scenarioConfigId}", 30, 62)
 
       graphics.font = Font(Font.MONOSPACED, Font.PLAIN, 14)
       graphics.drawWrappedMultilineString(
-          "$tscInstanceId:\n$tscInstance", x = 30, y = 68, maxWidth = 980)
+          "$tscInstanceId:\n$tscInstance", x = 30, y = 88, maxWidth = 980)
 
       graphics.font = Font(Font.SANS_SERIF, Font.BOLD, 17)
-      graphics.drawString("Found monitor violations", 1060, 68)
+      graphics.drawString("Found monitor violations", 1060, 88)
       graphics.font = Font(Font.SANS_SERIF, Font.PLAIN, 15)
       graphics.drawBulletList(
-          failedMonitors.toMonitorFailureLabels(), x = 1060, y = 94, maxWidth = width - 1090)
+          failedMonitors.toMonitorFailureLabels(), x = 1060, y = 114, maxWidth = width - 1090)
 
       graphics.font = Font(Font.SANS_SERIF, Font.PLAIN, 15)
       graphics.drawString(
@@ -549,7 +763,7 @@ class FailedMonitorsPerTickMetric(
     val vehicleRight =
         vehicle.frontBumperPositionOnLaneMeters.toImageX(
             visibleStart, visibleEnd, roadLeft, roadRight)
-    val bodyWidth = (vehicleRight - vehicleLeft).coerceAtLeast(18)
+    val bodyWidth = (vehicleRight - vehicleLeft).coerceAtLeast(2)
     val bodyHeight = 30
     val bodyY = laneTop + 25
     val isEgo = vehicle.vehicleId == egoVehicleId
@@ -687,6 +901,24 @@ data class TSCInstanceTimelineRange(
 )
 
 private data class TimelineSource(val sourceIdentifier: String, val mutantId: String)
+
+private data class TimelineExecution(
+    val tsc: TSC<*, *, *, *>,
+    val sourceIdentifier: String,
+    val mutantId: String
+)
+
+data class MonitorViolationTSCInstanceTransition(
+    val monitor: MonitorViolation,
+    val sourceIdentifier: String,
+    val mutantId: String,
+    val fromTickMillis: Long?,
+    val toTickMillis: Long,
+    val violatingTSCInstanceId: String,
+    val violatingTSCInstance: TSCInstance<*, *, *, *>,
+    val previousTSCInstanceId: String?,
+    val previousTSCInstance: TSCInstance<*, *, *, *>?,
+)
 
 private class GifSequenceWriter(
     private val writer: ImageWriter,
