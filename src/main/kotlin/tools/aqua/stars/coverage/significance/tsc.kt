@@ -25,7 +25,7 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
-fun tscTTC() =
+fun tsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("TTC Highway TSC") {
       all("Root") {
         monitors {
@@ -38,42 +38,99 @@ fun tscTTC() =
           monitor(i2DrivingFasterThenLeftTraffic.name, i2DrivingFasterThenLeftTraffic)
         }
         exclusive("Lane") {
-          // Left lane (index 2): only right adjacent lane exists
           optional("Left Lane") {
             condition(isOnLeftLane)
-            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
-            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
-            leaf("Critical Lateral Conflict Right") { condition(hasCriticalLateralConflictRight) }
-            leaf("Critical TTC Front Right Lane") { condition(hasCriticalTTCFrontRightLane) }
-            leaf("Critical TTC Rear Right Lane") { condition(hasCriticalTTCRearRightLane) }
+            optional("Has Vehicle Behind in Relevant Time Gap") {
+              condition(hasVehicleBehindInRelevantTimeGap)
+              leaf("Critical TTC With Vehicle Behind") {
+                condition(hasCriticalTTCWithVehicleBehind)
+              }
+            }
+            optional("Has no Vehicle in Right Lane in Relevant Time Gap") {
+              condition(hasNoVehicleInRightLaneInRelevantTimeGap)
+              optional("Has Vehicle in Right Lane of Right Lane in Relevant Time Gap") {
+                condition(hasVehicleInRightLaneOfRightLaneInRelevantTimeGap)
+                leaf("Critical TTC With Vehicle in Right Lane of Right Lane") {
+                  condition(hasCriticalTTCWithVehicleInRightLaneOfRightLane)
+                }
+              }
+            }
+            optional("Has Vehicle in Right Lane in Relevant Time Gap") {
+              condition(hasVehicleInRightLaneInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Right Lane") {
+                condition(hasCriticalTTCWithVehicleInRightLane)
+              }
+            }
+            optional("Has Vehicle in Front in Relevant Time Gap") {
+              condition(hasVehicleInFrontInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Front") {
+                condition(hasCriticalTTCWithVehicleInFront)
+              }
+            }
           }
-          // Middle lane (index 1): both adjacent lanes exist
           optional("Middle Lane") {
             condition(isOnMiddleLane)
-            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
-            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
-            leaf("Critical Lateral Conflict Left") { condition(hasCriticalLateralConflictLeft) }
-            leaf("Critical Lateral Conflict Right") { condition(hasCriticalLateralConflictRight) }
-            leaf("Critical TTC Front Left Lane") { condition(hasCriticalTTCFrontLeftLane) }
-            leaf("Critical TTC Front Right Lane") { condition(hasCriticalTTCFrontRightLane) }
-            leaf("Critical TTC Rear Left Lane") { condition(hasCriticalTTCRearLeftLane) }
-            leaf("Critical TTC Rear Right Lane") { condition(hasCriticalTTCRearRightLane) }
+            optional("Has Vehicle Behind in Relevant Time Gap") {
+              condition(hasVehicleBehindInRelevantTimeGap)
+              leaf("Critical TTC With Vehicle Behind") {
+                condition(hasCriticalTTCWithVehicleBehind)
+              }
+            }
+            optional("Has Vehicle in Left Lane in Relevant Time Gap") {
+              condition(hasVehicleInLeftLaneInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Left Lane") {
+                condition(hasCriticalTTCWithVehicleInLeftLane)
+              }
+            }
+            optional("Has Vehicle in Right Lane in Relevant Time Gap") {
+              condition(hasVehicleInRightLaneInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Right Lane") {
+                condition(hasCriticalTTCWithVehicleInRightLane)
+              }
+            }
+            optional("Has Vehicle in Front in Relevant Time Gap") {
+              condition(hasVehicleInFrontInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Front") {
+                condition(hasCriticalTTCWithVehicleInFront)
+              }
+            }
           }
-          // Right lane (index 0): only left adjacent lane exists
           optional("Right Lane") {
             condition(isOnRightLane)
-            leaf("Critical TTC Front Same Lane") { condition(hasCriticalTTCFrontSameLane) }
-            leaf("Warning TTC Front Same Lane") { condition(hasWarningTTCFrontSameLane) }
-            leaf("Critical Lateral Conflict Left") { condition(hasCriticalLateralConflictLeft) }
-            leaf("Critical TTC Front Left Lane") { condition(hasCriticalTTCFrontLeftLane) }
-            leaf("Critical TTC Rear Left Lane") { condition(hasCriticalTTCRearLeftLane) }
+            optional("Has Vehicle Behind in Relevant Time Gap") {
+              condition(hasVehicleBehindInRelevantTimeGap)
+              leaf("Critical TTC With Vehicle Behind") {
+                condition(hasCriticalTTCWithVehicleBehind)
+              }
+            }
+            optional("Has Vehicle in Left Lane in Relevant Time Gap") {
+              condition(hasVehicleInLeftLaneInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Left Lane") {
+                condition(hasCriticalTTCWithVehicleInLeftLane)
+              }
+            }
+            optional("Has no Vehicle in Left Lane in Relevant Time Gap") {
+              condition(hasNoVehicleInLeftLaneInRelevantTimeGap)
+              optional("Has Vehicle in Left Lane of Left Lane in Relevant Time Gap") {
+                condition(hasVehicleInLeftLaneOfLeftLaneInRelevantTimeGap)
+                leaf("Critical TTC With Vehicle in Left Lane of Left lane") {
+                  condition(hasCriticalTTCWithVehicleInLeftLaneOfLeftLane)
+                }
+              }
+            }
+            optional("Has Vehicle in Front in Relevant Time Gap") {
+              condition(hasVehicleInFrontInRelevantTimeGap)
+              leaf("Critical TTC with Vehicle in Front") {
+                condition(hasCriticalTTCWithVehicleInFront)
+              }
+            }
           }
         }
       }
     }
 
 /** TSC for static starting configurations. */
-fun tsc() =
+fun oldTSC() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Small Static TSC") {
       all("Root") {
         monitors {

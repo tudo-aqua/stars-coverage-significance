@@ -18,30 +18,19 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.core.evaluation.Predicate.Companion.predicate
+import tools.aqua.stars.core.evaluation.VariablePredicate.Companion.predicate
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 
-// ── TTC thresholds ────────────────────────────────────────────────────────────
-
 /** TTC in seconds below which a front approach is classified as critical. */
-const val TTC_CRITICAL_SECONDS: Double = 3.0
+const val TTC_CRITICAL_SECONDS: Double = 4.0
 
-/**
- * TTC in seconds below which a front approach triggers a warning. Must be greater than
- * [TTC_CRITICAL_SECONDS].
- */
-const val TTC_WARNING_SECONDS: Double = 6.0
+const val VEHICLE_TIME_GAP_SECONDS = 10.0
 
-// ── Corridor bounds ───────────────────────────────────────────────────────────
+const val LEFT_LANE_INDEX_MODIFIER = +1
 
-/** Rear extent of the lateral conflict corridor relative to the ego position (m). */
-const val CORRIDOR_REAR_METERS: Float = 20.0f
-
-/** Forward extent of the lateral conflict corridor relative to the ego position (m). */
-const val CORRIDOR_FRONT_METERS: Float = 40.0f
-
-// ── TTC helper functions ──────────────────────────────────────────────────────
+const val RIGHT_LANE_INDEX_MODIFIER = -1
 
 /**
  * Computes the time-to-collision from [ego] to vehicle [other] ahead of ego.
@@ -69,152 +58,127 @@ private fun ttcRear(ego: Vehicle, other: Vehicle): Double {
   else Double.POSITIVE_INFINITY
 }
 
-// ── Same-lane front TTC predicates ───────────────────────────────────────────
-
-/**
- * Predicate that checks if there is a vehicle ahead on the ego's lane for which the TTC is below
- * [TTC_CRITICAL_SECONDS]. The candidate vehicle must satisfy [isInFrontOnSameLane], which enforces
- * the [[VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM], [VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO]]
- * sensor range.
- */
-val hasCriticalTTCFrontSameLane =
-    predicate<TimeStep>("hasCriticalTTCFrontSameLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isInFrontOnSameLane.holds(tick, other to tick.ego) &&
-            ttcFront(tick.ego, other) < TTC_CRITICAL_SECONDS
+val hasVehicleBehindInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle Behind in Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
+            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
       }
     }
 
-/**
- * Predicate that checks if there is a vehicle ahead on the ego's lane for which the TTC is in the
- * warning range [[TTC_CRITICAL_SECONDS], [TTC_WARNING_SECONDS]). A vehicle that already triggers
- * [hasCriticalTTCFrontSameLane] does not also trigger this predicate.
- */
-val hasWarningTTCFrontSameLane =
-    predicate<TimeStep>("hasWarningTTCFrontSameLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isInFrontOnSameLane.holds(tick, other to tick.ego) &&
-            ttcFront(tick.ego, other).let { ttc ->
-              ttc >= TTC_CRITICAL_SECONDS && ttc < TTC_WARNING_SECONDS
-            }
+val isInTimeGapTo =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is in Time Gap to") { _, vehiclePair ->
+      val vehicleBehind = vehiclePair.first
+      val vehicleFront = vehiclePair.second
+      val distanceBetween =
+          vehicleFront.backBumperPositionOnLaneMeters -
+              vehicleBehind.frontBumperPositionOnLaneMeters
+      val timeDistance = distanceBetween / vehicleBehind.speedMetersPerSecond
+      timeDistance <= VEHICLE_TIME_GAP_SECONDS
+    }
+
+val hasCriticalTTCWithVehicleBehind =
+    predicate<TimeStep>("Has Critical TTC From Vehicle Behind") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
+            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
       }
     }
 
-// ── Lateral conflict corridor predicates ─────────────────────────────────────
-
-/**
- * Predicate that checks if any vehicle on the left-adjacent lane falls within the lateral conflict
- * corridor, i.e., its position is within [ego.pos - [CORRIDOR_REAR_METERS],
- * ego.pos + [CORRIDOR_FRONT_METERS]].
- *
- * Captures vehicles that would make a left-lane change immediately dangerous, regardless of their
- * speed relative to ego.
- */
-val hasCriticalLateralConflictLeft =
-    predicate<TimeStep>("hasCriticalLateralConflictLeft") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isOnLeftLaneOf.holds(tick, other to tick.ego) &&
-            other.positionOnLaneMeters >= tick.ego.positionOnLaneMeters - CORRIDOR_REAR_METERS &&
-            other.positionOnLaneMeters <= tick.ego.positionOnLaneMeters + CORRIDOR_FRONT_METERS
+val hasVehicleInRightLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle in Right Lane in Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
+            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
       }
     }
 
-/**
- * Predicate that checks if any vehicle on the right-adjacent lane falls within the lateral conflict
- * corridor.
- *
- * Captures vehicles that would make a right-lane change immediately dangerous.
- */
-val hasCriticalLateralConflictRight =
-    predicate<TimeStep>("hasCriticalLateralConflictRight") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isOnRightLaneOf.holds(tick, other to tick.ego) &&
-            other.positionOnLaneMeters >= tick.ego.positionOnLaneMeters - CORRIDOR_REAR_METERS &&
-            other.positionOnLaneMeters <= tick.ego.positionOnLaneMeters + CORRIDOR_FRONT_METERS
+val hasCriticalTTCWithVehicleInRightLane =
+    predicate<TimeStep>("Has Critical TTC with Vehicle in Right Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
+            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
       }
     }
 
-// ── Adjacent-lane front TTC predicates ───────────────────────────────────────
+val hasNoVehicleInRightLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has No Vehicle in Right Lane in Relevant Time Gap") { tick ->
+      !hasVehicleInRightLaneInRelevantTimeGap.holds(tick)
+    }
 
-/**
- * Predicate that checks if any vehicle ahead on the left-adjacent lane is within a critical TTC.
- *
- * Represents the situation: if ego were to merge left now, it would face a critical rear-end
- * situation with that vehicle.
- */
-val hasCriticalTTCFrontLeftLane =
-    predicate<TimeStep>("hasCriticalTTCFrontLeftLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isInFrontOnLeftLane.holds(tick, other to tick.ego) &&
-            ttcFront(tick.ego, other) < TTC_CRITICAL_SECONDS
+val hasCriticalTTCWithVehicleInRightLaneOfRightLane =
+    predicate<TimeStep>("Has Critical TTC with Vehicle in Right Lane of Right Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + (2 * RIGHT_LANE_INDEX_MODIFIER) &&
+            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
       }
     }
 
-/**
- * Predicate that checks if any vehicle ahead on the right-adjacent lane is within a critical TTC.
- *
- * Represents the situation: if ego were to merge right now, it would face a critical rear-end
- * situation with that vehicle.
- */
-val hasCriticalTTCFrontRightLane =
-    predicate<TimeStep>("hasCriticalTTCFrontRightLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isInFrontOnRightLane.holds(tick, other to tick.ego) &&
-            ttcFront(tick.ego, other) < TTC_CRITICAL_SECONDS
+val hasVehicleInRightLaneOfRightLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle in Right Lane of Right Lane In Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + (2 * RIGHT_LANE_INDEX_MODIFIER) &&
+            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
       }
     }
 
-// ── Adjacent-lane rear TTC predicates ────────────────────────────────────────
-
-/**
- * Predicate that checks if any vehicle behind on the left-adjacent lane is closing on ego within
- * [TTC_CRITICAL_SECONDS].
- *
- * A fast-closing left-lane follower is relevant for the ego's lateral safety and for detecting
- * situations where the ego is blocking the left lane.
- */
-val hasCriticalTTCRearLeftLane =
-    predicate<TimeStep>("hasCriticalTTCRearLeftLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isBehindOnLeftLane.holds(tick, other to tick.ego) &&
-            ttcRear(tick.ego, other) < TTC_CRITICAL_SECONDS
+val hasVehicleInFrontInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle in Front in Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
+            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
       }
     }
 
-/**
- * Predicate that checks if any vehicle behind on the right-adjacent lane is closing on ego within
- * [TTC_CRITICAL_SECONDS].
- */
-val hasCriticalTTCRearRightLane =
-    predicate<TimeStep>("hasCriticalTTCRearRightLane") { tick ->
-      exists(tick.vehiclesInTick) { other ->
-        isBehindOnRightLane.holds(tick, other to tick.ego) &&
-            ttcRear(tick.ego, other) < TTC_CRITICAL_SECONDS
+val hasCriticalTTCWithVehicleInFront =
+    predicate<TimeStep>("Has Critical TTC with Vehicle in Front") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
+            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
       }
     }
 
-// ── Far-lane corridor predicate ───────────────────────────────────────────────
+val hasVehicleInLeftLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle in Left Lane in Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + LEFT_LANE_INDEX_MODIFIER &&
+            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
+      }
+    }
 
-/**
- * Predicate that checks if any vehicle on the lane two positions away from ego (the far lane) falls
- * within the lateral conflict corridor.
- *
- * Only meaningful when ego is on the leftmost ([LANE_INDEX_LEFT]) or rightmost ([LANE_INDEX_RIGHT])
- * lane. Returns false for the middle lane, as no far lane exists in the three-lane highway model.
- * Uses presence-only detection (no TTC), since the interaction is one lane change removed from
- * being immediate.
- */
-val hasFarLaneVehicleInCorridor =
-    predicate<TimeStep>("hasFarLaneVehicleInCorridor") { tick ->
-      val farLaneIndex =
-          when (tick.ego.currentLane.laneIndex) {
-            LANE_INDEX_LEFT -> LANE_INDEX_RIGHT
-            LANE_INDEX_RIGHT -> LANE_INDEX_LEFT
-            else -> return@predicate false
-          }
-      exists(tick.vehiclesInTick) { other ->
-        other.currentLane.laneIndex == farLaneIndex &&
-            other.positionOnLaneMeters >= tick.ego.positionOnLaneMeters - CORRIDOR_REAR_METERS &&
-            other.positionOnLaneMeters <= tick.ego.positionOnLaneMeters + CORRIDOR_FRONT_METERS
+val hasCriticalTTCWithVehicleInLeftLane =
+    predicate<TimeStep>("Has Critical TTC with Vehicle in Left Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + LEFT_LANE_INDEX_MODIFIER &&
+            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
+      }
+    }
+
+val hasNoVehicleInLeftLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has No Vehicle in Left Lane in Relevant Time Gap") { tick ->
+      !hasVehicleInLeftLaneInRelevantTimeGap.holds(tick)
+    }
+
+val hasVehicleInLeftLaneOfLeftLaneInRelevantTimeGap =
+    predicate<TimeStep>("Has Vehicle in Left Lane of Left Lane in Relevant Time Gap") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + (2 * LEFT_LANE_INDEX_MODIFIER) &&
+            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
+      }
+    }
+
+val hasCriticalTTCWithVehicleInLeftLaneOfLeftLane =
+    predicate<TimeStep>("Has Critical TTC with Vehicle in Left Lane of Left Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + (2 * LEFT_LANE_INDEX_MODIFIER) &&
+            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
       }
     }

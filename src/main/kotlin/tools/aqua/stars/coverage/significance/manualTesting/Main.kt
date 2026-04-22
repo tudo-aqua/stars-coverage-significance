@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.util.*
-import org.jetbrains.exposed.sql.SortOrder
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
@@ -27,15 +26,11 @@ import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.db.db
-import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsPerTickMetric
 import tools.aqua.stars.coverage.significance.tsc
-import tools.aqua.stars.coverage.significance.tscTTC
 import tools.aqua.stars.coverage.significance.utils.TSCTikzRenderer
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -49,7 +44,7 @@ import tools.aqua.stars.sumo.mutants.AutopilotMutants
  * evaluation logic or metrics without running the entire evaluation pipeline.
  */
 fun main() {
-  val tscTTC = tscTTC()
+  val tscTTC = tsc()
   val tscTikz = TSCTikzRenderer.render(tscTTC)
 
   DbBootstrap.connect()
@@ -63,13 +58,15 @@ fun main() {
           UUID.fromString("b32511f8-4e4f-48a7-b50d-c66ccd67b475"),
       )
 
-  val scenarioIds = db {
-    MetricFailedMonitorsRepository.getAll()
-        .orderBy(MetricFailedMonitorsTable.monitorG0Failed, SortOrder.DESC)
-        .limit(100)
-        .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
-        .distinct()
-  }
+  //  val scenarioIds = db {
+  //    MetricFailedMonitorsRepository.getAll()
+  //        .orderBy(MetricFailedMonitorsTable.monitorG0Failed, SortOrder.DESC)
+  //        .limit(100)
+  //        .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
+  //        .distinct()
+  //  }
+
+  val scenarioIds = setOf(UUID.fromString("1dc5716f-5f9e-42c6-a11d-75d38c6fcd7b"))
 
   val tickSequences = mutableListOf<TickSequence<TimeStep>>()
 
