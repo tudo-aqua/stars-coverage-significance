@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance
 
+import kotlin.math.max
 import tools.aqua.stars.core.evaluation.Predicate.Companion.predicate
 import tools.aqua.stars.core.evaluation.VariablePredicate.Companion.predicate
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -24,9 +25,15 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 
 /** TTC in seconds below which a front approach is classified as critical. */
-const val TTC_CRITICAL_SECONDS: Double = 4.0
+const val TTC_CRITICAL_SECONDS: Double = 6.0
 
-const val VEHICLE_TIME_GAP_SECONDS = 10.0
+const val TG_CRITICAL_SECONDS: Double = 1.0
+
+const val TG_RELEVANT_SECONDS: Double = 6.0
+
+private const val LONGITUDINAL_BUMPER_EPSILON_METERS: Float = 0.5f
+
+private const val MIN_SPEED_NORMALIZATION_MPS: Float = 0.1f
 
 const val LEFT_LANE_INDEX_MODIFIER = +1
 
@@ -58,127 +65,159 @@ private fun ttcRear(ego: Vehicle, other: Vehicle): Double {
   else Double.POSITIVE_INFINITY
 }
 
-val hasVehicleBehindInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle Behind in Relevant Time Gap") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
-            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
+/**
+ * Computes the time gap from [vehicleBehind] to [vehicleFront].
+ *
+ * Returns [Double.POSITIVE_INFINITY] when [vehicleFront] is not ahead of [vehicleBehind] or when
+ * [vehicleBehind] has non-positive speed.
+ */
+fun timeGap(vehicleBehind: Vehicle, vehicleFront: Vehicle): Double {
+  val distanceBetween =
+      vehicleFront.backBumperPositionOnLaneMeters - vehicleBehind.frontBumperPositionOnLaneMeters
+  val speed = vehicleBehind.speedMetersPerSecond
+  return if (distanceBetween > 0.0 && speed > 0.0) distanceBetween.toDouble() / speed
+  else Double.POSITIVE_INFINITY
+}
+
+/**
+ * Computes a signed longitudinal time gap from [ego] to [other].
+ *
+ * Positive values mean [other] is ahead, negative values mean [other] is behind, and values near
+ * zero include overlapping or directly beside configurations.
+ */
+private fun signedTimeGapSeconds(ego: Vehicle, other: Vehicle): Double {
+  val frontClearance = other.backBumperPositionOnLaneMeters - ego.frontBumperPositionOnLaneMeters
+  val rearClearance = ego.backBumperPositionOnLaneMeters - other.frontBumperPositionOnLaneMeters
+
+  val signedLongitudinalClearance =
+      when {
+        frontClearance > LONGITUDINAL_BUMPER_EPSILON_METERS -> frontClearance
+        rearClearance > LONGITUDINAL_BUMPER_EPSILON_METERS -> -rearClearance
+        else -> 0.0
       }
+
+  val speedNormalization =
+      max(max(ego.speedMetersPerSecond, other.speedMetersPerSecond), MIN_SPEED_NORMALIZATION_MPS)
+  return signedLongitudinalClearance.toDouble() / speedNormalization.toDouble()
+}
+
+private fun isInsideSignedTimeGapWindow(
+    ego: Vehicle,
+    other: Vehicle,
+    minSeconds: Double,
+    maxSeconds: Double,
+): Boolean = signedTimeGapSeconds(ego, other) in minSeconds..maxSeconds
+
+val isInside6SecondsTimeGapFrontOrBack =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is inside 6 seconds time gap front or back") {
+        _,
+        vehiclePair ->
+      val ego = vehiclePair.first
+      val other = vehiclePair.second
+      isInsideSignedTimeGapWindow(ego, other, -TG_RELEVANT_SECONDS, TG_RELEVANT_SECONDS)
     }
 
-val isInTimeGapTo =
-    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is in Time Gap to") { _, vehiclePair ->
-      val vehicleBehind = vehiclePair.first
-      val vehicleFront = vehiclePair.second
-      val distanceBetween =
-          vehicleFront.backBumperPositionOnLaneMeters -
-              vehicleBehind.frontBumperPositionOnLaneMeters
-      val timeDistance = distanceBetween / vehicleBehind.speedMetersPerSecond
-      timeDistance <= VEHICLE_TIME_GAP_SECONDS
+val otherVehicleIsCriticalForEgo =
+    predicate<TimeStep, Pair<Vehicle, Vehicle>>("Other Vehicle is Critical for Ego") {
+        _,
+        vehiclePair ->
+      val ego = vehiclePair.first
+      val otherVehicle = vehiclePair.second
+      isInsideSignedTimeGapWindow(
+          ego,
+          otherVehicle,
+          -TG_CRITICAL_SECONDS,
+          TG_CRITICAL_SECONDS,
+      ) ||
+          ttcFront(ego, otherVehicle) < TTC_CRITICAL_SECONDS ||
+          ttcRear(ego, otherVehicle) < TTC_CRITICAL_SECONDS
     }
 
-val hasCriticalTTCWithVehicleBehind =
-    predicate<TimeStep>("Has Critical TTC From Vehicle Behind") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
-            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
-      }
-    }
-
-val hasVehicleInRightLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle in Right Lane in Relevant Time Gap") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex ==
-            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
-            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
-      }
-    }
-
-val hasCriticalTTCWithVehicleInRightLane =
-    predicate<TimeStep>("Has Critical TTC with Vehicle in Right Lane") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex ==
-            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
-            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
-      }
-    }
-
-val hasNoVehicleInRightLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has No Vehicle in Right Lane in Relevant Time Gap") { tick ->
-      !hasVehicleInRightLaneInRelevantTimeGap.holds(tick)
-    }
-
-val hasCriticalTTCWithVehicleInRightLaneOfRightLane =
-    predicate<TimeStep>("Has Critical TTC with Vehicle in Right Lane of Right Lane") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex ==
-            tick.ego.currentLane.laneIndex + (2 * RIGHT_LANE_INDEX_MODIFIER) &&
-            ttcRear(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
-      }
-    }
-
-val hasVehicleInRightLaneOfRightLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle in Right Lane of Right Lane In Relevant Time Gap") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex ==
-            tick.ego.currentLane.laneIndex + (2 * RIGHT_LANE_INDEX_MODIFIER) &&
-            isInTimeGapTo.holds(tick, otherVehicle to tick.ego)
-      }
-    }
-
-val hasVehicleInFrontInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle in Front in Relevant Time Gap") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
-            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
-      }
-    }
-
-val hasCriticalTTCWithVehicleInFront =
-    predicate<TimeStep>("Has Critical TTC with Vehicle in Front") { tick ->
-      exists(tick.nonEgoVehicles) { otherVehicle ->
-        otherVehicle.currentLane.laneIndex == tick.ego.currentLane.laneIndex &&
-            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
-      }
-    }
-
-val hasVehicleInLeftLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle in Left Lane in Relevant Time Gap") { tick ->
+val hasRelevantVehicleOnLeftLane =
+    predicate<TimeStep>("Has Relevant Vehicle on Left Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         otherVehicle.currentLane.laneIndex ==
             tick.ego.currentLane.laneIndex + LEFT_LANE_INDEX_MODIFIER &&
-            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
+            isInside6SecondsTimeGapFrontOrBack.holds(tick, tick.ego to otherVehicle)
       }
     }
 
-val hasCriticalTTCWithVehicleInLeftLane =
-    predicate<TimeStep>("Has Critical TTC with Vehicle in Left Lane") { tick ->
+val hasRelevantVehicleOnRightLane =
+    predicate<TimeStep>("Has Relevant Vehicle on Right Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
+            isInside6SecondsTimeGapFrontOrBack.holds(tick, tick.ego to otherVehicle)
+      }
+    }
+
+val canMoveLeft = predicate<TimeStep>("Can Move Left") { tick -> !canNotMoveLeft.holds(tick) }
+val canMoveRight = predicate<TimeStep>("Can Move Right") { tick -> !canNotMoveRight.holds(tick) }
+
+val canNotMoveLeft =
+    predicate<TimeStep>("Cannot Move Left") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         otherVehicle.currentLane.laneIndex ==
             tick.ego.currentLane.laneIndex + LEFT_LANE_INDEX_MODIFIER &&
-            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
+            otherVehicleIsCriticalForEgo.holds(tick, tick.ego to otherVehicle)
       }
     }
 
-val hasNoVehicleInLeftLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has No Vehicle in Left Lane in Relevant Time Gap") { tick ->
-      !hasVehicleInLeftLaneInRelevantTimeGap.holds(tick)
-    }
-
-val hasVehicleInLeftLaneOfLeftLaneInRelevantTimeGap =
-    predicate<TimeStep>("Has Vehicle in Left Lane of Left Lane in Relevant Time Gap") { tick ->
+val canNotMoveRight =
+    predicate<TimeStep>("Cannot Move Right") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         otherVehicle.currentLane.laneIndex ==
-            tick.ego.currentLane.laneIndex + (2 * LEFT_LANE_INDEX_MODIFIER) &&
-            isInTimeGapTo.holds(tick, tick.ego to otherVehicle)
+            tick.ego.currentLane.laneIndex + RIGHT_LANE_INDEX_MODIFIER &&
+            otherVehicleIsCriticalForEgo.holds(tick, tick.ego to otherVehicle)
       }
     }
 
-val hasCriticalTTCWithVehicleInLeftLaneOfLeftLane =
-    predicate<TimeStep>("Has Critical TTC with Vehicle in Left Lane of Left Lane") { tick ->
+val hasRelevantVehicleOnLeftLaneOfLeftLane =
+    predicate<TimeStep>("Has Relevant Vehicle on Left Lane of Left Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         otherVehicle.currentLane.laneIndex ==
             tick.ego.currentLane.laneIndex + (2 * LEFT_LANE_INDEX_MODIFIER) &&
-            ttcFront(tick.ego, otherVehicle) < TTC_CRITICAL_SECONDS
+            isInside6SecondsTimeGapFrontOrBack.holds(tick, tick.ego to otherVehicle)
+      }
+    }
+
+val hasRelevantVehicleOnRightLaneOfRightLane =
+    predicate<TimeStep>("Has Relevant Vehicle on Right Lane of Right Lane") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        otherVehicle.currentLane.laneIndex ==
+            tick.ego.currentLane.laneIndex + (2 * RIGHT_LANE_INDEX_MODIFIER) &&
+            isInside6SecondsTimeGapFrontOrBack.holds(tick, tick.ego to otherVehicle)
+      }
+    }
+
+val hasRelevantVehicleInFront =
+    predicate<TimeStep>("Has Relevant Vehicle in Front") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
+            timeGap(tick.ego, otherVehicle) <= TG_RELEVANT_SECONDS
+      }
+    }
+
+val hasRelevantVehicleInBehind =
+    predicate<TimeStep>("Has Relevant Vehicle in Behind") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
+            timeGap(otherVehicle, tick.ego) <= TG_RELEVANT_SECONDS
+      }
+    }
+
+val hasCriticalVehicleInFront =
+    predicate<TimeStep>("Has Critical Vehicle in Front") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
+            timeGap(tick.ego, otherVehicle) < TG_CRITICAL_SECONDS
+      }
+    }
+
+val hasCriticalVehicleInBehind =
+    predicate<TimeStep>("Has Critical Vehicle in Behind") { tick ->
+      exists(tick.nonEgoVehicles) { otherVehicle ->
+        tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
+            timeGap(otherVehicle, tick.ego) < TG_CRITICAL_SECONDS
       }
     }

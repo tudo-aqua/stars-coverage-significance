@@ -40,89 +40,75 @@ fun tsc() =
         exclusive("Lane") {
           optional("Left Lane") {
             condition(isOnLeftLane)
-            optional("Has Vehicle Behind in Relevant Time Gap") {
-              condition(hasVehicleBehindInRelevantTimeGap)
-              leaf("Critical TTC With Vehicle Behind") {
-                condition(hasCriticalTTCWithVehicleBehind)
-              }
-            }
-            optional("Has no Vehicle in Right Lane in Relevant Time Gap") {
-              condition(hasNoVehicleInRightLaneInRelevantTimeGap)
-              optional("Has Vehicle in Right Lane of Right Lane in Relevant Time Gap") {
-                condition(hasVehicleInRightLaneOfRightLaneInRelevantTimeGap)
-                leaf("Critical TTC With Vehicle in Right Lane of Right Lane") {
-                  condition(hasCriticalTTCWithVehicleInRightLaneOfRightLane)
+            exclusive("Has Relevant Vehicle on Right Lane") {
+              condition(hasRelevantVehicleOnRightLane)
+              optional("Can Move Right") {
+                condition(canMoveRight)
+                leaf("Has Vehicle on Right of Right Lane") {
+                  condition(hasRelevantVehicleOnRightLaneOfRightLane)
                 }
               }
+              leaf("Cannot Move Right") { condition(canNotMoveRight) }
             }
-            optional("Has Vehicle in Right Lane in Relevant Time Gap") {
-              condition(hasVehicleInRightLaneInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Right Lane") {
-                condition(hasCriticalTTCWithVehicleInRightLane)
-              }
+            optional("Has Relevant Vehicle in Front") {
+              condition(hasRelevantVehicleInFront)
+              leaf("Has Critical Vehicle in Front") { condition(hasCriticalVehicleInFront) }
             }
-            optional("Has Vehicle in Front in Relevant Time Gap") {
-              condition(hasVehicleInFrontInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Front") {
-                condition(hasCriticalTTCWithVehicleInFront)
-              }
+            optional("Has Relevant Vehicle in Behind") {
+              condition(hasRelevantVehicleInBehind)
+              leaf("Has Critical Vehicle in Behind") { condition(hasCriticalVehicleInBehind) }
             }
           }
           optional("Middle Lane") {
             condition(isOnMiddleLane)
-            optional("Has Vehicle Behind in Relevant Time Gap") {
-              condition(hasVehicleBehindInRelevantTimeGap)
-              leaf("Critical TTC With Vehicle Behind") {
-                condition(hasCriticalTTCWithVehicleBehind)
+            exclusive("Has Relevant Vehicle on Left Lane") {
+              condition(hasRelevantVehicleOnLeftLane)
+              optional("Can Move Left") {
+                condition(canMoveLeft)
+                leaf("Has Vehicle on Left of Left Lane") {
+                  condition(hasRelevantVehicleOnLeftLaneOfLeftLane)
+                }
               }
+              leaf("Cannot Move Left") { condition(canNotMoveLeft) }
             }
-            optional("Has Vehicle in Left Lane in Relevant Time Gap") {
-              condition(hasVehicleInLeftLaneInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Left Lane") {
-                condition(hasCriticalTTCWithVehicleInLeftLane)
+            exclusive("Has Relevant Vehicle on Right Lane") {
+              condition(hasRelevantVehicleOnRightLane)
+              optional("Can Move Right") {
+                condition(canMoveRight)
+                leaf("Has Vehicle on Right of Right Lane") {
+                  condition(hasRelevantVehicleOnRightLaneOfRightLane)
+                }
               }
+              leaf("Cannot Move Right") { condition(canNotMoveRight) }
             }
-            optional("Has Vehicle in Right Lane in Relevant Time Gap") {
-              condition(hasVehicleInRightLaneInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Right Lane") {
-                condition(hasCriticalTTCWithVehicleInRightLane)
-              }
+            optional("Has Relevant Vehicle in Front") {
+              condition(hasRelevantVehicleInFront)
+              leaf("Has Critical Vehicle in Front") { condition(hasCriticalVehicleInFront) }
             }
-            optional("Has Vehicle in Front in Relevant Time Gap") {
-              condition(hasVehicleInFrontInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Front") {
-                condition(hasCriticalTTCWithVehicleInFront)
-              }
+            optional("Has Relevant Vehicle in Behind") {
+              condition(hasRelevantVehicleInBehind)
+              leaf("Has Critical Vehicle in Behind") { condition(hasCriticalVehicleInBehind) }
             }
           }
           optional("Right Lane") {
             condition(isOnRightLane)
-            optional("Has Vehicle Behind in Relevant Time Gap") {
-              condition(hasVehicleBehindInRelevantTimeGap)
-              leaf("Critical TTC With Vehicle Behind") {
-                condition(hasCriticalTTCWithVehicleBehind)
-              }
-            }
-            optional("Has Vehicle in Left Lane in Relevant Time Gap") {
-              condition(hasVehicleInLeftLaneInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Left Lane") {
-                condition(hasCriticalTTCWithVehicleInLeftLane)
-              }
-            }
-            optional("Has no Vehicle in Left Lane in Relevant Time Gap") {
-              condition(hasNoVehicleInLeftLaneInRelevantTimeGap)
-              optional("Has Vehicle in Left Lane of Left Lane in Relevant Time Gap") {
-                condition(hasVehicleInLeftLaneOfLeftLaneInRelevantTimeGap)
-                leaf("Critical TTC With Vehicle in Left Lane of Left lane") {
-                  condition(hasCriticalTTCWithVehicleInLeftLaneOfLeftLane)
+            exclusive("Has Relevant Vehicle on Left Lane") {
+              condition(hasRelevantVehicleOnLeftLane)
+              leaf("Cannot Move Left") { condition(canNotMoveLeft) }
+              optional("Can Move Left") {
+                condition(canMoveLeft)
+                leaf("Has Vehicle on Left of Left Lane") {
+                  condition(hasRelevantVehicleOnLeftLaneOfLeftLane)
                 }
               }
             }
-            optional("Has Vehicle in Front in Relevant Time Gap") {
-              condition(hasVehicleInFrontInRelevantTimeGap)
-              leaf("Critical TTC with Vehicle in Front") {
-                condition(hasCriticalTTCWithVehicleInFront)
-              }
+            optional("Has Relevant Vehicle in Front") {
+              condition(hasRelevantVehicleInFront)
+              leaf("Has Critical Vehicle in Front") { condition(hasCriticalVehicleInFront) }
+            }
+            optional("Has Relevant Vehicle in Behind") {
+              condition(hasRelevantVehicleInBehind)
+              leaf("Has Critical Vehicle in Behind") { condition(hasCriticalVehicleInBehind) }
             }
           }
         }
