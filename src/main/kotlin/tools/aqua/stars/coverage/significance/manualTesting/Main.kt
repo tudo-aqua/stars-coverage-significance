@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.util.*
+import org.jetbrains.exposed.sql.SortOrder
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
@@ -26,8 +27,11 @@ import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsPerTickMetric
 import tools.aqua.stars.coverage.significance.tsc
@@ -54,19 +58,22 @@ fun main() {
   val mutantIds =
       setOf(
           UUID.fromString("e564db3a-0e52-4c1a-b002-b841502c7eec"),
-          UUID.fromString("9f39fa7b-c68f-4197-a27e-de7b57fc967b"),
-          UUID.fromString("b32511f8-4e4f-48a7-b50d-c66ccd67b475"),
+          //          UUID.fromString("9f39fa7b-c68f-4197-a27e-de7b57fc967b"),
+          //          UUID.fromString("b32511f8-4e4f-48a7-b50d-c66ccd67b475"),
       )
 
-  //  val scenarioIds = db {
-  //    MetricFailedMonitorsRepository.getAll()
-  //        .orderBy(MetricFailedMonitorsTable.monitorG0Failed, SortOrder.DESC)
-  //        .limit(100)
-  //        .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
-  //        .distinct()
-  //  }
+  val scenarioIds = db {
+    MetricFailedMonitorsRepository.getAll()
+        .orderBy(MetricFailedMonitorsTable.monitorG0Failed, SortOrder.DESC)
+        .orderBy(MetricFailedMonitorsTable.startingScenarioConfiguration, SortOrder.ASC)
+        .limit(100)
+        .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
+        .distinct()
+      .toMutableList()
+  }
+  scenarioIds += UUID.fromString("0e9b71df-ad81-4881-aaae-7a00e272f60e")
 
-  val scenarioIds = setOf(UUID.fromString("1dc5716f-5f9e-42c6-a11d-75d38c6fcd7b"))
+  //  val scenarioIds = setOf(UUID.fromString("1dc5716f-5f9e-42c6-a11d-75d38c6fcd7b"))
 
   val tickSequences = mutableListOf<TickSequence<TimeStep>>()
 

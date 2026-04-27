@@ -31,9 +31,11 @@ const val TG_LATERAL_CRITICAL_SECONDS: Double = 1.0
 
 const val TG_LATERAL_RELEVANT_SECONDS: Double = 6.0
 
-const val TG_LONGITUDINAL_CRITICAL_SECONDS: Double = 6.0
+const val TG_LONGITUDINAL_CRITICAL_SECONDS: Double = 1.0
 
-const val TG_LONGITUDINAL_RELEVANT_SECONDS: Double = 15.0
+const val TG_LONGITUDINAL_RELEVANT_SECONDS: Double = 10.0
+
+const val TTC_LONGITUDINAL_CRITICAL_SECONDS: Double = 2.0
 
 private const val LONGITUDINAL_BUMPER_EPSILON_METERS: Float = 0.5f
 
@@ -215,7 +217,8 @@ val hasCriticalVehicleInFront =
     predicate<TimeStep>("Has Critical Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(tick.ego, otherVehicle) < TG_LONGITUDINAL_CRITICAL_SECONDS
+            timeGap(tick.ego, otherVehicle) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
+            ttcFront(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS
       }
     }
 
@@ -223,6 +226,7 @@ val hasCriticalVehicleInBehind =
     predicate<TimeStep>("Has Critical Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(otherVehicle, tick.ego) < TG_LONGITUDINAL_CRITICAL_SECONDS
+            timeGap(otherVehicle, tick.ego) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
+            ttcRear(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS
       }
     }
