@@ -27,9 +27,13 @@ import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 /** TTC in seconds below which a front approach is classified as critical. */
 const val TTC_CRITICAL_SECONDS: Double = 6.0
 
-const val TG_CRITICAL_SECONDS: Double = 1.0
+const val TG_LATERAL_CRITICAL_SECONDS: Double = 1.0
 
-const val TG_RELEVANT_SECONDS: Double = 6.0
+const val TG_LATERAL_RELEVANT_SECONDS: Double = 6.0
+
+const val TG_LONGITUDINAL_CRITICAL_SECONDS: Double = 6.0
+
+const val TG_LONGITUDINAL_RELEVANT_SECONDS: Double = 15.0
 
 private const val LONGITUDINAL_BUMPER_EPSILON_METERS: Float = 0.5f
 
@@ -114,7 +118,8 @@ val isInside6SecondsTimeGapFrontOrBack =
         vehiclePair ->
       val ego = vehiclePair.first
       val other = vehiclePair.second
-      isInsideSignedTimeGapWindow(ego, other, -TG_RELEVANT_SECONDS, TG_RELEVANT_SECONDS)
+      isInsideSignedTimeGapWindow(
+          ego, other, -TG_LATERAL_RELEVANT_SECONDS, TG_LATERAL_RELEVANT_SECONDS)
     }
 
 val otherVehicleIsCriticalForEgo =
@@ -126,8 +131,8 @@ val otherVehicleIsCriticalForEgo =
       isInsideSignedTimeGapWindow(
           ego,
           otherVehicle,
-          -TG_CRITICAL_SECONDS,
-          TG_CRITICAL_SECONDS,
+          -TG_LATERAL_CRITICAL_SECONDS,
+          TG_LATERAL_CRITICAL_SECONDS,
       ) ||
           ttcFront(ego, otherVehicle) < TTC_CRITICAL_SECONDS ||
           ttcRear(ego, otherVehicle) < TTC_CRITICAL_SECONDS
@@ -194,7 +199,7 @@ val hasRelevantVehicleInFront =
     predicate<TimeStep>("Has Relevant Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(tick.ego, otherVehicle) <= TG_RELEVANT_SECONDS
+            timeGap(tick.ego, otherVehicle) <= TG_LONGITUDINAL_RELEVANT_SECONDS
       }
     }
 
@@ -202,7 +207,7 @@ val hasRelevantVehicleInBehind =
     predicate<TimeStep>("Has Relevant Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(otherVehicle, tick.ego) <= TG_RELEVANT_SECONDS
+            timeGap(otherVehicle, tick.ego) <= TG_LONGITUDINAL_RELEVANT_SECONDS
       }
     }
 
@@ -210,7 +215,7 @@ val hasCriticalVehicleInFront =
     predicate<TimeStep>("Has Critical Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(tick.ego, otherVehicle) < TG_CRITICAL_SECONDS
+            timeGap(tick.ego, otherVehicle) < TG_LONGITUDINAL_CRITICAL_SECONDS
       }
     }
 
@@ -218,6 +223,6 @@ val hasCriticalVehicleInBehind =
     predicate<TimeStep>("Has Critical Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(otherVehicle, tick.ego) < TG_CRITICAL_SECONDS
+            timeGap(otherVehicle, tick.ego) < TG_LONGITUDINAL_CRITICAL_SECONDS
       }
     }
