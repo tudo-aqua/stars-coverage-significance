@@ -33,7 +33,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
-import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsPerTickMetric
+import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.tsc
 import tools.aqua.stars.coverage.significance.utils.TSCTikzRenderer
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
