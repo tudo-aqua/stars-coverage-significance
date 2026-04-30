@@ -53,7 +53,7 @@ object LongTailDistributionPostEvaluation {
 
       plotDataAsBarChart(
           plot,
-          fileName = "longtail_by_tsc_${tscId}",
+          fileName = "longtail_by_tsc_${tscId}.png",
           title = "Long-tail for TSC $tscId",
           path = outPath,
       )
