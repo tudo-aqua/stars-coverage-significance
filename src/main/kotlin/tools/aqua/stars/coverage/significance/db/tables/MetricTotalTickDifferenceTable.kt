@@ -32,12 +32,6 @@ import org.jetbrains.exposed.dao.id.UUIDTable
  *   test run, scenario configuration, and mutant.
  */
 object MetricTotalTickDifferenceTable : UUIDTable("metric_total_tick_difference") {
-  val tsc =
-      reference(
-          name = "tsc_id",
-          foreign = TSCsTable,
-          onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
-          onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
   val run =
       reference(
           name = "run_id",
@@ -60,6 +54,6 @@ object MetricTotalTickDifferenceTable : UUIDTable("metric_total_tick_difference"
   val totalTickDifferenceMillis = long("total_tick_difference_millis").default(-1L)
 
   init {
-    uniqueIndex(tsc, run, startingScenarioConfiguration, mutant)
+    uniqueIndex(run, startingScenarioConfiguration, mutant)
   }
 }
