@@ -55,7 +55,7 @@ object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
               id to
                   mutantFailuresFiltered
                       .filter { it.mutantID == id }
-                      .map { it.tscInstance }
+                      .map { it.currentTSCInstance }
                       .toSet()
                       .size
             }

@@ -46,7 +46,7 @@ object ScenarioByMonitorCrossTable {
         }
 
     mutantsKilledByMonitor.forEach { mutantFailure ->
-      killingMatrix[mutantFailure.tscInstance]!![mutantFailure.mutantID] = true
+      killingMatrix[mutantFailure.currentTSCInstance]!![mutantFailure.mutantID] = true
     }
 
     val csvFileName = "scenarioByMonitorCrossTable_${monitor.name}.csv"

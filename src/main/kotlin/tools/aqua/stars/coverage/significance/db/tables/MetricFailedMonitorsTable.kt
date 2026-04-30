@@ -168,16 +168,12 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
    * @return Mapping of failed mutants for each scenario instance.
    */
   fun buildFailedMutantsMapping(): List<MutantFailure> =
-      join(
-              otherTable = MetricStartingValidTSCInstancesTable,
-              onColumn = startingScenarioConfiguration,
-              otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
-              joinType = JoinType.INNER)
-          .select(
+      select(
               MetricStartingValidTSCInstancesTable.tscInstance,
               startingScenarioConfiguration,
               mutant,
               tsc,
+              currentTSCInstance,
               monitorG0Failed,
               monitorG1Failed,
               monitorG2Failed,
@@ -191,7 +187,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
 
             MutantFailure(
                 tscId = it[tsc].value,
-                tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+                currentTSCInstance = it[currentTSCInstance].value,
                 startingScenarioConfigurationID = it[startingScenarioConfiguration].value,
                 mutantID = it[mutant].value,
                 monitorBitmask = monitorBitmask)
