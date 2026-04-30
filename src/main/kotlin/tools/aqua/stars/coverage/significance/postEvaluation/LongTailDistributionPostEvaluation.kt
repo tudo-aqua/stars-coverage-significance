@@ -19,25 +19,44 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import kotlin.collections.forEach
 import kotlin.collections.groupBy
-import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
+import tools.aqua.stars.core.utils.getPlot
+import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.mutantFailuresFromDB
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
+import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 
-object LongTailDistributionPostEvaluation :
-    PostEvaluationMetricProvider<
-        Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> {
-  override val dependsOn = null
+object LongTailDistributionPostEvaluation {
 
   val longTailByTSC = mutantFailuresFromDB.groupBy { it.tscId }
 
-  override fun postEvaluate() {
+  fun evaluate() {
     longTailByTSC.forEach { (tscId, failures) ->
       val groupedFailuresByTSCInstance = failures.groupBy { it.currentTSCInstance }
+
+      // Count number of failures per TSC instance and order counts descending to form a long-tail
+      val countsPerInstance = groupedFailuresByTSCInstance.mapValues { (_, v) -> v.size }
+      val orderedCounts = countsPerInstance.values.sortedDescending()
+
+      if (orderedCounts.isEmpty()) return@forEach
+
+      // Create plot using core getPlot utility. x-axis will be indices (0..n-1)
+      val plot =
+          getPlot(
+              "LongTail",
+              xValues = orderedCounts.mapIndexed { index, _ -> index },
+              yValues = orderedCounts,
+          )
+
+      if (plot == null) return@forEach
+
+      val subfolder = "longtail_by_tsc/${tscId}"
+      val outPath = java.nio.file.Path.of(POST_EVALUATION_BASE_DIR, subfolder)
+
+      plotDataAsBarChart(
+          plot,
+          fileName = "longtail_by_tsc_${tscId}",
+          title = "Long-tail for TSC $tscId",
+          path = outPath,
+      )
     }
   }
-
-  override fun printPostEvaluationResult() {}
 }
