@@ -169,7 +169,6 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
    */
   fun buildFailedMutantsMapping(): List<MutantFailure> =
       select(
-              MetricStartingValidTSCInstancesTable.tscInstance,
               startingScenarioConfiguration,
               mutant,
               tsc,
