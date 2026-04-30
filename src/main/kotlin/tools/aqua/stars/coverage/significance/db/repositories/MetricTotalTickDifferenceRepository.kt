@@ -29,7 +29,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenc
 import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable.run
 import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable.startingScenarioConfiguration
 import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable.totalTickDifferenceMillis
-import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable.tsc
 
 /**
  * Repository for accessing and modifying entries in the [MetricTotalTickDifferenceTable]. Provides
@@ -49,7 +48,6 @@ object MetricTotalTickDifferenceRepository {
    */
   fun batchInsert(entries: List<MetricTotalTickDifferenceEntry>): List<ResultRow> = db {
     MetricTotalTickDifferenceTable.batchInsert(entries) { entry ->
-      this[tsc] = entry.tscId
       this[run] = entry.runId
       this[startingScenarioConfiguration] = entry.scenarioConfigId
       this[mutant] = entry.mutantId
@@ -72,7 +70,6 @@ object MetricTotalTickDifferenceRepository {
     require(entry.id == null) { "insertIfMissingAndReturnId() expects entry.id == null." }
 
     MetricTotalTickDifferenceTable.insertIgnore { row ->
-      row[tsc] = entry.tscId
       row[run] = entry.runId
       row[startingScenarioConfiguration] = entry.scenarioConfigId
       row[mutant] = entry.mutantId
@@ -81,8 +78,7 @@ object MetricTotalTickDifferenceRepository {
 
     MetricTotalTickDifferenceTable.select(MetricTotalTickDifferenceTable.id)
         .where {
-          (tsc eq entry.tscId) and
-              (run eq entry.runId) and
+          (run eq entry.runId) and
               (startingScenarioConfiguration eq entry.scenarioConfigId) and
               (mutant eq entry.mutantId)
         }

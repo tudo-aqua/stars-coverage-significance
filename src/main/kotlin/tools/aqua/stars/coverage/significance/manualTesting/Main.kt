@@ -160,9 +160,7 @@ fun main() {
   //      FailedMonitorsPerTickMetric(
   //          writeToDb = false, writeVehicleStateImages = true, writeVehicleStateVideo = true)
 
-  val failedMonitorsMetric =
-      FailedMonitorsMetric(
-          tscId = UUID.fromString("eb5d8689-d756-4e52-b502-250add4a571b"), writeToDb = false)
+  val failedMonitorsMetric = FailedMonitorsMetric(writeToDb = false)
 
   eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
 

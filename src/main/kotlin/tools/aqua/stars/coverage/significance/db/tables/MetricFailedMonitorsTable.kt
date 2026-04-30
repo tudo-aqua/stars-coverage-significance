@@ -177,6 +177,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
               MetricStartingValidTSCInstancesTable.tscInstance,
               startingScenarioConfiguration,
               mutant,
+              tsc,
               monitorG0Failed,
               monitorG1Failed,
               monitorG2Failed,
@@ -189,6 +190,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
             val monitorBitmask = setOfMonitorViolations.toBitmask()
 
             MutantFailure(
+                tscId = it[tsc].value,
                 tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
                 startingScenarioConfigurationID = it[startingScenarioConfiguration].value,
                 mutantID = it[mutant].value,

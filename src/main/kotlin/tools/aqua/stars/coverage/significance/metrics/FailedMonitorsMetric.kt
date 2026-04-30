@@ -23,6 +23,7 @@ import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricPro
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.TSCEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
@@ -53,15 +54,10 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
  * Metric that tracks which monitors have failed for each TSC instance at each tick.
  *
  * @property dependsOn Optional dependency on another metric.
- * @property tscId UUID of the TSC being evaluated.
  * @property writeToDb Decides, whether the monitor results should be written to the database, or
  *   not.
  */
-class FailedMonitorsMetric(
-    override val dependsOn: Any? = null,
-    val tscId: UUID,
-    val writeToDb: Boolean = true
-) :
+class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: Boolean = true) :
     TSCAndTSCInstanceAndTickMetricProvider<
         Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
     PostEvaluationMetricProvider<
@@ -72,10 +68,12 @@ class FailedMonitorsMetric(
           TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
           MutableMap<Triple<UUID, UUID, Long>, MetricFailedMonitorsEntry>>()
 
-  private var tscInstanceEntries: List<TSCInstanceEntry>
+  private val tscInstanceEntries: List<TSCInstanceEntry>
+  private val tscEntries: List<TSCEntry>
 
   init {
     tscInstanceEntries = TSCInstancesRepository.getAll()
+    tscEntries = TSCsRepository.getAll()
   }
 
   override fun evaluate(
@@ -83,6 +81,8 @@ class FailedMonitorsMetric(
       tscInstance: TSCInstance<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
       tick: TimeStep
   ) {
+    val tscId = tscEntries.first { it.tscJson == tsc.getJsonString() }.id
+    checkNotNull(tscId) { "TSC not found in database." }
     val tscMap = failedMonitorsPerTickResult.getOrPut(tsc) { mutableMapOf() }
     checkNotNull(tick.mutantId) { "Tick mutantId is null." }
 
