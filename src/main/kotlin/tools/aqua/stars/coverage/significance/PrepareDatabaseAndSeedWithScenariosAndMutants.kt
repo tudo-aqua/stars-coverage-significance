@@ -32,22 +32,24 @@ import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
+import tools.aqua.stars.coverage.significance.tsc.tscWithoutCriticalSituations
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
 import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
+val tscListToUseInProject = listOf(tsc(), tscWithoutCriticalSituations())
+
 /** Seed and precompute necessary data for coverage significance evaluation. */
 fun main() {
   DbBootstrap.connectAndCreateSchema()
 
-  val tsc = tsc()
-
   // Add TSC to db
-  val tscId = TSCsRepository.upsertAndGetId(entry = tsc.toTSCEntry())
-
-  insertAllTSCInstance(tsc, tscId)
+  tscListToUseInProject.forEach { tsc ->
+    val tscId = TSCsRepository.upsertAndGetId(entry = tsc.toTSCEntry())
+    insertAllTSCInstance(tsc, tscId)
+  }
 
   // Seed scenarios
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
