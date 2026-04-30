@@ -19,6 +19,10 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 import java.util.UUID
 
+typealias TSCId = UUID
+
+typealias TSCInstanceId = UUID
+
 typealias MutantId = UUID
 
 typealias ScenarioInstanceId = UUID
