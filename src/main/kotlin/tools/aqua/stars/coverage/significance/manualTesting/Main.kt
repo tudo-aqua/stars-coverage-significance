@@ -156,9 +156,13 @@ fun main() {
       TotalTickDifferenceMetric<
           Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
 
+  //  val failedMonitorsMetric =
+  //      FailedMonitorsPerTickMetric(
+  //          writeToDb = false, writeVehicleStateImages = true, writeVehicleStateVideo = true)
+
   val failedMonitorsMetric =
-      FailedMonitorsPerTickMetric(
-          writeToDb = false, writeVehicleStateImages = true, writeVehicleStateVideo = true)
+      FailedMonitorsMetric(
+          tscId = UUID.fromString("eb5d8689-d756-4e52-b502-250add4a571b"), writeToDb = false)
 
   eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
 
