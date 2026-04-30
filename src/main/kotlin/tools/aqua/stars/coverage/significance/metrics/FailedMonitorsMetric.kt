@@ -108,20 +108,21 @@ class FailedMonitorsMetric(
 
     // Determine lastTickTSCInstanceId and previousTSCInstanceId by scanning existing entries
     val currentTickTime = tick.tickTimeMillis
-    val sameEntries =
+    val previousEntries =
         tscMap.filterKeys { (mutantId, scenarioConfigId, tickTime) ->
           mutantId == tick.mutantId &&
               scenarioConfigId == tick.scenarioConfigId &&
-              tickTime != currentTickTime
+              tickTime < currentTickTime
         }
 
     val closestEntry =
-        sameEntries.minByOrNull { (key, _) -> kotlin.math.abs(key.third - currentTickTime) }?.value
+        previousEntries
+            .minByOrNull { (key, _) -> kotlin.math.abs(key.third - currentTickTime) }
+            ?.value
     val lastTickId = closestEntry?.currentTSCInstanceId
 
     val previousDifferentEntry =
-        sameEntries.entries
-            .filter { it.key.third < currentTickTime }
+        previousEntries.entries
             .sortedByDescending { it.key.third }
             .map { it.value }
             .firstOrNull { it.currentTSCInstanceId != currentTSCInstanceId }
