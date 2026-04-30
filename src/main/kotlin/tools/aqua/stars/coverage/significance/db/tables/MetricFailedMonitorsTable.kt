@@ -70,9 +70,31 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           foreign = MutantsTable,
           onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
           onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+  val currentTSCInstance =
+      reference(
+          name = "current_tsc_instance_id",
+          foreign = TSCInstancesTable,
+          onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+          onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+  val lastTickTSCInstance =
+      reference(
+              name = "last_tsc_instance_id",
+              foreign = TSCInstancesTable,
+              onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+              onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+          .nullable()
+  val previouslyChangedTSCInstance =
+      reference(
+              name = "previously_changed_tsc_instance_id",
+              foreign = TSCInstancesTable,
+              onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+              onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+          .nullable()
+  val previouslyChangedTSCInstanceTick = long("previously_changed_tsc_instance_tick").nullable()
+  val tick = long("tick")
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
-  val monitorG2Failed = bool("monitor_g2_emergencybraking_failed").default(false)
+  val monitorG2Failed = bool("monitor_g2_emergencyBraking_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_MaximumSpeedLimit_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
@@ -80,12 +102,13 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val createdAt = timestamp("created_at")
 
   init {
-    index(true, tsc, run, startingScenarioConfiguration, mutant)
+    index(true, tsc, run, startingScenarioConfiguration, mutant, tick)
 
     index(false, tsc)
     index(false, run)
     index(false, startingScenarioConfiguration)
     index(false, mutant)
+    index(false, tick)
   }
 
   /**

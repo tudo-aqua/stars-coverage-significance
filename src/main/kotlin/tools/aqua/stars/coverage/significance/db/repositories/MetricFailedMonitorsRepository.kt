@@ -101,6 +101,11 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.mutant] = e.mutantId
       this[MetricFailedMonitorsTable.startingScenarioConfiguration] = e.scenarioConfigId
 
+      this[MetricFailedMonitorsTable.currentTSCInstance] = e.currentTSCInstanceId
+      this[MetricFailedMonitorsTable.lastTickTSCInstance] = e.lastTickTSCInstanceId
+      this[MetricFailedMonitorsTable.previouslyChangedTSCInstance] = e.previousTSCInstanceId
+      this[MetricFailedMonitorsTable.tick] = e.tick
+
       this[MetricFailedMonitorsTable.monitorG0Failed] = e.monitorG0Failed
       this[MetricFailedMonitorsTable.monitorG1Failed] = e.monitorG1Failed
       this[MetricFailedMonitorsTable.monitorG2Failed] = e.monitorG2Failed
@@ -128,6 +133,12 @@ object MetricFailedMonitorsRepository {
               row[tsc] = entry.tscId
               row[startingScenarioConfiguration] = entry.scenarioConfigId
               row[mutant] = entry.mutantId
+
+              row[currentTSCInstance] = entry.currentTSCInstanceId
+              row[lastTickTSCInstance] = entry.lastTickTSCInstanceId
+              row[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
+              row[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
+              row[tick] = entry.tick
 
               row[monitorG0Failed] = entry.monitorG0Failed
               row[monitorG1Failed] = entry.monitorG1Failed
@@ -169,6 +180,12 @@ object MetricFailedMonitorsRepository {
                   st[tsc] = entry.tscId
                   st[startingScenarioConfiguration] = entry.scenarioConfigId
                   st[mutant] = entry.mutantId
+
+                  st[currentTSCInstance] = entry.currentTSCInstanceId
+                  st[lastTickTSCInstance] = entry.lastTickTSCInstanceId
+                  st[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
+                  st[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
+                  st[tick] = entry.tick
 
                   st[monitorG0Failed] = entry.monitorG0Failed
                   st[monitorG1Failed] = entry.monitorG1Failed
@@ -217,6 +234,13 @@ object MetricFailedMonitorsRepository {
           tscId = this[MetricFailedMonitorsTable.tsc].value,
           mutantId = this[MetricFailedMonitorsTable.mutant].value,
           scenarioConfigId = this[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
+          currentTSCInstanceId = this[MetricFailedMonitorsTable.currentTSCInstance].value,
+          lastTickTSCInstanceId = this[MetricFailedMonitorsTable.lastTickTSCInstance]?.value,
+          previousTSCInstanceId =
+              this[MetricFailedMonitorsTable.previouslyChangedTSCInstance]?.value,
+          previousTSCInstanceTick =
+              this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick],
+          tick = this[MetricFailedMonitorsTable.tick],
           monitorG0Failed = this[MetricFailedMonitorsTable.monitorG0Failed],
           monitorG1Failed = this[MetricFailedMonitorsTable.monitorG1Failed],
           monitorG2Failed = this[MetricFailedMonitorsTable.monitorG2Failed],

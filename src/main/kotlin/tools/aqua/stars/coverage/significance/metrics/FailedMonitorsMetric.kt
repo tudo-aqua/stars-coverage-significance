@@ -23,8 +23,10 @@ import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricPro
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.TSCInstanceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.g0Accidents
 import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
@@ -33,6 +35,14 @@ import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
 import tools.aqua.stars.coverage.significance.g4TrafficFlow
 import tools.aqua.stars.coverage.significance.i1Stopping
 import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G0Accidents
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G1SafeDistance
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G2EmergencyBraking
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G3MaximumSpeedLimit
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G4TrafficFlow
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I1Stopping
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I2FasterThanLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -57,25 +67,80 @@ class FailedMonitorsMetric(
     PostEvaluationMetricProvider<
         Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> {
 
-  private val failedMonitorsResult =
+  private val failedMonitorsPerTickResult =
       mutableMapOf<
           TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
-          MutableMap<Pair<UUID, UUID>, MetricFailedMonitorsEntry>>()
+          MutableMap<Triple<UUID, UUID, Long>, MetricFailedMonitorsEntry>>()
+
+  private var tscInstanceEntries: List<TSCInstanceEntry>
+
+  init {
+    tscInstanceEntries = TSCInstancesRepository.getAll()
+  }
 
   override fun evaluate(
       tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
       tscInstance: TSCInstance<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>,
       tick: TimeStep
   ) {
-    val tscMap = failedMonitorsResult.getOrPut(tsc) { mutableMapOf() }
+    val tscMap = failedMonitorsPerTickResult.getOrPut(tsc) { mutableMapOf() }
     checkNotNull(tick.mutantId) { "Tick mutantId is null." }
+
+    val failedMonitorInstances = tscInstance.rootNode.validateMonitors(tick.identifier)
+    val setOfFailedMonitors = mutableSetOf<MonitorViolation>()
+    failedMonitorInstances.forEach { violatedMonitor ->
+      when (violatedMonitor.monitorLabel) {
+        g0Accidents.name -> setOfFailedMonitors.add(G0Accidents)
+        g1SafeDistanceToPrecedingVehicle.name -> setOfFailedMonitors.add(G1SafeDistance)
+        g2EmergencyBraking.name -> setOfFailedMonitors.add(G2EmergencyBraking)
+        g3MaximumSpeedLimit.name -> setOfFailedMonitors.add(G3MaximumSpeedLimit)
+        g4TrafficFlow.name -> setOfFailedMonitors.add(G4TrafficFlow)
+        i1Stopping.name -> setOfFailedMonitors.add(I1Stopping)
+        i2DrivingFasterThenLeftTraffic.name -> setOfFailedMonitors.add(I2FasterThanLeftTraffic)
+      }
+    }
+
+    val currentTSCInstanceId =
+        tscInstanceEntries
+            .first { it.tscId == tscId && it.instanceJson == tscInstance.getJsonString() }
+            .id
+    checkNotNull(currentTSCInstanceId) { "TSC instance not found in database." }
+
+    // Determine lastTickTSCInstanceId and previousTSCInstanceId by scanning existing entries
+    val currentTickTime = tick.tickTimeMillis
+    val sameEntries =
+        tscMap.filterKeys { (mutantId, scenarioConfigId, tickTime) ->
+          mutantId == tick.mutantId &&
+              scenarioConfigId == tick.scenarioConfigId &&
+              tickTime != currentTickTime
+        }
+
+    val closestEntry =
+        sameEntries.minByOrNull { (key, _) -> kotlin.math.abs(key.third - currentTickTime) }?.value
+    val lastTickId = closestEntry?.currentTSCInstanceId
+
+    val previousDifferentEntry =
+        sameEntries.entries
+            .filter { it.key.third < currentTickTime }
+            .sortedByDescending { it.key.third }
+            .map { it.value }
+            .firstOrNull { it.currentTSCInstanceId != currentTSCInstanceId }
+
+    val previousId = previousDifferentEntry?.currentTSCInstanceId
+    val previousTick = previousDifferentEntry?.tick
+
     val failedMonitorsEntry =
-        tscMap.getOrPut(tick.mutantId to tick.scenarioConfigId) {
+        tscMap.getOrPut(Triple(tick.mutantId, tick.scenarioConfigId, currentTickTime)) {
           MetricFailedMonitorsEntry(
               runId = tick.runId,
               tscId = tscId,
               mutantId = tick.mutantId,
               scenarioConfigId = tick.scenarioConfigId,
+              currentTSCInstanceId = currentTSCInstanceId,
+              lastTickTSCInstanceId = lastTickId,
+              previousTSCInstanceId = previousId,
+              previousTSCInstanceTick = previousTick,
+              tick = currentTickTime,
               monitorG0Failed = false,
               monitorG1Failed = false,
               monitorG2Failed = false,
@@ -101,8 +166,8 @@ class FailedMonitorsMetric(
   override fun postEvaluate() {
     if (writeToDb) {
       db {
-        failedMonitorsResult.keys.forEach { tsc ->
-          val map = failedMonitorsResult[tsc]
+        failedMonitorsPerTickResult.keys.forEach { tsc ->
+          val map = failedMonitorsPerTickResult[tsc]
           checkNotNull(map)
           val tscEntry = TSCsRepository.getByJson(tsc.getJsonString())
           checkNotNull(tscEntry) { "TSC not found in DB." }
@@ -115,8 +180,8 @@ class FailedMonitorsMetric(
 
   override fun printPostEvaluationResult() {
     if (!writeToDb) {
-      failedMonitorsResult.keys.forEach { tsc ->
-        val map = failedMonitorsResult[tsc]
+      failedMonitorsPerTickResult.keys.forEach { tsc ->
+        val map = failedMonitorsPerTickResult[tsc]
         checkNotNull(map)
         map.forEach { (mutantId, scenarioConfigId), failedMetric ->
           println(

@@ -69,7 +69,7 @@ fun main() {
         .limit(100)
         .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
         .distinct()
-      .toMutableList()
+        .toMutableList()
   }
   scenarioIds += UUID.fromString("0e9b71df-ad81-4881-aaae-7a00e272f60e")
 
