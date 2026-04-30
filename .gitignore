@@ -8,6 +8,7 @@
 !serialized-results/baseline/
 !serialized-results/baseline-all/
 
+*.salive
 **/.gradle
 **/build
 .idea
