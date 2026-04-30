@@ -104,6 +104,7 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.currentTSCInstance] = e.currentTSCInstanceId
       this[MetricFailedMonitorsTable.lastTickTSCInstance] = e.lastTickTSCInstanceId
       this[MetricFailedMonitorsTable.previouslyChangedTSCInstance] = e.previousTSCInstanceId
+      this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick] = e.previousTSCInstanceTick
       this[MetricFailedMonitorsTable.tick] = e.tick
 
       this[MetricFailedMonitorsTable.monitorG0Failed] = e.monitorG0Failed
