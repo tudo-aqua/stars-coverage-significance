@@ -333,11 +333,7 @@ class AutopilotMutant205 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 345 Id:
-       * ecf02776-dfc9-4ed1-8cb8-b032d67f83e5, Old Operator: &&, New Operator: ||
-       */
-      if (tooCloseBehind || tooCloseAhead) return false
+      if (tooCloseBehind && tooCloseAhead) return false
     }
 
     return true

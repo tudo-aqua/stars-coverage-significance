@@ -42,12 +42,7 @@ class AutopilotMutant179 : Mutant() {
   var stepLengthSeconds = 0.1
 
   /** Assumed maximum deceleration of the leader [m/s²] for kinematic safety checks. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 53 Id:
-   * 7b61ef61-1a4a-459a-ab3c-923dfae80d55, Old Operator: 9, New Operator: 0.07424712
-   */
-  var leaderMaxDecelerationInMps2 = 0.07424712
+  var leaderMaxDecelerationInMps2 = 9.0
 
   /** Gain applied to the gap error term (`gap - desiredGap`) when computing ACC target speed. */
   var gapGain = 0.5

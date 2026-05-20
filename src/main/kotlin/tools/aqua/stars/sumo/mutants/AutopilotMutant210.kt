@@ -192,12 +192,7 @@ class AutopilotMutant210 : Mutant() {
 
     // Free space available for ego braking (gap minus desired standstill gap).
     val netGap = gapMeters - minGapToLeadingInMeters
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 203 Id:
-     * f8ed0f18-1d46-4b0a-a8d3-e95936e5c00b, Old Operator: 0, New Operator: 0.9995798
-     */
-    val netGapClamped = if (netGap > 0.9995798) netGap else 0.0
+    val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
     val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)

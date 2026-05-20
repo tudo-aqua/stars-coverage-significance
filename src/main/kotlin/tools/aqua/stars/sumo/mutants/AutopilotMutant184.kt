@@ -204,12 +204,7 @@ class AutopilotMutant184 : Mutant() {
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
     val bt = bEgo * tau
     val disc = bt * bt + 2.0 * bEgo * sAvail
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 215 Id:
-     * a0d8f532-59f7-471c-87c3-30f7e466d753, Old Operator: 0, New Operator: 0.6824504
-     */
-    val root = if (disc > 0.6824504) sqrt(disc) else 0.0
+    val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 
     return if (vSafe > 0.0) vSafe else 0.0

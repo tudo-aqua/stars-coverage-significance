@@ -218,11 +218,7 @@ class AutopilotMutant111 : Mutant() {
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 229 Id:
-     * c7829b6f-b80d-41fd-a48d-39b61c6e7afb, Old Operator: +, New Operator: *
-     */
-    val vNew = vNow * dvApplied
+    val vNew = vNow + dvApplied
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 

@@ -70,12 +70,7 @@ class AutopilotMutant162 : Mutant() {
   var laneChangeMinGainInMps = 1.0
 
   /** The distance ahead to look for a neighbor. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 81 Id:
-   * 0c5426d2-39a2-4dd6-b49e-606488d8e8b2, Old Operator: 150, New Operator: 0.94506574
-   */
-  var neighborLookAheadInMeters = 0.94506574
+  var neighborLookAheadInMeters = 150.0
 
   /** The distance ahead to look for the leader. */
   var leaderLookAheadInMeters = 200.0

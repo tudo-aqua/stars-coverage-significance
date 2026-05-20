@@ -106,12 +106,7 @@ class AutopilotMutant163 : Mutant() {
   /**
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 117 Id:
-   * 0d9ae838-b1c8-4045-9c60-092a34620093, Old Operator: 1, New Operator: 0.82127583
-   */
-  var maxLaneChangeDurationInSeconds = 0.82127583
+  var maxLaneChangeDurationInSeconds = 1.0
 
   private var lastLaneChangeSimTimeInSeconds = -1e9
 

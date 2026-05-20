@@ -38,14 +38,8 @@ class AutopilotMutant166 : Mutant() {
   var maxAccelerationInMps2 = 2.6
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
-
   /** The step length in seconds. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 50 Id:
-   * 185f9381-8d87-4e8f-bab1-c45cbf2f20e1, Old Operator: 0.1, New Operator: 0.35234654
-   */
-  var stepLengthSeconds = 0.35234654
+  var stepLengthSeconds = 0.1
 
   /** Assumed maximum deceleration of the leader [m/s²] for kinematic safety checks. */
   var leaderMaxDecelerationInMps2 = 9.0

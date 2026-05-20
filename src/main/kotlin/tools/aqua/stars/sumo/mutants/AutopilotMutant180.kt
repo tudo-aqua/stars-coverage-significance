@@ -184,12 +184,7 @@ class AutopilotMutant180 : Mutant() {
    * The returned value is an upper bound for the *next* commanded speed.
    */
   private fun safeSpeedKinematic(gapMeters: Double, vLeader: Double): Double {
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 195 Id:
-     * 811ae3dc-abfa-4694-a9f8-81f524ea7923, Old Operator: 0, New Operator: 0.794976
-     */
-    val bEgo = if (maxDecelerationInMps2 > 0.794976) maxDecelerationInMps2 else 0.0
+    val bEgo = if (maxDecelerationInMps2 > 0.0) maxDecelerationInMps2 else 0.0
     if (bEgo <= 1e-9) return 0.0
 
     val bLead = if (leaderMaxDecelerationInMps2 > 0.0) leaderMaxDecelerationInMps2 else bEgo

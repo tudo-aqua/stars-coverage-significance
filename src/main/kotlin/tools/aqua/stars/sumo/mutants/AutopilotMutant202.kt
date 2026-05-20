@@ -108,11 +108,7 @@ class AutopilotMutant202 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 119 Id:
-   * df850693-bb49-40c9-91a2-ee58673ee132, Old Operator: 1000000000, New Operator: 0.94482756
-   */
-  private var lastLaneChangeSimTimeInSeconds = -0.94482756
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String) {

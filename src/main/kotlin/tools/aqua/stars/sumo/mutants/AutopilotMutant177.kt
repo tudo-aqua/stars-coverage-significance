@@ -61,12 +61,7 @@ class AutopilotMutant177 : Mutant() {
    * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
    * of time before considering lane changes.
    */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 72 Id:
-   * 70e0bb63-6cdf-40eb-b88a-b0c1efd549b4, Old Operator: 2, New Operator: 0.41757274
-   */
-  var laneChangeCooldownInSeconds = 0.41757274
+  var laneChangeCooldownInSeconds = 2.0
 
   /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,

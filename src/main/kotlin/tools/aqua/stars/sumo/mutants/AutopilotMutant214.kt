@@ -396,11 +396,7 @@ class AutopilotMutant214 : Mutant() {
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return null
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 408 Id:
-     * 22355fdf-4d67-4dfc-a6c1-e15bb649e6d4, Old Operator: 1, New Operator: 967072554
-     */
-    val bitRight = 967072554
+    val bitRight = 1
     val bitAhead = 2
 
     val rightBit = if (wantRight) bitRight else 0

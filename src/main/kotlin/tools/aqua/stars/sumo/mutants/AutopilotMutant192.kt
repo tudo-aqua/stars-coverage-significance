@@ -45,12 +45,7 @@ class AutopilotMutant192 : Mutant() {
   var leaderMaxDecelerationInMps2 = 9.0
 
   /** Gain applied to the gap error term (`gap - desiredGap`) when computing ACC target speed. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 56 Id:
-   * bcd0ec20-746b-48d2-b497-e3a642f0b1a2, Old Operator: 0.5, New Operator: 0.530807
-   */
-  var gapGain = 0.530807
+  var gapGain = 0.5
 
   /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
   var relativeSpeedGain = 0.2

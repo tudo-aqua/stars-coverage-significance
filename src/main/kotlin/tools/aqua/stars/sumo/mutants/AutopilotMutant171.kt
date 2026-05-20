@@ -35,12 +35,7 @@ class AutopilotMutant171 : Mutant() {
   var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 46 Id:
-   * 331de193-03ed-48d8-a62a-8e4050194fc4, Old Operator: 2.6, New Operator: 0.28914106
-   */
-  var maxAccelerationInMps2 = 0.28914106
+  var maxAccelerationInMps2 = 2.6
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
   /** The step length in seconds. */

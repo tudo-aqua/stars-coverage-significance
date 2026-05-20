@@ -76,12 +76,7 @@ class AutopilotMutant191 : Mutant() {
   var leaderLookAheadInMeters = 200.0
 
   /** Required free distance ahead on all lanes on the chosen side before changing lanes. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 87 Id:
-   * b2f924c0-765b-48b6-b73b-fcdd7e8ab546, Old Operator: 20, New Operator: 0.005636573
-   */
-  var laneChangeSideFrontGapInMeters = 0.005636573
+  var laneChangeSideFrontGapInMeters = 20.0
 
   /** Required free distance behind on all lanes on the chosen side before changing lanes. */
   var laneChangeSideBackGapInMeters = 15.0

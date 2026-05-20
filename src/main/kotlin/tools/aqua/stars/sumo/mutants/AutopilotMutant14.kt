@@ -132,12 +132,7 @@ class AutopilotMutant14 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 143
-       * Id: 4f0574af-ab45-4cf8-b9d5-82e89093395c, Old Operator: *, New Operator: -
-       */
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds - vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps

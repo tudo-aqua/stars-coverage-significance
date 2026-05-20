@@ -360,12 +360,7 @@ class AutopilotMutant213 : Mutant() {
    * - 2^2: blocking only (else all)
    */
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 372 Id:
-     * 1a25d0f2-9902-4cff-84fa-a3590f9c05ec, Old Operator: 0, New Operator: 159208459
-     */
-    val wantRight = dir < 159208459
+    val wantRight = dir < 0
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return false // dir == 0
 

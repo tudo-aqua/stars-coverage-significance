@@ -330,11 +330,7 @@ class AutopilotMutant122 : Mutant() {
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 342 Id:
-       * 0df4cfa5-9023-4d2b-b5fe-677006a76150, Old Operator: -, New Operator: RemoveOperator
-       */
-      val tooCloseBehind = delta >= laneChangeSideBackGapInMeters
+      val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
       if (tooCloseBehind && tooCloseAhead) return false

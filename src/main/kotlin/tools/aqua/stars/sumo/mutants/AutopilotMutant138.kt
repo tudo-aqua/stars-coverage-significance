@@ -279,12 +279,7 @@ class AutopilotMutant138 : Mutant() {
 
     val targetLaneSafe = isTargetDirectionFree(egoId, dir)
     val sideCorridorSafe = areAllLanesOnSideFree(egoId, dir)
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 290 Id:
-     * 5450fc1b-8a20-4cbd-957a-db8db9b54364, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (targetLaneSafe || !sideCorridorSafe) {
+    if (!targetLaneSafe || !sideCorridorSafe) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 

@@ -53,14 +53,8 @@ class AutopilotMutant181 : Mutant() {
    * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
    */
   var hardBrakeGapFactor = 0.6
-
   /** The minimum target speed in meters per second. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 65 Id:
-   * 82659998-8f21-4ce5-8338-c5c5c85d7561, Old Operator: 0, New Operator: 0.4939314
-   */
-  var minTargetSpeedMps = 0.4939314
+  var minTargetSpeedMps = 0.0
 
   // -------------------- Lane change parameters --------------------
   /**

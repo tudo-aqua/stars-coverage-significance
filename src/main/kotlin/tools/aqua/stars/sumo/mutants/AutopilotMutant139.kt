@@ -325,11 +325,7 @@ class AutopilotMutant139 : Mutant() {
             otherLaneIndex > egoLaneIndex
           }
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 337 Id:
-       * 60857844-4572-490b-980f-1fdc522cb689, Old Operator: !, New Operator: RemoveOperator
-       */
-      if (isOnChosenSide) continue
+      if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos

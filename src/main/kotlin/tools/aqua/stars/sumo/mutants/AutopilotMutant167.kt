@@ -79,12 +79,7 @@ class AutopilotMutant167 : Mutant() {
   var laneChangeSideFrontGapInMeters = 20.0
 
   /** Required free distance behind on all lanes on the chosen side before changing lanes. */
-
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 90 Id:
-   * 19352153-3aed-450a-9afd-0874776acb1e, Old Operator: 15, New Operator: 0.79234576
-   */
-  var laneChangeSideBackGapInMeters = 0.79234576
+  var laneChangeSideBackGapInMeters = 15.0
 
   /**
    * Whether to prefer a left lane change. If true, the ego vehicle will prefer left lane change. If

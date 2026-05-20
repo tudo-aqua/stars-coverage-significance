@@ -244,12 +244,7 @@ class AutopilotMutant102 : Mutant() {
 
     val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
     val right =
-
-        /**
-         * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 255
-         * Id: 8cf59b22-618c-452b-8b10-515d1f66b9fa, Old Operator: -, New Operator: %
-         */
-        evaluateLaneChange(egoId, dir = 0 % 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir = chooseDirection(left, right) ?: return
 

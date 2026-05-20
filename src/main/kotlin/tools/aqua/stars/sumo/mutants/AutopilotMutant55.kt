@@ -195,12 +195,7 @@ class AutopilotMutant55 : Mutant() {
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 206 Id:
-     * 772dd4e0-05e2-41c3-85a1-ad1fe867f602, Old Operator: *, New Operator: /
-     */
-    val leaderStopDist = (vLeader * vLeader) / (2.0 / bLead)
+    val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)
 
     // Total distance ego may spend: net gap + leader stopping distance.
     val sAvail = netGapClamped + leaderStopDist

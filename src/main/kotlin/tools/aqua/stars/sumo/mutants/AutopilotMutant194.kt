@@ -185,12 +185,7 @@ class AutopilotMutant194 : Mutant() {
    */
   private fun safeSpeedKinematic(gapMeters: Double, vLeader: Double): Double {
     val bEgo = if (maxDecelerationInMps2 > 0.0) maxDecelerationInMps2 else 0.0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 196 Id:
-     * c105de02-51d7-436b-bceb-7d639a6ba3f8, Old Operator: 0.000000001, New Operator: 0.6513791
-     */
-    if (bEgo <= 0.6513791) return 0.0
+    if (bEgo <= 1e-9) return 0.0
 
     val bLead = if (leaderMaxDecelerationInMps2 > 0.0) leaderMaxDecelerationInMps2 else bEgo
     val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0

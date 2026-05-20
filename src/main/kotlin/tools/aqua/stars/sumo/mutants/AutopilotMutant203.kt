@@ -345,12 +345,7 @@ class AutopilotMutant203 : Mutant() {
 
     if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 357 Id:
-     * dfaa9a53-47c6-467e-a640-e5da5eda9552, Old Operator: &&, New Operator: ||
-     */
-    if (!leftOk || rightOk) return right.dir
+    if (!leftOk && rightOk) return right.dir
 
     // both feasible
     return if (left.score > right.score) left.dir

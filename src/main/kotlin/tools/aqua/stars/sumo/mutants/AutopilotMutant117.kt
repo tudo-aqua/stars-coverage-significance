@@ -248,11 +248,7 @@ class AutopilotMutant117 : Mutant() {
 
     val chosenDir = chooseDirection(left, right) ?: return
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 259 Id:
-     * ed6ee607-0c91-40e6-9d93-7a9a05b44ad8, Old Operator: +, New Operator: %
-     */
-    val targetLaneIndex = baseLaneIndex % chosenDir
+    val targetLaneIndex = baseLaneIndex + chosenDir
     if (targetLaneIndex < 0) return
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
