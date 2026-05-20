@@ -31,8 +31,14 @@ class AutopilotMutant199 : Mutant() {
   var cruiseSpeedInMps = 27.77
   /** The time headway to the leader in seconds. */
   var timeHeadwayToLeaderInSeconds = 1.0
+
   /** The minimum gap to the leading vehicle in meters. */
-  var minGapToLeadingInMeters = 2.5
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 43 Id:
+   * d1a43af5-1fce-4885-9c80-581b55e6b85e, Old Operator: 2.5, New Operator: 0.26204276
+   */
+  var minGapToLeadingInMeters = 0.26204276
 
   /** Maximum longitudinal acceleration [m/s²]. */
   var maxAccelerationInMps2 = 2.6

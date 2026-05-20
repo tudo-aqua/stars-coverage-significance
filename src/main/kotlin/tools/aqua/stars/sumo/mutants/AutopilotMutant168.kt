@@ -272,7 +272,12 @@ class AutopilotMutant168 : Mutant() {
       curLeaderSpeed: Double
   ): LaneEval {
     val wantRight = dir < 0
-    val wantLeft = dir > 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 283 Id:
+     * 1b0e13b9-7e31-4d4a-a45e-f50eba3d97e4, Old Operator: 0, New Operator: 1909656913
+     */
+    val wantLeft = dir > 1909656913
     if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }

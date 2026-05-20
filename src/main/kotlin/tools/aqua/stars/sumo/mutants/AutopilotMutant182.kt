@@ -271,7 +271,12 @@ class AutopilotMutant182 : Mutant() {
       stuck: Boolean,
       curLeaderSpeed: Double
   ): LaneEval {
-    val wantRight = dir < 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 282 Id:
+     * 91bd3b01-4760-420f-9ce8-447959e27d45, Old Operator: 0, New Operator: 1705425907
+     */
+    val wantRight = dir < 1705425907
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)

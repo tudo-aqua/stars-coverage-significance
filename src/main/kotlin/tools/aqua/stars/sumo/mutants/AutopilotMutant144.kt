@@ -328,7 +328,12 @@ class AutopilotMutant144 : Mutant() {
       if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
-      val delta = otherPos - egoLanePos
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 340
+       * Id: 92a6c14c-bdfa-4dbc-8915-f8ae96ae0752, Old Operator: -, New Operator: /
+       */
+      val delta = otherPos / egoLanePos
 
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters

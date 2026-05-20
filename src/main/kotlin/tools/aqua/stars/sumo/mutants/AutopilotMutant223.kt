@@ -304,7 +304,12 @@ class AutopilotMutant223 : Mutant() {
    * vehicle on right lane, both trying to enter the middle lane.
    */
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
-    val wantRight = dir < 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 316 Id:
+     * d66e206a-9cc3-4b4a-9544-4d4097d1fc33, Old Operator: 0, New Operator: 695196343
+     */
+    val wantRight = dir < 695196343
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return false
 

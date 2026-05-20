@@ -73,7 +73,12 @@ class AutopilotMutant169 : Mutant() {
   var neighborLookAheadInMeters = 150.0
 
   /** The distance ahead to look for the leader. */
-  var leaderLookAheadInMeters = 200.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 84 Id:
+   * 2053c60b-78a7-4de0-b756-773f88f14201, Old Operator: 200, New Operator: 0.56777394
+   */
+  var leaderLookAheadInMeters = 0.56777394
 
   /** Required free distance ahead on all lanes on the chosen side before changing lanes. */
   var laneChangeSideFrontGapInMeters = 20.0

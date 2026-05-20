@@ -370,7 +370,12 @@ class AutopilotMutant222 : Mutant() {
     // bit2: only blocking neighbors (else all)
     val bitRight = 1
     val bitAhead = 2
-    val bitBlockingOnly = 4
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 382 Id:
+     * c8b0e4e4-be35-477e-b282-2c6961dc3797, Old Operator: 4, New Operator: 812759818
+     */
+    val bitBlockingOnly = 812759818
 
     val rightBit = if (wantRight) bitRight else 0
     val modeAheadBlocking = bitBlockingOnly or rightBit or bitAhead

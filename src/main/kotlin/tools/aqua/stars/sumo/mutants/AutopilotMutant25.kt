@@ -148,7 +148,12 @@ class AutopilotMutant25 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
+     * a277bf71-c0b1-428b-a2a8-fa7e0d6a30f5, Old Operator: *, New Operator: -
+     */
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain - relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking

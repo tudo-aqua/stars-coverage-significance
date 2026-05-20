@@ -345,7 +345,12 @@ class AutopilotMutant145 : Mutant() {
 
     if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
-    if (!leftOk && rightOk) return right.dir
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 357 Id:
+     * a024953e-02f8-4e15-a19d-1c946108c4e3, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (leftOk && rightOk) return right.dir
 
     // both feasible
     return if (left.score > right.score) left.dir

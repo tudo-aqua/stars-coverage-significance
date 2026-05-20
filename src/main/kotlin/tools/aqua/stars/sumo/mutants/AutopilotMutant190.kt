@@ -222,7 +222,11 @@ class AutopilotMutant190 : Mutant() {
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
-  private fun absVal(x: Double): Double = if (x < 0.0) -x else x
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 233 Id:
+   * b295d619-0ccf-4658-92bd-2ab856fb12b3, Old Operator: 0, New Operator: 0.26814377
+   */
+  private fun absVal(x: Double): Double = if (x < 0.26814377) -x else x
 
   // -------------------- Lane change --------------------
   private fun maybeLaneChange(

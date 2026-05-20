@@ -36,8 +36,14 @@ class AutopilotMutant208 : Mutant() {
 
   /** Maximum longitudinal acceleration [m/s²]. */
   var maxAccelerationInMps2 = 2.6
+
   /** The maximum deceleration in meters per second squared. */
-  var maxDecelerationInMps2 = 4.5
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 48 Id:
+   * f54e5154-b8f6-43cc-a8fb-55c57181b9ec, Old Operator: 4.5, New Operator: 0.16326499
+   */
+  var maxDecelerationInMps2 = 0.16326499
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 

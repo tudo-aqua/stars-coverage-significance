@@ -411,7 +411,12 @@ class AutopilotMutant215 : Mutant() {
       val dist = n.second
 
       if (id.isEmpty()) continue
-      if (dist <= 0.0) continue
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 423 Id:
+       * 2d21c40f-e188-4bad-ad83-a1e53249c772, Old Operator: 0, New Operator: 0.10665393
+       */
+      if (dist <= 0.10665393) continue
       if (dist > neighborLookAheadInMeters) continue
 
       if (best == null) {

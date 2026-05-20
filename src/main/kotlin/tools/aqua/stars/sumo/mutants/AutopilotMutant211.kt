@@ -48,7 +48,12 @@ class AutopilotMutant211 : Mutant() {
   var gapGain = 0.5
 
   /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
-  var relativeSpeedGain = 0.2
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 59 Id:
+   * fbba4c39-fc48-42c4-b5c1-c5611117ed5b, Old Operator: 0.2, New Operator: 0.41266298
+   */
+  var relativeSpeedGain = 0.41266298
   /**
    * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
    */

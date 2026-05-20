@@ -108,7 +108,11 @@ class AutopilotMutant142 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  private var lastLaneChangeSimTimeInSeconds = -1e9
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 119 Id:
+   * 87516a0a-5cd1-4526-8722-3e62b6e096bd, Old Operator: -, New Operator: RemoveOperator
+   */
+  private var lastLaneChangeSimTimeInSeconds = 1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String) {

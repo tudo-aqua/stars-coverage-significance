@@ -232,7 +232,12 @@ class AutopilotMutant87 : Mutant() {
       leader: StringDoublePair?
   ) {
     val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds) return
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 243 Id:
+     * 478d8c01-503d-485e-be62-2d883c5af4b8, Old Operator: -, New Operator: /
+     */
+    if (now / lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds) return
 
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 

@@ -101,7 +101,12 @@ class AutopilotMutant174 : Mutant() {
   var stuckSpeedDeltaMps = 0.5
 
   /** Weight for the side-lane speed-gain term in lane-change scoring. */
-  var sideLeaderWeight = 1.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 112 Id:
+   * 5fb9849f-4ba0-4b35-862d-4f94338b4bc3, Old Operator: 1, New Operator: 0.060036182
+   */
+  var sideLeaderWeight = 0.060036182
 
   /**
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).

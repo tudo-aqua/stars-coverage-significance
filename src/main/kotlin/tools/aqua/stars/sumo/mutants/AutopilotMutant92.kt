@@ -256,7 +256,12 @@ class AutopilotMutant92 : Mutant() {
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
-    val tooClose = gap < stuckGapFactor * desiredGap
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 267 Id:
+     * 5bd9378c-0dbc-43ab-96c2-dcb61f127cab, Old Operator: *, New Operator: %
+     */
+    val tooClose = gap < stuckGapFactor % desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }

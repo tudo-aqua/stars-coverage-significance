@@ -67,7 +67,12 @@ class AutopilotMutant206 : Mutant() {
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
-  var laneChangeMinGainInMps = 1.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 78 Id:
+   * edadc423-490e-44e5-a8ea-9ccce0a3abb5, Old Operator: 1, New Operator: 0.2600081
+   */
+  var laneChangeMinGainInMps = 0.2600081
 
   /** The distance ahead to look for a neighbor. */
   var neighborLookAheadInMeters = 150.0

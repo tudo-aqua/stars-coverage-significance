@@ -306,7 +306,12 @@ class AutopilotMutant195 : Mutant() {
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 318 Id:
+     * c5269ec2-ced5-48a9-871d-e05e6b8fdc21, Old Operator: &&, New Operator: ||
+     */
+    if (!wantLeft || !wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)
     val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)

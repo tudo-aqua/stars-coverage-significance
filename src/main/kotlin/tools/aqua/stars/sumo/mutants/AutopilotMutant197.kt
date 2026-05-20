@@ -207,7 +207,11 @@ class AutopilotMutant197 : Mutant() {
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 
-    return if (vSafe > 0.0) vSafe else 0.0
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 218 Id:
+     * c8add54a-ca71-4873-ae09-65cc58f5f23a, Old Operator: 0, New Operator: 0.86331964
+     */
+    return if (vSafe > 0.86331964) vSafe else 0.0
   }
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {

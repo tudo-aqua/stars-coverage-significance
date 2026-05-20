@@ -188,7 +188,12 @@ class AutopilotMutant209 : Mutant() {
     if (bEgo <= 1e-9) return 0.0
 
     val bLead = if (leaderMaxDecelerationInMps2 > 0.0) leaderMaxDecelerationInMps2 else bEgo
-    val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 199 Id:
+     * f59cbf98-cff3-4cb6-a59f-86832751354a, Old Operator: 0, New Operator: 0.116947174
+     */
+    val tau = if (stepLengthSeconds > 0.116947174) stepLengthSeconds else 0.0
 
     // Free space available for ego braking (gap minus desired standstill gap).
     val netGap = gapMeters - minGapToLeadingInMeters

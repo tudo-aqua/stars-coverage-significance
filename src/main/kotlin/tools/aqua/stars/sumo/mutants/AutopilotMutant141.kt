@@ -290,7 +290,11 @@ class AutopilotMutant141 : Mutant() {
     val gain = vSideLeader - curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
-    val score = sideLeaderWeight * gain + stuckBonus
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 301 Id:
+     * 7e7f7c8f-729b-4a1f-993e-a31f4a5bda15, Old Operator: +, New Operator: -
+     */
+    val score = sideLeaderWeight * gain - stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)
