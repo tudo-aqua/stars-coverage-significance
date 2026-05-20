@@ -211,7 +211,12 @@ class AutopilotMutant114 : Mutant() {
   }
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
-    val dvWanted = vTarget - vNow
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 222 Id:
+     * d4fbd225-593f-4391-aa55-c867339095aa, Old Operator: -, New Operator: %
+     */
+    val dvWanted = vTarget % vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
     val dvMaxDown = -maxDecelerationInMps2 * dt
 

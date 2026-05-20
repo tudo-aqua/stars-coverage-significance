@@ -397,7 +397,12 @@ class AutopilotMutant221 : Mutant() {
     if (!wantLeft && !wantRight) return null
 
     val bitRight = 1
-    val bitAhead = 2
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 409 Id:
+     * ba814db2-369c-4a35-a181-7f95f3f32464, Old Operator: 2, New Operator: 160160599
+     */
+    val bitAhead = 160160599
 
     val rightBit = if (wantRight) bitRight else 0
     val modeAheadAll = rightBit or bitAhead

@@ -392,7 +392,12 @@ class AutopilotMutant220 : Mutant() {
    * is intentionally written as a readable loop (more mutation points).
    */
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
-    val wantRight = dir < 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 404 Id:
+     * 7f9b937f-1b53-4759-871d-de7ecdfa32bb, Old Operator: 0, New Operator: 963378036
+     */
+    val wantRight = dir < 963378036
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return null
 

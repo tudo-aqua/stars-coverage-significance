@@ -85,7 +85,12 @@ class AutopilotMutant173 : Mutant() {
    * Whether to prefer a left lane change. If true, the ego vehicle will prefer left lane change. If
    * false, the ego vehicle will prefer a right lane change.
    */
-  var preferLeftLane = true
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 96 Id:
+   * 3ad720d3-4895-4ec1-ba44-0d38ec30b8ec, Old Operator: true, New Operator: false
+   */
+  var preferLeftLane = false
 
   /**
    * The factor for determining if the ego vehicle is stuck. If the gap to the leader is less than

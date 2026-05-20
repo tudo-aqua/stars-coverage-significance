@@ -98,7 +98,12 @@ class AutopilotMutant164 : Mutant() {
    * The speed delta for determining if the ego vehicle is stuck. If the leader is slower than the
    * ego vehicle by this amount, the ego vehicle will consider a lane change.
    */
-  var stuckSpeedDeltaMps = 0.5
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 109 Id:
+   * 0ea477cf-6650-43ba-a35c-a5b3a336b971, Old Operator: 0.5, New Operator: 0.1650331
+   */
+  var stuckSpeedDeltaMps = 0.1650331
 
   /** Weight for the side-lane speed-gain term in lane-change scoring. */
   var sideLeaderWeight = 1.0

@@ -92,7 +92,12 @@ class AutopilotMutant188 : Mutant() {
    * this factor times the desired gap, and the leader is slower than the ego vehicle, the ego
    * vehicle will consider lane change.
    */
-  var stuckGapFactor = 1.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 103 Id:
+   * ad5e7f05-9c48-48ac-bec7-f25278e9c7ef, Old Operator: 1, New Operator: 0.38789833
+   */
+  var stuckGapFactor = 0.38789833
 
   /**
    * The speed delta for determining if the ego vehicle is stuck. If the leader is slower than the

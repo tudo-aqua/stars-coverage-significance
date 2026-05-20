@@ -29,8 +29,14 @@ class AutopilotMutant204 : Mutant() {
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
+
   /** The time headway to the leader in seconds. */
-  var timeHeadwayToLeaderInSeconds = 1.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 41 Id:
+   * e8f8029f-99e0-4cb9-a1fb-d825d2c111c3, Old Operator: 1, New Operator: 0.29774606
+   */
+  var timeHeadwayToLeaderInSeconds = 0.29774606
   /** The minimum gap to the leading vehicle in meters. */
   var minGapToLeadingInMeters = 2.5
 

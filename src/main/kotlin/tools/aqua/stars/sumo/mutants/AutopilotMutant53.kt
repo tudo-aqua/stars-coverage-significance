@@ -154,7 +154,12 @@ class AutopilotMutant53 : Mutant() {
     // Extra safety-ish branch: if too close, bias towards braking
     if (gap < hardBrakeGapFactor * desiredGap) {
       val penalty = absVal(gapError) * 0.3
-      val hardProposal = vLeader - penalty
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 165
+       * Id: 63678848-7271-4831-a4a3-af6ab08c46a4, Old Operator: -, New Operator: +
+       */
+      val hardProposal = vLeader + penalty
       if (hardProposal < vTarget) vTarget = hardProposal
     }
 

@@ -344,7 +344,12 @@ class AutopilotMutant143 : Mutant() {
     val rightOk = right.feasible
 
     if (!leftOk && !rightOk) return null
-    if (leftOk && !rightOk) return left.dir
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 356 Id:
+     * 88e05324-d14d-478a-a2c6-4d66f73ec72a, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (leftOk && rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 
     // both feasible

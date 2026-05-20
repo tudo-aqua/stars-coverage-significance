@@ -393,7 +393,12 @@ class AutopilotMutant216 : Mutant() {
    */
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
     val wantRight = dir < 0
-    val wantLeft = dir > 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 405 Id:
+     * 36df466f-452d-4caa-b038-ceaa97d6543a, Old Operator: 0, New Operator: -1940421028
+     */
+    val wantLeft = dir > -1940421028
     if (!wantLeft && !wantRight) return null
 
     val bitRight = 1

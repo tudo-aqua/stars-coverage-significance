@@ -202,7 +202,12 @@ class AutopilotMutant56 : Mutant() {
 
     // Solve: v*tau + v^2/(2*bEgo) <= sAvail
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
-    val bt = bEgo * tau
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 213 Id:
+     * 7893455d-7170-4826-9949-28f7aeda1b05, Old Operator: *, New Operator: %
+     */
+    val bt = bEgo % tau
     val disc = bt * bt + 2.0 * bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt

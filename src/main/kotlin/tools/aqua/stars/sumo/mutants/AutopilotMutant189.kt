@@ -362,7 +362,12 @@ class AutopilotMutant189 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false // dir == 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 374 Id:
+     * b27c0014-9747-4066-8334-10879b893b32, Old Operator: &&, New Operator: ||
+     */
+    if (!wantLeft || !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)

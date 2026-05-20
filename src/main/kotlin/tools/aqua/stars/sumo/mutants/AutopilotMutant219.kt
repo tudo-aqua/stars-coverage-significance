@@ -361,7 +361,12 @@ class AutopilotMutant219 : Mutant() {
    */
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
-    val wantLeft = dir > 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 373 Id:
+     * 60cc4b51-77c8-46c2-bbf3-1a083789881f, Old Operator: 0, New Operator: -1698163452
+     */
+    val wantLeft = dir > -1698163452
     if (!wantLeft && !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
