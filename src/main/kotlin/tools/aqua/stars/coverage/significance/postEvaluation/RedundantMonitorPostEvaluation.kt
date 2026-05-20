@@ -27,7 +27,7 @@ object RedundantMonitorPostEvaluation {
         Monitors.entries.associateWith { monitor ->
           distinctMutantFailuresFiltered
               .filter { it.monitorBitmask and monitor.mask == monitor.mask }
-              .map { it.tscInstance to it.mutantID }
+              .map { it.currentTSCInstance to it.mutantID }
               .toSet()
         }
 

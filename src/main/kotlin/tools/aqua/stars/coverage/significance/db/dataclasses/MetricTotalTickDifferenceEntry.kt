@@ -25,7 +25,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenc
  *
  * @property id The unique identifier of the entry. This is optional and can be null when inserting
  *   a new entry.
- * @property tscId The unique identifier of the TSC for which the metric is calculated.
  * @property runId The unique identifier of the test run for which the metric is calculated.
  * @property scenarioConfigId The unique identifier of the scenario configuration for which the
  *   metric is calculated.
@@ -35,7 +34,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenc
  */
 data class MetricTotalTickDifferenceEntry(
     val id: UUID? = null,
-    val tscId: UUID,
     val runId: UUID,
     val scenarioConfigId: UUID,
     val mutantId: UUID,

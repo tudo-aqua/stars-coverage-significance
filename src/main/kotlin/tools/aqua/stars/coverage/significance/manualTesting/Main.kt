@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.util.*
+import org.jetbrains.exposed.sql.SortOrder
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
@@ -26,18 +27,15 @@ import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.MIDDLE_ROW
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.Spawn
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
 import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.utils.TSCTikzRenderer
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -50,94 +48,126 @@ import tools.aqua.stars.sumo.mutants.AutopilotMutants
  * evaluation logic or metrics without running the entire evaluation pipeline.
  */
 fun main() {
+  val tscTTC = tsc()
+  val tscTikz = TSCTikzRenderer.render(tscTTC)
+
   DbBootstrap.connect()
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
   val runId = UUID.randomUUID()
-  val tscId = UUID.fromString("7f4faac3-08ad-45d2-ae3f-b1e08f4b77fb")
-  val mutantId = UUID.fromString("3dadcc41-74c0-47f1-b7e2-45ed79c51eee")
-
-  val listOfScenarios =
-      listOf(
-          "ed38d17a-d876-407d-ba96-e0d76dcbbf6d",
+  val mutantIds =
+      setOf(
+          UUID.fromString("e564db3a-0e52-4c1a-b002-b841502c7eec"),
+          //          UUID.fromString("9f39fa7b-c68f-4197-a27e-de7b57fc967b"),
+          //          UUID.fromString("b32511f8-4e4f-48a7-b50d-c66ccd67b475"),
       )
-  listOfScenarios.forEach { scenarioId ->
-    val scenarioId = UUID.fromString(scenarioId)
 
-    val scenario = ScenarioStartingConfigurationRepository.getById(scenarioId)
-    checkNotNull(scenario) {
-      "Scenario with id $scenarioId not found in database. Please make sure to insert a scenario with this id before running the manual testing main function."
-    }
-    val mutantEntry = checkNotNull(MutantsRepository.getById(mutantId))
+  val scenarioIds = db {
+    MetricFailedMonitorsRepository.getAll()
+        .orderBy(MetricFailedMonitorsTable.monitorG0Failed, SortOrder.DESC)
+        .orderBy(MetricFailedMonitorsTable.startingScenarioConfiguration, SortOrder.ASC)
+        .limit(100)
+        .map { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value }
+        .distinct()
+        .toMutableList()
+  }
+  scenarioIds += UUID.fromString("0e9b71df-ad81-4881-aaae-7a00e272f60e")
+
+  //  val scenarioIds = setOf(UUID.fromString("1dc5716f-5f9e-42c6-a11d-75d38c6fcd7b"))
+
+  val tickSequences = mutableListOf<TickSequence<TimeStep>>()
+
+  mutantIds.forEach { mutantId ->
+    val mutantEntry =
+        checkNotNull(MutantsRepository.getById(mutantId)) {
+          "Mutant with id $mutantId not found in database. Please make sure to insert a mutant with this id before running the manual testing main function."
+        }
     val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
 
-    val manualScenario =
-        GeneratedScenario(
-                spawns =
-                    listOf(
-                        Spawn(
-                            row = MIDDLE_ROW,
-                            lane = RIGHT_LANE,
-                            positionMeters = 100.0f,
-                            type = GridVehicleType.EGO),
-                        Spawn(
-                            row = MIDDLE_ROW,
-                            lane = CENTER_LANE,
-                            positionMeters = 100.0f,
-                            type = GridVehicleType.CALM),
-                        Spawn(
-                            row = TOP_ROW,
-                            lane = RIGHT_LANE,
-                            positionMeters = 130.0f,
-                            type = GridVehicleType.CALM),
-                    ))
-            .toScenarioStartingConfigurationEntry(id = UUID.randomUUID())
+    scenarioIds.forEach { scenarioId ->
+      val scenario = ScenarioStartingConfigurationRepository.getById(scenarioId)
+      checkNotNull(scenario) {
+        "Scenario with id $scenarioId not found in database. Please make sure to insert a scenario with this id before running the manual testing main function."
+      }
 
-    val libSumoTicks =
-        libsumoDynamicDataCollector.runGeneratedScenario(
-            runId = runId,
-            scenario = scenario,
-            mutant = mutant,
-            mutantId = mutantId,
-            writeFCDReplayFile = true)
-    val tickSequences = mutableListOf<TickSequence<TimeStep>>()
+      //    val manualScenario =
+      //        GeneratedScenario(
+      //                spawns =
+      //                    listOf(
+      //                        Spawn(
+      //                            row = MIDDLE_ROW,
+      //                            lane = RIGHT_LANE,
+      //                            positionMeters = 100.0f,
+      //                            type = GridVehicleType.EGO),
+      //                        Spawn(
+      //                            row = MIDDLE_ROW,
+      //                            lane = CENTER_LANE,
+      //                            positionMeters = 100.0f,
+      //                            type = GridVehicleType.CALM),
+      //                        Spawn(
+      //                            row = TOP_ROW,
+      //                            lane = RIGHT_LANE,
+      //                            positionMeters = 130.0f,
+      //                            type = GridVehicleType.CALM),
+      //                    ))
+      //            .toScenarioStartingConfigurationEntry(id = UUID.randomUUID())
 
-    tickSequences.add(
-        libSumoTicks.asTickSequence(
-            scenario.humanReadableScenarioId,
-            bufferSize = BUFFER_SIZE,
-            iterationOrder = TickSequence.IterationOrder.BACKWARD,
-            iterationMode = TickSequence.IterationMode.END_FILLED))
+      val libSumoTicks =
+          libsumoDynamicDataCollector.runGeneratedScenario(
+              runId = runId,
+              scenario = scenario,
+              mutant = mutant,
+              mutantId = mutantId,
+              writeFCDReplayFile = true)
+      val ticksUntilFirstAccident = libSumoTicks.takeUntilFirstAccident()
 
-    println(
-        """
+      tickSequences.add(
+          ticksUntilFirstAccident.asTickSequence(
+              scenarioId.toString(),
+              bufferSize = BUFFER_SIZE,
+              iterationOrder = TickSequence.IterationOrder.BACKWARD,
+              iterationMode = TickSequence.IterationMode.END_FILLED))
+    }
+  }
+
+  println(
+      """
     Inside /sumoData/fcdReplay:
     python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k fcdReplay.sumocfg -f fcdReplay.fcd.xml
   """
-            .trimIndent())
-    val staticTsc = tsc()
+          .trimIndent())
 
-    val eval =
-        TSCEvaluation(
-            staticTsc,
-            writePlots = false,
-            writePlotDataCSV = false,
-            writeSerializedResults = false,
-            compareToPreviousRun = false)
+  val staticTsc = tsc()
 
-    eval.clearHooks()
-    eval.registerPreTickEvaluationHooks(
-        MinTicksPerTickSequenceHook(2),
-        MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()))
+  val eval =
+      TSCEvaluation(
+          staticTsc,
+          writePlots = false,
+          writePlotDataCSV = false,
+          writeSerializedResults = false,
+          compareToPreviousRun = false)
 
-    val totalTickDifferenceMetric =
-        TotalTickDifferenceMetric<
-            Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
+  eval.clearHooks()
+  eval.registerPreTickEvaluationHooks(
+      MinTicksPerTickSequenceHook(2),
+      MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()))
 
-    val failedMonitorsMetric = FailedMonitorsMetric(tscId = tscId, writeToDb = false)
+  val totalTickDifferenceMetric =
+      TotalTickDifferenceMetric<
+          Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
 
-    eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
+  //  val failedMonitorsMetric =
+  //      FailedMonitorsPerTickMetric(
+  //          writeToDb = false, writeVehicleStateImages = true, writeVehicleStateVideo = true)
 
-    eval.runEvaluation(tickSequences.asSequence())
-  }
+  val failedMonitorsMetric = FailedMonitorsMetric(writeToDb = false)
+
+  eval.registerMetricProviders(failedMonitorsMetric, totalTickDifferenceMetric)
+
+  eval.runEvaluation(tickSequences.asSequence())
+}
+
+private fun List<TimeStep>.takeUntilFirstAccident(): List<TimeStep> {
+  val firstAccidentIndex = indexOfFirst { it.collisionsInTick.isNotEmpty() }
+  return if (firstAccidentIndex == -1) this else take(firstAccidentIndex + 1)
 }

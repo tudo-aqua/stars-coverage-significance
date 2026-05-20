@@ -36,10 +36,9 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChun
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
-import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tscListToUseInProject
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
@@ -56,7 +55,6 @@ fun main(args: Array<String>) {
   installParentDeathWatcher(args)
   val workerId = CliArgs.requireString(args, "workerId")
   val runId = CliArgs.requireUuid(args, "runId")
-  val tscEntryId = CliArgs.requireUuid(args, "tscEntryId")
 
   DbBootstrap.connect()
 
@@ -68,11 +66,9 @@ fun main(args: Array<String>) {
     checkNotNull(job.jobId) { "No chunk job found for runId=$runId and workerId=$workerId" }
 
     try {
-      val staticTsc = tsc()
-
       val eval =
           TSCEvaluation(
-              staticTsc,
+              tscListToUseInProject,
               writePlots = false,
               writePlotDataCSV = false,
               writeSerializedResults = false,
@@ -86,10 +82,7 @@ fun main(args: Array<String>) {
           TotalTickDifferenceMetric<
               Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
 
-      eval.registerMetricProviders(
-          FirstTSCInstanceChangeMetric(evaluationRunEntryId = runId, tscEntryId = tscEntryId),
-          FailedMonitorsMetric(tscId = tscEntryId),
-          totalTickDifferenceMetric)
+      eval.registerMetricProviders(FailedMonitorsMetric(), totalTickDifferenceMetric)
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
@@ -123,7 +116,6 @@ fun main(args: Array<String>) {
         totalTickDifferences.map { (identifier, tickDifference) ->
           val dbEntry =
               MetricTotalTickDifferenceEntry(
-                  tscId = tscEntryId,
                   mutantId = job.mutantId,
                   runId = runId,
                   scenarioConfigId = UUID.fromString(identifier),
@@ -150,20 +142,14 @@ fun main(args: Array<String>) {
  *
  * @param workerId The ID of the worker.
  * @param evaluationRunId The ID of the evaluation run.
- * @param tscEntryId The ID of the TSC entry.
  * @return The started process.
  */
-fun startEvaluationWorkerProcess(
-    workerId: String,
-    evaluationRunId: UUID,
-    tscEntryId: UUID
-): Process =
+fun startEvaluationWorkerProcess(workerId: String, evaluationRunId: UUID): Process =
     startJavaProcess(
         mainClass = "tools.aqua.stars.coverage.significance.workers.EvaluationWorkerKt",
         args =
             listOf(
                 "--workerId=$workerId",
                 "--runId=$evaluationRunId",
-                "--tscEntryId=$tscEntryId",
                 "--parentPid=${ProcessHandle.current().pid()}",
             ))

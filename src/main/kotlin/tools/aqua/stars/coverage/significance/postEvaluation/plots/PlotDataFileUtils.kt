@@ -26,8 +26,8 @@ import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlotValues
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
 private fun writeCSVFiles(
     metricName: String,
@@ -80,6 +80,7 @@ private fun writeCSVFiles(
   //  extremeOutliersCsvPath.writeText(extremeOutliersCsvString)
 }
 
+/** Writes the CSV files for the given [map] and [selectedMonitors] to the file system. */
 fun writeCSVAndTeXFiles(
     metricName: String,
     map: Map<MutantKillingPostEvaluation.Coverage, PlotData>,
@@ -301,5 +302,12 @@ private fun List<Double>.nTile(n: Double): Double {
   }
 }
 
+/**
+ * Converts the given [Set] of [MonitorViolation]s to a string that can be used as a file name
+ * suffix. The string is formed by sorting the [MonitorViolation]s by their name and joining them
+ * together with an underscore. If the set is empty, the string "none" is returned.
+ *
+ * @return The string representation of the [Set] of [MonitorViolation]s.
+ */
 fun Set<MonitorViolation>.toFileNameSuffix(): String =
     this.sortedBy { it.name }.joinToString(separator = "_") { it.name }.ifBlank { "none" }

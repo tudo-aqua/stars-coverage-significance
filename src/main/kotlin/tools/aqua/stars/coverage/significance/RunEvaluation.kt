@@ -17,13 +17,10 @@
 
 package tools.aqua.stars.coverage.significance
 
-import tools.aqua.stars.core.serialization.tsc.SerializableTSCNode
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
-import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
 
 /**
@@ -41,19 +38,13 @@ fun main(args: Array<String>) {
       EvaluationRunsRepository.getLatest()?.id
           ?: error("No evaluation run found; cannot start evaluation workers.")
 
-  val tscEntryId =
-      TSCsRepository.getByJson(SerializableTSCNode(tsc().rootNode).getJsonString())?.id
-          ?: error("Static TSC not found in database; cannot start evaluation workers.")
-
   val processes: List<NamedProcess> =
       (0 until parallelism).map { idx ->
         NamedProcess(
             name = "worker-$idx",
             process =
                 startEvaluationWorkerProcess(
-                    workerId = "worker-$idx",
-                    evaluationRunId = evaluationRunId,
-                    tscEntryId = tscEntryId))
+                    workerId = "worker-$idx", evaluationRunId = evaluationRunId))
       }
   try {
     ProcessGroupRunner.awaitAll(groupLabel = "evaluation worker", processes = processes)

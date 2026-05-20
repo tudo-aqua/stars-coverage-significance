@@ -28,6 +28,13 @@ import java.util.UUID
  * @property tscId Unique identifier of the TSC.
  * @property mutantId Unique identifier of the mutant.
  * @property scenarioConfigId Unique identifier of the scenario starting configuration.
+ * @property currentTSCInstanceId Unique identifier of the TSC instance at the current tick.
+ * @property lastTickTSCInstanceId Unique identifier of the TSC instance at the last tick.
+ * @property previousTSCInstanceId Unique identifier of the TSC instance that changed to the current
+ *   TSC instance.
+ * @property previousTSCInstanceTick The tick at which the TSC instance changed to the current TSC
+ *   instance.
+ * @property tick The current tick.
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
@@ -43,6 +50,11 @@ data class MetricFailedMonitorsEntry(
     val tscId: UUID,
     val mutantId: UUID,
     val scenarioConfigId: UUID,
+    val currentTSCInstanceId: UUID,
+    val lastTickTSCInstanceId: UUID?,
+    val previousTSCInstanceId: UUID?,
+    val previousTSCInstanceTick: Long?,
+    val tick: Long,
     var monitorG0Failed: Boolean,
     var monitorG1Failed: Boolean,
     var monitorG2Failed: Boolean,

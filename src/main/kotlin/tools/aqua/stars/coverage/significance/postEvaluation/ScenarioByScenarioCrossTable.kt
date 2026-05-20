@@ -43,14 +43,14 @@ object ScenarioByScenarioCrossTable {
           async(Dispatchers.Default) {
             val distinctMutantsKilledByOuterScenario =
                 distinctMutantFailuresFiltered
-                    .filter { it.tscInstance == outerScenarioId }
+                    .filter { it.currentTSCInstance == outerScenarioId }
                     .map { it.mutantID }
                     .toSet()
 
             scenarioIds.forEachIndexed { innerIndex, innerScenarioId ->
               val distinctMutantsKilledByInnerScenario =
                   distinctMutantFailuresFiltered
-                      .filter { it.tscInstance == innerScenarioId }
+                      .filter { it.currentTSCInstance == innerScenarioId }
                       .map { it.mutantID }
                       .toSet()
 

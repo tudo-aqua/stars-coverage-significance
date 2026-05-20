@@ -27,14 +27,14 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselinePostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.LongTailDistributionPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.buildMonitorCombinations
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.buildMonitorCombinations
 
 // region Mutants
 // ----------------------------------------------------------------------------------------------------
-/** All Mutant IDs */
+/** All Mutant IDs. */
 val mutantIds: List<UUID> by lazy { db { MutantsRepository.getAllIds() } }
 
 /** All behavioral distinct Mutant IDs. */
@@ -82,13 +82,21 @@ val longtailDistribution by lazy {
 // ----------------------------------------------------------------------------------------------------
 // endregion
 
+/** Mapping of scenario failures to monitors. */
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
+
+/** All possible combinations of monitors. */
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
+
+/** All scenario IDs. */
 val scenarioIds: List<UUID> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioInstanceId } }
 }
 
+/** The size of the TSC. */
 val TSC_SIZE = tsc().instanceCount.toInt()
+
+/** The number of repetitions of the evaluation. */
 val REPETITIONS: Int = 100
 val TEST_SUITE_SIZE : Int = 160
 
@@ -96,21 +104,23 @@ val TEST_SUITE_SIZE : Int = 160
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
-  /** Populate database with longtail distribution from random highway traffic */
+  LongTailDistributionPostEvaluation.evaluate()
+
+  /** Populate the database with longtail distribution from random highway traffic */
   //  PopulateHighwayTrafficLongTailTable.populate()
 
   /**
    * Baseline comparing TSC approach with purely random draw and draw from generated starting
    * scenarios
    */
-  BaselinePostEvaluation.evaluate()
+  //  BaselinePostEvaluation.evaluate()
 //  BaselinePostEvaluation2.evaluate()
 
   /** Evaluate longtail distribution from random highway traffic */
   //  HighwayTrafficAnalysis.evaluate()
 
   /** Evaluate how many mutants have been killed by different values for scenario coverage. */
-//    MutantKillingPostEvaluation.evaluate()
+  //    MutantKillingPostEvaluation.evaluate()
 
   /** Plot with long-tail and scatter-plot of how many mutants are killed by each monitor * */
   //  MutantsKilledByMonitorsPerScenario.evaluate()

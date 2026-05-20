@@ -100,6 +100,9 @@ object DbBootstrap {
       }
 
       val jdbcUrlBase = "jdbc:postgresql://${cfg.host}:${cfg.port}/${cfg.database}"
+      // Ensure a schema is selected (Postgres requires a schema to create tables in).
+      // Add currentSchema=public to the JDBC URL so Exposed / Postgres will use the public schema
+      // by default.
       val jdbcUrl =
           if (jdbcUrlBase.contains("?")) jdbcUrlBase
           else

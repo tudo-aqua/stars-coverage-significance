@@ -18,5 +18,12 @@
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 import java.util.UUID
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
+/**
+ * Data class for storing a mutant failure.
+ *
+ * @property mutantId Mutant ID.
+ * @property violations Violations.
+ */
 data class MutantFailures(val mutantId: UUID, val violations: List<MonitorViolation>)

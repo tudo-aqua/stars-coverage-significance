@@ -15,18 +15,33 @@
  * limitations under the License.
  */
 
-@file:Suppress("StringLiteralDuplication")
-
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.tsc
 
 import tools.aqua.stars.core.tsc.builder.tsc
+import tools.aqua.stars.coverage.significance.g0Accidents
+import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
+import tools.aqua.stars.coverage.significance.g2EmergencyBraking
+import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
+import tools.aqua.stars.coverage.significance.g4TrafficFlow
+import tools.aqua.stars.coverage.significance.hasVehicleBesidesOnLeftLane
+import tools.aqua.stars.coverage.significance.hasVehicleBesidesOnRightLane
+import tools.aqua.stars.coverage.significance.i1Stopping
+import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
+import tools.aqua.stars.coverage.significance.isOnLeftLane
+import tools.aqua.stars.coverage.significance.isOnMiddleLane
+import tools.aqua.stars.coverage.significance.isOnRightLane
+import tools.aqua.stars.coverage.significance.vehicleOnLeftLaneBehindIsFaster
+import tools.aqua.stars.coverage.significance.vehicleOnLeftLaneInFrontIsSlower
+import tools.aqua.stars.coverage.significance.vehicleOnRightLaneBehindIsFaster
+import tools.aqua.stars.coverage.significance.vehicleOnRightLaneInFrontIsSlower
+import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsSlower
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
 /** TSC for static starting configurations. */
-fun tsc() =
+fun tscWithStaticDistances() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("Small Static TSC") {
       all("Root") {
         monitors {

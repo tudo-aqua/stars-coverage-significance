@@ -21,14 +21,15 @@ import java.util.UUID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.javatime.timestamp
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation.Companion.toMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
 
 /**
- * Table for storing the failed monitors for a mutant in a scenario starting configuration and
+ * Table for storing the failed monitors for a mutant in a scenario starting-configuration and
  * evaluation run.
  *
  * @property tsc TSC.
@@ -69,9 +70,31 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           foreign = MutantsTable,
           onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
           onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+  val currentTSCInstance =
+      reference(
+          name = "current_tsc_instance_id",
+          foreign = TSCInstancesTable,
+          onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+          onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+  val lastTickTSCInstance =
+      reference(
+              name = "last_tsc_instance_id",
+              foreign = TSCInstancesTable,
+              onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+              onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+          .nullable()
+  val previouslyChangedTSCInstance =
+      reference(
+              name = "previously_changed_tsc_instance_id",
+              foreign = TSCInstancesTable,
+              onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE,
+              onUpdate = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+          .nullable()
+  val previouslyChangedTSCInstanceTick = long("previously_changed_tsc_instance_tick").nullable()
+  val tick = long("tick")
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
-  val monitorG2Failed = bool("monitor_g2_emergencybraking_failed").default(false)
+  val monitorG2Failed = bool("monitor_g2_emergencyBraking_failed").default(false)
   val monitorG3Failed = bool("monitor_g3_MaximumSpeedLimit_failed").default(false)
   val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
@@ -79,14 +102,20 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val createdAt = timestamp("created_at")
 
   init {
-    index(true, tsc, run, startingScenarioConfiguration, mutant)
+    index(true, tsc, run, startingScenarioConfiguration, mutant, tick)
 
     index(false, tsc)
     index(false, run)
     index(false, startingScenarioConfiguration)
     index(false, mutant)
+    index(false, tick)
   }
 
+  /**
+   * Builds a mapping of scenario failures for each scenario instance.
+   *
+   * @return Mapping of scenario failures for each scenario instance.
+   */
   fun buildFailedMonitorMapping(): List<ScenarioFailure> {
     val failedMonitors = MetricFailedMonitorsTable
     val joinedWithTSCInstances =
@@ -133,16 +162,17 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
     }
   }
 
+  /**
+   * Builds a mapping of failed mutants for each scenario instance.
+   *
+   * @return Mapping of failed mutants for each scenario instance.
+   */
   fun buildFailedMutantsMapping(): List<MutantFailure> =
-      join(
-              otherTable = MetricStartingValidTSCInstancesTable,
-              onColumn = startingScenarioConfiguration,
-              otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
-              joinType = JoinType.INNER)
-          .select(
-              MetricStartingValidTSCInstancesTable.tscInstance,
+      select(
               startingScenarioConfiguration,
               mutant,
+              tsc,
+              currentTSCInstance,
               monitorG0Failed,
               monitorG1Failed,
               monitorG2Failed,
@@ -151,17 +181,12 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
               monitorI1Failed,
               monitorI2Failed)
           .mapNotNull {
-            val monitorBitmask =
-                (if (it[monitorG0Failed]) 1 else 0) +
-                    (if (it[monitorG1Failed]) 2 else 0) +
-                    (if (it[monitorG2Failed]) 4 else 0) +
-                    (if (it[monitorG3Failed]) 8 else 0) +
-                    (if (it[monitorG4Failed]) 16 else 0) +
-                    (if (it[monitorI1Failed]) 32 else 0) +
-                    (if (it[monitorI2Failed]) 64 else 0)
+            val setOfMonitorViolations = it.toMonitorViolations().toSet()
+            val monitorBitmask = setOfMonitorViolations.toBitmask()
 
             MutantFailure(
-                tscInstance = it[MetricStartingValidTSCInstancesTable.tscInstance].value,
+                tscId = it[tsc].value,
+                currentTSCInstance = it[currentTSCInstance].value,
                 startingScenarioConfigurationID = it[startingScenarioConfiguration].value,
                 mutantID = it[mutant].value,
                 monitorBitmask = monitorBitmask)

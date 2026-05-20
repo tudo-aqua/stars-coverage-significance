@@ -28,17 +28,19 @@ import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
 import tools.aqua.stars.coverage.significance.monitorCombinations
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MonitorViolation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
+/** Post-evaluation for the mutant killing metric. */
 object MutantKillingPostEvaluation {
 
   typealias Coverage = Int
 
+  /** Evaluates the mutant killing metric. */
   fun evaluate() {
     println("Starting MutantKillingPostEvaluation.")
 
