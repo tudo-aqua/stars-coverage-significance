@@ -90,26 +90,19 @@ fun writeCSVAndTeXFiles(
       metricName = metricName,
       fileName = "countOfKilledMutants",
       selectedMonitors,
-      map
-          .map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }
-          .toMap())
+      map.map { it.key to it.value.countOfKilledMutants.getBoxPlotValues() }.toMap())
 
   writeCSVFiles(
       metricName = metricName,
       fileName = "countOfMutantsKilledWithMonitors",
       selectedMonitors,
-    map
-          .map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }
-          .toMap())
+      map.map { it.key to it.value.countOfMutantsKilledWithMonitors.getBoxPlotValues() }.toMap())
 
   writeCSVFiles(
       metricName = metricName,
       fileName = "countOfViolations",
       selectedMonitors,
-    map
-          .map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }
-          .toMap())
-
+      map.map { it.key to it.value.countOfFailedMonitors.getBoxPlotValues() }.toMap())
 
   //  writeTeXFile(metricName = metricName, "countOfKilledMutants", selectedMonitors,
   // numberOfMutants)

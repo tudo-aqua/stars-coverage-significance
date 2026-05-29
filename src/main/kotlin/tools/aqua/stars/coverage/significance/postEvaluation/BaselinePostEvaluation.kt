@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
@@ -28,17 +27,9 @@ import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
 import tools.aqua.stars.coverage.significance.longtailDistribution
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
 object BaselinePostEvaluation {
-
-
-
-
-
-
-
 
   val longtail by lazy {
     longtailDistribution
@@ -46,9 +37,7 @@ object BaselinePostEvaluation {
         .sortedByDescending { it.second }
   }
 
-  val gridInstances by lazy {
-    failedMonitorMapping.flatMap { it.scenarioInstanceFailures }
-  }
+  val gridInstances by lazy { failedMonitorMapping.flatMap { it.scenarioInstanceFailures } }
 
   val sum by lazy { longtail.sumOf { it.second } }
 
@@ -66,34 +55,36 @@ object BaselinePostEvaluation {
 
   private fun evaluateMutantKillingRandom(): Pair<List<Int>, List<Int>> {
     val drawnScenarios =
-      (0 .. REPETITIONS).map {
-        (0..TEST_SUITE_SIZE).map {
-          val randomValue = rnd.nextLong(sum)
+        (0..REPETITIONS).map {
+          (0..TEST_SUITE_SIZE).map {
+            val randomValue = rnd.nextLong(sum)
 
-          val iterator = longtail.iterator()
-          var currentElement = iterator.next()
-          var currentValue = currentElement.second
+            val iterator = longtail.iterator()
+            var currentElement = iterator.next()
+            var currentValue = currentElement.second
 
-          while (currentValue < randomValue && iterator.hasNext()) {
-            currentElement = iterator.next()
-            currentValue += currentElement.second
+            while (currentValue < randomValue && iterator.hasNext()) {
+              currentElement = iterator.next()
+              currentValue += currentElement.second
+            }
+
+            // choose one random instance
+            val randomItem =
+                failedMonitorMapping
+                    .filter { it.scenarioId == currentElement.first }
+                    .flatMap { it.scenarioInstanceFailures }
+                    .random()
+
+            return@map randomItem
           }
-
-          // choose one random instance
-          val randomItem =
-            failedMonitorMapping.filter { it.scenarioId == currentElement.first }
-              .flatMap { it.scenarioInstanceFailures }.random()
-
-          return@map randomItem
         }
-      }
 
     return drawnScenarios.map { evaluateKilling(it) } to
         drawnScenarios.map { evaluateKillingWithMonitors(it) }
   }
 
   private fun evaluateMutantKillingGrid(): Pair<List<Int>, List<Int>> {
-    val drawnScenarios = (0 .. REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
+    val drawnScenarios = (0..REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
 
     return drawnScenarios.map { evaluateKilling(it) } to
         drawnScenarios.map { evaluateKillingWithMonitors(it) }
@@ -101,58 +92,61 @@ object BaselinePostEvaluation {
 
   private fun evaluateKilling(drawnScenarioFailures: List<ScenarioInstanceFailures>): Int {
     val relevantMonitors =
-      drawnScenarioFailures.flatMap { scenarioInstance ->
-        scenarioInstance.mutants.filter { mutant ->
-          mutant.mutantId in distinctMutantIds && mutant.violations.any()
+        drawnScenarioFailures.flatMap { scenarioInstance ->
+          scenarioInstance.mutants.filter { mutant ->
+            mutant.mutantId in distinctMutantIds && mutant.violations.any()
+          }
         }
-      }
 
     val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
 
     return mutantsKilled
   }
 
-  private fun evaluateKillingWithMonitors(drawnScenarioFailures: List<ScenarioInstanceFailures>): Int {
+  private fun evaluateKillingWithMonitors(
+      drawnScenarioFailures: List<ScenarioInstanceFailures>
+  ): Int {
     val relevantMonitors =
-      drawnScenarioFailures.flatMap { scenarioInstance ->
-        scenarioInstance.mutants.filter { mutant ->
-          mutant.mutantId in distinctMutantIds && mutant.violations.any()
+        drawnScenarioFailures.flatMap { scenarioInstance ->
+          scenarioInstance.mutants.filter { mutant ->
+            mutant.mutantId in distinctMutantIds && mutant.violations.any()
+          }
         }
-      }
 
     val mutantsKilled = relevantMonitors.map { it.mutantId to it.violations }.toSet().count()
 
     return mutantsKilled
   }
 
-  private fun save(
-    values: Pair<List<Int>, List<Int>>,
-    identifier: String
-  ) {
-      val csvFileName = "baseline_${identifier}.csv"
-      val path: Path =
-          Path.of(
-              POST_EVALUATION_BASE_DIR,
-              "baseline",
-              csvFileName,
-          )
-      Files.createDirectories(path.parent)
+  private fun save(values: Pair<List<Int>, List<Int>>, identifier: String) {
+    val csvFileName = "baseline_${identifier}.csv"
+    val path: Path =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "baseline",
+            csvFileName,
+        )
+    Files.createDirectories(path.parent)
 
-      path.writeText(
-          values.first.joinToString(
-              prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") { it.toString() })
+    path.writeText(
+        values.first.joinToString(
+            prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
+              it.toString()
+            })
 
-      val csvFileNameWithMonitors = "baseline_with_monitors_${identifier}.csv"
-      val pathWithMonitors: Path =
-          Path.of(
-              POST_EVALUATION_BASE_DIR,
-              "baseline_with_monitors",
-              csvFileNameWithMonitors,
-          )
-      Files.createDirectories(pathWithMonitors.parent)
+    val csvFileNameWithMonitors = "baseline_with_monitors_${identifier}.csv"
+    val pathWithMonitors: Path =
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "baseline_with_monitors",
+            csvFileNameWithMonitors,
+        )
+    Files.createDirectories(pathWithMonitors.parent)
 
-      pathWithMonitors.writeText(
-          values.second.joinToString(
-              prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") { it.toString() })
+    pathWithMonitors.writeText(
+        values.second.joinToString(
+            prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
+              it.toString()
+            })
   }
 }

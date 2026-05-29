@@ -98,7 +98,7 @@ val TSC_SIZE = tsc().instanceCount.toInt()
 
 /** The number of repetitions of the evaluation. */
 val REPETITIONS: Int = 100
-val TEST_SUITE_SIZE : Int = 160
+val TEST_SUITE_SIZE: Int = 160
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
@@ -114,7 +114,7 @@ fun main() {
    * scenarios
    */
   //  BaselinePostEvaluation.evaluate()
-//  BaselinePostEvaluation2.evaluate()
+  //  BaselinePostEvaluation2.evaluate()
 
   /** Evaluate longtail distribution from random highway traffic */
   //  HighwayTrafficAnalysis.evaluate()

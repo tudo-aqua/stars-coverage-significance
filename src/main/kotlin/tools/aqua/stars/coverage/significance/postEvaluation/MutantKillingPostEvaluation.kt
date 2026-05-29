@@ -27,11 +27,9 @@ import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
-import tools.aqua.stars.coverage.significance.monitorCombinations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
-import tools.aqua.stars.coverage.significance.postEvaluation.plots.toFileNameSuffix
 import tools.aqua.stars.coverage.significance.postEvaluation.plots.writeCSVAndTeXFiles
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
@@ -44,12 +42,16 @@ object MutantKillingPostEvaluation {
   fun evaluate() {
     println("Starting MutantKillingPostEvaluation.")
 
-
     createPlotData(
         scenarioFailures = failedMonitorMapping,
-        selectedMonitors = setOf(MonitorViolation.G0Accidents, MonitorViolation.G1SafeDistance, MonitorViolation.G2EmergencyBraking, MonitorViolation.G4TrafficFlow, MonitorViolation.I2FasterThanLeftTraffic),
+        selectedMonitors =
+            setOf(
+                MonitorViolation.G0Accidents,
+                MonitorViolation.G1SafeDistance,
+                MonitorViolation.G2EmergencyBraking,
+                MonitorViolation.G4TrafficFlow,
+                MonitorViolation.I2FasterThanLeftTraffic),
         baseSeed = 42L)
-
 
     println("Finished MutantKillingPostEvaluation.")
   }
@@ -79,7 +81,7 @@ object MutantKillingPostEvaluation {
                       selectedMonitors = selectedMonitors,
                       seed = baseSeed * 10_000 + coverage)
 
-                plotData[coverage] = values
+              plotData[coverage] = values
             }
           }
           .awaitAll()
@@ -109,19 +111,23 @@ object MutantKillingPostEvaluation {
       val repetitionScenarioIds = allScenarios.shuffled(rng).take(coverage)
 
       // Filter all failures for the selected
-      val drawnScenarios = scenarioFailures.filter { it.scenarioId in repetitionScenarioIds }.map { it.scenarioInstanceFailures.shuffled(rng).toMutableList() }
+      val drawnScenarios =
+          scenarioFailures
+              .filter { it.scenarioId in repetitionScenarioIds }
+              .map { it.scenarioInstanceFailures.shuffled(rng).toMutableList() }
 
       // From each scenarioID draw one random instance
-//      val drawnScenarioInstances = drawnScenarios.map { it.scenarioInstanceFailures.random(rng) }
-      val testSuite = mutableListOf< ScenarioInstanceFailures>()
-      for (i in 0 .. TEST_SUITE_SIZE) {
+      //      val drawnScenarioInstances = drawnScenarios.map {
+      // it.scenarioInstanceFailures.random(rng) }
+      val testSuite = mutableListOf<ScenarioInstanceFailures>()
+      for (i in 0..TEST_SUITE_SIZE) {
         val drawnScenario = drawnScenarios[i % drawnScenarios.size].removeFirst()
         drawnScenarios[i % drawnScenarios.size] += drawnScenario
         testSuite += drawnScenario
       }
 
       val relevantMonitors =
-        testSuite.flatMap { scenarioInstance ->
+          testSuite.flatMap { scenarioInstance ->
             scenarioInstance.mutants.filter { mutant ->
               mutant.mutantId in distinctMutantIds &&
                   mutant.violations.any { it in selectedMonitors }
@@ -134,7 +140,6 @@ object MutantKillingPostEvaluation {
       val monitorsFailed = relevantMonitors.flatMap { it.violations }.count()
       val distinctMonitorsFailed = relevantMonitors.flatMap { it.violations }.toSet().count()
 
-
       countOfKilledMutants[repetition] = mutantsKilled
       countOfMutantsKilledWithMonitors[repetition] = mutantsKilledWithMonitors
       countOfFailedMonitors[repetition] = monitorsFailed
@@ -142,9 +147,9 @@ object MutantKillingPostEvaluation {
     }
 
     return PlotData(
-          countOfKilledMutants = countOfKilledMutants,
-          countOfMutantsKilledWithMonitors = countOfMutantsKilledWithMonitors,
-          countOfFailedMonitors = countOfFailedMonitors,
-          countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
+        countOfKilledMutants = countOfKilledMutants,
+        countOfMutantsKilledWithMonitors = countOfMutantsKilledWithMonitors,
+        countOfFailedMonitors = countOfFailedMonitors,
+        countOfDistinctMonitorsFailed = countOfDistinctMonitorsFailed)
   }
 }
