@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant18 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant18 : Mutant() {
@@ -148,12 +149,7 @@ class AutopilotMutant18 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
-     * 6fdcbcfd-6876-42ea-87f0-230368bfedf9, Old Operator: *, New Operator: %
-     */
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain % relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -367,7 +363,16 @@ class AutopilotMutant18 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false // dir == 0
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 373
+            Id: 6dbdfad1-a3ed-4fb5-a2a1-a3f7ec3b1b61,
+            Old Operator: !,
+            New Operator: RemoveOperator
+            */
+    if (!wantLeft && wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)

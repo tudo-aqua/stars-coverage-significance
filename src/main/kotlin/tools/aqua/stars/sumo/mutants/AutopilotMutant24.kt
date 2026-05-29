@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant24 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant24 : Mutant() {
@@ -132,12 +133,7 @@ class AutopilotMutant24 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 143
-       * Id: 9a3816ee-58f4-4dff-a938-b20403b647b2, Old Operator: *, New Operator: %
-       */
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds % vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -311,7 +307,16 @@ class AutopilotMutant24 : Mutant() {
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 317
+            Id: acc8781c-4388-4858-b96a-41085466af33,
+            Old Operator: !,
+            New Operator: RemoveOperator
+            */
+    if (!wantLeft && wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)
     val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)

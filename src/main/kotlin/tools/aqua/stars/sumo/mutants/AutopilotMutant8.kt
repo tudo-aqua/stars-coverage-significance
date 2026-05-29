@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant8 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant8 : Mutant() {
@@ -148,12 +149,7 @@ class AutopilotMutant8 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
-     * 2d190fd8-fc7c-4b2b-8f10-8529e26ae885, Old Operator: +, New Operator: %
-     */
-    val followProposal = vLeader % gapGain * gapError + relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -218,7 +214,16 @@ class AutopilotMutant8 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 224
+            Id: f3dcb38d-b9ae-4b31-aeb3-d11f1d82ef5a,
+            Old Operator: -,
+            New Operator: RemoveOperator
+            */
+    val dvMaxDown = maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted

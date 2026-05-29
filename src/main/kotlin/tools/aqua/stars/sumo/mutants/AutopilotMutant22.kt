@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant22 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant22 : Mutant() {
@@ -148,12 +149,7 @@ class AutopilotMutant22 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
-     * 94c29f6e-9c35-49ba-be6b-5229a4f4aada, Old Operator: +, New Operator: /
-     */
-    val followProposal = vLeader / gapGain * gapError + relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -338,7 +334,16 @@ class AutopilotMutant22 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      if (tooCloseBehind && tooCloseAhead) return false
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: LogicalReplacementOperator
+            Line number: 344
+            Id: 9f688717-c332-48e0-adc5-05e62262f408,
+            Old Operator: &&,
+            New Operator: ||
+            */
+      if (tooCloseBehind || tooCloseAhead) return false
     }
 
     return true

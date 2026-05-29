@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant30 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant30 : Mutant() {
@@ -141,11 +142,7 @@ class AutopilotMutant30 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 152 Id:
-     * c13b1a34-80f3-44be-886d-9f8440cc6449, Old Operator: -, New Operator: +
-     */
-    val gapError = gap + desiredGap
+    val gapError = gap - desiredGap
     val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
@@ -348,7 +345,16 @@ class AutopilotMutant30 : Mutant() {
     val rightOk = right.feasible
 
     if (!leftOk && !rightOk) return null
-    if (leftOk && !rightOk) return left.dir
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 355
+            Id: fac97ffe-07e0-4297-8d7a-10cd4ac344ed,
+            Old Operator: !,
+            New Operator: RemoveOperator
+            */
+    if (leftOk && rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 
     // both feasible

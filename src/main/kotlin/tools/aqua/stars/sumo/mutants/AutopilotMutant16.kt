@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant16 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant16 : Mutant() {
@@ -132,12 +133,7 @@ class AutopilotMutant16 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 143
-       * Id: 65f132bf-0426-4568-b1fa-db89ec779e8a, Old Operator: +, New Operator: *
-       */
-      minGapToLeadingInMeters * timeHeadwayToLeaderInSeconds * vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -350,7 +346,16 @@ class AutopilotMutant16 : Mutant() {
 
     if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
-    if (!leftOk && rightOk) return right.dir
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 356
+            Id: 5040a467-7240-4cb8-97f8-61d60886a5c3,
+            Old Operator: !,
+            New Operator: RemoveOperator
+            */
+    if (leftOk && rightOk) return right.dir
 
     // both feasible
     return if (left.score > right.score) left.dir

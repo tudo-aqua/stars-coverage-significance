@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant26 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant26 : Mutant() {
@@ -132,12 +133,7 @@ class AutopilotMutant26 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 143
-       * Id: a508005b-1c4b-47ae-b163-56c82c7587bc, Old Operator: *, New Operator: /
-       */
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds / vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -263,7 +259,16 @@ class AutopilotMutant26 : Mutant() {
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
-    return tooClose && leaderSlower
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: LogicalReplacementOperator
+            Line number: 269
+            Id: c72adbcb-4725-41c2-922a-c6c2b12bf271,
+            Old Operator: &&,
+            New Operator: ||
+            */
+    return tooClose || leaderSlower
   }
 
   private data class LaneEval(val dir: Int, val feasible: Boolean, val score: Double)

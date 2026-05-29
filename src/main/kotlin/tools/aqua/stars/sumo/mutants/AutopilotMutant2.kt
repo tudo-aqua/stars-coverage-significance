@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant2 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant2 : Mutant() {
@@ -148,12 +149,7 @@ class AutopilotMutant2 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
-     * 041c5b44-4da0-416f-bb70-1260f319c2ed, Old Operator: +, New Operator: -
-     */
-    val followProposal = vLeader + gapGain * gapError - relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -227,7 +223,16 @@ class AutopilotMutant2 : Mutant() {
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
-  private fun absVal(x: Double): Double = if (x < 0.0) -x else x
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 233
+            Id: 39d8e650-b686-49b5-9a42-f88d1cffdd78,
+            Old Operator: -,
+            New Operator: RemoveOperator
+            */
+  private fun absVal(x: Double): Double = if (x < 0.0) x else x
 
   // -------------------- Lane change --------------------
   private fun maybeLaneChange(

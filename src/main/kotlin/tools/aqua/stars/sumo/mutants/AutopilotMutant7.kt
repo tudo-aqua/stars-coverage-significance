@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant7 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant7 : Mutant() {
@@ -108,7 +109,16 @@ class AutopilotMutant7 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  private var lastLaneChangeSimTimeInSeconds = -1e9
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 119
+            Id: ce261611-2c67-4a00-8fb4-d407f7653526,
+            Old Operator: -,
+            New Operator: RemoveOperator
+            */
+  private var lastLaneChangeSimTimeInSeconds = 1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String) {
@@ -142,12 +152,7 @@ class AutopilotMutant7 : Mutant() {
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
     val gapError = gap - desiredGap
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 153 Id:
-     * 28862b82-5b75-422c-95c1-edcb407cde62, Old Operator: -, New Operator: +
-     */
-    val relSpeed = vLeader + vEgo
+    val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
     var vTarget = cruiseSpeedInMps

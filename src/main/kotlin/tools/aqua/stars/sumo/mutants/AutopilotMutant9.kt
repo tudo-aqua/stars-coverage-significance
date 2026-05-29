@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant9 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant9 : Mutant() {
@@ -142,12 +143,7 @@ class AutopilotMutant9 : Mutant() {
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
     val gapError = gap - desiredGap
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 153 Id:
-     * 320aa406-c610-4fd0-940d-c2348314f944, Old Operator: -, New Operator: /
-     */
-    val relSpeed = vLeader / vEgo
+    val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
     var vTarget = cruiseSpeedInMps
@@ -367,7 +363,16 @@ class AutopilotMutant9 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false // dir == 0
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: LogicalReplacementOperator
+            Line number: 373
+            Id: 08e94215-5581-400f-949a-1e92362ffcb0,
+            Old Operator: &&,
+            New Operator: ||
+            */
+    if (!wantLeft || !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)

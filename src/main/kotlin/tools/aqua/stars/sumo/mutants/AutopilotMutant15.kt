@@ -17,11 +17,12 @@
 
 package tools.aqua.stars.sumo.mutants
 
+import tools.aqua.stars.sumo.Mutant
+
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant15 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant15 : Mutant() {
@@ -148,12 +149,7 @@ class AutopilotMutant15 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 159 Id:
-     * 5df2a4ba-d039-4a69-842c-c2a4ef615fba, Old Operator: *, New Operator: /
-     */
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain / relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -330,7 +326,16 @@ class AutopilotMutant15 : Mutant() {
             otherLaneIndex > egoLaneIndex
           }
 
-      if (!isOnChosenSide) continue
+
+            /**
+            AUTO GENERATED COMMENT
+            Mutation Operator: UnaryRemovalOperator
+            Line number: 336
+            Id: 4616f8e1-0177-4345-9890-1f77d3796e74,
+            Old Operator: !,
+            New Operator: RemoveOperator
+            */
+      if (isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos
