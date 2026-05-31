@@ -26,6 +26,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantF
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
+import org.jetbrains.exposed.sql.statements.StatementType
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
@@ -202,58 +204,67 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
    * - the union of all monitors that failed from the scenario start up to (and including) the first
    *   TSC instance change, or across the entire observation window when no change occurred.
    *
-   * The result is computed with a single table scan; grouping and accumulation are performed
-   * in-memory.
+   * All aggregation (MIN, BOOL_OR) is delegated to the database via a single CTE query so that
+   * only one result row per pair is transferred to the application.
    *
    * @return One [TSCInstanceChangeData] per distinct (mutant, scenarioConfiguration) pair.
    */
   fun buildTSCInstanceChangeData(): List<TSCInstanceChangeData> {
-    data class RowData(
-        val mutantId: UUID,
-        val scenarioConfigId: UUID,
-        val tick: Long,
-        val previouslyChangedTick: Long?,
-        val violations: Set<MonitorViolation>,
-    )
+    // Column names as stored in PostgreSQL (double-quoted to preserve the mixed-case names that
+    // Exposed uses when generating the DDL).
+    val sql =
+        """
+        WITH first_change AS (
+            SELECT
+                "mutant_id",
+                "scenario_config_id",
+                MIN("tick")                                  AS start_tick,
+                MIN("previously_changed_tsc_instance_tick") AS first_change_tick
+            FROM metric_failed_monitors
+            GROUP BY "mutant_id", "scenario_config_id"
+        )
+        SELECT
+            f."mutant_id",
+            f."scenario_config_id",
+            (fc.first_change_tick - fc.start_tick)                             AS millis_until_change,
+            BOOL_OR(f."monitor_g0_Accidents_failed")                           AS g0,
+            BOOL_OR(f."monitor_g1_SafeDistanceToPrecedingVehicle_failed")      AS g1,
+            BOOL_OR(f."monitor_g2_emergencyBraking_failed")                    AS g2,
+            BOOL_OR(f."monitor_g3_MaximumSpeedLimit_failed")                   AS g3,
+            BOOL_OR(f."monitor_g4_TrafficFlow_failed")                         AS g4,
+            BOOL_OR(f."monitor_i1_Stopping_failed")                            AS i1,
+            BOOL_OR(f."monitor_i2_DrivingFasterThenLeftTraffic_failed")        AS i2
+        FROM metric_failed_monitors f
+        JOIN first_change fc
+            ON  f."mutant_id"         = fc."mutant_id"
+            AND f."scenario_config_id" = fc."scenario_config_id"
+            AND (fc.first_change_tick IS NULL OR f."tick" <= fc.first_change_tick)
+        GROUP BY f."mutant_id", f."scenario_config_id", fc.first_change_tick, fc.start_tick
+        """.trimIndent()
 
-    val rows =
-        select(
-                mutant,
-                startingScenarioConfiguration,
-                tick,
-                previouslyChangedTSCInstanceTick,
-                monitorG0Failed,
-                monitorG1Failed,
-                monitorG2Failed,
-                monitorG3Failed,
-                monitorG4Failed,
-                monitorI1Failed,
-                monitorI2Failed)
-            .map { row ->
-              RowData(
-                  mutantId = row[mutant].value,
-                  scenarioConfigId = row[startingScenarioConfiguration].value,
-                  tick = row[tick],
-                  previouslyChangedTick = row[previouslyChangedTSCInstanceTick],
-                  violations = row.toMonitorViolations().toSet())
-            }
-
-    return rows
-        .groupBy { it.mutantId to it.scenarioConfigId }
-        .map { (key, groupRows) ->
-          val (mutantId, scenarioConfigId) = key
-          val startTick = groupRows.minOf { it.tick }
-          val firstChangeTick = groupRows.mapNotNull { it.previouslyChangedTick }.minOrNull()
-
-          TSCInstanceChangeData(
-              mutantId = mutantId,
-              scenarioConfigId = scenarioConfigId,
-              millisUntilFirstChange = firstChangeTick?.let { it - startTick },
-              failedMonitorsUntilChange =
-                  groupRows
-                      .filter { firstChangeTick == null || it.tick <= firstChangeTick }
-                      .flatMap { it.violations }
-                      .toSet())
-        }
+    return TransactionManager.current()
+        .exec(sql, explicitStatementType = StatementType.SELECT) { rs ->
+          val result = mutableListOf<TSCInstanceChangeData>()
+          while (rs.next()) {
+            val rawMillis = rs.getLong("millis_until_change")
+            val millisUntilChange = if (rs.wasNull()) null else rawMillis
+            result.add(
+                TSCInstanceChangeData(
+                    mutantId = rs.getObject("mutant_id", UUID::class.java),
+                    scenarioConfigId = rs.getObject("scenario_config_id", UUID::class.java),
+                    millisUntilFirstChange = millisUntilChange,
+                    failedMonitorsUntilChange =
+                        buildSet {
+                          if (rs.getBoolean("g0")) add(MonitorViolation.G0Accidents)
+                          if (rs.getBoolean("g1")) add(MonitorViolation.G1SafeDistance)
+                          if (rs.getBoolean("g2")) add(MonitorViolation.G2EmergencyBraking)
+                          if (rs.getBoolean("g3")) add(MonitorViolation.G3MaximumSpeedLimit)
+                          if (rs.getBoolean("g4")) add(MonitorViolation.G4TrafficFlow)
+                          if (rs.getBoolean("i1")) add(MonitorViolation.I1Stopping)
+                          if (rs.getBoolean("i2")) add(MonitorViolation.I2FasterThanLeftTraffic)
+                        }))
+          }
+          result
+        } ?: emptyList()
   }
 }
