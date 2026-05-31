@@ -56,6 +56,11 @@ object TSCInstanceChangeAnalysis {
     println("  Mean:   $mean")
     println("  Median: $median")
     println("  StdDev: $stddev")
+    println("")
+
+    val sortedData = data.sortedBy { it.millisUntilFirstChange }
+    sortedData.take(10).forEach { println(it) }
+    sortedData.takeLast(10).forEach { println(it) }
 
     println("Finished TSCInstanceChangeAnalysis.")
   }
