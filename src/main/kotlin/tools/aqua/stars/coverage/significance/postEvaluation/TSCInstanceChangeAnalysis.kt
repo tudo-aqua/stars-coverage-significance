@@ -59,9 +59,8 @@ object TSCInstanceChangeAnalysis {
 
     val sortedData =
         data.filter { it.millisUntilFirstChange != null }.sortedBy { it.millisUntilFirstChange }
-    sortedData.take(10).forEach { println(it) }
-    data.minus(sortedData).take(10).forEach { println(it) }
-    sortedData.takeLast(10).forEach { println(it) }
+    sortedData.take(5).forEach { println(it) }
+    sortedData.takeLast(5).forEach { println(it) }
 
     println("Finished TSCInstanceChangeAnalysis.")
   }
