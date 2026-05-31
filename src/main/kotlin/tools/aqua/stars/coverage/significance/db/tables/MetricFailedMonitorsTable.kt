@@ -234,7 +234,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
         SELECT
             f."mutant_id",
             f."scenario_config_id",
-            (fc.first_change_tick - fc.start_tick)                             AS millis_until_change,
+            fc.first_change_tick                             AS millis_until_change,
             BOOL_OR(f."monitor_g0_Accidents_failed")                           AS g0,
             BOOL_OR(f."monitor_g1_SafeDistanceToPrecedingVehicle_failed")      AS g1,
             BOOL_OR(f."monitor_g2_emergencyBraking_failed")                    AS g2,
