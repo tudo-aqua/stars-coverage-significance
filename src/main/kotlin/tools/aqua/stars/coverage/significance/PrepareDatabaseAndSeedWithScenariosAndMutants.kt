@@ -32,14 +32,13 @@ import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
-import tools.aqua.stars.coverage.significance.tsc.tscWithoutCriticalSituations
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
 import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
-val tscListToUseInProject = listOf(tsc(), tscWithoutCriticalSituations())
+val tscListToUseInProject = listOf(tsc())
 
 /** Seed and precompute necessary data for coverage significance evaluation. */
 fun main() {
@@ -53,9 +52,15 @@ fun main() {
 
   // Seed scenarios
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
+//  seedGridTrafficScenarios(
+//      seed = SEED,
+//      insertIntoDatabase = true,
+//      onlyInsertFromListOfReadableIds =
+//          listOf(
+//              "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
 
   // Seed mutants
-  seedMutants(seedBaseLine = true, seedMutants = true)
+  seedMutants(seedBaseLine = false, seedMutants = true)
 
   // Precompute scenario-only metric once
   //  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2, tscId = tscId)
@@ -91,6 +96,7 @@ private fun seedMutants(
   }
   if (seedMutants) {
     mutantIds += MutantGenerator.seed()
+//    mutantIds += MutantGenerator.seed(onlyInsertMutantsWithMutantNumber = listOf(19))
   }
 
   println("Finished seeding mutants. Total mutants in database: ${mutantIds.size}")
