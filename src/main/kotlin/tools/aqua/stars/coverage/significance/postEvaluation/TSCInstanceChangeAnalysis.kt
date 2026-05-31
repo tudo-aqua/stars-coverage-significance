@@ -33,7 +33,7 @@ object TSCInstanceChangeAnalysis {
     val withChange = times.size
     val withoutChange = data.size - withChange
     println(
-        "Entries: ${data.size} total — $withChange with TSC instance change, $withoutChange without.")
+        "Entries: ${data.size} total - $withChange with TSC instance change, $withoutChange without.")
 
     if (times.isEmpty()) {
       println("No TSC instance changes observed; statistics unavailable.")

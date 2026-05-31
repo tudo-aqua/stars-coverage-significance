@@ -28,9 +28,12 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
+import tools.aqua.stars.coverage.significance.utils.getJsonString
 
 /**
  * Table for storing the failed monitors for a mutant in a scenario starting-configuration and
@@ -209,7 +212,11 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
    *
    * @return One [TSCInstanceChangeData] per distinct (mutant, scenarioConfiguration) pair.
    */
-  fun buildTSCInstanceChangeData(): List<TSCInstanceChangeData> {
+  fun buildTSCInstanceChangeData(tsc: TSC<*, *, *, *>): List<TSCInstanceChangeData> {
+    val tscEntryId = TSCsRepository.getByJson(tsc.getJsonString())?.id
+
+    checkNotNull(tscEntryId) { "TSC entry not found for TSC: $tsc" }
+
     // Column names as stored in PostgreSQL (double-quoted to preserve the mixed-case names that
     // Exposed uses when generating the DDL).
     val sql =
@@ -220,6 +227,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
                 "scenario_config_id",
                 MIN("tick")                                  AS start_tick,
                 MIN("previously_changed_tsc_instance_tick") AS first_change_tick
+            WHERE "tsc_id" = $tscEntryId"
             FROM metric_failed_monitors
             GROUP BY "mutant_id", "scenario_config_id"
         )

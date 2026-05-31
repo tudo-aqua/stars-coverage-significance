@@ -89,7 +89,7 @@ val longtailDistribution by lazy {
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
 
 /** Per-(mutant, scenarioConfiguration) TSC instance change times and accumulated monitor failures. */
-val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy { db { buildTSCInstanceChangeData() } }
+val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy { db { buildTSCInstanceChangeData(tsc()) } }
 
 /** All possible combinations of monitors. */
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
