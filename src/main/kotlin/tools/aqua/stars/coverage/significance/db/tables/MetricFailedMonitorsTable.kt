@@ -25,6 +25,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantF
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
+import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
 
@@ -192,4 +194,66 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
                 monitorBitmask = monitorBitmask)
           }
           .toList()
+
+  /**
+   * For each (mutant, scenarioConfiguration) pair, returns:
+   * - the elapsed milliseconds from the scenario start until the TSC instance first changed, or
+   *   null if no change was observed;
+   * - the union of all monitors that failed from the scenario start up to (and including) the first
+   *   TSC instance change, or across the entire observation window when no change occurred.
+   *
+   * The result is computed with a single table scan; grouping and accumulation are performed
+   * in-memory.
+   *
+   * @return One [TSCInstanceChangeData] per distinct (mutant, scenarioConfiguration) pair.
+   */
+  fun buildTSCInstanceChangeData(): List<TSCInstanceChangeData> {
+    data class RowData(
+        val mutantId: UUID,
+        val scenarioConfigId: UUID,
+        val tick: Long,
+        val previouslyChangedTick: Long?,
+        val violations: Set<MonitorViolation>,
+    )
+
+    val rows =
+        select(
+                mutant,
+                startingScenarioConfiguration,
+                tick,
+                previouslyChangedTSCInstanceTick,
+                monitorG0Failed,
+                monitorG1Failed,
+                monitorG2Failed,
+                monitorG3Failed,
+                monitorG4Failed,
+                monitorI1Failed,
+                monitorI2Failed)
+            .map { row ->
+              RowData(
+                  mutantId = row[mutant].value,
+                  scenarioConfigId = row[startingScenarioConfiguration].value,
+                  tick = row[tick],
+                  previouslyChangedTick = row[previouslyChangedTSCInstanceTick],
+                  violations = row.toMonitorViolations().toSet())
+            }
+
+    return rows
+        .groupBy { it.mutantId to it.scenarioConfigId }
+        .map { (key, groupRows) ->
+          val (mutantId, scenarioConfigId) = key
+          val startTick = groupRows.minOf { it.tick }
+          val firstChangeTick = groupRows.mapNotNull { it.previouslyChangedTick }.minOrNull()
+
+          TSCInstanceChangeData(
+              mutantId = mutantId,
+              scenarioConfigId = scenarioConfigId,
+              millisUntilFirstChange = firstChangeTick?.let { it - startTick },
+              failedMonitorsUntilChange =
+                  groupRows
+                      .filter { firstChangeTick == null || it.tick <= firstChangeTick }
+                      .flatMap { it.violations }
+                      .toSet())
+        }
+  }
 }
