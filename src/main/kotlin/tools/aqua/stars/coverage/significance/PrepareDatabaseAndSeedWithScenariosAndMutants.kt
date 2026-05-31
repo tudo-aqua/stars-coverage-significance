@@ -52,12 +52,13 @@ fun main() {
 
   // Seed scenarios
   seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
-//  seedGridTrafficScenarios(
-//      seed = SEED,
-//      insertIntoDatabase = true,
-//      onlyInsertFromListOfReadableIds =
-//          listOf(
-//              "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
+  //  seedGridTrafficScenarios(
+  //      seed = SEED,
+  //      insertIntoDatabase = true,
+  //      onlyInsertFromListOfReadableIds =
+  //          listOf(
+  //
+  // "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
 
   // Seed mutants
   seedMutants(seedBaseLine = false, seedMutants = true)
@@ -96,7 +97,7 @@ private fun seedMutants(
   }
   if (seedMutants) {
     mutantIds += MutantGenerator.seed()
-//    mutantIds += MutantGenerator.seed(onlyInsertMutantsWithMutantNumber = listOf(19))
+    //    mutantIds += MutantGenerator.seed(onlyInsertMutantsWithMutantNumber = listOf(19))
   }
 
   println("Finished seeding mutants. Total mutants in database: ${mutantIds.size}")
