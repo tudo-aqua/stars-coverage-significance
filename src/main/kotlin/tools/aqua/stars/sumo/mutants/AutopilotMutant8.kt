@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant8 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant8 : Mutant() {
@@ -215,14 +214,10 @@ class AutopilotMutant8 : Mutant() {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
 
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: UnaryRemovalOperator
-            Line number: 224
-            Id: f3dcb38d-b9ae-4b31-aeb3-d11f1d82ef5a,
-            Old Operator: -,
-            New Operator: RemoveOperator
-            */
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 224 Id:
+     * f3dcb38d-b9ae-4b31-aeb3-d11f1d82ef5a, Old Operator: -, New Operator: RemoveOperator
+     */
     val dvMaxDown = maxDecelerationInMps2 * dt
 
     val dvApplied =

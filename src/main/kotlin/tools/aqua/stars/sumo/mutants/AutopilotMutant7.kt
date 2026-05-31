@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant7 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant7 : Mutant() {
@@ -109,15 +108,10 @@ class AutopilotMutant7 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: UnaryRemovalOperator
-            Line number: 119
-            Id: ce261611-2c67-4a00-8fb4-d407f7653526,
-            Old Operator: -,
-            New Operator: RemoveOperator
-            */
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 119 Id:
+   * ce261611-2c67-4a00-8fb4-d407f7653526, Old Operator: -, New Operator: RemoveOperator
+   */
   private var lastLaneChangeSimTimeInSeconds = 1e9
 
   // -------------------- Public tick --------------------

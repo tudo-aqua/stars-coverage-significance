@@ -21,15 +21,15 @@ import java.util.UUID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.statements.StatementType
+import org.jetbrains.exposed.sql.transactions.TransactionManager
+import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
-import org.jetbrains.exposed.sql.statements.StatementType
-import org.jetbrains.exposed.sql.transactions.TransactionManager
-import tools.aqua.stars.core.tsc.TSC
-import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
@@ -207,8 +207,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
    * - the union of all monitors that failed from the scenario start up to (and including) the first
    *   TSC instance change, or across the entire observation window when no change occurred.
    *
-   * All aggregation (MIN, BOOL_OR) is delegated to the database via a single CTE query so that
-   * only one result row per pair is transferred to the application.
+   * All aggregation (MIN, BOOL_OR) is delegated to the database via a single CTE query so that only
+   * one result row per pair is transferred to the application.
    *
    * @return One [TSCInstanceChangeData] per distinct (mutant, scenarioConfiguration) pair.
    */
@@ -248,31 +248,32 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
             AND f."scenario_config_id" = fc."scenario_config_id"
             AND (fc.first_change_tick IS NULL OR f."tick" <= fc.first_change_tick)
         GROUP BY f."mutant_id", f."scenario_config_id", fc.first_change_tick, fc.start_tick
-        """.trimIndent()
+        """
+            .trimIndent()
 
-    return TransactionManager.current()
-        .exec(sql, explicitStatementType = StatementType.SELECT) { rs ->
-          val result = mutableListOf<TSCInstanceChangeData>()
-          while (rs.next()) {
-            val rawMillis = rs.getLong("millis_until_change")
-            val millisUntilChange = if (rs.wasNull()) null else rawMillis
-            result.add(
-                TSCInstanceChangeData(
-                    mutantId = rs.getObject("mutant_id", UUID::class.java),
-                    scenarioConfigId = rs.getObject("scenario_config_id", UUID::class.java),
-                    millisUntilFirstChange = millisUntilChange,
-                    failedMonitorsUntilChange =
-                        buildSet {
-                          if (rs.getBoolean("g0")) add(MonitorViolation.G0Accidents)
-                          if (rs.getBoolean("g1")) add(MonitorViolation.G1SafeDistance)
-                          if (rs.getBoolean("g2")) add(MonitorViolation.G2EmergencyBraking)
-                          if (rs.getBoolean("g3")) add(MonitorViolation.G3MaximumSpeedLimit)
-                          if (rs.getBoolean("g4")) add(MonitorViolation.G4TrafficFlow)
-                          if (rs.getBoolean("i1")) add(MonitorViolation.I1Stopping)
-                          if (rs.getBoolean("i2")) add(MonitorViolation.I2FasterThanLeftTraffic)
-                        }))
-          }
-          result
-        } ?: emptyList()
+    return TransactionManager.current().exec(sql, explicitStatementType = StatementType.SELECT) { rs
+      ->
+      val result = mutableListOf<TSCInstanceChangeData>()
+      while (rs.next()) {
+        val rawMillis = rs.getLong("millis_until_change")
+        val millisUntilChange = if (rs.wasNull()) null else rawMillis
+        result.add(
+            TSCInstanceChangeData(
+                mutantId = rs.getObject("mutant_id", UUID::class.java),
+                scenarioConfigId = rs.getObject("scenario_config_id", UUID::class.java),
+                millisUntilFirstChange = millisUntilChange,
+                failedMonitorsUntilChange =
+                    buildSet {
+                      if (rs.getBoolean("g0")) add(MonitorViolation.G0Accidents)
+                      if (rs.getBoolean("g1")) add(MonitorViolation.G1SafeDistance)
+                      if (rs.getBoolean("g2")) add(MonitorViolation.G2EmergencyBraking)
+                      if (rs.getBoolean("g3")) add(MonitorViolation.G3MaximumSpeedLimit)
+                      if (rs.getBoolean("g4")) add(MonitorViolation.G4TrafficFlow)
+                      if (rs.getBoolean("i1")) add(MonitorViolation.I1Stopping)
+                      if (rs.getBoolean("i2")) add(MonitorViolation.I2FasterThanLeftTraffic)
+                    }))
+      }
+      result
+    } ?: emptyList()
   }
 }

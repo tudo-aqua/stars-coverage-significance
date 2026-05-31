@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant10 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant10 : Mutant() {
@@ -331,15 +330,10 @@ class AutopilotMutant10 : Mutant() {
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos
 
-
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: UnaryRemovalOperator
-            Line number: 341
-            Id: 19e73077-2b05-49b3-a36b-37d8cf669afb,
-            Old Operator: -,
-            New Operator: RemoveOperator
-            */
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 341 Id:
+       * 19e73077-2b05-49b3-a36b-37d8cf669afb, Old Operator: -, New Operator: RemoveOperator
+       */
       val tooCloseBehind = delta >= laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 

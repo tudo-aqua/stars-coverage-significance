@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant26 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant26 : Mutant() {
@@ -260,14 +259,10 @@ class AutopilotMutant26 : Mutant() {
     val tooClose = gap < stuckGapFactor * desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
 
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: LogicalReplacementOperator
-            Line number: 269
-            Id: c72adbcb-4725-41c2-922a-c6c2b12bf271,
-            Old Operator: &&,
-            New Operator: ||
-            */
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 269 Id:
+     * c72adbcb-4725-41c2-922a-c6c2b12bf271, Old Operator: &&, New Operator: ||
+     */
     return tooClose || leaderSlower
   }
 

@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant24 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant24 : Mutant() {
@@ -308,14 +307,10 @@ class AutopilotMutant24 : Mutant() {
     val wantRight = dir < 0
     val wantLeft = dir > 0
 
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: UnaryRemovalOperator
-            Line number: 317
-            Id: acc8781c-4388-4858-b96a-41085466af33,
-            Old Operator: !,
-            New Operator: RemoveOperator
-            */
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 317 Id:
+     * acc8781c-4388-4858-b96a-41085466af33, Old Operator: !, New Operator: RemoveOperator
+     */
     if (!wantLeft && wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)

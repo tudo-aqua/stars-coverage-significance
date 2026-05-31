@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant23 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant23 : Mutant() {
@@ -281,14 +280,10 @@ class AutopilotMutant23 : Mutant() {
     val targetLaneSafe = isTargetDirectionFree(egoId, dir)
     val sideCorridorSafe = areAllLanesOnSideFree(egoId, dir)
 
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: LogicalReplacementOperator
-            Line number: 290
-            Id: abe92bf2-945c-47e9-8474-41dc9e76bb2c,
-            Old Operator: ||,
-            New Operator: &&
-            */
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 290 Id:
+     * abe92bf2-945c-47e9-8474-41dc9e76bb2c, Old Operator: ||, New Operator: &&
+     */
     if (!targetLaneSafe && !sideCorridorSafe) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }

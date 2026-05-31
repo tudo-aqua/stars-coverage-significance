@@ -17,12 +17,11 @@
 
 package tools.aqua.stars.sumo.mutants
 
-import tools.aqua.stars.sumo.Mutant
-
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.Mutant
 
 /** Simple AutopilotMutant11 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant11 : Mutant() {
@@ -346,14 +345,10 @@ class AutopilotMutant11 : Mutant() {
 
     if (!leftOk && !rightOk) return null
 
-            /**
-            AUTO GENERATED COMMENT
-            Mutation Operator: LogicalReplacementOperator
-            Line number: 355
-            Id: 1e9e8cb2-c4cf-4306-9ec2-6710623af7ac,
-            Old Operator: &&,
-            New Operator: ||
-            */
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 355 Id:
+     * 1e9e8cb2-c4cf-4306-9ec2-6710623af7ac, Old Operator: &&, New Operator: ||
+     */
     if (leftOk || !rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 

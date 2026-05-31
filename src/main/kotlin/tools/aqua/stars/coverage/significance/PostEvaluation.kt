@@ -28,7 +28,6 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
-import tools.aqua.stars.coverage.significance.postEvaluation.LongTailDistributionPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceChangeAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
@@ -88,8 +87,12 @@ val longtailDistribution by lazy {
 /** Mapping of scenario failures to monitors. */
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
 
-/** Per-(mutant, scenarioConfiguration) TSC instance change times and accumulated monitor failures. */
-val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy { db { buildTSCInstanceChangeData(tsc()) } }
+/**
+ * Per-(mutant, scenarioConfiguration) TSC instance change times and accumulated monitor failures.
+ */
+val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy {
+  db { buildTSCInstanceChangeData(tsc()) }
+}
 
 /** All possible combinations of monitors. */
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
@@ -110,11 +113,11 @@ val TEST_SUITE_SIZE: Int = 160
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
-//  LongTailDistributionPostEvaluation.evaluate()
+  //  LongTailDistributionPostEvaluation.evaluate()
 
   /**
-   * Calculate the time until a TSCInstance changes for each mutant x scenario pair.
-   * Calculate the failed monitors in the time spans from above.
+   * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
+   * failed monitors in the time spans from above.
    */
   TSCInstanceChangeAnalysis.evaluate()
 
