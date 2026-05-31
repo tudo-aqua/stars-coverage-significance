@@ -227,8 +227,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
                 "scenario_config_id",
                 MIN("tick")                                  AS start_tick,
                 MIN("previously_changed_tsc_instance_tick") AS first_change_tick
-            WHERE "tsc_id" = $tscEntryId"
             FROM metric_failed_monitors
+            WHERE "tsc_id" = '$tscEntryId'
             GROUP BY "mutant_id", "scenario_config_id"
         )
         SELECT
