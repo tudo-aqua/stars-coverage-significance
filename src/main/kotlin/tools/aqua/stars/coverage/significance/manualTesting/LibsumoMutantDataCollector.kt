@@ -200,13 +200,13 @@ class LibsumoMutantDataCollector(
     SumoVehicle.setLaneChangeMode(egoId, 0)
 
     while (Simulation.getMinExpectedNumber() > 0) {
+      Simulation.step()
+
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
 
       mutant.controlTick(egoId)
-
-      Simulation.step()
     }
 
     Simulation.close()

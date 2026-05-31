@@ -34,12 +34,19 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 fun seedGridTrafficScenarios(
     n: Int? = null,
     seed: Int = 1,
-    insertIntoDatabase: Boolean = true
+    insertIntoDatabase: Boolean = true,
+    onlyInsertFromListOfReadableIds: List<String>? = null
 ): List<GeneratedScenario> {
   println("Generating scenarios...")
   val generator = GridTrafficScenarioGenerator()
 
   var allScenarios = generator.generateAll().toList()
+
+  if (onlyInsertFromListOfReadableIds != null) {
+    allScenarios =
+        allScenarios.filter { it.buildHumanReadableId() in onlyInsertFromListOfReadableIds }
+  }
+
   if (n != null && n < allScenarios.size) {
     allScenarios = allScenarios.shuffled(Random(seed)).take(n)
   }

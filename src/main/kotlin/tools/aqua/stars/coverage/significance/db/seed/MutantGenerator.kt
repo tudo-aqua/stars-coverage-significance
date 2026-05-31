@@ -87,9 +87,15 @@ object MutantGenerator {
    * @param numberOfMutants Number of mutants to seed.
    * @return List of inserted mutant entry IDs, or an empty list if the database was not empty.
    */
-  fun seed(numberOfMutants: Int? = null): List<UUID> {
+  fun seed(
+      numberOfMutants: Int? = null,
+      onlyInsertMutantsWithMutantNumber: List<Int>? = null
+  ): List<UUID> {
     println("Seeding database with mutants...")
     var mutants = generateAll()
+    if (onlyInsertMutantsWithMutantNumber != null) {
+      mutants = mutants.filter { it.mutantNumber in onlyInsertMutantsWithMutantNumber }
+    }
     if (numberOfMutants != null) {
       mutants = mutants.take(numberOfMutants)
     }

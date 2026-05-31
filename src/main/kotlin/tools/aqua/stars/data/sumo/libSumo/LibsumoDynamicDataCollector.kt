@@ -194,13 +194,13 @@ class LibsumoDynamicDataCollector(
     val autopilot = AutopilotMutants.create(mutantEntry.mutantNumber)
 
     while (Simulation.getMinExpectedNumber() > 0) {
+      Simulation.step()
+
       val timeStep =
           getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
       ticks += timeStep
 
       autopilot.controlTick(egoId)
-
-      Simulation.step()
     }
 
     Simulation.close()

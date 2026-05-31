@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
               compareToPreviousRun = false)
 
       eval.registerPreTickEvaluationHooks(
-          MinTicksPerTickSequenceHook(2),
+          MinTicksPerTickSequenceHook(1),
           MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()))
 
       val totalTickDifferenceMetric =
