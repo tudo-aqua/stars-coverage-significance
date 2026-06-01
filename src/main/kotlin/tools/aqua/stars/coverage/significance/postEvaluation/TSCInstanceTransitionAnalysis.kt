@@ -50,26 +50,32 @@ object TSCInstanceTransitionAnalysis {
 
     Files.createDirectories(BASE_PATH)
 
-    writeCsvAndHeatmap(
-        instanceIds = instanceIds,
-        idToIndex = idToIndex,
-        labels = labels,
-        title = "TSC Instance Transitions",
-        subtitle = "Cell value = number of ticks where the TSC instance switched from row → column",
-        fileName = "transitions_overall",
-        values = { transition -> transition.totalCount },
-    )
+    for (excludeDiagonal in listOf(false, true)) {
+      val suffix = if (excludeDiagonal) "_no_diagonal" else ""
 
-    for (monitor in MonitorViolation.entries) {
       writeCsvAndHeatmap(
           instanceIds = instanceIds,
           idToIndex = idToIndex,
           labels = labels,
-          title = "TSC Instance Transitions – ${monitor.name} failed",
-          subtitle = "Cell value = transitions from row → column where ${monitor.name} failed at destination",
-          fileName = "transitions_${monitor.name}",
-          values = { transition -> transition.monitorCounts[monitor] ?: 0L },
+          title = "TSC Instance Transitions${if (excludeDiagonal) " (diagonal excluded)" else ""}",
+          subtitle = "Cell value = number of ticks where the TSC instance switched from row → column",
+          fileName = "transitions_overall$suffix",
+          excludeDiagonal = excludeDiagonal,
+          values = { transition -> transition.totalCount },
       )
+
+      for (monitor in MonitorViolation.entries) {
+        writeCsvAndHeatmap(
+            instanceIds = instanceIds,
+            idToIndex = idToIndex,
+            labels = labels,
+            title = "TSC Instance Transitions – ${monitor.name} failed${if (excludeDiagonal) " (diagonal excluded)" else ""}",
+            subtitle = "Cell value = transitions from row → column where ${monitor.name} failed at destination",
+            fileName = "transitions_${monitor.name}$suffix",
+            excludeDiagonal = excludeDiagonal,
+            values = { transition -> transition.monitorCounts[monitor] ?: 0L },
+        )
+      }
     }
 
     println("Finished TSCInstanceTransitionAnalysis. Output in $BASE_PATH")
@@ -89,6 +95,7 @@ object TSCInstanceTransitionAnalysis {
       title: String,
       subtitle: String,
       fileName: String,
+      excludeDiagonal: Boolean,
       values: (TSCInstanceTransition) -> Long,
   ) {
     val n = instanceIds.size
@@ -97,6 +104,7 @@ object TSCInstanceTransitionAnalysis {
     for (t in tscInstanceTransitions) {
       val fi = idToIndex[t.fromInstanceId] ?: continue
       val ti = idToIndex[t.toInstanceId] ?: continue
+      if (excludeDiagonal && fi == ti) continue
       matrix[fi][ti] = values(t)
     }
 
