@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance show HEAD~1:postEvaluation/baseline/baseline_scatter.py)",
+      "Bash(git -C \"C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance\" show HEAD:postEvaluation/baseline/baseline_scatter.py)",
+      "Bash(git -C \"C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance\" log --oneline --all)"
+    ]
+  }
+}
