@@ -281,9 +281,9 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   /**
    * Returns aggregated transition counts between TSC instances for the given TSC.
    *
-   * A transition row is any tick where [lastTickTSCInstance] differs from [currentTSCInstance].
-   * Per-monitor counts reflect how often each monitor failed at the destination instance across
-   * those transition rows.
+   * Every row in metric_failed_monitors where [lastTickTSCInstance] is non-null counts as a
+   * transition, including self-loops (instance unchanged). The diagonal (from == to) therefore
+   * represents the most common case: the instance staying the same across consecutive ticks.
    *
    * @return One [TSCInstanceTransition] per distinct (from, to) instance pair.
    */
@@ -294,7 +294,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
     val sql =
         """
         SELECT
-            m."last_tsc_instance_id"   AS from_id,
+            m."last_tsc_instance_id"    AS from_id,
             m."current_tsc_instance_id" AS to_id,
             COUNT(*)                    AS total_count,
             SUM(CASE WHEN m."monitor_g0_Accidents_failed"                      THEN 1 ELSE 0 END) AS g0,
@@ -307,7 +307,6 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
         FROM metric_failed_monitors m
         WHERE m."tsc_id" = '$tscEntryId'
             AND m."last_tsc_instance_id" IS NOT NULL
-            AND m."last_tsc_instance_id" != m."current_tsc_instance_id"
         GROUP BY m."last_tsc_instance_id", m."current_tsc_instance_id"
         """
             .trimIndent()

@@ -22,7 +22,6 @@ import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import org.jetbrains.letsPlot.export.ggsave
 import org.jetbrains.letsPlot.geom.geomTile
-import org.jetbrains.letsPlot.geom.geomText
 import org.jetbrains.letsPlot.ggsize
 import org.jetbrains.letsPlot.label.ggtitle
 import org.jetbrains.letsPlot.label.labs
@@ -86,7 +85,6 @@ fun plotDataAsHeatmap(
   var plot =
       letsPlot(data) { x = "to"; y = "from"; fill = "value" } +
           geomTile() +
-          geomText(size = 7, color = "grey50") { label = "value" } +
           scaleFillGradient(low = lowColor, high = highColor, name = "Count") +
           labs(x = xLabel, y = yLabel) +
           theme(axisTextX = elementText(angle = 45.0, hjust = 1.0))

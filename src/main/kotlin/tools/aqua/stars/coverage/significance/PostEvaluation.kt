@@ -127,7 +127,7 @@ fun main() {
    * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
    * failed monitors in the time spans from above.
    */
-  TSCInstanceChangeAnalysis.evaluate()
+//  TSCInstanceChangeAnalysis.evaluate()
 
   /** Build transition automaton between TSC instances and render heatmaps. */
   TSCInstanceTransitionAnalysis.evaluate()
