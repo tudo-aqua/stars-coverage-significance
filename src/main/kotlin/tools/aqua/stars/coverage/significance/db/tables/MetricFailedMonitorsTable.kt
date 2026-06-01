@@ -30,6 +30,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantF
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
@@ -272,6 +273,64 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
                       if (rs.getBoolean("i1")) add(MonitorViolation.I1Stopping)
                       if (rs.getBoolean("i2")) add(MonitorViolation.I2FasterThanLeftTraffic)
                     }))
+      }
+      result
+    } ?: emptyList()
+  }
+
+  /**
+   * Returns aggregated transition counts between TSC instances for the given TSC.
+   *
+   * A transition row is any tick where [lastTickTSCInstance] differs from [currentTSCInstance].
+   * Per-monitor counts reflect how often each monitor failed at the destination instance across
+   * those transition rows.
+   *
+   * @return One [TSCInstanceTransition] per distinct (from, to) instance pair.
+   */
+  fun buildTSCInstanceTransitions(tsc: TSC<*, *, *, *>): List<TSCInstanceTransition> {
+    val tscEntryId = TSCsRepository.getByJson(tsc.getJsonString())?.id
+    checkNotNull(tscEntryId) { "TSC entry not found for TSC: $tsc" }
+
+    val sql =
+        """
+        SELECT
+            m."last_tsc_instance_id"   AS from_id,
+            m."current_tsc_instance_id" AS to_id,
+            COUNT(*)                    AS total_count,
+            SUM(CASE WHEN m."monitor_g0_Accidents_failed"                      THEN 1 ELSE 0 END) AS g0,
+            SUM(CASE WHEN m."monitor_g1_SafeDistanceToPrecedingVehicle_failed" THEN 1 ELSE 0 END) AS g1,
+            SUM(CASE WHEN m."monitor_g2_emergencyBraking_failed"               THEN 1 ELSE 0 END) AS g2,
+            SUM(CASE WHEN m."monitor_g3_MaximumSpeedLimit_failed"              THEN 1 ELSE 0 END) AS g3,
+            SUM(CASE WHEN m."monitor_g4_TrafficFlow_failed"                    THEN 1 ELSE 0 END) AS g4,
+            SUM(CASE WHEN m."monitor_i1_Stopping_failed"                       THEN 1 ELSE 0 END) AS i1,
+            SUM(CASE WHEN m."monitor_i2_DrivingFasterThenLeftTraffic_failed"   THEN 1 ELSE 0 END) AS i2
+        FROM metric_failed_monitors m
+        WHERE m."tsc_id" = '$tscEntryId'
+            AND m."last_tsc_instance_id" IS NOT NULL
+            AND m."last_tsc_instance_id" != m."current_tsc_instance_id"
+        GROUP BY m."last_tsc_instance_id", m."current_tsc_instance_id"
+        """
+            .trimIndent()
+
+    return TransactionManager.current().exec(sql, explicitStatementType = StatementType.SELECT) { rs
+      ->
+      val result = mutableListOf<TSCInstanceTransition>()
+      while (rs.next()) {
+        result.add(
+            TSCInstanceTransition(
+                fromInstanceId = rs.getObject("from_id", UUID::class.java),
+                toInstanceId = rs.getObject("to_id", UUID::class.java),
+                totalCount = rs.getLong("total_count"),
+                monitorCounts =
+                    mapOf(
+                        MonitorViolation.G0Accidents to rs.getLong("g0"),
+                        MonitorViolation.G1SafeDistance to rs.getLong("g1"),
+                        MonitorViolation.G2EmergencyBraking to rs.getLong("g2"),
+                        MonitorViolation.G3MaximumSpeedLimit to rs.getLong("g3"),
+                        MonitorViolation.G4TrafficFlow to rs.getLong("g4"),
+                        MonitorViolation.I1Stopping to rs.getLong("i1"),
+                        MonitorViolation.I2FasterThanLeftTraffic to rs.getLong("i2"),
+                    )))
       }
       result
     } ?: emptyList()

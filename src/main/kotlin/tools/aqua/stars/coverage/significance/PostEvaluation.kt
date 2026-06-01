@@ -28,9 +28,12 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
 import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceChangeAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceTransitionAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.buildMonitorCombinations
 
@@ -94,6 +97,11 @@ val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy {
   db { buildTSCInstanceChangeData(tsc()) }
 }
 
+/** Aggregated (from → to) TSC-instance transition counts, with per-monitor breakdown. */
+val tscInstanceTransitions: List<TSCInstanceTransition> by lazy {
+  db { buildTSCInstanceTransitions(tsc()) }
+}
+
 /** All possible combinations of monitors. */
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
 
@@ -120,6 +128,9 @@ fun main() {
    * failed monitors in the time spans from above.
    */
   TSCInstanceChangeAnalysis.evaluate()
+
+  /** Build transition automaton between TSC instances and render heatmaps. */
+  TSCInstanceTransitionAnalysis.evaluate()
 
   /** Populate the database with longtail distribution from random highway traffic */
   //  PopulateHighwayTrafficLongTailTable.populate()

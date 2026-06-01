@@ -3,7 +3,15 @@
     "allow": [
       "Bash(git -C C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance show HEAD~1:postEvaluation/baseline/baseline_scatter.py)",
       "Bash(git -C \"C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance\" show HEAD:postEvaluation/baseline/baseline_scatter.py)",
-      "Bash(git -C \"C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance\" log --oneline --all)"
+      "Bash(git -C \"C:\\\\Users\\\\Schallau\\\\Repositories\\\\github\\\\aqua\\\\stars-coverage-significance\" log --oneline --all)",
+      "Bash(Get-ChildItem -Path \"D:\\\\github\\\\aqua\\\\stars-coverage-significance\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(xargs grep -l \"lets-plot\\\\|ggsave\\\\|geom\\\\|plot\")",
+      "Bash(./gradlew compileKotlin)",
+      "Bash(./gradlew dependencies *)",
+      "Bash(jar tf *)",
+      "Bash(jar xf *)",
+      "Read(//tmp/lp/org/jetbrains/letsPlot/themes/**)"
     ]
   }
 }
