@@ -58,7 +58,7 @@ fun plotDataAsHeatmap(
     subtitle: String? = null,
     xLabel: String = "To",
     yLabel: String = "From",
-    zeroColor: String = "#d9d9d9",
+    zeroColor: String = "#ffffff",
     lowColor: String = "#c6dbef",
     highColor: String = "#08306b",
     size: Pair<Number, Number> = 1200 to 1000,
