@@ -43,7 +43,8 @@ import org.jetbrains.letsPlot.themes.theme
  * @param subtitle Optional plot subtitle.
  * @param xLabel X-axis label (destination / "to" axis).
  * @param yLabel Y-axis label (source / "from" axis).
- * @param lowColor Colour for low values (default: white).
+ * @param zeroColor Colour for cells with value 0 (default: light gray, clearly distinct from the gradient).
+ * @param lowColor Colour for the lowest non-zero value on the gradient (default: light blue).
  * @param highColor Colour for high values (default: dark blue).
  * @param size Width × height in pixels.
  */
@@ -57,7 +58,8 @@ fun plotDataAsHeatmap(
     subtitle: String? = null,
     xLabel: String = "To",
     yLabel: String = "From",
-    lowColor: String = "#ffffff",
+    zeroColor: String = "#d9d9d9",
+    lowColor: String = "#c6dbef",
     highColor: String = "#08306b",
     size: Pair<Number, Number> = 1200 to 1000,
 ) {
@@ -65,18 +67,20 @@ fun plotDataAsHeatmap(
 
   val fromList = mutableListOf<String>()
   val toList = mutableListOf<String>()
-  val valueList = mutableListOf<Long>()
+  // Zeros become null so Lets-Plot renders them with naValue; positives keep their numeric value.
+  val valueList = mutableListOf<Long?>()
 
   for ((fi, from) in fromLabels.withIndex()) {
     for ((ti, to) in toLabels.withIndex()) {
       fromList += from
       toList += to
-      valueList += values[fi][ti]
+      val v = values[fi][ti]
+      valueList += if (v == 0L) null else v
     }
   }
 
   val data =
-      mapOf<String, Any>(
+      mapOf<String, Any?>(
           "from" to fromList,
           "to" to toList,
           "value" to valueList,
@@ -85,7 +89,7 @@ fun plotDataAsHeatmap(
   var plot =
       letsPlot(data) { x = "to"; y = "from"; fill = "value" } +
           geomTile() +
-          scaleFillGradient(low = lowColor, high = highColor, name = "Count") +
+          scaleFillGradient(low = lowColor, high = highColor, name = "Count", naValue = zeroColor) +
           labs(x = xLabel, y = yLabel) +
           theme(axisTextX = elementText(angle = 45.0, hjust = 1.0))
 
