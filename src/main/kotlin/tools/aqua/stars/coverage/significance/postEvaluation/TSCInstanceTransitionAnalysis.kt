@@ -78,6 +78,14 @@ object TSCInstanceTransitionAnalysis {
       }
     }
 
+    TSCInstanceTransitionAutomaton.generate(
+        instanceIds = instanceIds,
+        labels = labels,
+        transitions = transitions,
+        idToIndex = idToIndex,
+        basePath = BASE_PATH,
+    )
+
     println("Finished TSCInstanceTransitionAnalysis. Output in $BASE_PATH")
   }
 
