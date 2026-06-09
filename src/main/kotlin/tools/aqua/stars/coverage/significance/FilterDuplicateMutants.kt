@@ -27,7 +27,7 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 
-/** Filters mutants that are behavioral equivalent and writes the results back to the database */
+/** Filters mutants that are behavioral equivalent and writes the results back to the database. */
 fun main() {
   DbBootstrap.connect(DbBootstrap.DbConfig(port = 5432))
 
@@ -42,6 +42,13 @@ fun main() {
   }
 }
 
+/**
+ * Filters mutants that are behavioral equivalent.
+ *
+ * @param listOfFailures The mutant failures as they come from the DB.
+ * @param mutants The mutants as they come from the DB.
+ * @return The mutants that are behavioral distinct.
+ */
 fun filter(listOfFailures: List<MutantFailure>, mutants: List<UUID>): List<UUID> {
   println("Start comparing mutants...")
   val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()

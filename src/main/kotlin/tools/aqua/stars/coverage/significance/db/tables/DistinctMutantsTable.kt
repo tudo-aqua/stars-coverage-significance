@@ -21,7 +21,11 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 
-/** Table object for the [MutantEntry] data class. */
+/**
+ * Table object for the [MutantEntry] data class.
+ *
+ * @property createdAt Timestamp of when the mutant was created. *
+ */
 object DistinctMutantsTable : UUIDTable("distinct_mutants") {
   val createdAt = timestamp("created_at")
 

@@ -32,12 +32,23 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
 import tools.aqua.stars.coverage.significance.db.tables.TSCInstancesTable
 
+/** Repository for [HighwayTrafficScenariosEntry]s. */
 object HighwayTrafficScenariosRepository {
 
+  /**
+   * Returns a list containing all entries in the table.
+   *
+   * @return The list containing all entries.
+   */
   fun getAll(): List<HighwayTrafficScenariosEntry> = db {
     HighwayTrafficScenariosTable.selectAll().map { it.toEntry() }
   }
 
+  /**
+   * Loads the highway traffic long tail entries.
+   *
+   * @return The list containing all entries.
+   */
   fun loadHighwayTrafficLongTailEntries(): List<HighwayTrafficLongTailEntry> = db {
     val countExpr: Count = HighwayTrafficScenariosTable.id.count()
 
@@ -79,12 +90,22 @@ object HighwayTrafficScenariosRepository {
     return@db list
   }
 
+  /**
+   * Returns a list containing all instance ids in the table.
+   *
+   * @return The list containing all instance ids.
+   */
   fun getInstanceIds(): List<UUID> = db {
     HighwayTrafficScenariosTable.select(HighwayTrafficScenariosTable.tscInstance).map {
       it[HighwayTrafficScenariosTable.tscInstance].value
     }
   }
 
+  /**
+   * Inserts a list of entries into the table.
+   *
+   * @param entries The list of entries to insert.
+   */
   fun batchInsert(entries: List<HighwayTrafficScenariosEntry>) = db {
     if (entries.isEmpty()) return@db
 
@@ -101,6 +122,11 @@ object HighwayTrafficScenariosRepository {
     }
   }
 
+  /**
+   * Converts a [ResultRow] to a [HighwayTrafficScenariosEntry].
+   *
+   * @return Converted [HighwayTrafficScenariosEntry].
+   */
   private fun ResultRow.toEntry(): HighwayTrafficScenariosEntry =
       HighwayTrafficScenariosEntry(
           id = this[HighwayTrafficScenariosTable.id].value,
@@ -116,5 +142,6 @@ object HighwayTrafficScenariosRepository {
           createdAt = this[HighwayTrafficScenariosTable.createdAt],
       )
 
+  /** Clears the table. */
   fun clear() = db { HighwayTrafficScenariosTable.deleteAll() }
 }

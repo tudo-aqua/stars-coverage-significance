@@ -19,13 +19,13 @@ package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
-import tools.aqua.stars.coverage.significance.isBehindOnSameLane
-import tools.aqua.stars.coverage.significance.isInFrontOnSameLane
-import tools.aqua.stars.coverage.significance.isOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.isBehindOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.isInFrontOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.isOnSameLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allRelativePositionPredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 

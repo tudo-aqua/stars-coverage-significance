@@ -34,7 +34,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingCo
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
 import tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.TSCTikzRenderer
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds

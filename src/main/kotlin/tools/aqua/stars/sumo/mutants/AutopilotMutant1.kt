@@ -112,7 +112,7 @@ class AutopilotMutant1 : Mutant() {
 
   /**
    * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 121 Id:
-   * 02a0ff18-777d-42d3-aec3-ac053ca63fe1, Old Operator: -, New Operator: RemoveOperator
+   * 02a0ff18-777d-42d3-aec3-ac053ca63fe1, Old Operator: -, New Operator: RemoveOperator.
    */
   private var lastLaneChangeSimTimeInSeconds = 1e9
 

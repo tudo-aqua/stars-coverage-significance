@@ -18,15 +18,15 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import java.util.UUID
-import tools.aqua.stars.coverage.significance.isOnLeftLane
-import tools.aqua.stars.coverage.significance.isOnLeftLaneOf
-import tools.aqua.stars.coverage.significance.isOnMiddleLane
-import tools.aqua.stars.coverage.significance.isOnRightLane
-import tools.aqua.stars.coverage.significance.isOnRightLaneOf
-import tools.aqua.stars.coverage.significance.isOnSameLane
-import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsFaster
-import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsSlower
-import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontSameSpeed
+import tools.aqua.stars.coverage.significance.tsc.isOnLeftLane
+import tools.aqua.stars.coverage.significance.tsc.isOnLeftLaneOf
+import tools.aqua.stars.coverage.significance.tsc.isOnMiddleLane
+import tools.aqua.stars.coverage.significance.tsc.isOnRightLane
+import tools.aqua.stars.coverage.significance.tsc.isOnRightLaneOf
+import tools.aqua.stars.coverage.significance.tsc.isOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.vehicleOnSameLaneInFrontIsFaster
+import tools.aqua.stars.coverage.significance.tsc.vehicleOnSameLaneInFrontIsSlower
+import tools.aqua.stars.coverage.significance.tsc.vehicleOnSameLaneInFrontSameSpeed
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle

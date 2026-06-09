@@ -19,13 +19,13 @@ package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
-import tools.aqua.stars.coverage.significance.isBehindOnLeftLane
-import tools.aqua.stars.coverage.significance.isInFrontOnLeftLane
-import tools.aqua.stars.coverage.significance.isOnLeftLaneOf
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.isBehindOnLeftLane
+import tools.aqua.stars.coverage.significance.tsc.isInFrontOnLeftLane
+import tools.aqua.stars.coverage.significance.tsc.isOnLeftLaneOf
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allRelativePositionPredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 

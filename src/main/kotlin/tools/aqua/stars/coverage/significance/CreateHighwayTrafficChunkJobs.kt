@@ -24,6 +24,7 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficAnalysisJobsRepository
 
+/** Creates a set of highway traffic analysis chunk jobs for evaluation. */
 fun main() {
   DbBootstrap.connectAndCreateSchema()
 

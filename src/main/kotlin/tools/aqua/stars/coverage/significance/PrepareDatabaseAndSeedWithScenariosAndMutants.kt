@@ -32,12 +32,14 @@ import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
 import tools.aqua.stars.coverage.significance.workers.startStartingValidTSCInstancesWorkerProcess
 import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
+/** Seeds the database with the TSC and mutants used in the project. */
 val tscListToUseInProject = listOf(tsc())
 
 /** Seed and precompute necessary data for coverage significance evaluation. */

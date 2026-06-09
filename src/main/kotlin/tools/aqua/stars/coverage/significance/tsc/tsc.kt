@@ -17,7 +17,7 @@
 
 @file:Suppress("StringLiteralDuplication")
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.tsc
 
 import tools.aqua.stars.core.tsc.builder.tsc
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
@@ -25,6 +25,7 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
+/** TSC for the TTC Highway. */
 fun tsc() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("TTC Highway TSC") {
       all("Root") {

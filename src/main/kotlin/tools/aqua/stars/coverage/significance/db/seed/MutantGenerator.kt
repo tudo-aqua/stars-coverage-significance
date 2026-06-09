@@ -85,6 +85,7 @@ object MutantGenerator {
    * Seeds the database with mutant entries if it is currently empty.
    *
    * @param numberOfMutants Number of mutants to seed.
+   * @param onlyInsertMutantsWithMutantNumber List of mutant numbers to insert.
    * @return List of inserted mutant entry IDs, or an empty list if the database was not empty.
    */
   fun seed(

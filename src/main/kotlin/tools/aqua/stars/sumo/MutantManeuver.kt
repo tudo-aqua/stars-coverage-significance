@@ -28,28 +28,25 @@ data class MutantManeuver(
     val laneChangeDirection: LaneChangeDirection,
 )
 
-/**
- * Represents possible directions for a lane change in a traffic simulation context.
- *
- * This enumeration defines the following states:
- * - `NO_LANE_CHANGE`: Indicates that no lane change is to be performed.
- * - `CHANGE_LEFT`: Indicates a lane change to the left.
- * - `CHANGE_RIGHT`: Indicates a lane change to the right.
- */
+/** Represents possible directions for a lane change in a traffic simulation context. */
 enum class LaneChangeDirection {
+  /** Indicates that no lane change is to be performed. */
   NO_LANE_CHANGE,
+
+  /** Indicates a lane change to the left. */
   CHANGE_LEFT,
+
+  /** Indicates a lane change to the right. */
   CHANGE_RIGHT;
 
   /** Holds static methods for [LaneChangeDirection] enum values. */
   companion object {
     /** Converts a direction integer to a [LaneChangeDirection] enum value. */
-    fun fromDirection(dir: Int?): LaneChangeDirection {
-      return when (dir) {
-        1 -> CHANGE_LEFT
-        -1 -> CHANGE_RIGHT
-        else -> NO_LANE_CHANGE
-      }
-    }
+    fun fromDirection(dir: Int?): LaneChangeDirection =
+        when (dir) {
+          1 -> CHANGE_LEFT
+          -1 -> CHANGE_RIGHT
+          else -> NO_LANE_CHANGE
+        }
   }
 }

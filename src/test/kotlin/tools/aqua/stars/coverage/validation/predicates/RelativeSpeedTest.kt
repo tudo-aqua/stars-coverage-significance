@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
-import tools.aqua.stars.coverage.significance.SPEED_THRESHOLD_KMH
-import tools.aqua.stars.coverage.significance.vehicleOnSameLaneInFrontIsFaster
+import tools.aqua.stars.coverage.significance.tsc.SPEED_THRESHOLD_KMH
+import tools.aqua.stars.coverage.significance.tsc.vehicleOnSameLaneInFrontIsFaster
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allSpeedPredicatesSameLaneInFront
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 

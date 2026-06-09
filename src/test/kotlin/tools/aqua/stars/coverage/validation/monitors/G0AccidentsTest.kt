@@ -19,7 +19,7 @@ package tools.aqua.stars.coverage.validation.monitors
 
 import kotlin.test.Test
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
-import tools.aqua.stars.coverage.significance.g0Accidents
+import tools.aqua.stars.coverage.significance.tsc.g0Accidents
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 import tools.aqua.stars.coverage.validation.predicates.RoadNetworkTestHelpers

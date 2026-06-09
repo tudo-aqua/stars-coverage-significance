@@ -20,7 +20,15 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficLongTailRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
 
+/**
+ * Populates the HighwayTrafficLongTailTable with the long tail data from the highway traffic
+ * scenarios.
+ */
 object PopulateHighwayTrafficLongTailTable {
+  /**
+   * Populates the HighwayTrafficLongTailTable with the long tail data from the highway traffic
+   * scenarios.
+   */
   fun populate() {
     if (HighwayTrafficLongTailRepository.getAll().isNotEmpty()) {
       println("HighwayTrafficLongTailTable is already populated. Skipping population.")

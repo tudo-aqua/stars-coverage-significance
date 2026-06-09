@@ -337,7 +337,7 @@ class AutopilotMutant5 : Mutant() {
 
       /**
        * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 346 Id:
-       * 2452364c-6b97-4f4c-98e0-15d9f035389e, Old Operator: -, New Operator: RemoveOperator
+       * 2452364c-6b97-4f4c-98e0-15d9f035389e, Old Operator: -, New Operator: RemoveOperator.
        */
       val tooCloseBehind = delta >= laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters

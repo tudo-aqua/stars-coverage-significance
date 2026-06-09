@@ -17,6 +17,14 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
+/**
+ * Data class for storing plot data.
+ *
+ * @property countOfKilledMutants Count of killed mutants.
+ * @property countOfMutantsKilledWithMonitors Count of mutants killed with monitors.
+ * @property countOfFailedMonitors Count of failed monitors.
+ * @property countOfDistinctMonitorsFailed Count of distinct monitors failed.
+ */
 data class PlotData(
     val countOfKilledMutants: List<Int>,
     val countOfMutantsKilledWithMonitors: List<Int>,

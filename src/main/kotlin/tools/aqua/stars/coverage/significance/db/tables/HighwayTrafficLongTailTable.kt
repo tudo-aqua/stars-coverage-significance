@@ -20,6 +20,14 @@ package tools.aqua.stars.coverage.significance.db.tables
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
+/**
+ * Table for storing long tail values for highway traffic scenarios.
+ *
+ * @property tscInstance TSC instance.
+ * @property tscInstanceJson JSON representation of the TSC instance.
+ * @property longTail Long tail value.
+ * @property createdAt Timestamp of when the long tail value was created.
+ */
 object HighwayTrafficLongTailTable : UUIDTable("highway_traffic_long_tail") {
   val tscInstance =
       reference(

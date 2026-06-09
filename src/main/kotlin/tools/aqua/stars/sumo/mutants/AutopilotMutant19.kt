@@ -219,7 +219,7 @@ class AutopilotMutant19 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 227 Id:
-     * fefe5d90-8e44-46d3-9372-ae69a483a5de, Old Operator: -, New Operator: RemoveOperator
+     * fefe5d90-8e44-46d3-9372-ae69a483a5de, Old Operator: -, New Operator: RemoveOperator.
      */
     val dvMaxDown = maxDecelerationInMps2 * dt
 

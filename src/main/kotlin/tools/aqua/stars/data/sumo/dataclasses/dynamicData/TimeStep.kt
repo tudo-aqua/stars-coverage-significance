@@ -32,6 +32,7 @@ import tools.aqua.stars.sumo.MutantManeuver
  * @property tickTimeMillis Tick time in milliseconds.
  * @property vehiclesInTick Vehicles present in this tick.
  * @property collisionsInTick Collisions occurring during this tick.
+ * @property egoManeuver The ego vehicle's maneuver.
  * @property ego The ego vehicle.
  */
 class TimeStep(

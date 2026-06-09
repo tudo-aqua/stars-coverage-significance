@@ -20,6 +20,22 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * Data class representing a row in the HighwayTrafficScenariosTable.
+ *
+ * @property id The unique identifier of the entry. This is optional and can be null when inserting
+ *   a new entry.
+ * @property seed The seed of the scenario.
+ * @property crowdiness The crowdiness of the scenario.
+ * @property vehicleId The ID of the vehicle.
+ * @property vehicleType The type of the vehicle.
+ * @property tick The tick of the scenario.
+ * @property lane The lane of the scenario.
+ * @property position The position of the vehicle.
+ * @property speed The speed of the vehicle.
+ * @property tscInstanceId The unique identifier of the TSC instance.
+ * @property createdAt The timestamp of when the entry was created.
+ */
 data class HighwayTrafficScenariosEntry(
     val id: UUID? = null,
     val seed: Int,

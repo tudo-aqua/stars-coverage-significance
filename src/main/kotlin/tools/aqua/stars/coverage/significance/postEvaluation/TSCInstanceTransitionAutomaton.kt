@@ -26,13 +26,18 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
-/**
- * Generates automaton representations of TSC-instance transitions:
- * - Graphviz DOT files (+ PNG if `dot` is on PATH) for every variant
- * - One combined interactive HTML viewer (Cytoscape.js) with all variants and an inspection panel
- */
+/** Generates an interactive HTML file that visualizes the [TSCInstanceTransition]s. */
 object TSCInstanceTransitionAutomaton {
 
+  /**
+   * Generates the HTML file.
+   *
+   * @param instanceIds The [UUID]s of the instances.
+   * @param labels The labels of the instances.
+   * @param transitions The [TSCInstanceTransition]s.
+   * @param idToIndex A mapping from [UUID]s to indices.
+   * @param basePath The base path for the output files.
+   */
   fun generate(
       instanceIds: List<UUID>,
       labels: List<String>,
@@ -74,6 +79,16 @@ object TSCInstanceTransitionAutomaton {
   // Matrix helpers
   // ---------------------------------------------------------------------------
 
+  /**
+   * Builds a matrix of counts for the given [TSCInstanceTransition]s.
+   *
+   * @param n The number of instances.
+   * @param transitions The [TSCInstanceTransition]s.
+   * @param idToIndex A mapping from [UUID]s to indices.
+   * @param excludeDiagonal Whether to exclude the diagonal.
+   * @param valueExtractor A function that extracts the count from a [TSCInstanceTransition].
+   * @return The matrix.
+   */
   private fun buildMatrix(
       n: Int,
       transitions: List<TSCInstanceTransition>,
@@ -94,7 +109,14 @@ object TSCInstanceTransitionAutomaton {
   // ---------------------------------------------------------------------------
   // DOT / Graphviz
   // ---------------------------------------------------------------------------
-
+  /**
+   * Emits a DOT file and a PNG file.
+   *
+   * @param labels The labels of the instances.
+   * @param matrix The matrix of counts.
+   * @param basePath The base path for the output files.
+   * @param name The name of the output files.
+   */
   private fun emitDotAndPng(
       labels: List<String>,
       matrix: Array<LongArray>,
@@ -106,6 +128,13 @@ object TSCInstanceTransitionAutomaton {
     tryRenderPng(dotPath, basePath.resolve("$name.png"))
   }
 
+  /**
+   * Builds a DOT file for the given [TSCInstanceTransition]s.
+   *
+   * @param labels The labels of the instances.
+   * @param matrix The matrix of counts.
+   * @return The DOT file.
+   */
   private fun buildDot(labels: List<String>, matrix: Array<LongArray>): String = buildString {
     appendLine("digraph {")
     appendLine(
@@ -125,6 +154,12 @@ object TSCInstanceTransitionAutomaton {
     appendLine("}")
   }
 
+  /**
+   * Tries to render a DOT file to a PNG file using Graphviz.
+   *
+   * @param dotFile The DOT file.
+   * @param pngFile The PNG file.
+   */
   private fun tryRenderPng(dotFile: Path, pngFile: Path) {
     try {
       val proc =
@@ -152,7 +187,14 @@ object TSCInstanceTransitionAutomaton {
   // ---------------------------------------------------------------------------
   // Interactive HTML
   // ---------------------------------------------------------------------------
-
+  /**
+   * Builds the HTML for the interactive viewer.
+   *
+   * @param instanceIds The [UUID]s of the instances.
+   * @param labels The labels of the instances.
+   * @param variants The variants of the matrix.
+   * @return The HTML.
+   */
   private fun buildHtml(
       instanceIds: List<UUID>,
       labels: List<String>,
@@ -182,11 +224,23 @@ object TSCInstanceTransitionAutomaton {
     return htmlTemplate(variantJs)
   }
 
+  /**
+   * Escapes a string for use in JavaScript.
+   *
+   * @param s The string to escape.
+   * @return The escaped string.
+   */
   private fun esc(s: String): String = s.replace("\\", "\\\\").replace("'", "\\'")
 
   // The HTML is built via concatenation so that Kotlin does not misinterpret JavaScript's
   // ${...} template-literal syntax as Kotlin string interpolations.
   @Suppress("LongMethod")
+  /**
+   * Builds the HTML template for the interactive viewer.
+   *
+   * @param variantJs The JavaScript object containing the variants.
+   * @return The HTML template.
+   */
   private fun htmlTemplate(variantJs: String): String {
     val css =
         """

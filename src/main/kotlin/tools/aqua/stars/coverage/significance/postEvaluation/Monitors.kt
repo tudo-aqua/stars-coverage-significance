@@ -17,15 +17,33 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation
 
+/**
+ * Enum representing various types of traffic monitors utilized for evaluating simulated traffic
+ * scenarios.
+ */
 enum class Monitors {
+  /** Monitor for accidents. */
   G0Accidents,
+
+  /** Monitor for safe distance. */
   G1SafeDistance,
+
+  /** Monitor for emergency braking. */
   G2EmergencyBraking,
+
+  /** Monitor for maximum speed. */
   G3MaximumSpeed,
+
+  /** Monitor for traffic flow. */
   G4TrafficFlow,
+
+  /** Monitor for stopping. */
   I1Stopping,
+
+  /** Monitor for faster than left traffic. */
   I2FasterThanLeftTraffic;
 
+  /** Returns the bit mask corresponding to this monitor. */
   val mask: Int
     get() = 1 shl ordinal
 }

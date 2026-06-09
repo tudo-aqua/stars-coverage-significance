@@ -26,7 +26,9 @@ import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceId
 
+/** Cross-table of scenarios and monitors. */
 object ScenarioByMonitorCrossTable {
+  /** Evaluates the cross-table of scenarios and monitors. */
   fun evaluate() {
     println("Starting ScenarioByMonitorCrossTable.")
     Monitors.entries.forEach { monitor -> evaluateForMonitor(monitor) }

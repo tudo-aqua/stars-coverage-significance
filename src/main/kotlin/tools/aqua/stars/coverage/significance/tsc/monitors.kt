@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.tsc
 
 import kotlin.math.abs
 import kotlin.math.max

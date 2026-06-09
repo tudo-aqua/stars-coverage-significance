@@ -299,7 +299,7 @@ class AutopilotMutant29 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 307 Id:
-     * d6cd1ea6-c861-478e-bee5-b447c96fb3f4, Old Operator: ||, New Operator: &&
+     * d6cd1ea6-c861-478e-bee5-b447c96fb3f4, Old Operator: ||, New Operator: &&.
      */
     val feasible = stuck && (score > laneChangeMinGainInMps)
 

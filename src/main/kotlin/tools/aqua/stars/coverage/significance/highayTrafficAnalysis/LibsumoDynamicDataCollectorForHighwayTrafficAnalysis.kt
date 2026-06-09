@@ -41,7 +41,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.LEFT_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
@@ -54,6 +54,7 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
 
+/** Main entry point for the highway traffic analysis. */
 fun main() {
 
   DbBootstrap.connect()
@@ -93,15 +94,21 @@ fun main() {
 }
 
 /**
- * Minimal libsumo runner for the 3-lane highway scenario.
+ * A data collector for highway traffic scenarios using SUMO.
  *
- * Current behavior:
- * - one route on edge "highway"
- * - stochastic total-demand arrivals with simple inter-arrival headways
- * - density-dependent lane assignment with keep-right bias
- * - spawn only on right and middle lane; left lane emerges from overtaking only
- * - the simulation runs longer and snapshots are evaluated every fixed interval
- * - only vehicles that have already progressed a minimum distance are considered for TSC analysis
+ * This class is responsible for generating highway traffic scenarios using SUMO and storing the
+ * generated data in a database. It supports running simulations with different crowdiness levels
+ * and different driving archetypes.
+ *
+ * @param baseDir The base directory where the SUMO network and additional files are located.
+ * @param netFileName The name of the SUMO network file.
+ * @param vTypeAdditionalFile The name of the additional file containing vehicle types.
+ * @property tsc The [TSC] instance to use for generating traffic scenarios.
+ * @property tscId The ID of the [TSC] instance.
+ * @property stepLength The length of each time step in seconds.
+ * @property simulationDurationSeconds The duration of the simulation in seconds.
+ * @property snapshotIntervalSeconds The interval at which snapshots are taken in seconds.
+ * @property minAnalysisDistanceMeters The minimum distance in meters at which to analyze vehicles.
  */
 class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     baseDir: Path = Path(HIGHWAY_TRAFFIC_EXPERIMENT_DIR),
@@ -159,6 +166,13 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
           DriverArchetype.SPEEDY to LaneWeights(center = 0.42, right = 0.58),
       )
 
+  /**
+   * Runs the highway traffic simulation.
+   *
+   * @param seed The seed for the random number generator.
+   * @param crowdiness The crowdiness of the traffic.
+   * @return A list of [TSCInstance]s representing the generated traffic scenarios.
+   */
   fun runHighwayTraffic(seed: Int, crowdiness: Int): List<TSCInstance<*, *, *, *>> {
     Simulation.preloadLibraries()
 

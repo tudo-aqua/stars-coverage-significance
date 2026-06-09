@@ -38,13 +38,13 @@ import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricProvider
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
-import tools.aqua.stars.coverage.significance.g0Accidents
-import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
-import tools.aqua.stars.coverage.significance.g2EmergencyBraking
-import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
-import tools.aqua.stars.coverage.significance.g4TrafficFlow
-import tools.aqua.stars.coverage.significance.i1Stopping
-import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
+import tools.aqua.stars.coverage.significance.tsc.g0Accidents
+import tools.aqua.stars.coverage.significance.tsc.g1SafeDistanceToPrecedingVehicle
+import tools.aqua.stars.coverage.significance.tsc.g2EmergencyBraking
+import tools.aqua.stars.coverage.significance.tsc.g3MaximumSpeedLimit
+import tools.aqua.stars.coverage.significance.tsc.g4TrafficFlow
+import tools.aqua.stars.coverage.significance.tsc.i1Stopping
+import tools.aqua.stars.coverage.significance.tsc.i2DrivingFasterThenLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toReadableString
@@ -63,11 +63,18 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
+@Suppress("StringLiteralDuplication")
 /**
  * Metric that tracks which monitors have failed for each TSC instance at each tick.
  *
  * @property dependsOn This metric does not depend on any other metric.
  * @property writeToDb Whether to write the results to the database.
+ * @property writeVehicleStateImages Whether to write vehicle state images to the output folder.
+ * @property vehicleStateImagesFolder The folder where vehicle state images will be written.
+ * @property writeVehicleStateVideo Whether to write a video of the vehicle states to the output
+ *   folder.
+ * @property vehicleStateVideoFramesPerSecond The frame rate of the video.
+ * @constructor Creates a new [FailedMonitorsPerTickMetric].
  */
 class FailedMonitorsPerTickMetric(
     override val dependsOn: Any? = null,
@@ -947,6 +954,16 @@ class FailedMonitorsPerTickMetric(
       replace(Regex("[^A-Za-z0-9._-]"), "_").take(80).ifBlank { "unknown" }
 }
 
+/**
+ * Represents the failed monitors for a specific tick within the context of a [TSC] evaluation.
+ * *
+ *
+ * @property tsc The [TSC] instance representing the tree structure being evaluated.
+ * @property tick The [TimeStep] instance representing the simulation data for the specific tick.
+ * @property failedMonitors A bitmask ([MonitorViolationBitmask]) indicating the monitors that
+ *   failed during the evaluation for the given tick.
+ * @property tscInstance The [TSCInstance] derived from the [TSC] evaluation for the specified tick.
+ */
 data class FailedMonitorsPerTick(
     val tsc: TSC<*, *, *, *>,
     val tick: TimeStep,
@@ -954,6 +971,17 @@ data class FailedMonitorsPerTick(
     val tscInstance: TSCInstance<*, *, *, *>
 )
 
+/**
+ * Represents the result of a [TSC] evaluation.
+ *
+ * @property tsc The [TSC] instance used for the evaluation.
+ * @property tick The [TimeStep] instance representing the simulation data for the evaluated tick.
+ * @property failedMonitors A bitmask ([MonitorViolationBitmask]) indicating the monitors that
+ *   failed during the evaluation for the given tick.
+ * @property tscInstance The [TSCInstance] derived from the [TSC] evaluation for the specified tick.
+ * @property tscInstanceId The unique identifier for the [TSCInstance] derived from the [TSC]
+ *   evaluation.
+ */
 data class TSCInstanceTimelineTick(
     val tsc: TSC<*, *, *, *>,
     val tick: TimeStep,
@@ -962,6 +990,19 @@ data class TSCInstanceTimelineTick(
     val tscInstanceId: String
 )
 
+/**
+ * Represents a specific range in the timeline of a [TSCInstance].
+ *
+ * @property tsc The [TSC] used to generate this timeline range.
+ * @property tscInstance The specific [TSCInstance] associated with this timeline range.
+ * @property tscInstanceId The unique identifier of the [TSCInstance] for this range.
+ * @property sourceIdentifier A string identifier indicating the source of the evaluation.
+ * @property mutantId A unique identifier of the mutant entity related to this range.
+ * @property fromTickMillis The starting time (inclusive) of the timeline range in milliseconds.
+ * @property toTickMillis The ending time (inclusive) of the timeline range in milliseconds.
+ * @property ticks The list of [TSCInstanceTimelineTick] objects representing individual tick
+ *   evaluations within this range.
+ */
 data class TSCInstanceTimelineRange(
     val tsc: TSC<*, *, *, *>,
     val tscInstance: TSCInstance<*, *, *, *>,
@@ -973,14 +1014,56 @@ data class TSCInstanceTimelineRange(
     val ticks: List<TSCInstanceTimelineTick>
 )
 
+/**
+ * Represents a source of timeline data with a unique identifier and associated mutant ID.
+ *
+ * @property sourceIdentifier A unique identifier for the timeline source.
+ * @property mutantId The ID associated with the mutant in the timeline source.
+ */
 private data class TimelineSource(val sourceIdentifier: String, val mutantId: String)
 
+/**
+ * Represents the execution of a timeline associated with a specific TSC instance, identified by a
+ * source identifier and a mutant ID.
+ *
+ * @property tsc The TSC instance that represents the tree structure being executed.
+ * @property sourceIdentifier A unique identifier associated with the source of the timeline
+ *   execution.
+ * @property mutantId A unique identifier used to track mutations or changes within the timeline
+ *   context.
+ */
 private data class TimelineExecution(
     val tsc: TSC<*, *, *, *>,
     val sourceIdentifier: String,
     val mutantId: String
 )
 
+/**
+ * Represents a transition of instances in a Temporal Structure Chart (TSC) result that violates a
+ * specific monitor condition.
+ *
+ * @property monitor The specific monitor violation associated with this transition.
+ * @property sourceIdentifier The unique identifier of the source from which the transition
+ *   originated.
+ * @property mutantId The unique identifier of the mutant associated with this transition.
+ * @property fromTickMillis The timestamp in milliseconds representing the starting point of this
+ *   transition, if any.
+ * @property toTickMillis The timestamp in milliseconds representing the ending point of this
+ *   transition.
+ * @property violatingTSCInstanceId The unique identifier of the TSC instance that caused the
+ *   violation.
+ * @property violatingTSCInstance The TSC instance that caused the violation.
+ * @property previousTSCInstanceId The unique identifier of the previous TSC instance, if any.
+ * @property previousTSCInstance The TSC instance observed prior to the violation, if any.
+ * @property lastChangedFromTSCInstanceId The unique identifier of the last TSC instance that
+ *   initiated the change leading to this violation, if any.
+ * @property lastChangedFromTSCInstance The last TSC instance that initiated the change leading to
+ *   this violation, if any.
+ * @property lastChangeFromTickMillis The timestamp in milliseconds representing the starting point
+ *   of the last change, if any.
+ * @property lastChangeToTickMillis The timestamp in milliseconds representing the ending point of
+ *   the last change, if any.
+ */
 data class MonitorViolationTSCInstanceTransition(
     val monitor: MonitorViolation,
     val sourceIdentifier: String,
@@ -997,6 +1080,19 @@ data class MonitorViolationTSCInstanceTransition(
     val lastChangeToTickMillis: Long?,
 )
 
+/**
+ * A utility class for writing animated GIFs by adding images to a sequence.
+ *
+ * This class handles the creation of GIF metadata and sequences for animated GIFs. It provides
+ * methods for setting up the GIF writer, writing frames, and closing the sequence.
+ *
+ * @param writer The `ImageWriter` instance used to write the GIF.
+ * @param output The `ImageOutputStream` where the GIF data is written.
+ * @param imageType The type of images to be written, specified using constants from
+ *   `BufferedImage`.
+ * @param delayMillis The delay time between frames in milliseconds.
+ * @param loop Determines whether the GIF should loop indefinitely (`true`) or play once (`false`).
+ */
 private class GifSequenceWriter(
     private val writer: ImageWriter,
     private val output: ImageOutputStream,
@@ -1033,6 +1129,11 @@ private class GifSequenceWriter(
     writer.prepareWriteSequence(null)
   }
 
+  /**
+   * Writes a single image to a sequence in the output stream managed by this writer.
+   *
+   * @param image the BufferedImage to be written to the sequence
+   */
   fun writeToSequence(image: BufferedImage) {
     writer.writeToSequence(javax.imageio.IIOImage(image, null, metadata), null)
   }

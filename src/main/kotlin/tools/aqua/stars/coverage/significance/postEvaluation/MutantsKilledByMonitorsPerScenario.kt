@@ -25,7 +25,9 @@ import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioIdAndJSON
 
+/** Counts the number of mutants killed per monitor per scenario. */
 object MutantsKilledByMonitorsPerScenario {
+  /** Evaluates the count of mutants killed per monitor per scenario. */
   fun evaluate() {
     println("Starting MutantsKilledByMonitorsPerScenario.")
 

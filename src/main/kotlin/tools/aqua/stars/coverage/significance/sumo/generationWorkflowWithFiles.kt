@@ -39,7 +39,7 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridT
 import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.parallelism
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.baseKey
 import tools.aqua.stars.coverage.significance.utils.buckets

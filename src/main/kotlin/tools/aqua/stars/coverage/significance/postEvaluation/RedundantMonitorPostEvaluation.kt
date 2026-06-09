@@ -19,7 +19,9 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 
+/** Checks for redundant monitors. */
 object RedundantMonitorPostEvaluation {
+  /** Evaluates for redundant monitors. */
   fun evaluate() {
     println("Starting ScenarioByScenarioCrossTable.")
 

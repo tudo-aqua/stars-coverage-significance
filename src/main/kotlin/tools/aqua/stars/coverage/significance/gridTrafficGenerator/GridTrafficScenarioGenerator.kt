@@ -19,10 +19,10 @@ package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
 import kotlin.math.max
 import kotlin.math.min
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
-import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
+import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
 
 /**
  * Exhaustive 3x3-grid scenario generator.
@@ -33,7 +33,6 @@ import tools.aqua.stars.coverage.significance.VEHICLE_IN_FRONT_MIN_DISTANCE_METE
  * @property i1End End of row 1 interval (meters).
  * @property i2Start Start of row 2 interval (meters).
  * @property i2End End of row 2 interval (meters).
- * @property minForwardGapMeters Minimum forward gap between vehicles (meters).
  */
 data class GridTrafficScenarioGenerator(
     // Intervals (meters)

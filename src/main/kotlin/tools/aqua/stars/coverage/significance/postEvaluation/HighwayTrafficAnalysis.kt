@@ -23,7 +23,9 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.longtailDistribution
 
+/** Statistical analysis of the highway traffic. */
 object HighwayTrafficAnalysis {
+  /** Evaluates the highway traffic. */
   fun evaluate() {
     println("Starting HighwayTrafficAnalysis.")
 

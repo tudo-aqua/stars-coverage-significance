@@ -30,7 +30,7 @@ import tools.aqua.stars.coverage.significance.hooks.MaxTicksPerTickSequenceHook
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep

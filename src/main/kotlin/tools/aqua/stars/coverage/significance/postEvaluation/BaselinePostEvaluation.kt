@@ -29,20 +29,33 @@ import tools.aqua.stars.coverage.significance.failedMonitorMapping
 import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
+/**
+ * Object responsible for performing post-evaluation of baseline data, particularly focusing on the
+ * evaluation of mutant killing in simulated traffic scenarios. This includes operations for
+ * analyzing both random and grid-based traffic distributions.
+ */
 object BaselinePostEvaluation {
 
+  /** The longtail distribution of the TSC instances. */
   val longtail by lazy {
     longtailDistribution
         .map { it.tscInstanceId to it.longTailValue }
         .sortedByDescending { it.second }
   }
 
+  /** The grid-based traffic instances. */
   val gridInstances by lazy { failedMonitorMapping.flatMap { it.scenarioInstanceFailures } }
 
+  /** The sum of longtail values. */
   val sum by lazy { longtail.sumOf { it.second } }
 
+  /** The random number generator used for sampling. */
   val rnd = Random(42L)
 
+  /**
+   * Evaluates the mutant killing in simulated traffic scenarios. This includes both random traffic
+   * and grid-based traffic distributions.
+   */
   fun evaluate() {
     println("Evaluating mutants killed in random traffic")
     val valuesRandom = evaluateMutantKillingRandom()
@@ -53,6 +66,12 @@ object BaselinePostEvaluation {
     save(valuesGrid, "grid")
   }
 
+  /**
+   * Evaluates the mutant killing in simulated traffic scenarios using a random distribution.
+   *
+   * @return Pair of lists: first list contains the number of mutants killed in each scenario,
+   *   second list contains the number of mutants killed in each scenario with monitors.
+   */
   private fun evaluateMutantKillingRandom(): Pair<List<Int>, List<Int>> {
     val drawnScenarios =
         (0..REPETITIONS).map {
@@ -83,6 +102,12 @@ object BaselinePostEvaluation {
         drawnScenarios.map { evaluateKillingWithMonitors(it) }
   }
 
+  /**
+   * Evaluates the mutant killing in simulated traffic scenarios using a grid-based distribution.
+   *
+   * @return Pair of lists: first list contains the number of mutants killed in each scenario,
+   *   second list contains the number of mutants killed in each scenario with monitors.
+   */
   private fun evaluateMutantKillingGrid(): Pair<List<Int>, List<Int>> {
     val drawnScenarios = (0..REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
 
@@ -90,6 +115,12 @@ object BaselinePostEvaluation {
         drawnScenarios.map { evaluateKillingWithMonitors(it) }
   }
 
+  /**
+   * Evaluates the mutant killing in a given list of scenario failures.
+   *
+   * @param drawnScenarioFailures List of scenario failures to evaluate.
+   * @return Number of mutants killed in the given list of scenario failures.
+   */
   private fun evaluateKilling(drawnScenarioFailures: List<ScenarioInstanceFailures>): Int {
     val relevantMonitors =
         drawnScenarioFailures.flatMap { scenarioInstance ->
@@ -103,6 +134,12 @@ object BaselinePostEvaluation {
     return mutantsKilled
   }
 
+  /**
+   * Evaluates the mutant killing in a given list of scenario failures, including monitors.
+   *
+   * @param drawnScenarioFailures List of scenario failures to evaluate.
+   * @return Number of mutants killed in the given list of scenario failures, including monitors.
+   */
   private fun evaluateKillingWithMonitors(
       drawnScenarioFailures: List<ScenarioInstanceFailures>
   ): Int {
@@ -118,6 +155,13 @@ object BaselinePostEvaluation {
     return mutantsKilled
   }
 
+  /**
+   * Saves the evaluation results to CSV files.
+   *
+   * @param values Pair of lists: first list contains the number of mutants killed in each scenario,
+   *   second list contains the number of mutants killed in each scenario with monitors.
+   * @param identifier Identifier for the evaluation (e.g., "random", "grid").
+   */
   private fun save(values: Pair<List<Int>, List<Int>>, identifier: String) {
     val csvFileName = "baseline_${identifier}.csv"
     val path: Path =

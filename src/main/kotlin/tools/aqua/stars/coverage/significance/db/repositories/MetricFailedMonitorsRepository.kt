@@ -49,6 +49,11 @@ object MetricFailedMonitorsRepository {
         ?.toEntry()
   }
 
+  /**
+   * Retrieves all [MetricFailedMonitorsEntry]s that satisfy the given predicate.
+   *
+   * @param predicate Predicate to filter the results.
+   */
   fun callPredicate(predicate: Op<Boolean>) = db {
     MetricFailedMonitorsTable.selectAll().where(predicate)
   }

@@ -29,12 +29,25 @@ typealias MonitorViolationBitmask = Int
  * @property bit The bit position of the monitor violation in the bitmask.
  */
 enum class MonitorViolation(val bit: Int) {
+  /** Bit for G0Accidents. */
   G0Accidents(0),
+
+  /** Bit for G1SafeDistance. */
   G1SafeDistance(1),
+
+  /** Bit for G2EmergencyBraking. */
   G2EmergencyBraking(2),
+
+  /** Bit for G3MaximumSpeedLimit. */
   G3MaximumSpeedLimit(3),
+
+  /** Bit for G4TrafficFlow. */
   G4TrafficFlow(4),
+
+  /** Bit for I1Stopping. */
   I1Stopping(5),
+
+  /** Bit for I2FasterThanLeftTraffic. */
   I2FasterThanLeftTraffic(6);
 
   /** Holds helper functions. */

@@ -20,10 +20,10 @@ package tools.aqua.stars.coverage.validation.monitors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
-import tools.aqua.stars.coverage.significance.cutIn
-import tools.aqua.stars.coverage.significance.isBesidesOf
-import tools.aqua.stars.coverage.significance.isInFrontOfAbsolute
-import tools.aqua.stars.coverage.significance.isOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.cutIn
+import tools.aqua.stars.coverage.significance.tsc.isBesidesOf
+import tools.aqua.stars.coverage.significance.tsc.isInFrontOfAbsolute
+import tools.aqua.stars.coverage.significance.tsc.isOnSameLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 import tools.aqua.stars.coverage.validation.predicates.RoadNetworkTestHelpers

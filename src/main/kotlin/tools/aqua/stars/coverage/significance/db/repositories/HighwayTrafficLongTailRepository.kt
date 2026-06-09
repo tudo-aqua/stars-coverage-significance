@@ -26,18 +26,34 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficLongTailTable
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
 
+/** Repository for [HighwayTrafficLongTailEntry]s. */
 object HighwayTrafficLongTailRepository {
 
+  /**
+   * Returns a list containing all entries in the table.
+   *
+   * @return The list containing all entries.
+   */
   fun getAll(): List<HighwayTrafficLongTailEntry> = db {
     HighwayTrafficLongTailTable.selectAll().map { it.toEntry() }
   }
 
+  /**
+   * Returns a list containing all instance ids in the table.
+   *
+   * @return The list containing all instance ids.
+   */
   fun getInstanceIds(): List<UUID> = db {
     HighwayTrafficLongTailTable.select(HighwayTrafficScenariosTable.tscInstance).map {
       it[HighwayTrafficScenariosTable.tscInstance].value
     }
   }
 
+  /**
+   * Inserts a list of entries into the table.
+   *
+   * @param entries The list of entries to insert.
+   */
   fun batchInsert(entries: List<HighwayTrafficLongTailEntry>) = db {
     if (entries.isEmpty()) return@db
 
@@ -49,6 +65,11 @@ object HighwayTrafficLongTailRepository {
     }
   }
 
+  /**
+   * Converts a [ResultRow] to a [HighwayTrafficLongTailEntry].
+   *
+   * @return Converted [HighwayTrafficLongTailEntry].
+   */
   fun ResultRow.toEntry(): HighwayTrafficLongTailEntry =
       HighwayTrafficLongTailEntry(
           id = this[HighwayTrafficLongTailTable.id].value,

@@ -23,6 +23,7 @@ import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.workers.startEvaluationWorkerProcess
 
+@Suppress("ThrowingExceptionInMain")
 /**
  * Main entry point for running evaluation workers in parallel.
  *

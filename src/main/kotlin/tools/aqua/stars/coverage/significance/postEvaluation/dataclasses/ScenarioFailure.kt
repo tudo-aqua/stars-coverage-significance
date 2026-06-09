@@ -19,6 +19,12 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
 import java.util.UUID
 
+/**
+ * Data class for storing a scenario failure.
+ *
+ * @property scenarioId Scenario ID.
+ * @property scenarioInstanceFailures Scenario instance failures.
+ */
 data class ScenarioFailure(
     val scenarioId: UUID,
     val scenarioInstanceFailures: List<ScenarioInstanceFailures>

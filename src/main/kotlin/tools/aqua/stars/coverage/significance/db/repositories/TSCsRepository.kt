@@ -32,6 +32,7 @@ import tools.aqua.stars.coverage.significance.db.tables.TSCsTable
 import tools.aqua.stars.coverage.significance.db.tables.TSCsTable.possibleTSCInstancesCount
 import tools.aqua.stars.coverage.significance.db.tables.TSCsTable.tscJson
 
+@Suppress("StringLiteralDuplication")
 /** Repository for [TSCEntry]s. */
 object TSCsRepository {
 
@@ -73,6 +74,12 @@ object TSCsRepository {
     }
   }
 
+  /**
+   * Inserts a new [TSCEntry] into the database if it does not exist.
+   *
+   * @param entry Entry to insert.
+   * @return The ID of the inserted entry.
+   */
   fun insertIfMissingAndReturnId(entry: TSCEntry): UUID = db {
     require(entry.id == null) { "insert() expects entry.id == null." }
 

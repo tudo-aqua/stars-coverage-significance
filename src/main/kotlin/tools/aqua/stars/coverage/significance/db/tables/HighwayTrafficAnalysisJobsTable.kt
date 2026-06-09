@@ -22,6 +22,21 @@ import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.javatime.timestamp
 import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 
+/**
+ * Table storing jobs for evaluating chunks of highway traffic scenarios.
+ *
+ * @property run Evaluation run.
+ * @property seedFromInclusive Seed from which to start the analysis.
+ * @property seedToExclusive Seed up to which to stop the analysis.
+ * @property crowdiness Crowdiness of the analysis.
+ * @property status Status of the job.
+ * @property attempts Number of attempts made to run the job.
+ * @property lockedBy ID of the worker currently locked on the job.
+ * @property lockedAt Timestamp of when the job was locked.
+ * @property startedAt Timestamp of when the job was started.
+ * @property finishedAt Timestamp of when the job was finished.
+ * @property errorText Error message if the job failed.
+ */
 object HighwayTrafficAnalysisJobsTable : LongIdTable("highway_traffic_analysis_chunk_jobs") {
   val run = reference("run_id", EvaluationRunsTable, onDelete = ReferenceOption.CASCADE)
 

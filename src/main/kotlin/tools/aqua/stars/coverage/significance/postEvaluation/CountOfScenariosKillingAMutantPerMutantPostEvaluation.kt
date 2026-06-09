@@ -25,7 +25,9 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.mutantFailuresFiltered
 
+/** Counts the number of scenarios killing a mutant per mutant. */
 object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
+  /** Evaluates the count of scenarios killing a mutant per mutant. */
   fun evaluate() {
     println("Starting CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
     val countOfScenariosKillingAMutant = calculateCountOfScenariosKillingMutant()

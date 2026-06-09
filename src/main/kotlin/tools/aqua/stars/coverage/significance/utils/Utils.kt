@@ -44,14 +44,34 @@ val jsonConfiguration: Json = Json { isLenient = true }
  */
 fun SerializableTSCNode.getJsonString(): String = jsonConfiguration.encodeToString(this)
 
+/**
+ * Extension function to convert a [TSCInstance] or [TSC] to its JSON string representation.
+ *
+ * @return JSON string representation of the [TSCInstance] or [TSC].
+ */
 fun TSCInstance<*, *, *, *>.getJsonString(): String =
     SerializableTSCNode(this.rootNode).getJsonString()
 
+/**
+ * Extension function to convert a [TSC] to its JSON string representation.
+ *
+ * @return JSON string representation of the [TSC].
+ */
 fun TSC<*, *, *, *>.getJsonString(): String = SerializableTSCNode(this.rootNode).getJsonString()
 
+/**
+ * Returns a set of all feature names in the TSC.
+ *
+ * @return Set of all feature names in the TSC.
+ */
 fun TSC<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
     this.rootNode.getSetOfAllFeatureNames() - "CONST_TRUE"
 
+/**
+ * Returns a set of all feature names in the TSC node and its children.
+ *
+ * @return Set of all feature names in the TSC node and its children.
+ */
 private fun TSCNode<*, *, *, *>.getSetOfAllFeatureNames(): Set<String> =
     setOf(this.label) + this.edges.flatMap { it.destination.getSetOfAllFeatureNames() }
 

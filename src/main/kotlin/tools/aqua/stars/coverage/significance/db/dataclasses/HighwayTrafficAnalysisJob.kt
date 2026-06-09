@@ -19,6 +19,17 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.util.UUID
 
+/**
+ * Data class representing a highway traffic analysis job.
+ *
+ * @property jobId The unique identifier of the job.
+ * @property runId The unique identifier of the test run.
+ * @property seedFromInclusive The seed from which to start the analysis.
+ * @property seedToExclusive The seed up to which to stop the analysis.
+ * @property crowdiness The crowdiness of the analysis.
+ * @property status The status of the job.
+ * @property attempts The number of attempts made to run the job.
+ */
 data class HighwayTrafficAnalysisJob(
     val jobId: Long? = null,
     val runId: UUID,

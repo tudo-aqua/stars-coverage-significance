@@ -24,7 +24,9 @@ import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 
+/** Counts the number of mutants killed per monitor. */
 object CountOfMutantsKilledPerMonitor {
+  /** Evaluates the count of mutants killed per monitor. */
   fun evaluate() {
     println("Starting CountOfMutantsKilledPerMonitor.")
     val monitorToFailedMutantsMap =

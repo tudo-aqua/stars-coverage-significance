@@ -24,9 +24,16 @@ import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficAnal
 import tools.aqua.stars.coverage.significance.highayTrafficAnalysis.LibsumoDynamicDataCollectorForHighwayTrafficAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
-import tools.aqua.stars.coverage.significance.tsc
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 
+/**
+ * Entry point for the highway traffic analysis worker.
+ *
+ * @param args Command-line arguments: --workerId=<workerId> --runId=<runId>
+ *   --tscEntryId=<tscEntryId> --seedFromInclusive=<seedFromInclusive>
+ *   --seedToExclusive=<seedToExclusive> --crowdiness=<crowdiness>
+ */
 fun main(args: Array<String>) {
   installParentDeathWatcher(args)
 
@@ -70,6 +77,14 @@ fun main(args: Array<String>) {
   }
 }
 
+/**
+ * Starts a highway traffic analysis worker process.
+ *
+ * @param workerId The ID of the worker.
+ * @param evaluationRunId The ID of the evaluation run.
+ * @param tscEntryId The ID of the TSC entry.
+ * @return The started process.
+ */
 fun startHighwayTrafficAnalysisWorkerProcess(
     workerId: String,
     evaluationRunId: java.util.UUID,

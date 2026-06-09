@@ -33,6 +33,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceTransiti
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.buildMonitorCombinations
 
@@ -113,8 +114,10 @@ val scenarioIds: List<UUID> by lazy {
 val TSC_SIZE = tsc().instanceCount.toInt()
 
 /** The number of repetitions of the evaluation. */
-val REPETITIONS: Int = 100
-val TEST_SUITE_SIZE: Int = 160
+const val REPETITIONS: Int = 100
+
+/** The size of the test suite. */
+const val TEST_SUITE_SIZE: Int = 160
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {

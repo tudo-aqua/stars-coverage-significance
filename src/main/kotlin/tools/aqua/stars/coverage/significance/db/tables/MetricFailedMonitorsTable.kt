@@ -44,6 +44,11 @@ import tools.aqua.stars.coverage.significance.utils.getJsonString
  * @property run Evaluation run.
  * @property startingScenarioConfiguration Scenario starting configuration.
  * @property mutant Mutant.
+ * @property currentTSCInstance Current TSC instance.
+ * @property lastTickTSCInstance Last TSC instance tick.
+ * @property previouslyChangedTSCInstance Previously changed TSC instance.
+ * @property previouslyChangedTSCInstanceTick Previously changed TSC instance tick.
+ * @property tick TSC instance tick.
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.

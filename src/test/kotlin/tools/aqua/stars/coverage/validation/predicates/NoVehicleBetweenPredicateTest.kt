@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
-import tools.aqua.stars.coverage.significance.noVehicleBetweenOnSameLane
+import tools.aqua.stars.coverage.significance.tsc.noVehicleBetweenOnSameLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 
 /** Test class for NoVehicleBetweenPredicate. */

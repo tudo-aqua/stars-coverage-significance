@@ -227,7 +227,7 @@ class AutopilotMutant6 : Mutant() {
 
   /**
    * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 236 Id:
-   * 42a93b03-d044-4879-b314-3a075f125536, Old Operator: -, New Operator: RemoveOperator
+   * 42a93b03-d044-4879-b314-3a075f125536, Old Operator: -, New Operator: RemoveOperator.
    */
   private fun absVal(x: Double): Double = if (x < 0.0) x else x
 

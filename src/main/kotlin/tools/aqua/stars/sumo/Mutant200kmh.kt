@@ -19,6 +19,7 @@ package tools.aqua.stars.sumo
 
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 
+/** Mutant that sets the speed of the ego vehicle to 200 km/h. */
 class Mutant200kmh : Mutant() {
   override fun controlTick(egoId: String): MutantManeuver {
     SumoVehicle.setSpeedMode(egoId, 0)

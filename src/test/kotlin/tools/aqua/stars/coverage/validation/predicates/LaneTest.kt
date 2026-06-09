@@ -18,9 +18,9 @@
 package tools.aqua.stars.coverage.validation.predicates
 
 import kotlin.test.Test
-import tools.aqua.stars.coverage.significance.isOnLeftLane
-import tools.aqua.stars.coverage.significance.isOnMiddleLane
-import tools.aqua.stars.coverage.significance.isOnRightLane
+import tools.aqua.stars.coverage.significance.tsc.isOnLeftLane
+import tools.aqua.stars.coverage.significance.tsc.isOnMiddleLane
+import tools.aqua.stars.coverage.significance.tsc.isOnRightLane
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.allLanePredicates
 import tools.aqua.stars.coverage.validation.predicates.PredicateTestHelper.getTestTimeStep
 

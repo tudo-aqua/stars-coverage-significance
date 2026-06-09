@@ -35,6 +35,10 @@ object TSCInstanceTransitionAnalysis {
 
   private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "tsc_instance_transitions")
 
+  /**
+   * Analyzes TSC-instance transitions by building a transition automaton and rendering each as a
+   * heatmap.
+   */
   fun evaluate() {
     println("Starting TSCInstanceTransitionAnalysis.")
 
@@ -92,11 +96,29 @@ object TSCInstanceTransitionAnalysis {
     println("Finished TSCInstanceTransitionAnalysis. Output in $BASE_PATH")
   }
 
+  /**
+   * Derives the ordered list of instance IDs from the given list of transitions.
+   *
+   * @param transitions The list of transitions to derive instance IDs from.
+   * @return The ordered list of instance IDs.
+   */
   private fun deriveOrderedInstanceIds(transitions: List<TSCInstanceTransition>): List<UUID> =
       (transitions.map { it.fromInstanceId } + transitions.map { it.toInstanceId })
           .distinct()
           .sorted()
 
+  /**
+   * Writes a CSV file and a heatmap for the given TSC-instance transitions.
+   *
+   * @param instanceIds The list of instance IDs.
+   * @param idToIndex A map from instance ID to index in the instance IDs list.
+   * @param labels The list of labels for the instance IDs.
+   * @param title The title of the heatmap.
+   * @param subtitle The subtitle of the heatmap.
+   * @param fileName The base name of the CSV and heatmap files.
+   * @param excludeDiagonal Whether to exclude the diagonal from the heatmap.
+   * @param values A function to extract the value from a transition.
+   */
   private fun writeCsvAndHeatmap(
       instanceIds: List<UUID>,
       idToIndex: Map<UUID, Int>,

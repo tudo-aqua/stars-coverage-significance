@@ -17,6 +17,18 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
+/**
+ * Data class for storing box plot values.
+ *
+ * @property median Median.
+ * @property firstQuartile First quartile.
+ * @property thirdQuartile Third quartile.
+ * @property lowerWhisker Lower whisker.
+ * @property upperWhisker Upper whisker.
+ * @property mildOutliers Mild outliers.
+ * @property extremeOutliers Extreme outliers.
+ * @property allData All data.
+ */
 data class BoxPlotValues(
     val median: Double,
     val firstQuartile: Double,

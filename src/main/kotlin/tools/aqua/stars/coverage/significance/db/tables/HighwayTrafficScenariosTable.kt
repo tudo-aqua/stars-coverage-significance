@@ -21,6 +21,20 @@ import java.time.Instant
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
+/**
+ * Table for storing highway traffic scenarios.
+ *
+ * @property seed Seed of the scenario.
+ * @property crowdiness Crowdiness of the scenario.
+ * @property vehicleId ID of the vehicle.
+ * @property vehicleType Type of the vehicle.
+ * @property tick Tick of the scenario.
+ * @property lane Lane of the vehicle.
+ * @property position Position of the vehicle.
+ * @property speed Speed of the vehicle.
+ * @property tscInstance TSC instance of the scenario.
+ * @property createdAt Timestamp of when the scenario was created.
+ */
 object HighwayTrafficScenariosTable : UUIDTable("highway_traffic_scenarios") {
   val seed = integer("seed")
   val crowdiness = integer("crowdiness")

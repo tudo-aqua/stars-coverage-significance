@@ -20,6 +20,16 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * Data class representing a row in the HighwayTrafficLongTailTable.
+ *
+ * @property id The unique identifier of the entry. This is optional and can be null when inserting
+ *   a new entry.
+ * @property tscInstanceId The unique identifier of the TSC instance.
+ * @property tscInstanceJson The JSON representation of the TSC instance.
+ * @property longTailValue The long tail value for the TSC instance.
+ * @property createdAt The timestamp of when the entry was created.
+ */
 data class HighwayTrafficLongTailEntry(
     val id: UUID? = null,
     val tscInstanceId: UUID,

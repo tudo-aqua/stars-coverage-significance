@@ -111,6 +111,11 @@ object TSCInstancesRepository {
           instanceJson = this[TSCInstancesTable.instanceJson],
       )
 
+  /**
+   * Returns a list of all scenario instances with their JSON.
+   *
+   * @return List of [ScenarioIdAndJSON] objects.
+   */
   fun getAllScenariosWithJSON(): List<ScenarioIdAndJSON> =
       TSCInstancesTable.select(TSCInstancesTable.id, TSCInstancesTable.instanceJson).map { row ->
         ScenarioIdAndJSON(
@@ -118,5 +123,10 @@ object TSCInstancesRepository {
             scenarioInstanceJson = row[TSCInstancesTable.instanceJson])
       }
 
+  /**
+   * Returns a list of all [TSCInstanceEntry]s.
+   *
+   * @return List of [TSCInstanceEntry]s.
+   */
   fun getAll(): List<TSCInstanceEntry> = db { TSCInstancesTable.selectAll().map { it.toEntry() } }
 }

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.coverage.significance
+package tools.aqua.stars.coverage.significance.tsc
 
 import kotlin.math.max
 import tools.aqua.stars.core.evaluation.Predicate.Companion.predicate
@@ -27,22 +27,31 @@ import tools.aqua.stars.logic.kcmftbl.firstorder.exists
 /** TTC in seconds below which a front approach is classified as critical. */
 const val TTC_CRITICAL_SECONDS: Double = 6.0
 
+/** Time gap in seconds in which a vehicle is considered critical for the ego vehicle. */
 const val TG_LATERAL_CRITICAL_SECONDS: Double = 1.0
 
+/** Time gap in seconds in which a vehicle is considered relevant for the ego vehicle. */
 const val TG_LATERAL_RELEVANT_SECONDS: Double = 6.0
 
+/** Time gap in seconds in which a vehicle is considered relevant for the ego vehicle. */
 const val TG_LONGITUDINAL_CRITICAL_SECONDS: Double = 1.0
 
+/** Time gap in seconds in which a vehicle is considered relevant for the ego vehicle. */
 const val TG_LONGITUDINAL_RELEVANT_SECONDS: Double = 10.0
 
+/** TTC in seconds below which a vehicle is considered critical for the ego vehicle. */
 const val TTC_LONGITUDINAL_CRITICAL_SECONDS: Double = 2.0
 
+/** Epsilon for considering a vehicle as being "besides" the ego vehicle. */
 private const val LONGITUDINAL_BUMPER_EPSILON_METERS: Float = 0.5f
 
+/** Minimum speed in meters per second for which the speed normalization is used. */
 private const val MIN_SPEED_NORMALIZATION_MPS: Float = 0.1f
 
+/** Lane index modifier for the left lane. */
 const val LEFT_LANE_INDEX_MODIFIER = +1
 
+/** Lane index modifier for the right lane. */
 const val RIGHT_LANE_INDEX_MODIFIER = -1
 
 /**
@@ -114,6 +123,10 @@ private fun isInsideSignedTimeGapWindow(
     maxSeconds: Double,
 ): Boolean = signedTimeGapSeconds(ego, other) in minSeconds..maxSeconds
 
+/**
+ * Predicate that checks if the vehicle in front of the ego vehicle is moving at about the same
+ * speed as the ego vehicle.
+ */
 val isInside6SecondsTimeGapFrontOrBack =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Is inside 6 seconds time gap front or back") {
         _,
@@ -124,6 +137,7 @@ val isInside6SecondsTimeGapFrontOrBack =
           ego, other, -TG_LATERAL_RELEVANT_SECONDS, TG_LATERAL_RELEVANT_SECONDS)
     }
 
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val otherVehicleIsCriticalForEgo =
     predicate<TimeStep, Pair<Vehicle, Vehicle>>("Other Vehicle is Critical for Ego") {
         _,
@@ -140,6 +154,7 @@ val otherVehicleIsCriticalForEgo =
           ttcRear(ego, otherVehicle) < TTC_CRITICAL_SECONDS
     }
 
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val hasRelevantVehicleOnLeftLane =
     predicate<TimeStep>("Has Relevant Vehicle on Left Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -149,6 +164,7 @@ val hasRelevantVehicleOnLeftLane =
       }
     }
 
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val hasRelevantVehicleOnRightLane =
     predicate<TimeStep>("Has Relevant Vehicle on Right Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -158,9 +174,13 @@ val hasRelevantVehicleOnRightLane =
       }
     }
 
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val canMoveLeft = predicate<TimeStep>("Can Move Left") { tick -> !canNotMoveLeft.holds(tick) }
+
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val canMoveRight = predicate<TimeStep>("Can Move Right") { tick -> !canNotMoveRight.holds(tick) }
 
+/** Predicate that checks if the vehicle is critical for the ego vehicle. */
 val canNotMoveLeft =
     predicate<TimeStep>("Cannot Move Left") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -170,6 +190,10 @@ val canNotMoveLeft =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * left lane.
+ */
 val canNotMoveRight =
     predicate<TimeStep>("Cannot Move Right") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -179,6 +203,10 @@ val canNotMoveRight =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasRelevantVehicleOnLeftLaneOfLeftLane =
     predicate<TimeStep>("Has Relevant Vehicle on Left Lane of Left Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -188,6 +216,10 @@ val hasRelevantVehicleOnLeftLaneOfLeftLane =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasRelevantVehicleOnRightLaneOfRightLane =
     predicate<TimeStep>("Has Relevant Vehicle on Right Lane of Right Lane") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -197,6 +229,10 @@ val hasRelevantVehicleOnRightLaneOfRightLane =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasRelevantVehicleInFront =
     predicate<TimeStep>("Has Relevant Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -205,6 +241,10 @@ val hasRelevantVehicleInFront =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasRelevantVehicleInBehind =
     predicate<TimeStep>("Has Relevant Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -213,6 +253,10 @@ val hasRelevantVehicleInBehind =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasCriticalVehicleInFront =
     predicate<TimeStep>("Has Critical Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
@@ -222,6 +266,10 @@ val hasCriticalVehicleInFront =
       }
     }
 
+/**
+ * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
+ * right lane.
+ */
 val hasCriticalVehicleInBehind =
     predicate<TimeStep>("Has Critical Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->

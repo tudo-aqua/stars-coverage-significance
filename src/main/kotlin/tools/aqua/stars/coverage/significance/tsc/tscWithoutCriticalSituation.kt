@@ -18,31 +18,13 @@
 package tools.aqua.stars.coverage.significance.tsc
 
 import tools.aqua.stars.core.tsc.builder.tsc
-import tools.aqua.stars.coverage.significance.canMoveLeft
-import tools.aqua.stars.coverage.significance.canMoveRight
-import tools.aqua.stars.coverage.significance.canNotMoveLeft
-import tools.aqua.stars.coverage.significance.canNotMoveRight
-import tools.aqua.stars.coverage.significance.g0Accidents
-import tools.aqua.stars.coverage.significance.g1SafeDistanceToPrecedingVehicle
-import tools.aqua.stars.coverage.significance.g2EmergencyBraking
-import tools.aqua.stars.coverage.significance.g3MaximumSpeedLimit
-import tools.aqua.stars.coverage.significance.g4TrafficFlow
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleInBehind
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleInFront
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleOnLeftLane
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleOnLeftLaneOfLeftLane
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleOnRightLane
-import tools.aqua.stars.coverage.significance.hasRelevantVehicleOnRightLaneOfRightLane
-import tools.aqua.stars.coverage.significance.i1Stopping
-import tools.aqua.stars.coverage.significance.i2DrivingFasterThenLeftTraffic
-import tools.aqua.stars.coverage.significance.isOnLeftLane
-import tools.aqua.stars.coverage.significance.isOnMiddleLane
-import tools.aqua.stars.coverage.significance.isOnRightLane
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 
+/** TSC for the TTC Highway without critical situations. */
+@Suppress("StringLiteralDuplication")
 fun tscWithoutCriticalSituations() =
     tsc<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>("TTC Highway TSC") {
       all("Root") {

@@ -29,6 +29,7 @@ import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
  * @param n Optional number of scenarios to generate; if null, generates all scenarios.
  * @param seed Seed for random number generation.
  * @param insertIntoDatabase Whether to insert the scenarios into the database.
+ * @param onlyInsertFromListOfReadableIds Optional list of scenario identifiers to insert.
  * @return List of generated scenarios.
  */
 fun seedGridTrafficScenarios(

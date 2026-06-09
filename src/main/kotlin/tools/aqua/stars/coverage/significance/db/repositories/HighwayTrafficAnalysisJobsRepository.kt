@@ -34,11 +34,17 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.JobStatus
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficAnalysisJobsTable
 
+/** Repository for managing highway traffic analysis jobs. */
 object HighwayTrafficAnalysisJobsRepository {
 
   /** Removes all entries from the database. */
   fun clearTable() = transaction { HighwayTrafficAnalysisJobsTable.deleteAll() }
 
+  /**
+   * Inserts a list of chunk jobs into the database.
+   *
+   * @param chunkJobs List of chunk jobs to insert.
+   */
   fun batchInsert(chunkJobs: List<HighwayTrafficAnalysisJob>) = db {
     HighwayTrafficAnalysisJobsTable.batchInsert(chunkJobs) { chunkJob ->
       this[HighwayTrafficAnalysisJobsTable.run] = chunkJob.runId
@@ -81,6 +87,13 @@ object HighwayTrafficAnalysisJobsRepository {
     )
   }
 
+  /**
+   * Claims the next available chunk job for processing.
+   *
+   * @param runId The UUID of the run to claim a job from.
+   * @param workerId The identifier of the worker claiming the job.
+   * @return The claimed [HighwayTrafficAnalysisJob] or null if no pending jobs exist.
+   */
   fun claimNextJob(runId: UUID, workerId: String): HighwayTrafficAnalysisJob? = db {
     val row =
         HighwayTrafficAnalysisJobsTable.select(

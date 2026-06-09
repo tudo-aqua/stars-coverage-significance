@@ -38,6 +38,7 @@ import org.jetbrains.letsPlot.scale.scaleYLog10
  *
  * @param plot Contains all necessary data points for the bar chart.
  * @param fileName The name of the resulting plot file.
+ * @param title (Default: null) The title of the plot.
  * @param path The path in which the plot should be saved.
  * @param size (Default: null) The size of the resulting PNG file.
  * @param xAxisScaleMaxValue (Default: null) Sets the max x-value for the chart. The data is scaled
@@ -46,6 +47,7 @@ import org.jetbrains.letsPlot.scale.scaleYLog10
  *   accordingly.
  * @param logScaleX (Default: false) If true, the x-axis will be scaled logarithmically.
  * @param logScaleY (Default: false) If true, the y-axis will be scaled logarithmically.
+ * @param subtitle (Default: null) The subtitle of the plot.
  */
 fun plotDataAsBarChart(
     plot: Plot,
@@ -87,6 +89,8 @@ fun plotDataAsBarChart(
  *   accordingly.
  * @param logScaleX (Default: false) If true, the x-axis will be scaled logarithmically.
  * @param logScaleY (Default: false) If true, the y-axis will be scaled logarithmically.
+ * @param title (Default: null) The title of the plot.
+ * @param subtitle (Default: null) The subtitle of the plot.
  */
 private fun applyStyle(
     plot: Plot,

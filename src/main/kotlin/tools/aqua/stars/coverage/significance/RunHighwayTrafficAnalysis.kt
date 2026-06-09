@@ -29,10 +29,17 @@ import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLo
 import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation.writePgfplotsBarChartTex
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
+import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.plotDataAsBarChart
 import tools.aqua.stars.coverage.significance.workers.startHighwayTrafficAnalysisWorkerProcess
 
+@Suppress("ThrowingExceptionInMain")
+/**
+ * Main entry point for running highway traffic analysis workers in parallel.
+ *
+ * @param args Command line arguments.
+ */
 fun main(args: Array<String>) {
   val bufferProcessors = parseIntArg(args, "--bufferProcessors", 0).coerceAtLeast(0)
   val parallelism = (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)

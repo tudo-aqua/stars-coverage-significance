@@ -30,8 +30,13 @@ import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
 import tools.aqua.stars.coverage.significance.scenarioIds
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 
+/**
+ * Creates a heatmap of the number of mutants killed by each scenario compared to the scenarios
+ * themselves.
+ */
 object ScenarioByScenarioCrossTable {
 
+  /** Evaluates the scenario by scenario cross table. */
   fun evaluate() = runBlocking {
     val consoleProgress = ConsoleProgress(total = scenarioIds.size * scenarioIds.size)
     println("Starting ScenarioByScenarioCrossTable.")
