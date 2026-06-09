@@ -35,6 +35,7 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
 import tools.aqua.stars.coverage.significance.utils.getJsonString
+import tools.aqua.stars.sumo.LaneChangeDirection
 
 /**
  * Table for storing the failed monitors for a mutant in a scenario starting-configuration and
@@ -49,6 +50,8 @@ import tools.aqua.stars.coverage.significance.utils.getJsonString
  * @property previouslyChangedTSCInstance Previously changed TSC instance.
  * @property previouslyChangedTSCInstanceTick Previously changed TSC instance tick.
  * @property tick TSC instance tick.
+ * @property egoManeuverSpeed Ego maneuver speed.
+ * @property egoManeuverLaneChange Ego maneuver lane change.
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
@@ -105,6 +108,9 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
           .nullable()
   val previouslyChangedTSCInstanceTick = long("previously_changed_tsc_instance_tick").nullable()
   val tick = long("tick")
+  val egoManeuverSpeed = double("ego_maneuver_speed").nullable()
+  val egoManeuverLaneChange =
+      enumeration<LaneChangeDirection>("ego_maneuver_lane_change").nullable()
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
   val monitorG2Failed = bool("monitor_g2_emergencyBraking_failed").default(false)

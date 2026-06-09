@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
 import java.util.UUID
+import tools.aqua.stars.sumo.LaneChangeDirection
 
 /**
  * Data class representing a row in the MetricFailedMonitorsTable.
@@ -35,6 +36,8 @@ import java.util.UUID
  * @property previousTSCInstanceTick The tick at which the TSC instance changed to the current TSC
  *   instance.
  * @property tick The current tick.
+ * @property egoManeuverSpeed The ego maneuver speed.
+ * @property egoManeuverLangeChange The ego maneuver lane change.
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
@@ -55,6 +58,8 @@ data class MetricFailedMonitorsEntry(
     val previousTSCInstanceId: UUID?,
     val previousTSCInstanceTick: Long?,
     val tick: Long,
+    val egoManeuverSpeed: Double?,
+    val egoManeuverLangeChange: LaneChangeDirection?,
     var monitorG0Failed: Boolean,
     var monitorG1Failed: Boolean,
     var monitorG2Failed: Boolean,

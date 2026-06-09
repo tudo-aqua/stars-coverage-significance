@@ -111,6 +111,8 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.previouslyChangedTSCInstance] = e.previousTSCInstanceId
       this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick] = e.previousTSCInstanceTick
       this[MetricFailedMonitorsTable.tick] = e.tick
+      this[MetricFailedMonitorsTable.egoManeuverSpeed] = e.egoManeuverSpeed
+      this[MetricFailedMonitorsTable.egoManeuverLaneChange] = e.egoManeuverLangeChange
 
       this[MetricFailedMonitorsTable.monitorG0Failed] = e.monitorG0Failed
       this[MetricFailedMonitorsTable.monitorG1Failed] = e.monitorG1Failed
@@ -145,6 +147,8 @@ object MetricFailedMonitorsRepository {
               row[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
               row[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
               row[tick] = entry.tick
+              row[egoManeuverSpeed] = entry.egoManeuverSpeed
+              row[egoManeuverLaneChange] = entry.egoManeuverLangeChange
 
               row[monitorG0Failed] = entry.monitorG0Failed
               row[monitorG1Failed] = entry.monitorG1Failed
@@ -192,6 +196,8 @@ object MetricFailedMonitorsRepository {
                   st[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
                   st[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
                   st[tick] = entry.tick
+                  st[egoManeuverSpeed] = entry.egoManeuverSpeed
+                  st[egoManeuverLaneChange] = entry.egoManeuverLangeChange
 
                   st[monitorG0Failed] = entry.monitorG0Failed
                   st[monitorG1Failed] = entry.monitorG1Failed
@@ -247,6 +253,8 @@ object MetricFailedMonitorsRepository {
           previousTSCInstanceTick =
               this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick],
           tick = this[MetricFailedMonitorsTable.tick],
+          egoManeuverSpeed = this[MetricFailedMonitorsTable.egoManeuverSpeed],
+          egoManeuverLangeChange = this[MetricFailedMonitorsTable.egoManeuverLaneChange],
           monitorG0Failed = this[MetricFailedMonitorsTable.monitorG0Failed],
           monitorG1Failed = this[MetricFailedMonitorsTable.monitorG1Failed],
           monitorG2Failed = this[MetricFailedMonitorsTable.monitorG2Failed],
