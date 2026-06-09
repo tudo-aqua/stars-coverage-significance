@@ -19,6 +19,6 @@ package tools.aqua.stars.sumo
 
 /** Abstract class for all mutants. */
 abstract class Mutant {
-  /** Sets the control parameters for the ego vehicle inside SUMO. */
-  abstract fun controlTick(egoId: String)
+  /** Sets the control parameters for the ego vehicle inside SUMO and returns the result. */
+  abstract fun controlTick(egoId: String): MutantManeuver
 }

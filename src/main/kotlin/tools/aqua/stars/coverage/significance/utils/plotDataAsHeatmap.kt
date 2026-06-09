@@ -43,7 +43,8 @@ import org.jetbrains.letsPlot.themes.theme
  * @param subtitle Optional plot subtitle.
  * @param xLabel X-axis label (destination / "to" axis).
  * @param yLabel Y-axis label (source / "from" axis).
- * @param zeroColor Colour for cells with value 0 (default: light gray, clearly distinct from the gradient).
+ * @param zeroColor Colour for cells with value 0 (default: light gray, clearly distinct from the
+ *   gradient).
  * @param lowColor Colour for the lowest non-zero value on the gradient (default: light blue).
  * @param highColor Colour for high values (default: dark blue).
  * @param size Width × height in pixels.
@@ -87,7 +88,11 @@ fun plotDataAsHeatmap(
       )
 
   var plot =
-      letsPlot(data) { x = "to"; y = "from"; fill = "value" } +
+      letsPlot(data) {
+        x = "to"
+        y = "from"
+        fill = "value"
+      } +
           geomTile() +
           scaleFillGradient(low = lowColor, high = highColor, name = "Count", naValue = zeroColor) +
           labs(x = xLabel, y = yLabel) +

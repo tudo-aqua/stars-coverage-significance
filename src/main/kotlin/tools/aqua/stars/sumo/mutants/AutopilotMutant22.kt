@@ -21,7 +21,9 @@ import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.LaneChangeDirection
 import tools.aqua.stars.sumo.Mutant
+import tools.aqua.stars.sumo.MutantManeuver
 
 /** Simple AutopilotMutant22 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant22 : Mutant() {
@@ -111,7 +113,7 @@ class AutopilotMutant22 : Mutant() {
   private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
-  override fun controlTick(egoId: String) {
+  override fun controlTick(egoId: String): MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -122,7 +124,8 @@ class AutopilotMutant22 : Mutant() {
 
     SumoVehicle.setSpeed(egoId, vCmd)
 
-    maybeLaneChange(egoId, vEgo, desiredGap, leader)
+    val laneChangeDir = maybeLaneChange(egoId, vEgo, desiredGap, leader)
+    return MutantManeuver(vCmd, laneChangeDir)
   }
 
   // -------------------- ACC --------------------
@@ -230,9 +233,10 @@ class AutopilotMutant22 : Mutant() {
       vEgo: Double,
       desiredGap: Double,
       leader: StringDoublePair?
-  ) {
+  ): LaneChangeDirection {
     val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds) return
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return LaneChangeDirection.NO_LANE_CHANGE
 
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
@@ -246,13 +250,14 @@ class AutopilotMutant22 : Mutant() {
     val right =
         evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
-    val chosenDir = chooseDirection(left, right) ?: return
+    val chosenDir = chooseDirection(left, right) ?: return LaneChangeDirection.NO_LANE_CHANGE
 
     val targetLaneIndex = baseLaneIndex + chosenDir
-    if (targetLaneIndex < 0) return
+    if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
     lastLaneChangeSimTimeInSeconds = now
+    return LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
@@ -333,11 +338,7 @@ class AutopilotMutant22 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 344 Id:
-       * 9f688717-c332-48e0-adc5-05e62262f408, Old Operator: &&, New Operator: ||
-       */
-      if (tooCloseBehind || tooCloseAhead) return false
+      if (tooCloseBehind && tooCloseAhead) return false
     }
 
     return true
@@ -348,7 +349,12 @@ class AutopilotMutant22 : Mutant() {
     val rightOk = right.feasible
 
     if (!leftOk && !rightOk) return null
-    if (leftOk && !rightOk) return left.dir
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 360 Id:
+     * 44cd5a04-6dbb-4b70-99fb-4534bb0fc5c8, Old Operator: &&, New Operator: ||
+     */
+    if (leftOk || !rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 
     // both feasible

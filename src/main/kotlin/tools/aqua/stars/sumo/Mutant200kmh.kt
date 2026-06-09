@@ -20,8 +20,10 @@ package tools.aqua.stars.sumo
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 
 class Mutant200kmh : Mutant() {
-  override fun controlTick(egoId: String) {
+  override fun controlTick(egoId: String): MutantManeuver {
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setSpeed(egoId, 200.0)
+    return MutantManeuver(
+        newSpeedMps = 200.0, laneChangeDirection = LaneChangeDirection.NO_LANE_CHANGE)
   }
 }

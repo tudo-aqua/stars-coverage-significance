@@ -29,7 +29,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
-import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceChangeAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceTransitionAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
@@ -127,7 +126,7 @@ fun main() {
    * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
    * failed monitors in the time spans from above.
    */
-//  TSCInstanceChangeAnalysis.evaluate()
+  //  TSCInstanceChangeAnalysis.evaluate()
 
   /** Build transition automaton between TSC instances and render heatmaps. */
   TSCInstanceTransitionAnalysis.evaluate()

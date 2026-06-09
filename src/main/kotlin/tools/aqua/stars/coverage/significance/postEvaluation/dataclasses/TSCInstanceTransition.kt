@@ -26,7 +26,8 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation
  * @property fromInstanceId The TSC instance that was active on the previous tick.
  * @property toInstanceId The TSC instance that became active on the current tick.
  * @property totalCount Number of tick-rows that represent this transition.
- * @property monitorCounts Number of tick-rows where each monitor failed at the destination instance.
+ * @property monitorCounts Number of tick-rows where each monitor failed at the destination
+ *   instance.
  */
 data class TSCInstanceTransition(
     val fromInstanceId: TSCInstanceId,

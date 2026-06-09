@@ -67,10 +67,14 @@ object TSCInstanceChangeAnalysis {
     sortedData.takeLast(5).forEach { println(it) }
 
     val csvPath =
-        Path.of(POST_EVALUATION_BASE_DIR, "tsc_instance_change_analysis", "tsc_instance_change_times.csv")
+        Path.of(
+            POST_EVALUATION_BASE_DIR,
+            "tsc_instance_change_analysis",
+            "tsc_instance_change_times.csv")
     Files.createDirectories(csvPath.parent)
     csvPath.writeText(
-        "millisUntilFirstChange\n" + times.joinToString(separator = "\n") { it.toLong().toString() })
+        "millisUntilFirstChange\n" +
+            times.joinToString(separator = "\n") { it.toLong().toString() })
     println("Wrote CSV to $csvPath")
 
     println("Finished TSCInstanceChangeAnalysis.")

@@ -21,7 +21,9 @@ import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
+import tools.aqua.stars.sumo.LaneChangeDirection
 import tools.aqua.stars.sumo.Mutant
+import tools.aqua.stars.sumo.MutantManeuver
 
 /** Simple AutopilotMutant19 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant19 : Mutant() {
@@ -111,7 +113,7 @@ class AutopilotMutant19 : Mutant() {
   private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
-  override fun controlTick(egoId: String) {
+  override fun controlTick(egoId: String): MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -122,7 +124,8 @@ class AutopilotMutant19 : Mutant() {
 
     SumoVehicle.setSpeed(egoId, vCmd)
 
-    maybeLaneChange(egoId, vEgo, desiredGap, leader)
+    val laneChangeDir = maybeLaneChange(egoId, vEgo, desiredGap, leader)
+    return MutantManeuver(vCmd, laneChangeDir)
   }
 
   // -------------------- ACC --------------------
@@ -213,7 +216,12 @@ class AutopilotMutant19 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 227 Id:
+     * fefe5d90-8e44-46d3-9372-ae69a483a5de, Old Operator: -, New Operator: RemoveOperator
+     */
+    val dvMaxDown = maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -230,9 +238,10 @@ class AutopilotMutant19 : Mutant() {
       vEgo: Double,
       desiredGap: Double,
       leader: StringDoublePair?
-  ) {
+  ): LaneChangeDirection {
     val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds) return
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return LaneChangeDirection.NO_LANE_CHANGE
 
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
@@ -246,13 +255,14 @@ class AutopilotMutant19 : Mutant() {
     val right =
         evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
-    val chosenDir = chooseDirection(left, right) ?: return
+    val chosenDir = chooseDirection(left, right) ?: return LaneChangeDirection.NO_LANE_CHANGE
 
     val targetLaneIndex = baseLaneIndex + chosenDir
-    if (targetLaneIndex < 0) return
+    if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
     lastLaneChangeSimTimeInSeconds = now
+    return LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
@@ -343,11 +353,7 @@ class AutopilotMutant19 : Mutant() {
     val leftOk = left.feasible
     val rightOk = right.feasible
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 354 Id:
-     * 822b6b80-9d8c-4985-91e5-86f47029e618, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (leftOk && !rightOk) return null
+    if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 

@@ -214,7 +214,8 @@ object TSCInstanceTransitionAutomaton {
         th { background: #f5f7fa; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #777; }
         td:last-child, th:last-child { text-align: right; }
         tr:hover td { background: #f9fbfc; }
-        """.trimIndent()
+        """
+            .trimIndent()
 
     // JavaScript written without template literals so Kotlin does not misparse the $ signs.
     val js =
@@ -329,7 +330,8 @@ object TSCInstanceTransitionAutomaton {
 
         varsel.addEventListener('change', function() { load(varsel.value); });
         if (Object.keys(variants).length) load(Object.keys(variants)[0]);
-        """.trimIndent()
+        """
+            .trimIndent()
 
     return """
 <!DOCTYPE html>
@@ -358,6 +360,7 @@ object TSCInstanceTransitionAutomaton {
 <script>$js</script>
 </body>
 </html>
-    """.trimIndent()
+    """
+        .trimIndent()
   }
 }

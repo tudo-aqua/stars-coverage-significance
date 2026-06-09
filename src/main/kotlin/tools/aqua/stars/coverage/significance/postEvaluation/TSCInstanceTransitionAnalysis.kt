@@ -58,7 +58,8 @@ object TSCInstanceTransitionAnalysis {
           idToIndex = idToIndex,
           labels = labels,
           title = "TSC Instance Transitions${if (excludeDiagonal) " (diagonal excluded)" else ""}",
-          subtitle = "Cell value = number of ticks where the TSC instance switched from row → column",
+          subtitle =
+              "Cell value = number of ticks where the TSC instance switched from row → column",
           fileName = "transitions_overall$suffix",
           excludeDiagonal = excludeDiagonal,
           values = { transition -> transition.totalCount },
@@ -69,8 +70,10 @@ object TSCInstanceTransitionAnalysis {
             instanceIds = instanceIds,
             idToIndex = idToIndex,
             labels = labels,
-            title = "TSC Instance Transitions – ${monitor.name} failed${if (excludeDiagonal) " (diagonal excluded)" else ""}",
-            subtitle = "Cell value = transitions from row → column where ${monitor.name} failed at destination",
+            title =
+                "TSC Instance Transitions – ${monitor.name} failed${if (excludeDiagonal) " (diagonal excluded)" else ""}",
+            subtitle =
+                "Cell value = transitions from row → column where ${monitor.name} failed at destination",
             fileName = "transitions_${monitor.name}$suffix",
             excludeDiagonal = excludeDiagonal,
             values = { transition -> transition.monitorCounts[monitor] ?: 0L },
@@ -89,9 +92,7 @@ object TSCInstanceTransitionAnalysis {
     println("Finished TSCInstanceTransitionAnalysis. Output in $BASE_PATH")
   }
 
-  private fun deriveOrderedInstanceIds(
-      transitions: List<TSCInstanceTransition>
-  ): List<UUID> =
+  private fun deriveOrderedInstanceIds(transitions: List<TSCInstanceTransition>): List<UUID> =
       (transitions.map { it.fromInstanceId } + transitions.map { it.toInstanceId })
           .distinct()
           .sorted()
@@ -134,9 +135,8 @@ object TSCInstanceTransitionAnalysis {
 
   private fun buildCsv(labels: List<String>, matrix: Array<LongArray>): String {
     val header = "from\\to," + labels.joinToString(",")
-    val rows = labels.indices.joinToString("\n") { fi ->
-      labels[fi] + "," + matrix[fi].joinToString(",")
-    }
+    val rows =
+        labels.indices.joinToString("\n") { fi -> labels[fi] + "," + matrix[fi].joinToString(",") }
     return "$header\n$rows\n"
   }
 }

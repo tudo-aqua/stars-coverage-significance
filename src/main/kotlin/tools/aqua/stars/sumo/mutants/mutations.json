@@ -1,9 +1,27 @@
 {
+  "./Mutant.kt": {
+    "mutations": []
+  },
+  "./MutantManeuver.kt": {
+    "mutations": [
+      {
+        "file_name": "./MutantManeuver.kt",
+        "line_number": 48,
+        "new_op": "RemoveOperator",
+        "old_op": "-",
+        "mutation_type": "UnaryRemovalOperator",
+        "result": "InProgress"
+      }
+    ]
+  },
+  "./Mutant200kmh.kt": {
+    "mutations": []
+  },
   "./Autopilot.kt": {
     "mutations": [
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 110,
+        "line_number": 112,
         "new_op": "RemoveOperator",
         "old_op": "-",
         "mutation_type": "UnaryRemovalOperator",
@@ -11,7 +29,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 215,
+        "line_number": 218,
         "new_op": "RemoveOperator",
         "old_op": "-",
         "mutation_type": "UnaryRemovalOperator",
@@ -19,7 +37,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 224,
+        "line_number": 227,
         "new_op": "RemoveOperator",
         "old_op": "-",
         "mutation_type": "UnaryRemovalOperator",
@@ -27,7 +45,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 275,
+        "line_number": 280,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -35,7 +53,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 275,
+        "line_number": 280,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -43,7 +61,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 281,
+        "line_number": 286,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -51,7 +69,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 281,
+        "line_number": 286,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -59,7 +77,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 308,
+        "line_number": 313,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -67,15 +85,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 308,
-        "new_op": "RemoveOperator",
-        "old_op": "!",
-        "mutation_type": "UnaryRemovalOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 327,
+        "line_number": 313,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -85,13 +95,21 @@
         "file_name": "./Autopilot.kt",
         "line_number": 332,
         "new_op": "RemoveOperator",
+        "old_op": "!",
+        "mutation_type": "UnaryRemovalOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 337,
+        "new_op": "RemoveOperator",
         "old_op": "-",
         "mutation_type": "UnaryRemovalOperator",
         "result": "InProgress"
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 345,
+        "line_number": 350,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -99,7 +117,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 345,
+        "line_number": 350,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -107,7 +125,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 346,
+        "line_number": 351,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -115,7 +133,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 347,
+        "line_number": 352,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -123,7 +141,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 364,
+        "line_number": 369,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -131,7 +149,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 364,
+        "line_number": 369,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -139,7 +157,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 396,
+        "line_number": 401,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -147,7 +165,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 396,
+        "line_number": 401,
         "new_op": "RemoveOperator",
         "old_op": "!",
         "mutation_type": "UnaryRemovalOperator",
@@ -155,7 +173,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 260,
+        "line_number": 265,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -163,7 +181,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 275,
+        "line_number": 280,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -171,7 +189,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 281,
+        "line_number": 286,
         "new_op": "&&",
         "old_op": "||",
         "mutation_type": "LogicalReplacementOperator",
@@ -179,7 +197,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 293,
+        "line_number": 298,
         "new_op": "&&",
         "old_op": "||",
         "mutation_type": "LogicalReplacementOperator",
@@ -187,7 +205,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 308,
+        "line_number": 313,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -195,7 +213,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 335,
+        "line_number": 340,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -203,7 +221,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 345,
+        "line_number": 350,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -211,7 +229,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 346,
+        "line_number": 351,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -219,7 +237,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 347,
+        "line_number": 352,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -227,7 +245,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 364,
+        "line_number": 369,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
@@ -235,18 +253,12 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 396,
+        "line_number": 401,
         "new_op": "||",
         "old_op": "&&",
         "mutation_type": "LogicalReplacementOperator",
         "result": "InProgress"
       }
     ]
-  },
-  "./Mutant200kmh.kt": {
-    "mutations": []
-  },
-  "./Mutant.kt": {
-    "mutations": []
   }
 }
