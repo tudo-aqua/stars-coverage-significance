@@ -88,7 +88,8 @@ object PredicateTestHelper {
               },
           ego = ego,
           runId = UUID.randomUUID(),
-          scenarioConfigId = UUID.randomUUID())
+          scenarioConfigId = UUID.randomUUID(),
+          egoManeuver = null)
 
   /** Creates a test [Vehicle] with the given parameters. */
   fun getTestVehicle(

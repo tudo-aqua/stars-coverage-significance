@@ -41,6 +41,7 @@ import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
+import tools.aqua.stars.sumo.MutantManeuver
 import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
 /**
@@ -184,7 +185,7 @@ class LibsumoDynamicDataCollector(
 
     if (onlyFirstTick)
         return listOfNotNull(
-            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks))
+            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, null))
 
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
@@ -196,11 +197,12 @@ class LibsumoDynamicDataCollector(
     while (Simulation.getMinExpectedNumber() > 0) {
       Simulation.step()
 
-      val timeStep =
-          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks) ?: break
-      ticks += timeStep
+      val egoManeuver = autopilot.controlTick(egoId)
 
-      autopilot.controlTick(egoId)
+      val timeStep =
+          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, egoManeuver)
+              ?: break
+      ticks += timeStep
     }
 
     Simulation.close()
@@ -225,7 +227,8 @@ class LibsumoDynamicDataCollector(
       egoId: String,
       mutantId: UUID?,
       scenario: ScenarioStartingConfigurationEntry,
-      ticks: List<TimeStep> = emptyList()
+      ticks: List<TimeStep> = emptyList(),
+      egoManeuver: MutantManeuver?
   ): TimeStep? {
     val simTimeSeconds = Simulation.getTime()
     val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
@@ -340,6 +343,7 @@ class LibsumoDynamicDataCollector(
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
         mutantId = mutantId,
-        ego = ego)
+        ego = ego,
+        egoManeuver = egoManeuver)
   }
 }

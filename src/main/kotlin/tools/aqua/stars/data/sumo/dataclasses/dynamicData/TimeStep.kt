@@ -19,6 +19,7 @@ package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
 import java.util.UUID
 import tools.aqua.stars.core.types.TickDataType
+import tools.aqua.stars.sumo.MutantManeuver
 
 /**
  * One tick (timestep) of simulation data as a STARS [TickDataType].
@@ -42,6 +43,7 @@ class TimeStep(
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,
+    val egoManeuver: MutantManeuver?,
     override val ego: Vehicle
 ) :
     TickDataType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>(

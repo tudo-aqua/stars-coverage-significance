@@ -434,6 +434,6 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
         collisionsInTick = emptyList(),
         mutantId = UUID.randomUUID(),
         ego = ego,
-    )
+        egoManeuver = null)
   }
 }

@@ -997,7 +997,8 @@ object SumoImporter {
         scenarioConfigId = UUID.randomUUID(),
         runId = UUID.randomUUID(),
         mutantId = UUID.randomUUID(),
-        ego = ego)
+        ego = ego,
+        egoManeuver = null)
   }
 
   /**

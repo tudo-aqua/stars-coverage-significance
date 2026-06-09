@@ -342,6 +342,7 @@ class LibsumoDynamicDataCollectorTest(
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
         mutantId = mutantId,
-        ego = ego)
+        ego = ego,
+        egoManeuver = null)
   }
 }
