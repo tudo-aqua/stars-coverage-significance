@@ -52,6 +52,14 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property nextTickMonitorG4Failed Whether monitor G4 failed in the next tick (null = last tick).
  * @property nextTickMonitorI1Failed Whether monitor I1 failed in the next tick (null = last tick).
  * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
+ * @property surroundingDistFront Distance to nearest vehicle ahead on the same lane (m).
+ * @property surroundingDistRear Distance to nearest vehicle behind on the same lane (m).
+ * @property surroundingDistFrontLeft Distance to nearest vehicle ahead on the left lane (m).
+ * @property surroundingDistFrontRight Distance to nearest vehicle ahead on the right lane (m).
+ * @property surroundingDistRearLeft Distance to nearest vehicle behind on the left lane (m).
+ * @property surroundingDistRearRight Distance to nearest vehicle behind on the right lane (m).
+ * @property surroundingDistLeft Distance to nearest vehicle on the left lane, any position (m).
+ * @property surroundingDistRight Distance to nearest vehicle on the right lane, any position (m).
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricFailedMonitorsEntry(
@@ -81,5 +89,13 @@ data class MetricFailedMonitorsEntry(
     var nextTickMonitorG4Failed: Boolean? = null,
     var nextTickMonitorI1Failed: Boolean? = null,
     var nextTickMonitorI2Failed: Boolean? = null,
+    val surroundingDistFront: Double? = null,
+    val surroundingDistRear: Double? = null,
+    val surroundingDistFrontLeft: Double? = null,
+    val surroundingDistFrontRight: Double? = null,
+    val surroundingDistRearLeft: Double? = null,
+    val surroundingDistRearRight: Double? = null,
+    val surroundingDistLeft: Double? = null,
+    val surroundingDistRight: Double? = null,
     val createdAt: Instant = Instant.now(),
 )

@@ -130,6 +130,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
     val previousId = previousDifferentEntry?.currentTSCInstanceId
     val previousTick = previousDifferentEntry?.tick
 
+    val surroundingDistances = tick.egoSurroundingVehicleDistances
     val failedMonitorsEntry =
         tscMap.getOrPut(Triple(tick.mutantId, tick.scenarioConfigId, currentTickTime)) {
           MetricFailedMonitorsEntry(
@@ -150,7 +151,15 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               monitorG3Failed = false,
               monitorG4Failed = false,
               monitorI1Failed = false,
-              monitorI2Failed = false)
+              monitorI2Failed = false,
+              surroundingDistFront = surroundingDistances?.frontMeters,
+              surroundingDistRear = surroundingDistances?.rearMeters,
+              surroundingDistFrontLeft = surroundingDistances?.frontLeftMeters,
+              surroundingDistFrontRight = surroundingDistances?.frontRightMeters,
+              surroundingDistRearLeft = surroundingDistances?.rearLeftMeters,
+              surroundingDistRearRight = surroundingDistances?.rearRightMeters,
+              surroundingDistLeft = surroundingDistances?.leftMeters,
+              surroundingDistRight = surroundingDistances?.rightMeters)
         }
     val violatedMonitors = tscInstance.rootNode.validateMonitors(tick.identifier)
     violatedMonitors.forEach { violatedMonitor ->

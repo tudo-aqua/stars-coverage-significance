@@ -197,6 +197,8 @@ class LibsumoDynamicDataCollector(
     while (Simulation.getMinExpectedNumber() > 0) {
       Simulation.step()
 
+      if (!checkEgoExistence(egoId)) break
+
       val egoManeuver = autopilot.controlTick(egoId)
 
       val timeStep =
@@ -219,6 +221,11 @@ class LibsumoDynamicDataCollector(
     }
 
     return resultList
+  }
+
+  private fun checkEgoExistence(egoId: String): Boolean {
+    val vehIds = SumoVehicle.getIDList()
+    return egoId in vehIds
   }
 
   private fun getCurrentTimeStep(
@@ -307,6 +314,8 @@ class LibsumoDynamicDataCollector(
       return null
     }
 
+    val surroundingDistances = sampleEgoSurroundingDistances(egoId)
+
     val collisionsInTick = ArrayList<CollisionEvent>()
     for (collision in Simulation.getCollisions()) {
       val laneId = collision.lane ?: ""
@@ -344,6 +353,7 @@ class LibsumoDynamicDataCollector(
         collisionsInTick = collisionsInTick,
         mutantId = mutantId,
         ego = ego,
-        egoManeuver = egoManeuver)
+        egoManeuver = egoManeuver,
+        egoSurroundingVehicleDistances = surroundingDistances)
   }
 }

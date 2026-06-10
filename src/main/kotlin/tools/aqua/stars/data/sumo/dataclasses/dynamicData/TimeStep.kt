@@ -34,6 +34,8 @@ import tools.aqua.stars.sumo.MutantManeuver
  * @property collisionsInTick Collisions occurring during this tick.
  * @property egoManeuver The ego vehicle's maneuver.
  * @property ego The ego vehicle.
+ * @property egoSurroundingVehicleDistances Bumper-to-bumper distances to surrounding vehicles
+ *   sampled from the live SUMO simulation, or `null` when not available (e.g. loaded from XML).
  */
 class TimeStep(
     identifier: String,
@@ -45,7 +47,8 @@ class TimeStep(
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,
     val egoManeuver: MutantManeuver?,
-    override val ego: Vehicle
+    override val ego: Vehicle,
+    val egoSurroundingVehicleDistances: SurroundingVehicleDistances? = null,
 ) :
     TickDataType<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>(
         currentTickUnit = TickUnitMilliseconds(tickTimeMillis),

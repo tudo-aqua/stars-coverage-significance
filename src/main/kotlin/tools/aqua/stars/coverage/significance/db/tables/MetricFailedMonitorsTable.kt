@@ -66,6 +66,14 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property nextTickMonitorG4Failed Whether monitor G4 failed in the next tick (null = last tick).
  * @property nextTickMonitorI1Failed Whether monitor I1 failed in the next tick (null = last tick).
  * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
+ * @property surroundingDistFront Distance to nearest vehicle ahead on the same lane (m).
+ * @property surroundingDistRear Distance to nearest vehicle behind on the same lane (m).
+ * @property surroundingDistFrontLeft Distance to nearest vehicle ahead on the left lane (m).
+ * @property surroundingDistFrontRight Distance to nearest vehicle ahead on the right lane (m).
+ * @property surroundingDistRearLeft Distance to nearest vehicle behind on the left lane (m).
+ * @property surroundingDistRearRight Distance to nearest vehicle behind on the right lane (m).
+ * @property surroundingDistLeft Distance to nearest vehicle on the left lane, any position (m).
+ * @property surroundingDistRight Distance to nearest vehicle on the right lane, any position (m).
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
@@ -117,7 +125,7 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val tick = long("tick")
   val egoManeuverSpeed = double("ego_maneuver_speed").nullable()
   val egoManeuverLaneChange =
-      enumeration<LaneChangeDirection>("ego_maneuver_lane_change").nullable()
+      enumerationByName("ego_maneuver_lane_change", 20, LaneChangeDirection::class).nullable()
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
   val monitorG2Failed = bool("monitor_g2_emergencyBraking_failed").default(false)
@@ -134,6 +142,14 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val nextTickMonitorI1Failed = bool("next_tick_monitor_i1_Stopping_failed").nullable()
   val nextTickMonitorI2Failed =
       bool("next_tick_monitor_i2_DrivingFasterThenLeftTraffic_failed").nullable()
+  val surroundingDistFront = double("surrounding_dist_front").nullable()
+  val surroundingDistRear = double("surrounding_dist_rear").nullable()
+  val surroundingDistFrontLeft = double("surrounding_dist_front_left").nullable()
+  val surroundingDistFrontRight = double("surrounding_dist_front_right").nullable()
+  val surroundingDistRearLeft = double("surrounding_dist_rear_left").nullable()
+  val surroundingDistRearRight = double("surrounding_dist_rear_right").nullable()
+  val surroundingDistLeft = double("surrounding_dist_left").nullable()
+  val surroundingDistRight = double("surrounding_dist_right").nullable()
   val createdAt = timestamp("created_at")
 
   init {

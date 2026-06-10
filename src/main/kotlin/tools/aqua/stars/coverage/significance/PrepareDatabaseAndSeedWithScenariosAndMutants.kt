@@ -53,7 +53,7 @@ fun main() {
   }
 
   // Seed scenarios
-  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
+  seedGridTrafficScenarios(n = 1, seed = SEED, insertIntoDatabase = true)
   //  seedGridTrafficScenarios(
   //      seed = SEED,
   //      insertIntoDatabase = true,
@@ -63,7 +63,7 @@ fun main() {
   // "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
 
   // Seed mutants
-  seedMutants(seedBaseLine = false, seedMutants = true)
+  seedMutants(seedBaseLine = false, seedMutants = true, numberOfMutants = 1)
 
   // Precompute scenario-only metric once
   //  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2, tscId = tscId)

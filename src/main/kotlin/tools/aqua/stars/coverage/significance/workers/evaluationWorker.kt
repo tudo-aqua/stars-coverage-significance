@@ -31,6 +31,7 @@ import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricTotalTickDifferenceEntry
 import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MetricTotalTickDifferenceRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
@@ -53,10 +54,18 @@ import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
  */
 fun main(args: Array<String>) {
   installParentDeathWatcher(args)
-  val workerId = CliArgs.requireString(args, "workerId")
-  val runId = CliArgs.requireUuid(args, "runId")
-
   DbBootstrap.connect()
+
+  val finalArgs =
+      if (args.isEmpty() || args.all { it.isBlank() }) {
+        arrayOf("--workerId=1", "--runId=${EvaluationRunsRepository.getLatest()?.id}")
+      } else {
+        args
+      }
+
+  val workerId = CliArgs.requireString(finalArgs, "workerId")
+  val runId = CliArgs.requireUuid(finalArgs, "runId")
+
 
   while (true) {
     val job =

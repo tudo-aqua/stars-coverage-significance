@@ -40,6 +40,7 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.VehicleType
 import tools.aqua.stars.data.sumo.dataclasses.staticData.Lane
 import tools.aqua.stars.data.sumo.dataclasses.staticData.RoadNetwork
+import tools.aqua.stars.data.sumo.libSumo.sampleEgoSurroundingDistances
 import tools.aqua.stars.data.sumo.xml.SumoImporter
 import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
 import tools.aqua.stars.sumo.Mutant
@@ -205,6 +206,8 @@ class LibsumoMutantDataCollector(
     while (Simulation.getMinExpectedNumber() > 0) {
       Simulation.step()
 
+      if (!checkEgoExistence(egoId)) break
+
       val egoManeuver = mutant.controlTick(egoId)
 
       val timeStep =
@@ -227,6 +230,11 @@ class LibsumoMutantDataCollector(
     }
 
     return resultList
+  }
+
+  private fun checkEgoExistence(egoId: String): Boolean {
+    val vehIds = SumoVehicle.getIDList()
+    return egoId in vehIds
   }
 
   private fun getCurrentTimeStep(
@@ -315,6 +323,8 @@ class LibsumoMutantDataCollector(
       return null
     }
 
+    val surroundingDistances = sampleEgoSurroundingDistances(egoId)
+
     val collisionsInTick = ArrayList<CollisionEvent>()
     for (collision in Simulation.getCollisions()) {
       val laneId = collision.lane ?: ""
@@ -352,6 +362,7 @@ class LibsumoMutantDataCollector(
         collisionsInTick = collisionsInTick,
         mutantId = mutantId,
         ego = ego,
-        egoManeuver = egoManeuver)
+        egoManeuver = egoManeuver,
+        egoSurroundingVehicleDistances = surroundingDistances)
   }
 }

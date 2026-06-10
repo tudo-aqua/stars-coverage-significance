@@ -130,6 +130,15 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.nextTickMonitorI1Failed] = e.nextTickMonitorI1Failed
       this[MetricFailedMonitorsTable.nextTickMonitorI2Failed] = e.nextTickMonitorI2Failed
 
+      this[MetricFailedMonitorsTable.surroundingDistFront] = e.surroundingDistFront
+      this[MetricFailedMonitorsTable.surroundingDistRear] = e.surroundingDistRear
+      this[MetricFailedMonitorsTable.surroundingDistFrontLeft] = e.surroundingDistFrontLeft
+      this[MetricFailedMonitorsTable.surroundingDistFrontRight] = e.surroundingDistFrontRight
+      this[MetricFailedMonitorsTable.surroundingDistRearLeft] = e.surroundingDistRearLeft
+      this[MetricFailedMonitorsTable.surroundingDistRearRight] = e.surroundingDistRearRight
+      this[MetricFailedMonitorsTable.surroundingDistLeft] = e.surroundingDistLeft
+      this[MetricFailedMonitorsTable.surroundingDistRight] = e.surroundingDistRight
+
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
   }
@@ -173,6 +182,15 @@ object MetricFailedMonitorsRepository {
               row[nextTickMonitorG4Failed] = entry.nextTickMonitorG4Failed
               row[nextTickMonitorI1Failed] = entry.nextTickMonitorI1Failed
               row[nextTickMonitorI2Failed] = entry.nextTickMonitorI2Failed
+
+              row[surroundingDistFront] = entry.surroundingDistFront
+              row[surroundingDistRear] = entry.surroundingDistRear
+              row[surroundingDistFrontLeft] = entry.surroundingDistFrontLeft
+              row[surroundingDistFrontRight] = entry.surroundingDistFrontRight
+              row[surroundingDistRearLeft] = entry.surroundingDistRearLeft
+              row[surroundingDistRearRight] = entry.surroundingDistRearRight
+              row[surroundingDistLeft] = entry.surroundingDistLeft
+              row[surroundingDistRight] = entry.surroundingDistRight
 
               row[createdAt] = entry.createdAt
             }
@@ -230,6 +248,15 @@ object MetricFailedMonitorsRepository {
                   st[nextTickMonitorG4Failed] = entry.nextTickMonitorG4Failed
                   st[nextTickMonitorI1Failed] = entry.nextTickMonitorI1Failed
                   st[nextTickMonitorI2Failed] = entry.nextTickMonitorI2Failed
+
+                  st[surroundingDistFront] = entry.surroundingDistFront
+                  st[surroundingDistRear] = entry.surroundingDistRear
+                  st[surroundingDistFrontLeft] = entry.surroundingDistFrontLeft
+                  st[surroundingDistFrontRight] = entry.surroundingDistFrontRight
+                  st[surroundingDistRearLeft] = entry.surroundingDistRearLeft
+                  st[surroundingDistRearRight] = entry.surroundingDistRearRight
+                  st[surroundingDistLeft] = entry.surroundingDistLeft
+                  st[surroundingDistRight] = entry.surroundingDistRight
 
                   st[createdAt] = entry.createdAt
                 }
@@ -293,6 +320,14 @@ object MetricFailedMonitorsRepository {
           nextTickMonitorG4Failed = this[MetricFailedMonitorsTable.nextTickMonitorG4Failed],
           nextTickMonitorI1Failed = this[MetricFailedMonitorsTable.nextTickMonitorI1Failed],
           nextTickMonitorI2Failed = this[MetricFailedMonitorsTable.nextTickMonitorI2Failed],
+          surroundingDistFront = this[MetricFailedMonitorsTable.surroundingDistFront],
+          surroundingDistRear = this[MetricFailedMonitorsTable.surroundingDistRear],
+          surroundingDistFrontLeft = this[MetricFailedMonitorsTable.surroundingDistFrontLeft],
+          surroundingDistFrontRight = this[MetricFailedMonitorsTable.surroundingDistFrontRight],
+          surroundingDistRearLeft = this[MetricFailedMonitorsTable.surroundingDistRearLeft],
+          surroundingDistRearRight = this[MetricFailedMonitorsTable.surroundingDistRearRight],
+          surroundingDistLeft = this[MetricFailedMonitorsTable.surroundingDistLeft],
+          surroundingDistRight = this[MetricFailedMonitorsTable.surroundingDistRight],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
       )
 }
