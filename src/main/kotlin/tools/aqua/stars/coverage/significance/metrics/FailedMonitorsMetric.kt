@@ -164,6 +164,17 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
         i2DrivingFasterThenLeftTraffic.name -> failedMonitorsEntry.monitorI2Failed = true
       }
     }
+
+    // Back-populate the previous tick's "next tick" monitor fields with this tick's results.
+    if (closestEntry != null) {
+      closestEntry.nextTickMonitorG0Failed = G0Accidents in setOfFailedMonitors
+      closestEntry.nextTickMonitorG1Failed = G1SafeDistance in setOfFailedMonitors
+      closestEntry.nextTickMonitorG2Failed = G2EmergencyBraking in setOfFailedMonitors
+      closestEntry.nextTickMonitorG3Failed = G3MaximumSpeedLimit in setOfFailedMonitors
+      closestEntry.nextTickMonitorG4Failed = G4TrafficFlow in setOfFailedMonitors
+      closestEntry.nextTickMonitorI1Failed = I1Stopping in setOfFailedMonitors
+      closestEntry.nextTickMonitorI2Failed = I2FasterThanLeftTraffic in setOfFailedMonitors
+    }
   }
 
   override fun postEvaluate() {

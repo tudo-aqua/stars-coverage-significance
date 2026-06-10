@@ -122,6 +122,14 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.monitorI1Failed] = e.monitorI1Failed
       this[MetricFailedMonitorsTable.monitorI2Failed] = e.monitorI2Failed
 
+      this[MetricFailedMonitorsTable.nextTickMonitorG0Failed] = e.nextTickMonitorG0Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorG1Failed] = e.nextTickMonitorG1Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorG2Failed] = e.nextTickMonitorG2Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorG3Failed] = e.nextTickMonitorG3Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorG4Failed] = e.nextTickMonitorG4Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorI1Failed] = e.nextTickMonitorI1Failed
+      this[MetricFailedMonitorsTable.nextTickMonitorI2Failed] = e.nextTickMonitorI2Failed
+
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
   }
@@ -157,6 +165,14 @@ object MetricFailedMonitorsRepository {
               row[monitorG4Failed] = entry.monitorG4Failed
               row[monitorI1Failed] = entry.monitorI1Failed
               row[monitorI2Failed] = entry.monitorI2Failed
+
+              row[nextTickMonitorG0Failed] = entry.nextTickMonitorG0Failed
+              row[nextTickMonitorG1Failed] = entry.nextTickMonitorG1Failed
+              row[nextTickMonitorG2Failed] = entry.nextTickMonitorG2Failed
+              row[nextTickMonitorG3Failed] = entry.nextTickMonitorG3Failed
+              row[nextTickMonitorG4Failed] = entry.nextTickMonitorG4Failed
+              row[nextTickMonitorI1Failed] = entry.nextTickMonitorI1Failed
+              row[nextTickMonitorI2Failed] = entry.nextTickMonitorI2Failed
 
               row[createdAt] = entry.createdAt
             }
@@ -206,6 +222,14 @@ object MetricFailedMonitorsRepository {
                   st[monitorG4Failed] = entry.monitorG4Failed
                   st[monitorI1Failed] = entry.monitorI1Failed
                   st[monitorI2Failed] = entry.monitorI2Failed
+
+                  st[nextTickMonitorG0Failed] = entry.nextTickMonitorG0Failed
+                  st[nextTickMonitorG1Failed] = entry.nextTickMonitorG1Failed
+                  st[nextTickMonitorG2Failed] = entry.nextTickMonitorG2Failed
+                  st[nextTickMonitorG3Failed] = entry.nextTickMonitorG3Failed
+                  st[nextTickMonitorG4Failed] = entry.nextTickMonitorG4Failed
+                  st[nextTickMonitorI1Failed] = entry.nextTickMonitorI1Failed
+                  st[nextTickMonitorI2Failed] = entry.nextTickMonitorI2Failed
 
                   st[createdAt] = entry.createdAt
                 }
@@ -262,6 +286,13 @@ object MetricFailedMonitorsRepository {
           monitorG4Failed = this[MetricFailedMonitorsTable.monitorG4Failed],
           monitorI1Failed = this[MetricFailedMonitorsTable.monitorI1Failed],
           monitorI2Failed = this[MetricFailedMonitorsTable.monitorI2Failed],
+          nextTickMonitorG0Failed = this[MetricFailedMonitorsTable.nextTickMonitorG0Failed],
+          nextTickMonitorG1Failed = this[MetricFailedMonitorsTable.nextTickMonitorG1Failed],
+          nextTickMonitorG2Failed = this[MetricFailedMonitorsTable.nextTickMonitorG2Failed],
+          nextTickMonitorG3Failed = this[MetricFailedMonitorsTable.nextTickMonitorG3Failed],
+          nextTickMonitorG4Failed = this[MetricFailedMonitorsTable.nextTickMonitorG4Failed],
+          nextTickMonitorI1Failed = this[MetricFailedMonitorsTable.nextTickMonitorI1Failed],
+          nextTickMonitorI2Failed = this[MetricFailedMonitorsTable.nextTickMonitorI2Failed],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
       )
 }

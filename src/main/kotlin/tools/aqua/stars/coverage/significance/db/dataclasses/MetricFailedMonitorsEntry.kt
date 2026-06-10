@@ -45,6 +45,13 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
  * @property monitorI2Failed Whether monitor I2 failed.
+ * @property nextTickMonitorG0Failed Whether monitor G0 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG1Failed Whether monitor G1 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG2Failed Whether monitor G2 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG3Failed Whether monitor G3 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG4Failed Whether monitor G4 failed in the next tick (null = last tick).
+ * @property nextTickMonitorI1Failed Whether monitor I1 failed in the next tick (null = last tick).
+ * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricFailedMonitorsEntry(
@@ -67,5 +74,12 @@ data class MetricFailedMonitorsEntry(
     var monitorG4Failed: Boolean,
     var monitorI1Failed: Boolean,
     var monitorI2Failed: Boolean,
+    var nextTickMonitorG0Failed: Boolean? = null,
+    var nextTickMonitorG1Failed: Boolean? = null,
+    var nextTickMonitorG2Failed: Boolean? = null,
+    var nextTickMonitorG3Failed: Boolean? = null,
+    var nextTickMonitorG4Failed: Boolean? = null,
+    var nextTickMonitorI1Failed: Boolean? = null,
+    var nextTickMonitorI2Failed: Boolean? = null,
     val createdAt: Instant = Instant.now(),
 )

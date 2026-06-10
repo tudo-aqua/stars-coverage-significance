@@ -59,6 +59,13 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
  * @property monitorI2Failed Whether monitor I2 failed.
+ * @property nextTickMonitorG0Failed Whether monitor G0 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG1Failed Whether monitor G1 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG2Failed Whether monitor G2 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG3Failed Whether monitor G3 failed in the next tick (null = last tick).
+ * @property nextTickMonitorG4Failed Whether monitor G4 failed in the next tick (null = last tick).
+ * @property nextTickMonitorI1Failed Whether monitor I1 failed in the next tick (null = last tick).
+ * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
@@ -118,6 +125,15 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val monitorG4Failed = bool("monitor_g4_TrafficFlow_failed").default(false)
   val monitorI1Failed = bool("monitor_i1_Stopping_failed").default(false)
   val monitorI2Failed = bool("monitor_i2_DrivingFasterThenLeftTraffic_failed").default(false)
+  val nextTickMonitorG0Failed = bool("next_tick_monitor_g0_Accidents_failed").nullable()
+  val nextTickMonitorG1Failed =
+      bool("next_tick_monitor_g1_SafeDistanceToPrecedingVehicle_failed").nullable()
+  val nextTickMonitorG2Failed = bool("next_tick_monitor_g2_emergencyBraking_failed").nullable()
+  val nextTickMonitorG3Failed = bool("next_tick_monitor_g3_MaximumSpeedLimit_failed").nullable()
+  val nextTickMonitorG4Failed = bool("next_tick_monitor_g4_TrafficFlow_failed").nullable()
+  val nextTickMonitorI1Failed = bool("next_tick_monitor_i1_Stopping_failed").nullable()
+  val nextTickMonitorI2Failed =
+      bool("next_tick_monitor_i2_DrivingFasterThenLeftTraffic_failed").nullable()
   val createdAt = timestamp("created_at")
 
   init {
