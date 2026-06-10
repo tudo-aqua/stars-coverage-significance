@@ -129,7 +129,7 @@ fun main() {
   println(
       """
     Inside /sumoData/fcdReplay:
-    python "C:\Program Files (x86)\Eclipse\Sumo\tools\fcdReplay.py" -k fcdReplay.sumocfg -f fcdReplay.fcd.xml
+    python fcdReplay.py -k fcdReplay.sumocfg -f fcdReplay.fcd.xml
   """
           .trimIndent())
 
