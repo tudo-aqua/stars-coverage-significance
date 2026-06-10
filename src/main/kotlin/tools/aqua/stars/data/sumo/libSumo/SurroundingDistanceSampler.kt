@@ -47,22 +47,22 @@ const val VEHICLE_BESIDES_MAX_DISTANCE_METERS = 3.0
  *   front bumper = getLanePosition()
  *   rear  bumper = getLanePosition() − getLength()
  * ```
+ *
  * The gap between two bounding boxes is:
- * - `gapAhead  = veh_rear  − ego_front`  (≥ 0 when vehicle is fully ahead)
- * - `gapBehind = ego_rear  − veh_front`  (≥ 0 when vehicle is fully behind)
+ * - `gapAhead = veh_rear − ego_front` (≥ 0 when vehicle is fully ahead)
+ * - `gapBehind = ego_rear − veh_front` (≥ 0 when vehicle is fully behind)
  * - Both negative → bounding boxes **overlap** longitudinally.
  *
  * ## Cell assignment (adjacent-lane vehicles only)
- * The bounding-box distance is `min(gapAhead, gapBehind)` clamped to 0 for overlaps.
- * | box distance | direction | cell |
- * |---|---|---|
- * | ≤ [VEHICLE_BESIDES_MAX_DISTANCE_METERS] | – | **left** / **right** (distance = box dist; 0 for overlap) |
- * | > threshold | ahead | **front-left** / **front-right** (distance = gapAhead) |
- * | > threshold | behind | **rear-left** / **rear-right** (distance = gapBehind) |
+ * The bounding-box distance is `min(gapAhead, gapBehind)` clamped to 0 for overlaps. | box distance
+ * | direction | cell | |---|---|---| | ≤ [VEHICLE_BESIDES_MAX_DISTANCE_METERS] | – | **left** /
+ * **right** (distance = box dist; 0 for overlap) | | > threshold | ahead | **front-left** /
+ * **front-right** (distance = gapAhead) | | > threshold | behind | **rear-left** / **rear-right**
+ * (distance = gapBehind) |
  *
  * ## Scope
- * Only vehicles on the same road edge and an immediately adjacent lane (`|laneIndex diff| ≤ 1`)
- * are considered. SUMO lane indices increase toward the left (`0` = rightmost lane).
+ * Only vehicles on the same road edge and an immediately adjacent lane (`|laneIndex diff| ≤ 1`) are
+ * considered. SUMO lane indices increase toward the left (`0` = rightmost lane).
  */
 fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
   val egoFront = SumoVehicle.getLanePosition(egoId)

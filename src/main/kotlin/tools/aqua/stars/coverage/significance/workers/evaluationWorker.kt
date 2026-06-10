@@ -66,7 +66,6 @@ fun main(args: Array<String>) {
   val workerId = CliArgs.requireString(finalArgs, "workerId")
   val runId = CliArgs.requireUuid(finalArgs, "runId")
 
-
   while (true) {
     val job =
         MutantScenarioChunkJobsRepository.claimNextChunkJob(runId = runId, workerId = workerId)
