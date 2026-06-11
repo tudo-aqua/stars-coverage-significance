@@ -150,6 +150,94 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
   val surroundingDistRearRight = double("surrounding_dist_rear_right").nullable()
   val surroundingDistLeft = double("surrounding_dist_left").nullable()
   val surroundingDistRight = double("surrounding_dist_right").nullable()
+  val egoSpeedMps = double("ego_speed_mps").nullable()
+  val egoAccelMps2 = double("ego_accel_mps2").nullable()
+  val egoFrontBumperPosMeters = double("ego_front_bumper_pos_meters").nullable()
+  val egoBackBumperPosMeters = double("ego_back_bumper_pos_meters").nullable()
+  val surroundingFrontSpeedMps = double("surrounding_front_speed_mps").nullable()
+  val surroundingFrontFrontBumperPosMeters =
+      double("surrounding_front_front_bumper_pos_meters").nullable()
+  val surroundingFrontBackBumperPosMeters =
+      double("surrounding_front_back_bumper_pos_meters").nullable()
+  val surroundingFrontAccelMps2 = double("surrounding_front_accel_mps2").nullable()
+  val surroundingFrontSpeedDiffMps = double("surrounding_front_speed_diff_mps").nullable()
+  val surroundingFrontAccelDiffMps2 = double("surrounding_front_accel_diff_mps2").nullable()
+  val surroundingFrontTtcSeconds = double("surrounding_front_ttc_s").nullable()
+  val surroundingFrontTgSeconds = double("surrounding_front_tg_s").nullable()
+  val surroundingRearSpeedMps = double("surrounding_rear_speed_mps").nullable()
+  val surroundingRearFrontBumperPosMeters =
+      double("surrounding_rear_front_bumper_pos_meters").nullable()
+  val surroundingRearBackBumperPosMeters =
+      double("surrounding_rear_back_bumper_pos_meters").nullable()
+  val surroundingRearAccelMps2 = double("surrounding_rear_accel_mps2").nullable()
+  val surroundingRearSpeedDiffMps = double("surrounding_rear_speed_diff_mps").nullable()
+  val surroundingRearAccelDiffMps2 = double("surrounding_rear_accel_diff_mps2").nullable()
+  val surroundingRearTtcSeconds = double("surrounding_rear_ttc_s").nullable()
+  val surroundingRearTgSeconds = double("surrounding_rear_tg_s").nullable()
+  val surroundingFrontLeftSpeedMps = double("surrounding_front_left_speed_mps").nullable()
+  val surroundingFrontLeftFrontBumperPosMeters =
+      double("surrounding_front_left_front_bumper_pos_meters").nullable()
+  val surroundingFrontLeftBackBumperPosMeters =
+      double("surrounding_front_left_back_bumper_pos_meters").nullable()
+  val surroundingFrontLeftAccelMps2 = double("surrounding_front_left_accel_mps2").nullable()
+  val surroundingFrontLeftSpeedDiffMps = double("surrounding_front_left_speed_diff_mps").nullable()
+  val surroundingFrontLeftAccelDiffMps2 =
+      double("surrounding_front_left_accel_diff_mps2").nullable()
+  val surroundingFrontLeftTtcSeconds = double("surrounding_front_left_ttc_s").nullable()
+  val surroundingFrontLeftTgSeconds = double("surrounding_front_left_tg_s").nullable()
+  val surroundingFrontRightSpeedMps = double("surrounding_front_right_speed_mps").nullable()
+  val surroundingFrontRightFrontBumperPosMeters =
+      double("surrounding_front_right_front_bumper_pos_meters").nullable()
+  val surroundingFrontRightBackBumperPosMeters =
+      double("surrounding_front_right_back_bumper_pos_meters").nullable()
+  val surroundingFrontRightAccelMps2 = double("surrounding_front_right_accel_mps2").nullable()
+  val surroundingFrontRightSpeedDiffMps =
+      double("surrounding_front_right_speed_diff_mps").nullable()
+  val surroundingFrontRightAccelDiffMps2 =
+      double("surrounding_front_right_accel_diff_mps2").nullable()
+  val surroundingFrontRightTtcSeconds = double("surrounding_front_right_ttc_s").nullable()
+  val surroundingFrontRightTgSeconds = double("surrounding_front_right_tg_s").nullable()
+  val surroundingRearLeftSpeedMps = double("surrounding_rear_left_speed_mps").nullable()
+  val surroundingRearLeftFrontBumperPosMeters =
+      double("surrounding_rear_left_front_bumper_pos_meters").nullable()
+  val surroundingRearLeftBackBumperPosMeters =
+      double("surrounding_rear_left_back_bumper_pos_meters").nullable()
+  val surroundingRearLeftAccelMps2 = double("surrounding_rear_left_accel_mps2").nullable()
+  val surroundingRearLeftSpeedDiffMps = double("surrounding_rear_left_speed_diff_mps").nullable()
+  val surroundingRearLeftAccelDiffMps2 = double("surrounding_rear_left_accel_diff_mps2").nullable()
+  val surroundingRearLeftTtcSeconds = double("surrounding_rear_left_ttc_s").nullable()
+  val surroundingRearLeftTgSeconds = double("surrounding_rear_left_tg_s").nullable()
+  val surroundingRearRightSpeedMps = double("surrounding_rear_right_speed_mps").nullable()
+  val surroundingRearRightFrontBumperPosMeters =
+      double("surrounding_rear_right_front_bumper_pos_meters").nullable()
+  val surroundingRearRightBackBumperPosMeters =
+      double("surrounding_rear_right_back_bumper_pos_meters").nullable()
+  val surroundingRearRightAccelMps2 = double("surrounding_rear_right_accel_mps2").nullable()
+  val surroundingRearRightSpeedDiffMps = double("surrounding_rear_right_speed_diff_mps").nullable()
+  val surroundingRearRightAccelDiffMps2 =
+      double("surrounding_rear_right_accel_diff_mps2").nullable()
+  val surroundingRearRightTtcSeconds = double("surrounding_rear_right_ttc_s").nullable()
+  val surroundingRearRightTgSeconds = double("surrounding_rear_right_tg_s").nullable()
+  val surroundingLeftSpeedMps = double("surrounding_left_speed_mps").nullable()
+  val surroundingLeftFrontBumperPosMeters =
+      double("surrounding_left_front_bumper_pos_meters").nullable()
+  val surroundingLeftBackBumperPosMeters =
+      double("surrounding_left_back_bumper_pos_meters").nullable()
+  val surroundingLeftAccelMps2 = double("surrounding_left_accel_mps2").nullable()
+  val surroundingLeftSpeedDiffMps = double("surrounding_left_speed_diff_mps").nullable()
+  val surroundingLeftAccelDiffMps2 = double("surrounding_left_accel_diff_mps2").nullable()
+  val surroundingLeftTtcSeconds = double("surrounding_left_ttc_s").nullable()
+  val surroundingLeftTgSeconds = double("surrounding_left_tg_s").nullable()
+  val surroundingRightSpeedMps = double("surrounding_right_speed_mps").nullable()
+  val surroundingRightFrontBumperPosMeters =
+      double("surrounding_right_front_bumper_pos_meters").nullable()
+  val surroundingRightBackBumperPosMeters =
+      double("surrounding_right_back_bumper_pos_meters").nullable()
+  val surroundingRightAccelMps2 = double("surrounding_right_accel_mps2").nullable()
+  val surroundingRightSpeedDiffMps = double("surrounding_right_speed_diff_mps").nullable()
+  val surroundingRightAccelDiffMps2 = double("surrounding_right_accel_diff_mps2").nullable()
+  val surroundingRightTtcSeconds = double("surrounding_right_ttc_s").nullable()
+  val surroundingRightTgSeconds = double("surrounding_right_tg_s").nullable()
   val createdAt = timestamp("created_at")
 
   init {

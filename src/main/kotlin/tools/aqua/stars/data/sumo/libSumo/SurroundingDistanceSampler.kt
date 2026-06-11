@@ -71,14 +71,14 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
   val egoLane = SumoVehicle.getLaneIndex(egoId)
   val egoRoad = SumoVehicle.getRoadID(egoId)
 
-  var distFront: Double? = null
-  var distRear: Double? = null
-  var distLeft: Double? = null
-  var distRight: Double? = null
-  var distFrontLeft: Double? = null
-  var distRearLeft: Double? = null
-  var distFrontRight: Double? = null
-  var distRearRight: Double? = null
+  var snapFront: NeighborSnapshot? = null
+  var snapRear: NeighborSnapshot? = null
+  var snapLeft: NeighborSnapshot? = null
+  var snapRight: NeighborSnapshot? = null
+  var snapFrontLeft: NeighborSnapshot? = null
+  var snapRearLeft: NeighborSnapshot? = null
+  var snapFrontRight: NeighborSnapshot? = null
+  var snapRearRight: NeighborSnapshot? = null
 
   for (vehId in SumoVehicle.getIDList()) {
     if (vehId == egoId) continue
@@ -90,6 +90,8 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
     val vehFront = SumoVehicle.getLanePosition(vehId)
     val vehLength = runCatching { SumoVehicle.getLength(vehId) }.getOrElse { 5.0 }
     val vehRear = vehFront - vehLength
+    val vehSpeed = SumoVehicle.getSpeed(vehId)
+    val vehAccel = runCatching { SumoVehicle.getAcceleration(vehId) }.getOrElse { 0.0 }
 
     // Positive when the vehicle is fully ahead / fully behind; negative when boxes overlap.
     val gapAhead = vehRear - egoFront
@@ -97,8 +99,10 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
 
     if (laneDiff == 0) {
       // ── Same lane: only front / rear ──────────────────────────────────────────────────────────
-      if (gapAhead >= 0.0) distFront = nearerGap(distFront, gapAhead)
-      else if (gapBehind >= 0.0) distRear = nearerGap(distRear, gapBehind)
+      if (gapAhead >= 0.0)
+          snapFront = nearer(snapFront, NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel))
+      else if (gapBehind >= 0.0)
+          snapRear = nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel))
       // Both negative = same-lane collision; ignore for distance purposes.
     } else {
       // ── Adjacent lane: assign to besides-zone or corner cell ──────────────────────────────────
@@ -114,32 +118,75 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
 
       if (boxDist <= VEHICLE_BESIDES_MAX_DISTANCE_METERS) {
         // Vehicle is in the "besides" zone (middle row of the 3×3 grid).
-        if (isLeft) distLeft = nearerGap(distLeft, boxDist)
-        else distRight = nearerGap(distRight, boxDist)
+        val snap = NeighborSnapshot(boxDist, vehSpeed, vehFront, vehRear, vehAccel)
+        if (isLeft) snapLeft = nearer(snapLeft, snap) else snapRight = nearer(snapRight, snap)
       } else if (gapAhead > VEHICLE_BESIDES_MAX_DISTANCE_METERS) {
         // Vehicle is clearly ahead — corner cell.
-        if (isLeft) distFrontLeft = nearerGap(distFrontLeft, gapAhead)
-        else distFrontRight = nearerGap(distFrontRight, gapAhead)
+        val snap = NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel)
+        if (isLeft) snapFrontLeft = nearer(snapFrontLeft, snap)
+        else snapFrontRight = nearer(snapFrontRight, snap)
       } else {
         // Vehicle is clearly behind — corner cell.
-        if (isLeft) distRearLeft = nearerGap(distRearLeft, gapBehind)
-        else distRearRight = nearerGap(distRearRight, gapBehind)
+        val snap = NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel)
+        if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
+        else snapRearRight = nearer(snapRearRight, snap)
       }
     }
   }
 
   return SurroundingVehicleDistances(
-      frontMeters = distFront,
-      rearMeters = distRear,
-      frontLeftMeters = distFrontLeft,
-      frontRightMeters = distFrontRight,
-      rearLeftMeters = distRearLeft,
-      rearRightMeters = distRearRight,
-      leftMeters = distLeft,
-      rightMeters = distRight,
+      frontMeters = snapFront?.distMeters,
+      rearMeters = snapRear?.distMeters,
+      frontLeftMeters = snapFrontLeft?.distMeters,
+      frontRightMeters = snapFrontRight?.distMeters,
+      rearLeftMeters = snapRearLeft?.distMeters,
+      rearRightMeters = snapRearRight?.distMeters,
+      leftMeters = snapLeft?.distMeters,
+      rightMeters = snapRight?.distMeters,
+      frontSpeedMps = snapFront?.speedMps,
+      frontFrontBumperPositionMeters = snapFront?.frontBumperPositionMeters,
+      frontBackBumperPositionMeters = snapFront?.backBumperPositionMeters,
+      frontAccelMps2 = snapFront?.accelMps2,
+      rearSpeedMps = snapRear?.speedMps,
+      rearFrontBumperPositionMeters = snapRear?.frontBumperPositionMeters,
+      rearBackBumperPositionMeters = snapRear?.backBumperPositionMeters,
+      rearAccelMps2 = snapRear?.accelMps2,
+      frontLeftSpeedMps = snapFrontLeft?.speedMps,
+      frontLeftFrontBumperPositionMeters = snapFrontLeft?.frontBumperPositionMeters,
+      frontLeftBackBumperPositionMeters = snapFrontLeft?.backBumperPositionMeters,
+      frontLeftAccelMps2 = snapFrontLeft?.accelMps2,
+      frontRightSpeedMps = snapFrontRight?.speedMps,
+      frontRightFrontBumperPositionMeters = snapFrontRight?.frontBumperPositionMeters,
+      frontRightBackBumperPositionMeters = snapFrontRight?.backBumperPositionMeters,
+      frontRightAccelMps2 = snapFrontRight?.accelMps2,
+      rearLeftSpeedMps = snapRearLeft?.speedMps,
+      rearLeftFrontBumperPositionMeters = snapRearLeft?.frontBumperPositionMeters,
+      rearLeftBackBumperPositionMeters = snapRearLeft?.backBumperPositionMeters,
+      rearLeftAccelMps2 = snapRearLeft?.accelMps2,
+      rearRightSpeedMps = snapRearRight?.speedMps,
+      rearRightFrontBumperPositionMeters = snapRearRight?.frontBumperPositionMeters,
+      rearRightBackBumperPositionMeters = snapRearRight?.backBumperPositionMeters,
+      rearRightAccelMps2 = snapRearRight?.accelMps2,
+      leftSpeedMps = snapLeft?.speedMps,
+      leftFrontBumperPositionMeters = snapLeft?.frontBumperPositionMeters,
+      leftBackBumperPositionMeters = snapLeft?.backBumperPositionMeters,
+      leftAccelMps2 = snapLeft?.accelMps2,
+      rightSpeedMps = snapRight?.speedMps,
+      rightFrontBumperPositionMeters = snapRight?.frontBumperPositionMeters,
+      rightBackBumperPositionMeters = snapRight?.backBumperPositionMeters,
+      rightAccelMps2 = snapRight?.accelMps2,
   )
 }
 
-/** Keeps the smaller of the two gaps (nearer / more dangerous). */
-private fun nearerGap(current: Double?, candidate: Double): Double =
-    if (current == null || candidate < current) candidate else current
+/** Snapshot of the nearest neighbour vehicle in one grid cell. */
+private data class NeighborSnapshot(
+    val distMeters: Double,
+    val speedMps: Double,
+    val frontBumperPositionMeters: Double,
+    val backBumperPositionMeters: Double,
+    val accelMps2: Double,
+)
+
+/** Keeps the snapshot with the smaller distance (nearer / more dangerous). */
+private fun nearer(current: NeighborSnapshot?, candidate: NeighborSnapshot): NeighborSnapshot =
+    if (current == null || candidate.distMeters < current.distMeters) candidate else current
