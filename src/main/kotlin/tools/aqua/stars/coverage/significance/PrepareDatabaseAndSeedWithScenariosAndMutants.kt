@@ -63,13 +63,19 @@ fun main() {
   // "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
 
   // Seed mutants
-  seedMutants(seedBaseLine = false, seedMutants = true)
+  seedMutants(seedBaseLine = true, seedMutants = true)
 
   // Precompute scenario-only metric once
   //  runStartingValidTSCInstancesEvaluation(parallelism = parallelism - 2, tscId = tscId)
 }
 
-/** Seed all mutants and the baseline mutant into the database. */
+/**
+ * Seed all mutants and the baseline mutant into the database.
+ *
+ * @param seedBaseLine Whether to seed the baseline mutant.
+ * @param seedMutants Whether to seed the mutants.
+ * @param numberOfMutants The number of mutants to seed. If null, all mutants are seeded.
+ */
 private fun seedMutants(
     seedBaseLine: Boolean = true,
     seedMutants: Boolean = true,
@@ -79,8 +85,8 @@ private fun seedMutants(
   val existing = MutantsRepository.getAllIds()
   // When all "MutantGenerator.expectedMutantCount " mutants exist and the number of mutants to seed
   // is not specified, return early.
-  val expectedMutantCount = AutopilotMutants.byIndex.size
-  if (numberOfMutants == null && existing.isNotEmpty() && existing.size == expectedMutantCount) {
+  val expectedMutantCount = numberOfMutants ?: AutopilotMutants.byIndex.size
+  if (existing.isNotEmpty() && existing.size == expectedMutantCount) {
     println("Database already seeded with $expectedMutantCount mutants.")
     return existing
   }
@@ -98,7 +104,7 @@ private fun seedMutants(
     mutantIds += MutantGenerator.seedBaseline()
   }
   if (seedMutants) {
-    mutantIds += MutantGenerator.seed()
+    mutantIds += MutantGenerator.seed(numberOfMutants = numberOfMutants)
     //    mutantIds += MutantGenerator.seed(onlyInsertMutantsWithMutantNumber = listOf(19))
   }
 
@@ -125,7 +131,10 @@ private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: UUID) = db {
   tsc.possibleTSCInstances.forEach { tscInstance ->
     consoleProgress.step()
     TSCInstancesRepository.insertIfAbsentReturnId(
-        TSCInstanceEntry(tscId = tscId, instanceJson = tscInstance.getJsonString()))
+        TSCInstanceEntry(
+            tscId = tscId,
+            instanceJson = tscInstance.getJsonString(),
+            humanReadableString = tscInstance.toString()))
   }
   println("Finished inserting TSCInstances.")
 }
