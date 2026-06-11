@@ -214,6 +214,7 @@ class LibsumoMutantDataCollector(
           getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, egoManeuver)
               ?: break
       ticks += timeStep
+      if (timeStep.collisionsInTick.isNotEmpty()) break
     }
 
     Simulation.close()

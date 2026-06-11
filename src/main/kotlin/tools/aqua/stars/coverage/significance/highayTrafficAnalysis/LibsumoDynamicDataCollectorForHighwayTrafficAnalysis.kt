@@ -242,6 +242,8 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
 
       Simulation.step()
 
+      if (Simulation.getCollisions().isNotEmpty()) break
+
       val simTimeSeconds = Simulation.getTime()
       while (simTimeSeconds >= nextSnapshotTimeSeconds &&
           nextSnapshotTimeSeconds <= simulationDurationSeconds) {
