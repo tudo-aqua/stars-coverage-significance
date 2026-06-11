@@ -37,6 +37,7 @@ object TSCInstancesTable : UUIDTable("tsc_instances") {
           onUpdate = ReferenceOption.CASCADE)
   val createdAt = timestamp("created_at")
   val instanceJson = text("instance_json")
+  val humanReadableString = text("human_readable_string")
 
   init {
     index(true, tsc, instanceJson)

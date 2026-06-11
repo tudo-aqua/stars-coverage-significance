@@ -26,11 +26,13 @@ import java.util.UUID
  * @property id Unique identifier of the TSC instance.
  * @property tscId Unique identifier of the TSC.
  * @property instanceJson JSON representation of the TSC instance.
+ * @property humanReadableString Human-readable string representation of the TSC instance.
  * @property createdAt Timestamp of when the TSC instance was created.
  */
 data class TSCInstanceEntry(
     val id: UUID? = null,
     val tscId: UUID,
     val instanceJson: String,
+    val humanReadableString: String,
     val createdAt: Instant = Instant.now(),
 )

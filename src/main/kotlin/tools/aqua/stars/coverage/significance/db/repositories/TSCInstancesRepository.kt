@@ -86,6 +86,7 @@ object TSCInstancesRepository {
       st[TSCInstancesTable.tsc] = entry.tscId
       st[TSCInstancesTable.createdAt] = entry.createdAt
       st[TSCInstancesTable.instanceJson] = entry.instanceJson
+      st[TSCInstancesTable.humanReadableString] = entry.humanReadableString
     }
 
     TSCInstancesTable.select(TSCInstancesTable.id)
@@ -109,6 +110,7 @@ object TSCInstancesRepository {
           tscId = this[TSCInstancesTable.tsc].value,
           createdAt = this[TSCInstancesTable.createdAt],
           instanceJson = this[TSCInstancesTable.instanceJson],
+          humanReadableString = this[TSCInstancesTable.humanReadableString],
       )
 
   /**
