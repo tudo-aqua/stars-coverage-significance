@@ -22,6 +22,7 @@ import polars as pl
 
 
 FEATURE_COLS = [
+    # Current-tick monitor states
     "monitor_g0_Accidents_failed",
     "monitor_g1_SafeDistanceToPrecedingVehicle_failed",
     "monitor_g2_emergencyBraking_failed",
@@ -29,8 +30,15 @@ FEATURE_COLS = [
     "monitor_g4_TrafficFlow_failed",
     "monitor_i1_Stopping_failed",
     "monitor_i2_DrivingFasterThenLeftTraffic_failed",
+    # Ego maneuver
     "ego_maneuver_speed",
     "ego_maneuver_lane_change",
+    # Ego state
+    "ego_speed_mps",
+    "ego_accel_mps2",
+    "ego_front_bumper_pos_meters",
+    "ego_back_bumper_pos_meters",
+    # Bumper-to-bumper distances to nearest neighbour per grid cell
     "surrounding_dist_front",
     "surrounding_dist_rear",
     "surrounding_dist_front_left",
@@ -39,6 +47,78 @@ FEATURE_COLS = [
     "surrounding_dist_rear_right",
     "surrounding_dist_left",
     "surrounding_dist_right",
+    # Front neighbour
+    "surrounding_front_speed_mps",
+    "surrounding_front_front_bumper_pos_meters",
+    "surrounding_front_back_bumper_pos_meters",
+    "surrounding_front_accel_mps2",
+    "surrounding_front_speed_diff_mps",
+    "surrounding_front_accel_diff_mps2",
+    "surrounding_front_ttc_s",
+    "surrounding_front_tg_s",
+    # Rear neighbour
+    "surrounding_rear_speed_mps",
+    "surrounding_rear_front_bumper_pos_meters",
+    "surrounding_rear_back_bumper_pos_meters",
+    "surrounding_rear_accel_mps2",
+    "surrounding_rear_speed_diff_mps",
+    "surrounding_rear_accel_diff_mps2",
+    "surrounding_rear_ttc_s",
+    "surrounding_rear_tg_s",
+    # Front-left neighbour
+    "surrounding_front_left_speed_mps",
+    "surrounding_front_left_front_bumper_pos_meters",
+    "surrounding_front_left_back_bumper_pos_meters",
+    "surrounding_front_left_accel_mps2",
+    "surrounding_front_left_speed_diff_mps",
+    "surrounding_front_left_accel_diff_mps2",
+    "surrounding_front_left_ttc_s",
+    "surrounding_front_left_tg_s",
+    # Front-right neighbour
+    "surrounding_front_right_speed_mps",
+    "surrounding_front_right_front_bumper_pos_meters",
+    "surrounding_front_right_back_bumper_pos_meters",
+    "surrounding_front_right_accel_mps2",
+    "surrounding_front_right_speed_diff_mps",
+    "surrounding_front_right_accel_diff_mps2",
+    "surrounding_front_right_ttc_s",
+    "surrounding_front_right_tg_s",
+    # Rear-left neighbour
+    "surrounding_rear_left_speed_mps",
+    "surrounding_rear_left_front_bumper_pos_meters",
+    "surrounding_rear_left_back_bumper_pos_meters",
+    "surrounding_rear_left_accel_mps2",
+    "surrounding_rear_left_speed_diff_mps",
+    "surrounding_rear_left_accel_diff_mps2",
+    "surrounding_rear_left_ttc_s",
+    "surrounding_rear_left_tg_s",
+    # Rear-right neighbour
+    "surrounding_rear_right_speed_mps",
+    "surrounding_rear_right_front_bumper_pos_meters",
+    "surrounding_rear_right_back_bumper_pos_meters",
+    "surrounding_rear_right_accel_mps2",
+    "surrounding_rear_right_speed_diff_mps",
+    "surrounding_rear_right_accel_diff_mps2",
+    "surrounding_rear_right_ttc_s",
+    "surrounding_rear_right_tg_s",
+    # Left neighbour
+    "surrounding_left_speed_mps",
+    "surrounding_left_front_bumper_pos_meters",
+    "surrounding_left_back_bumper_pos_meters",
+    "surrounding_left_accel_mps2",
+    "surrounding_left_speed_diff_mps",
+    "surrounding_left_accel_diff_mps2",
+    "surrounding_left_ttc_s",
+    "surrounding_left_tg_s",
+    # Right neighbour
+    "surrounding_right_speed_mps",
+    "surrounding_right_front_bumper_pos_meters",
+    "surrounding_right_back_bumper_pos_meters",
+    "surrounding_right_accel_mps2",
+    "surrounding_right_speed_diff_mps",
+    "surrounding_right_accel_diff_mps2",
+    "surrounding_right_ttc_s",
+    "surrounding_right_tg_s",
 ]
 
 TARGET_COL = "next_tick_monitor_g0_Accidents_failed"
@@ -83,8 +163,9 @@ def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
         + [_bool_to_int8(TARGET_COL)]
     )
 
-    # -1 sentinel for missing distance/speed measurements
-    X = df.select(FEATURE_COLS).fill_null(-1).to_numpy()
+    # Nulls in continuous columns (no vehicle in that grid cell) are left as NaN
+    # so LightGBM can route them to the optimal branch natively.
+    X = df.select(FEATURE_COLS).to_numpy(allow_copy=True)
     y = df.select(TARGET_COL).to_numpy().ravel()
 
     return X, y
