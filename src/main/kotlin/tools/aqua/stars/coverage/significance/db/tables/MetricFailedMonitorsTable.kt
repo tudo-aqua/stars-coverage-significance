@@ -160,6 +160,8 @@ object MetricFailedMonitorsTable : UUIDTable("metric_failed_monitors") {
     index(false, startingScenarioConfiguration)
     index(false, mutant)
     index(false, tick)
+    index(false, monitorG0Failed)
+    index(false, nextTickMonitorG0Failed)
   }
 
   /**

@@ -11,7 +11,12 @@
       "Bash(./gradlew dependencies *)",
       "Bash(jar tf *)",
       "Bash(jar xf *)",
-      "Read(//tmp/lp/org/jetbrains/letsPlot/themes/**)"
+      "Read(//tmp/lp/org/jetbrains/letsPlot/themes/**)",
+      "Bash(python scripts/decision_tree_g0.py scripts/stars_public_metric_failed_monitors.csv)",
+      "Bash(python -c \"import pandas as pd; df = pd.read_csv\\('scripts/stars_public_metric_failed_monitors.csv', low_memory=False, nrows=5\\); print\\(df.dtypes\\); print\\(\\); print\\(df.head\\(2\\).to_string\\(\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(python scripts/decision_tree_g0.py scripts/test.parquet)"
     ]
   }
 }
