@@ -176,9 +176,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.frontBackBumperPositionMeters,
               surroundingFrontAccelMps2 = surroundingDistances?.frontAccelMps2,
               surroundingFrontSpeedDiffMps =
-                  surroundingDistances?.frontSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.frontSpeedMps?.let { it - egoSpeed },
               surroundingFrontAccelDiffMps2 =
-                  surroundingDistances?.frontAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.frontAccelMps2?.let { it - egoAccel },
               surroundingFrontTtcSeconds =
                   ttcAhead(
                       surroundingDistances?.frontMeters,
@@ -192,9 +192,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.rearBackBumperPositionMeters,
               surroundingRearAccelMps2 = surroundingDistances?.rearAccelMps2,
               surroundingRearSpeedDiffMps =
-                  surroundingDistances?.rearSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.rearSpeedMps?.let { it - egoSpeed },
               surroundingRearAccelDiffMps2 =
-                  surroundingDistances?.rearAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.rearAccelMps2?.let { it - egoAccel },
               surroundingRearTtcSeconds =
                   ttcBehind(
                       surroundingDistances?.rearMeters,
@@ -209,9 +209,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.frontLeftBackBumperPositionMeters,
               surroundingFrontLeftAccelMps2 = surroundingDistances?.frontLeftAccelMps2,
               surroundingFrontLeftSpeedDiffMps =
-                  surroundingDistances?.frontLeftSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.frontLeftSpeedMps?.let { it - egoSpeed },
               surroundingFrontLeftAccelDiffMps2 =
-                  surroundingDistances?.frontLeftAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.frontLeftAccelMps2?.let { it - egoAccel },
               surroundingFrontLeftTtcSeconds =
                   ttcAhead(
                       surroundingDistances?.frontLeftMeters,
@@ -226,9 +226,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.frontRightBackBumperPositionMeters,
               surroundingFrontRightAccelMps2 = surroundingDistances?.frontRightAccelMps2,
               surroundingFrontRightSpeedDiffMps =
-                  surroundingDistances?.frontRightSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.frontRightSpeedMps?.let { it - egoSpeed },
               surroundingFrontRightAccelDiffMps2 =
-                  surroundingDistances?.frontRightAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.frontRightAccelMps2?.let { it - egoAccel },
               surroundingFrontRightTtcSeconds =
                   ttcAhead(
                       surroundingDistances?.frontRightMeters,
@@ -243,9 +243,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.rearLeftBackBumperPositionMeters,
               surroundingRearLeftAccelMps2 = surroundingDistances?.rearLeftAccelMps2,
               surroundingRearLeftSpeedDiffMps =
-                  surroundingDistances?.rearLeftSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.rearLeftSpeedMps?.let { it - egoSpeed },
               surroundingRearLeftAccelDiffMps2 =
-                  surroundingDistances?.rearLeftAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.rearLeftAccelMps2?.let { it - egoAccel },
               surroundingRearLeftTtcSeconds =
                   ttcBehind(
                       surroundingDistances?.rearLeftMeters,
@@ -261,9 +261,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.rearRightBackBumperPositionMeters,
               surroundingRearRightAccelMps2 = surroundingDistances?.rearRightAccelMps2,
               surroundingRearRightSpeedDiffMps =
-                  surroundingDistances?.rearRightSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.rearRightSpeedMps?.let { it - egoSpeed },
               surroundingRearRightAccelDiffMps2 =
-                  surroundingDistances?.rearRightAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.rearRightAccelMps2?.let { it - egoAccel },
               surroundingRearRightTtcSeconds =
                   ttcBehind(
                       surroundingDistances?.rearRightMeters,
@@ -280,9 +280,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.leftBackBumperPositionMeters,
               surroundingLeftAccelMps2 = surroundingDistances?.leftAccelMps2,
               surroundingLeftSpeedDiffMps =
-                  surroundingDistances?.leftSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.leftSpeedMps?.let { it - egoSpeed },
               surroundingLeftAccelDiffMps2 =
-                  surroundingDistances?.leftAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.leftAccelMps2?.let { it - egoAccel },
               surroundingLeftTtcSeconds =
                   ttcBeside(
                       surroundingDistances?.leftMeters,
@@ -296,9 +296,9 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   surroundingDistances?.rightBackBumperPositionMeters,
               surroundingRightAccelMps2 = surroundingDistances?.rightAccelMps2,
               surroundingRightSpeedDiffMps =
-                  surroundingDistances?.rightSpeedMps?.let { egoSpeed - it },
+                  surroundingDistances?.rightSpeedMps?.let { it - egoSpeed },
               surroundingRightAccelDiffMps2 =
-                  surroundingDistances?.rightAccelMps2?.let { egoAccel - it },
+                  surroundingDistances?.rightAccelMps2?.let { it - egoAccel },
               surroundingRightTtcSeconds =
                   ttcBeside(
                       surroundingDistances?.rightMeters,
