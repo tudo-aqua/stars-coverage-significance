@@ -61,7 +61,7 @@ const val RIGHT_LANE_INDEX_MODIFIER = -1
  * closing on [other].
  */
 private fun ttcFront(ego: Vehicle, other: Vehicle): Double {
-  val gap = other.positionOnLaneMeters - ego.positionOnLaneMeters
+  val gap = other.backBumperPositionOnLaneMeters - ego.frontBumperPositionOnLaneMeters
   val closingSpeed = ego.speedMetersPerSecond - other.speedMetersPerSecond
   return if (gap > 0.0 && closingSpeed > 0.0) gap.toDouble() / closingSpeed
   else Double.POSITIVE_INFINITY
@@ -74,7 +74,7 @@ private fun ttcFront(ego: Vehicle, other: Vehicle): Double {
  * closing on [ego].
  */
 private fun ttcRear(ego: Vehicle, other: Vehicle): Double {
-  val gap = ego.positionOnLaneMeters - other.positionOnLaneMeters
+  val gap = ego.backBumperPositionOnLaneMeters - other.frontBumperPositionOnLaneMeters
   val closingSpeed = other.speedMetersPerSecond - ego.speedMetersPerSecond
   return if (gap > 0.0 && closingSpeed > 0.0) gap.toDouble() / closingSpeed
   else Double.POSITIVE_INFINITY
