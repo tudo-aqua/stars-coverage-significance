@@ -37,23 +37,31 @@ package tools.aqua.stars.data.sumo.dataclasses.dynamicData
  * @property rearAccelMps2 Acceleration of the rear neighbour (m/s²).
  * @property frontLeftMeters Nearest vehicle ahead on the left adjacent lane (m).
  * @property frontLeftSpeedMps Speed of the front-left neighbour (m/s).
- * @property frontLeftFrontBumperPositionMeters Front-bumper lane position of the front-left neighbour (m).
- * @property frontLeftBackBumperPositionMeters Back-bumper lane position of the front-left neighbour (m).
+ * @property frontLeftFrontBumperPositionMeters Front-bumper lane position of the front-left
+ *   neighbour (m).
+ * @property frontLeftBackBumperPositionMeters Back-bumper lane position of the front-left neighbour
+ *   (m).
  * @property frontLeftAccelMps2 Acceleration of the front-left neighbour (m/s²).
  * @property frontRightMeters Nearest vehicle ahead on the right adjacent lane (m).
  * @property frontRightSpeedMps Speed of the front-right neighbour (m/s).
- * @property frontRightFrontBumperPositionMeters Front-bumper lane position of the front-right neighbour (m).
- * @property frontRightBackBumperPositionMeters Back-bumper lane position of the front-right neighbour (m).
+ * @property frontRightFrontBumperPositionMeters Front-bumper lane position of the front-right
+ *   neighbour (m).
+ * @property frontRightBackBumperPositionMeters Back-bumper lane position of the front-right
+ *   neighbour (m).
  * @property frontRightAccelMps2 Acceleration of the front-right neighbour (m/s²).
  * @property rearLeftMeters Nearest vehicle behind on the left adjacent lane (m).
  * @property rearLeftSpeedMps Speed of the rear-left neighbour (m/s).
- * @property rearLeftFrontBumperPositionMeters Front-bumper lane position of the rear-left neighbour (m).
- * @property rearLeftBackBumperPositionMeters Back-bumper lane position of the rear-left neighbour (m).
+ * @property rearLeftFrontBumperPositionMeters Front-bumper lane position of the rear-left neighbour
+ *   (m).
+ * @property rearLeftBackBumperPositionMeters Back-bumper lane position of the rear-left neighbour
+ *   (m).
  * @property rearLeftAccelMps2 Acceleration of the rear-left neighbour (m/s²).
  * @property rearRightMeters Nearest vehicle behind on the right adjacent lane (m).
  * @property rearRightSpeedMps Speed of the rear-right neighbour (m/s).
- * @property rearRightFrontBumperPositionMeters Front-bumper lane position of the rear-right neighbour (m).
- * @property rearRightBackBumperPositionMeters Back-bumper lane position of the rear-right neighbour (m).
+ * @property rearRightFrontBumperPositionMeters Front-bumper lane position of the rear-right
+ *   neighbour (m).
+ * @property rearRightBackBumperPositionMeters Back-bumper lane position of the rear-right neighbour
+ *   (m).
  * @property rearRightAccelMps2 Acceleration of the rear-right neighbour (m/s²).
  * @property leftMeters Nearest vehicle on the left adjacent lane in the "besides" zone (m).
  * @property leftSpeedMps Speed of the left neighbour (m/s).

@@ -170,101 +170,141 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               egoFrontBumperPosMeters = egoFrontBumperPos,
               egoBackBumperPosMeters = egoBackBumperPos,
               surroundingFrontSpeedMps = surroundingDistances?.frontSpeedMps,
-              surroundingFrontFrontBumperPosMeters = surroundingDistances?.frontFrontBumperPositionMeters,
-              surroundingFrontBackBumperPosMeters = surroundingDistances?.frontBackBumperPositionMeters,
+              surroundingFrontFrontBumperPosMeters =
+                  surroundingDistances?.frontFrontBumperPositionMeters,
+              surroundingFrontBackBumperPosMeters =
+                  surroundingDistances?.frontBackBumperPositionMeters,
               surroundingFrontAccelMps2 = surroundingDistances?.frontAccelMps2,
               surroundingFrontSpeedDiffMps =
                   surroundingDistances?.frontSpeedMps?.let { egoSpeed - it },
               surroundingFrontAccelDiffMps2 =
                   surroundingDistances?.frontAccelMps2?.let { egoAccel - it },
               surroundingFrontTtcSeconds =
-                  ttcAhead(surroundingDistances?.frontMeters, surroundingDistances?.frontSpeedMps, egoSpeed),
-              surroundingFrontTgSeconds =
-                  tgEgo(surroundingDistances?.frontMeters, egoSpeed),
+                  ttcAhead(
+                      surroundingDistances?.frontMeters,
+                      surroundingDistances?.frontSpeedMps,
+                      egoSpeed),
+              surroundingFrontTgSeconds = tgEgo(surroundingDistances?.frontMeters, egoSpeed),
               surroundingRearSpeedMps = surroundingDistances?.rearSpeedMps,
-              surroundingRearFrontBumperPosMeters = surroundingDistances?.rearFrontBumperPositionMeters,
-              surroundingRearBackBumperPosMeters = surroundingDistances?.rearBackBumperPositionMeters,
+              surroundingRearFrontBumperPosMeters =
+                  surroundingDistances?.rearFrontBumperPositionMeters,
+              surroundingRearBackBumperPosMeters =
+                  surroundingDistances?.rearBackBumperPositionMeters,
               surroundingRearAccelMps2 = surroundingDistances?.rearAccelMps2,
               surroundingRearSpeedDiffMps =
                   surroundingDistances?.rearSpeedMps?.let { egoSpeed - it },
               surroundingRearAccelDiffMps2 =
                   surroundingDistances?.rearAccelMps2?.let { egoAccel - it },
               surroundingRearTtcSeconds =
-                  ttcBehind(surroundingDistances?.rearMeters, surroundingDistances?.rearSpeedMps, egoSpeed),
+                  ttcBehind(
+                      surroundingDistances?.rearMeters,
+                      surroundingDistances?.rearSpeedMps,
+                      egoSpeed),
               surroundingRearTgSeconds =
                   tgNeighbor(surroundingDistances?.rearMeters, surroundingDistances?.rearSpeedMps),
               surroundingFrontLeftSpeedMps = surroundingDistances?.frontLeftSpeedMps,
-              surroundingFrontLeftFrontBumperPosMeters = surroundingDistances?.frontLeftFrontBumperPositionMeters,
-              surroundingFrontLeftBackBumperPosMeters = surroundingDistances?.frontLeftBackBumperPositionMeters,
+              surroundingFrontLeftFrontBumperPosMeters =
+                  surroundingDistances?.frontLeftFrontBumperPositionMeters,
+              surroundingFrontLeftBackBumperPosMeters =
+                  surroundingDistances?.frontLeftBackBumperPositionMeters,
               surroundingFrontLeftAccelMps2 = surroundingDistances?.frontLeftAccelMps2,
               surroundingFrontLeftSpeedDiffMps =
                   surroundingDistances?.frontLeftSpeedMps?.let { egoSpeed - it },
               surroundingFrontLeftAccelDiffMps2 =
                   surroundingDistances?.frontLeftAccelMps2?.let { egoAccel - it },
               surroundingFrontLeftTtcSeconds =
-                  ttcAhead(surroundingDistances?.frontLeftMeters, surroundingDistances?.frontLeftSpeedMps, egoSpeed),
+                  ttcAhead(
+                      surroundingDistances?.frontLeftMeters,
+                      surroundingDistances?.frontLeftSpeedMps,
+                      egoSpeed),
               surroundingFrontLeftTgSeconds =
                   tgEgo(surroundingDistances?.frontLeftMeters, egoSpeed),
               surroundingFrontRightSpeedMps = surroundingDistances?.frontRightSpeedMps,
-              surroundingFrontRightFrontBumperPosMeters = surroundingDistances?.frontRightFrontBumperPositionMeters,
-              surroundingFrontRightBackBumperPosMeters = surroundingDistances?.frontRightBackBumperPositionMeters,
+              surroundingFrontRightFrontBumperPosMeters =
+                  surroundingDistances?.frontRightFrontBumperPositionMeters,
+              surroundingFrontRightBackBumperPosMeters =
+                  surroundingDistances?.frontRightBackBumperPositionMeters,
               surroundingFrontRightAccelMps2 = surroundingDistances?.frontRightAccelMps2,
               surroundingFrontRightSpeedDiffMps =
                   surroundingDistances?.frontRightSpeedMps?.let { egoSpeed - it },
               surroundingFrontRightAccelDiffMps2 =
                   surroundingDistances?.frontRightAccelMps2?.let { egoAccel - it },
               surroundingFrontRightTtcSeconds =
-                  ttcAhead(surroundingDistances?.frontRightMeters, surroundingDistances?.frontRightSpeedMps, egoSpeed),
+                  ttcAhead(
+                      surroundingDistances?.frontRightMeters,
+                      surroundingDistances?.frontRightSpeedMps,
+                      egoSpeed),
               surroundingFrontRightTgSeconds =
                   tgEgo(surroundingDistances?.frontRightMeters, egoSpeed),
               surroundingRearLeftSpeedMps = surroundingDistances?.rearLeftSpeedMps,
-              surroundingRearLeftFrontBumperPosMeters = surroundingDistances?.rearLeftFrontBumperPositionMeters,
-              surroundingRearLeftBackBumperPosMeters = surroundingDistances?.rearLeftBackBumperPositionMeters,
+              surroundingRearLeftFrontBumperPosMeters =
+                  surroundingDistances?.rearLeftFrontBumperPositionMeters,
+              surroundingRearLeftBackBumperPosMeters =
+                  surroundingDistances?.rearLeftBackBumperPositionMeters,
               surroundingRearLeftAccelMps2 = surroundingDistances?.rearLeftAccelMps2,
               surroundingRearLeftSpeedDiffMps =
                   surroundingDistances?.rearLeftSpeedMps?.let { egoSpeed - it },
               surroundingRearLeftAccelDiffMps2 =
                   surroundingDistances?.rearLeftAccelMps2?.let { egoAccel - it },
               surroundingRearLeftTtcSeconds =
-                  ttcBehind(surroundingDistances?.rearLeftMeters, surroundingDistances?.rearLeftSpeedMps, egoSpeed),
+                  ttcBehind(
+                      surroundingDistances?.rearLeftMeters,
+                      surroundingDistances?.rearLeftSpeedMps,
+                      egoSpeed),
               surroundingRearLeftTgSeconds =
-                  tgNeighbor(surroundingDistances?.rearLeftMeters, surroundingDistances?.rearLeftSpeedMps),
+                  tgNeighbor(
+                      surroundingDistances?.rearLeftMeters, surroundingDistances?.rearLeftSpeedMps),
               surroundingRearRightSpeedMps = surroundingDistances?.rearRightSpeedMps,
-              surroundingRearRightFrontBumperPosMeters = surroundingDistances?.rearRightFrontBumperPositionMeters,
-              surroundingRearRightBackBumperPosMeters = surroundingDistances?.rearRightBackBumperPositionMeters,
+              surroundingRearRightFrontBumperPosMeters =
+                  surroundingDistances?.rearRightFrontBumperPositionMeters,
+              surroundingRearRightBackBumperPosMeters =
+                  surroundingDistances?.rearRightBackBumperPositionMeters,
               surroundingRearRightAccelMps2 = surroundingDistances?.rearRightAccelMps2,
               surroundingRearRightSpeedDiffMps =
                   surroundingDistances?.rearRightSpeedMps?.let { egoSpeed - it },
               surroundingRearRightAccelDiffMps2 =
                   surroundingDistances?.rearRightAccelMps2?.let { egoAccel - it },
               surroundingRearRightTtcSeconds =
-                  ttcBehind(surroundingDistances?.rearRightMeters, surroundingDistances?.rearRightSpeedMps, egoSpeed),
+                  ttcBehind(
+                      surroundingDistances?.rearRightMeters,
+                      surroundingDistances?.rearRightSpeedMps,
+                      egoSpeed),
               surroundingRearRightTgSeconds =
-                  tgNeighbor(surroundingDistances?.rearRightMeters, surroundingDistances?.rearRightSpeedMps),
+                  tgNeighbor(
+                      surroundingDistances?.rearRightMeters,
+                      surroundingDistances?.rearRightSpeedMps),
               surroundingLeftSpeedMps = surroundingDistances?.leftSpeedMps,
-              surroundingLeftFrontBumperPosMeters = surroundingDistances?.leftFrontBumperPositionMeters,
-              surroundingLeftBackBumperPosMeters = surroundingDistances?.leftBackBumperPositionMeters,
+              surroundingLeftFrontBumperPosMeters =
+                  surroundingDistances?.leftFrontBumperPositionMeters,
+              surroundingLeftBackBumperPosMeters =
+                  surroundingDistances?.leftBackBumperPositionMeters,
               surroundingLeftAccelMps2 = surroundingDistances?.leftAccelMps2,
               surroundingLeftSpeedDiffMps =
                   surroundingDistances?.leftSpeedMps?.let { egoSpeed - it },
               surroundingLeftAccelDiffMps2 =
                   surroundingDistances?.leftAccelMps2?.let { egoAccel - it },
               surroundingLeftTtcSeconds =
-                  ttcBeside(surroundingDistances?.leftMeters, surroundingDistances?.leftSpeedMps, egoSpeed),
-              surroundingLeftTgSeconds =
-                  tgEgo(surroundingDistances?.leftMeters, egoSpeed),
+                  ttcBeside(
+                      surroundingDistances?.leftMeters,
+                      surroundingDistances?.leftSpeedMps,
+                      egoSpeed),
+              surroundingLeftTgSeconds = tgEgo(surroundingDistances?.leftMeters, egoSpeed),
               surroundingRightSpeedMps = surroundingDistances?.rightSpeedMps,
-              surroundingRightFrontBumperPosMeters = surroundingDistances?.rightFrontBumperPositionMeters,
-              surroundingRightBackBumperPosMeters = surroundingDistances?.rightBackBumperPositionMeters,
+              surroundingRightFrontBumperPosMeters =
+                  surroundingDistances?.rightFrontBumperPositionMeters,
+              surroundingRightBackBumperPosMeters =
+                  surroundingDistances?.rightBackBumperPositionMeters,
               surroundingRightAccelMps2 = surroundingDistances?.rightAccelMps2,
               surroundingRightSpeedDiffMps =
                   surroundingDistances?.rightSpeedMps?.let { egoSpeed - it },
               surroundingRightAccelDiffMps2 =
                   surroundingDistances?.rightAccelMps2?.let { egoAccel - it },
               surroundingRightTtcSeconds =
-                  ttcBeside(surroundingDistances?.rightMeters, surroundingDistances?.rightSpeedMps, egoSpeed),
-              surroundingRightTgSeconds =
-                  tgEgo(surroundingDistances?.rightMeters, egoSpeed),
+                  ttcBeside(
+                      surroundingDistances?.rightMeters,
+                      surroundingDistances?.rightSpeedMps,
+                      egoSpeed),
+              surroundingRightTgSeconds = tgEgo(surroundingDistances?.rightMeters, egoSpeed),
           )
         }
     val violatedMonitors = tscInstance.rootNode.validateMonitors(tick.identifier)

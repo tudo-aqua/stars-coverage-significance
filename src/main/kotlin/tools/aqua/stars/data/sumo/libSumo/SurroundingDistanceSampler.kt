@@ -100,9 +100,11 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
     if (laneDiff == 0) {
       // ── Same lane: only front / rear ──────────────────────────────────────────────────────────
       if (gapAhead >= 0.0)
-          snapFront = nearer(snapFront, NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel))
+          snapFront =
+              nearer(snapFront, NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel))
       else if (gapBehind >= 0.0)
-          snapRear = nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel))
+          snapRear =
+              nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel))
       // Both negative = same-lane collision; ignore for distance purposes.
     } else {
       // ── Adjacent lane: assign to besides-zone or corner cell ──────────────────────────────────
