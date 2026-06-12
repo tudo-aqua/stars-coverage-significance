@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantFailuresFiltered
@@ -30,7 +29,7 @@ object CountOfMutantsKilledPerMonitor {
   fun evaluate() {
     println("Starting CountOfMutantsKilledPerMonitor.")
     val monitorToFailedMutantsMap =
-        Monitors.entries.associate { m -> m.name to mutableSetOf<UUID>() }
+        Monitors.entries.associate { m -> m.name to mutableSetOf<Int>() }
 
     distinctMutantFailuresFiltered.forEach { failure ->
       Monitors.entries.forEach { m ->

@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import java.time.Instant
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 /**
@@ -35,15 +35,15 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property tscInstance TSC instance of the scenario.
  * @property createdAt Timestamp of when the scenario was created.
  */
-object HighwayTrafficScenariosTable : UUIDTable("highway_traffic_scenarios") {
+object HighwayTrafficScenariosTable : IntIdTable("highway_traffic_scenarios") {
   val seed = integer("seed")
   val crowdiness = integer("crowdiness")
   val vehicleId = varchar("vehicle_id", 1024)
   val vehicleType = varchar("vehicle_type", 1024)
   val tick = long("tick")
   val lane = integer("lane")
-  val position = double("position")
-  val speed = double("speed")
+  val position = float("position")
+  val speed = float("speed")
   val tscInstance =
       reference(
           "tsc_instance_id",

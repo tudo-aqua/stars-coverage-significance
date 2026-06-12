@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -51,7 +50,7 @@ object MetricStartingValidTSCInstancesRepository {
   fun count(): Long = transaction { MetricStartingValidTSCInstancesTable.selectAll().count() }
 
   /** Returns the number of entries for a given TSC. */
-  fun countByTSC(tscId: UUID): Long = transaction {
+  fun countByTSC(tscId: Int): Long = transaction {
     MetricStartingValidTSCInstancesTable.selectAll()
         .where { MetricStartingValidTSCInstancesTable.tsc eq tscId }
         .count()
@@ -61,7 +60,7 @@ object MetricStartingValidTSCInstancesRepository {
   fun clearTable() = transaction { MetricStartingValidTSCInstancesTable.deleteAll() }
 
   /** Clears all entries for a given TSC. */
-  fun clearTSCEntries(tscId: UUID) = transaction {
+  fun clearTSCEntries(tscId: Int) = transaction {
     MetricStartingValidTSCInstancesTable.deleteWhere { tsc eq tscId }
   }
 
@@ -86,7 +85,7 @@ object MetricStartingValidTSCInstancesRepository {
    * @param entry The entry to insert.
    * @return The ID of the inserted or existing entry.
    */
-  fun insertIfMissingAndReturnId(entry: MetricStartingValidTSCInstancesEntry): UUID = transaction {
+  fun insertIfMissingAndReturnId(entry: MetricStartingValidTSCInstancesEntry): Int = transaction {
     require(entry.id == null) { "insert() expects entry.id == null." }
 
     MetricStartingValidTSCInstancesTable.insertIgnore { row ->
@@ -112,7 +111,7 @@ object MetricStartingValidTSCInstancesRepository {
    *
    * @param id ID of the entry to retrieve.
    */
-  fun getById(id: UUID): MetricStartingValidTSCInstancesEntry? = transaction {
+  fun getById(id: Int): MetricStartingValidTSCInstancesEntry? = transaction {
     MetricStartingValidTSCInstancesTable.selectAll()
         .where { MetricStartingValidTSCInstancesTable.id eq id }
         .limit(1)
@@ -126,7 +125,7 @@ object MetricStartingValidTSCInstancesRepository {
    * @param tscId ID of the TSC.
    * @param scenarioConfigId ID of the scenario starting configuration.
    */
-  fun getByKey(tscId: UUID, scenarioConfigId: UUID): MetricStartingValidTSCInstancesEntry? =
+  fun getByKey(tscId: Int, scenarioConfigId: Int): MetricStartingValidTSCInstancesEntry? =
       transaction {
         MetricStartingValidTSCInstancesTable.selectAll()
             .where {
@@ -144,7 +143,7 @@ object MetricStartingValidTSCInstancesRepository {
    * @param tscId ID of the TSC.
    * @return All entries for the given evaluation run and TSC.
    */
-  fun getAllForTsc(tscId: UUID): List<MetricStartingValidTSCInstancesEntry> = transaction {
+  fun getAllForTsc(tscId: Int): List<MetricStartingValidTSCInstancesEntry> = transaction {
     MetricStartingValidTSCInstancesTable.selectAll()
         .where { (MetricStartingValidTSCInstancesTable.tsc eq tscId) }
         .map { it.toEntry() }

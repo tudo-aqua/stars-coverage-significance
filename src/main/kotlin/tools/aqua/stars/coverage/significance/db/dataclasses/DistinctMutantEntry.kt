@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a mutant entry in the database.
@@ -26,4 +25,4 @@ import java.util.UUID
  * @property id Unique identifier of the mutant entry.
  * @property createdAt Timestamp of when the mutant entry was created.
  */
-data class DistinctMutantEntry(val id: UUID? = null, val createdAt: Instant = Instant.now())
+data class DistinctMutantEntry(val id: Int? = null, val createdAt: Instant = Instant.now())

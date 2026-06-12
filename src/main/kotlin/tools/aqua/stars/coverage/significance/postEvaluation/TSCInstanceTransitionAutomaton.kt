@@ -20,7 +20,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
@@ -32,17 +31,17 @@ object TSCInstanceTransitionAutomaton {
   /**
    * Generates the HTML file.
    *
-   * @param instanceIds The [UUID]s of the instances.
+   * @param instanceIds The ids of the instances.
    * @param labels The labels of the instances.
    * @param transitions The [TSCInstanceTransition]s.
-   * @param idToIndex A mapping from [UUID]s to indices.
+   * @param idToIndex A mapping from ids to indices.
    * @param basePath The base path for the output files.
    */
   fun generate(
-      instanceIds: List<UUID>,
+      instanceIds: List<Int>,
       labels: List<String>,
       transitions: List<TSCInstanceTransition>,
-      idToIndex: Map<UUID, Int>,
+      idToIndex: Map<Int, Int>,
       basePath: Path,
   ) {
     Files.createDirectories(basePath)
@@ -84,7 +83,7 @@ object TSCInstanceTransitionAutomaton {
    *
    * @param n The number of instances.
    * @param transitions The [TSCInstanceTransition]s.
-   * @param idToIndex A mapping from [UUID]s to indices.
+   * @param idToIndex A mapping from ids to indices.
    * @param excludeDiagonal Whether to exclude the diagonal.
    * @param valueExtractor A function that extracts the count from a [TSCInstanceTransition].
    * @return The matrix.
@@ -92,7 +91,7 @@ object TSCInstanceTransitionAutomaton {
   private fun buildMatrix(
       n: Int,
       transitions: List<TSCInstanceTransition>,
-      idToIndex: Map<UUID, Int>,
+      idToIndex: Map<Int, Int>,
       excludeDiagonal: Boolean,
       valueExtractor: (TSCInstanceTransition) -> Long,
   ): Array<LongArray> {
@@ -190,13 +189,13 @@ object TSCInstanceTransitionAutomaton {
   /**
    * Builds the HTML for the interactive viewer.
    *
-   * @param instanceIds The [UUID]s of the instances.
+   * @param instanceIds The ids of the instances.
    * @param labels The labels of the instances.
    * @param variants The variants of the matrix.
    * @return The HTML.
    */
   private fun buildHtml(
-      instanceIds: List<UUID>,
+      instanceIds: List<Int>,
       labels: List<String>,
       variants: Map<String, Array<LongArray>>,
   ): String {
@@ -204,7 +203,7 @@ object TSCInstanceTransitionAutomaton {
         variants.entries.joinToString(",\n        ") { (name, matrix) ->
           val nodes =
               labels.indices.joinToString(", ") { i ->
-                "{ data: { id: '${esc(labels[i])}', label: '${esc(labels[i])}', uuid: '${instanceIds[i]}' } }"
+                "{ data: { id: '${esc(labels[i])}', label: '${esc(labels[i])}', id: '${instanceIds[i]}' } }"
               }
           val edges =
               buildList {
@@ -358,7 +357,7 @@ object TSCInstanceTransitionAutomaton {
           const innRows = inn.map(function(e) { return ['← ' + e.data.source, fmt(e.data.count)]; });
           document.getElementById('panel').innerHTML =
             '<h3>Node ' + id + '</h3>' +
-            prop('UUID', node.data('uuid'), true) +
+            prop('ID', node.data('id'), true) +
             prop('Total outgoing count', fmt(totalOut)) +
             prop('Total incoming count', fmt(totalIn)) +
             '<div class="section-title">Outgoing transitions</div>' +

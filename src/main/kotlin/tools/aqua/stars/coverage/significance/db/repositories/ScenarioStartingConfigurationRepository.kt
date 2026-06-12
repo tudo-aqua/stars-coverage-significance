@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -83,7 +82,7 @@ object ScenarioStartingConfigurationRepository {
    * @param id The id of the entry to retrieve.
    * @return The entry with the given id or null if not found.
    */
-  fun getById(id: UUID): ScenarioStartingConfigurationEntry? = transaction {
+  fun getById(id: Int): ScenarioStartingConfigurationEntry? = transaction {
     ScenarioStartingConfigurationTable.selectAll()
         .where { ScenarioStartingConfigurationTable.id eq id }
         .limit(1)
@@ -162,7 +161,7 @@ object ScenarioStartingConfigurationRepository {
       "batchInsert() expects all entry.id == null. Use upsert() or update() otherwise."
     }
 
-    val insertedIds: List<UUID> =
+    val insertedIds: List<Int> =
         ScenarioStartingConfigurationTable.batchInsert(
                 entries, shouldReturnGeneratedValues = true) { entry ->
                   this[humanReadableScenarioId] = entry.humanReadableScenarioId
@@ -286,7 +285,7 @@ object ScenarioStartingConfigurationRepository {
    * @param seqTo The ending sequence number (inclusive).
    * @return A list of scenario IDs within the specified sequence number range.
    */
-  fun loadScenarioIds(seqFrom: Long, seqTo: Long): List<UUID> = transaction {
+  fun loadScenarioIds(seqFrom: Long, seqTo: Long): List<Int> = transaction {
     ScenarioStartingConfigurationTable.select(ScenarioStartingConfigurationTable.id)
         .where {
           (ScenarioStartingConfigurationTable.sequenceNumber greaterEq seqFrom) and

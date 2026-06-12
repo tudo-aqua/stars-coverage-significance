@@ -17,8 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.manualTesting
 
-import java.util.UUID
-
 /**
  * Data class representing a mutant.
  *
@@ -42,7 +40,7 @@ import java.util.UUID
  * @property lcCooperative Lane change cooperativeness of the mutant.
  */
 data class Mutant(
-    val id: UUID = UUID.randomUUID(),
+    val id: Int = 0,
     val initialAwareness: Double = 1.0,
     val headwayErrorCoefficient: Double = 0.75,
     val headwayChangePerceptionThreshold: Double = 0.05,

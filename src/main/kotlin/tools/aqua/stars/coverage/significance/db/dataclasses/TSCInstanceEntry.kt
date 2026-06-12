@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a row in the TSC instances table.
@@ -30,8 +29,8 @@ import java.util.UUID
  * @property createdAt Timestamp of when the TSC instance was created.
  */
 data class TSCInstanceEntry(
-    val id: UUID? = null,
-    val tscId: UUID,
+    val id: Int? = null,
+    val tscId: Int,
     val instanceJson: String,
     val humanReadableString: String,
     val createdAt: Instant = Instant.now(),

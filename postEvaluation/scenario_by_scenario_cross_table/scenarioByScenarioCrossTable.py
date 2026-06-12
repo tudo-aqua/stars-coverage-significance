@@ -22,7 +22,7 @@ def main() -> None:
     ax.set_ylabel("Scenario")
     fig.colorbar(heatmap, ax=ax, label="Value")
 
-    # Too many UUID labels to render legibly; keep axes clean.
+    # Too many id labels to render legibly; keep axes clean.
     ax.set_xticks([])
     ax.set_yticks([])
 

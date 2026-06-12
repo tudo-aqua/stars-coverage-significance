@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.time.Instant
-import java.util.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -58,10 +57,10 @@ object MutantScenarioChunkJobsRepository {
   /**
    * Retrieves the progress of chunk jobs for a given run ID.
    *
-   * @param runId The UUID of the run to get progress for.
+   * @param runId The id of the run to get progress for.
    * @return A [ChunkJobsProgress] object containing the progress details.
    */
-  fun getProgress(runId: UUID): ChunkJobsProgress = transaction {
+  fun getProgress(runId: Int): ChunkJobsProgress = transaction {
     val cnt = MutantScenarioChunkJobsTable.id.count()
 
     // Returns rows: (status, count)
@@ -89,11 +88,11 @@ object MutantScenarioChunkJobsRepository {
   /**
    * Claims the next available chunk job for processing.
    *
-   * @param runId The UUID of the run to claim a job from.
+   * @param runId The id of the run to claim a job from.
    * @param workerId The identifier of the worker claiming the job.
    * @return The claimed [MutantScenarioChunkJob] or null if no pending jobs
    */
-  fun claimNextChunkJob(runId: UUID, workerId: String): MutantScenarioChunkJob? = transaction {
+  fun claimNextChunkJob(runId: Int, workerId: String): MutantScenarioChunkJob? = transaction {
     val row =
         MutantScenarioChunkJobsTable.select(
                 MutantScenarioChunkJobsTable.id,

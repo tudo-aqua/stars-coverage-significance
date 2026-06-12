@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteAll
@@ -46,7 +45,7 @@ object DistinctMutantsRepository {
    *
    * @return All distinct mutant ids.
    */
-  fun getAllIds(): List<UUID> = getAll().map { it.id!! }
+  fun getAllIds(): List<Int> = getAll().map { it.id!! }
 
   /**
    * Inserts multiple mutants into the database.

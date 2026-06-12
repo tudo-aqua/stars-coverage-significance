@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.BOTTOM_ROW
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
@@ -64,7 +63,7 @@ import tools.aqua.stars.coverage.significance.gridTrafficGenerator.TOP_ROW
  * @property bottomRightPosition The position of the vehicle in the bottom right corner of the grid.
  */
 data class ScenarioStartingConfigurationEntry(
-    val id: UUID? = null,
+    val id: Int? = null,
     val sequenceNumber: Long? = null,
     val humanReadableScenarioId: String,
     val topLeftVehicleState: ScenarioStartingConfigurationVehicleState,

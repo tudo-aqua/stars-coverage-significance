@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 /**
@@ -27,7 +27,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property tscJson JSON representation of the TSC.
  * @property possibleTSCInstancesCount Number of possible TSC instances.
  */
-object TSCsTable : UUIDTable("tscs") {
+object TSCsTable : IntIdTable("tscs") {
   val createdAt = timestamp("created_at")
   val tscJson = text("tsc_json")
   val possibleTSCInstancesCount = integer("possible_tsc_instances_count")

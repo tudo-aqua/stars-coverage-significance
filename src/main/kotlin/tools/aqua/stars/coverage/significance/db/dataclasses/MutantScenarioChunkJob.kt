@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a chunk job for processing a range of sequences for a specific mutant in
@@ -39,8 +38,8 @@ import java.util.UUID
  */
 data class MutantScenarioChunkJob(
     val jobId: Long? = null,
-    val runId: UUID,
-    val mutantId: UUID,
+    val runId: Int,
+    val mutantId: Int,
     val seqFrom: Long,
     val seqTo: Long,
     val status: JobStatus = JobStatus.PENDING,

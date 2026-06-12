@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a row in the TSC entries table.
@@ -29,7 +28,7 @@ import java.util.UUID
  * @property possibleTSCInstancesCount Number of possible TSC instances.
  */
 data class TSCEntry(
-    val id: UUID? = null,
+    val id: Int? = null,
     val createdAt: Instant = Instant.now(),
     val tscJson: String,
     val possibleTSCInstancesCount: Int

@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.distinctMutantIds
@@ -50,8 +49,8 @@ object CountOfScenariosKillingAMutantPerMutantPostEvaluation {
     println("Finished CountOfScenariosKillingAMutantPerMutantPostEvaluation.")
   }
 
-  private fun calculateCountOfScenariosKillingMutant(): List<Pair<UUID, Int>> {
-    val countOfScenariosKillingMutant: List<Pair<UUID, Int>> =
+  private fun calculateCountOfScenariosKillingMutant(): List<Pair<Int, Int>> {
+    val countOfScenariosKillingMutant: List<Pair<Int, Int>> =
         distinctMutantIds
             .map { id ->
               id to

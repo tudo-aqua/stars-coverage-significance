@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
@@ -66,7 +65,7 @@ object MetricTotalTickDifferenceRepository {
    * @return The ID of the inserted entry, or the ID of the existing entry if an entry with the same
    *   TSC ID, run ID, scenario configuration ID, and mutant ID already exists in the database.
    */
-  fun insertIfMissingAndReturnId(entry: MetricTotalTickDifferenceEntry): UUID = db {
+  fun insertIfMissingAndReturnId(entry: MetricTotalTickDifferenceEntry): Int = db {
     require(entry.id == null) { "insertIfMissingAndReturnId() expects entry.id == null." }
 
     MetricTotalTickDifferenceTable.insertIgnore { row ->

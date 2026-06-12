@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.ResultRow
@@ -41,7 +40,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry.
    * @return The corresponding [MetricFailedMonitorsEntry] or null if not found.
    */
-  fun getById(id: UUID): MetricFailedMonitorsEntry? = db {
+  fun getById(id: Int): MetricFailedMonitorsEntry? = db {
     MetricFailedMonitorsTable.selectAll()
         .where { MetricFailedMonitorsTable.id eq id }
         .limit(1)
@@ -75,10 +74,10 @@ object MetricFailedMonitorsRepository {
    * @return The corresponding [MetricFailedMonitorsEntry] or null if not found.
    */
   fun getByKey(
-      runId: UUID,
-      tscId: UUID,
-      scenarioConfigId: UUID,
-      mutantId: UUID
+      runId: Int,
+      tscId: Int,
+      scenarioConfigId: Int,
+      mutantId: Int
   ): MetricFailedMonitorsEntry? = db {
     MetricFailedMonitorsTable.selectAll()
         .where {
@@ -537,7 +536,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry to delete.
    * @return The number of rows deleted (0 or 1).
    */
-  fun deleteById(id: UUID): Int = db {
+  fun deleteById(id: Int): Int = db {
     MetricFailedMonitorsTable.deleteWhere { MetricFailedMonitorsTable.id eq id }
   }
 
@@ -547,7 +546,7 @@ object MetricFailedMonitorsRepository {
    * @param runId Unique identifier of the evaluation run.
    * @return The number of rows deleted.
    */
-  fun deleteByRun(runId: UUID): Int = db {
+  fun deleteByRun(runId: Int): Int = db {
     MetricFailedMonitorsTable.deleteWhere { MetricFailedMonitorsTable.run eq runId }
   }
 

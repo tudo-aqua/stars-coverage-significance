@@ -38,8 +38,8 @@ fun main(args: Array<String>) {
   installParentDeathWatcher(args)
 
   val workerId = CliArgs.requireString(args, "workerId")
-  val runId = CliArgs.requireUuid(args, "runId")
-  val tscEntryId = CliArgs.requireUuid(args, "tscEntryId")
+  val runId = CliArgs.requireInt(args, "runId")
+  val tscEntryId = CliArgs.requireInt(args, "tscEntryId")
 
   DbBootstrap.connect()
 
@@ -87,8 +87,8 @@ fun main(args: Array<String>) {
  */
 fun startHighwayTrafficAnalysisWorkerProcess(
     workerId: String,
-    evaluationRunId: java.util.UUID,
-    tscEntryId: java.util.UUID
+    evaluationRunId: Int,
+    tscEntryId: Int
 ): Process =
     startJavaProcess(
         mainClass = "tools.aqua.stars.coverage.significance.workers.HighwayTrafficAnalysisKt",

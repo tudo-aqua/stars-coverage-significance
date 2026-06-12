@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.javatime.timestamp
 
@@ -30,7 +30,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property scenarioConfig Scenario starting configuration.
  * @property createdAt Timestamp of when the entry was created.
  */
-object MetricStartingValidTSCInstancesTable : UUIDTable("metric_starting_valid_tsc_instances") {
+object MetricStartingValidTSCInstancesTable : IntIdTable("metric_starting_valid_tsc_instances") {
   val tsc =
       reference(
           name = "tsc_id",

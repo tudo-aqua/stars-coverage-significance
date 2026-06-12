@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.javatime.timestamp
 
@@ -31,7 +31,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property firstChangeMillis Milliseconds since the epoch of the first change in the TSC instance.
  * @property createdAt Timestamp of when the entry was created.
  */
-object MetricFirstTSCInstanceChangeTable : UUIDTable("metric_first_tsc_instance_changes") {
+object MetricFirstTSCInstanceChangeTable : IntIdTable("metric_first_tsc_instance_changes") {
   val run =
       reference(
           name = "run_id",

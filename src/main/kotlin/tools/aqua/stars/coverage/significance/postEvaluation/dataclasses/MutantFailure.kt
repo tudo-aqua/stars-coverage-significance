@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.utils.MonitorViolationBitmask
 
 /**
@@ -32,7 +31,7 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolationBitmask
 data class MutantFailure(
     val tscId: TSCId,
     val currentTSCInstance: TSCInstanceId,
-    val startingScenarioConfigurationID: UUID,
+    val startingScenarioConfigurationID: Int,
     val mutantID: MutantId,
     val monitorBitmask: MonitorViolationBitmask
 )

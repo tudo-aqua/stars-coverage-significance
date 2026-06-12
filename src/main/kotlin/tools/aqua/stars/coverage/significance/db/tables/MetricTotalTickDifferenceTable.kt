@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 
 /**
  * Table for storing the total tick difference metric for a given TSC, test run, scenario
@@ -31,7 +31,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
  * @property totalTickDifferenceMillis The total tick difference in milliseconds for the given TSC,
  *   test run, scenario configuration, and mutant.
  */
-object MetricTotalTickDifferenceTable : UUIDTable("metric_total_tick_difference") {
+object MetricTotalTickDifferenceTable : IntIdTable("metric_total_tick_difference") {
   val run =
       reference(
           name = "run_id",

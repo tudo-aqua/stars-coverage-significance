@@ -17,8 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
-import java.util.UUID
-
 /**
  * Data class representing a highway traffic analysis job.
  *
@@ -32,7 +30,7 @@ import java.util.UUID
  */
 data class HighwayTrafficAnalysisJob(
     val jobId: Long? = null,
-    val runId: UUID,
+    val runId: Int,
     val seedFromInclusive: Int,
     val seedToExclusive: Int,
     val crowdiness: Int,

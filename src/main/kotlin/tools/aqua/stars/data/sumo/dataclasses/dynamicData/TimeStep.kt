@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
-import java.util.UUID
 import tools.aqua.stars.core.types.TickDataType
 import tools.aqua.stars.sumo.MutantManeuver
 
@@ -39,10 +38,10 @@ import tools.aqua.stars.sumo.MutantManeuver
  */
 class TimeStep(
     identifier: String,
-    val runId: UUID,
+    val runId: Int,
     val sourceIdentifier: String,
-    val mutantId: UUID?,
-    val scenarioConfigId: UUID,
+    val mutantId: Int?,
+    val scenarioConfigId: Int,
     val tickTimeMillis: Long,
     val vehiclesInTick: List<Vehicle>,
     val collisionsInTick: List<CollisionEvent>,

@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.nio.file.Path
 import java.util.ArrayList
-import java.util.UUID
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
@@ -85,10 +84,10 @@ class LibsumoMutantDataCollector(
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
-      runId: UUID,
+      runId: Int,
       scenario: GeneratedScenario,
       mutant: Mutant,
-      mutantId: UUID
+      mutantId: Int
   ): List<TimeStep> =
       runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutant, mutantId)
 
@@ -108,10 +107,10 @@ class LibsumoMutantDataCollector(
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
-      runId: UUID,
+      runId: Int,
       scenario: ScenarioStartingConfigurationEntry,
       mutant: Mutant,
-      mutantId: UUID,
+      mutantId: Int,
       onlyFirstTick: Boolean = false,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
@@ -239,10 +238,10 @@ class LibsumoMutantDataCollector(
   }
 
   private fun getCurrentTimeStep(
-      runId: UUID,
-      scenarioConfigId: UUID?,
+      runId: Int,
+      scenarioConfigId: Int?,
       egoId: String,
-      mutantId: UUID,
+      mutantId: Int,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList(),
       egoManeuver: MutantManeuver?

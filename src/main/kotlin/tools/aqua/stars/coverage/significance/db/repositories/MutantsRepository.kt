@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -42,7 +41,7 @@ object MutantsRepository {
    * @param id Mutant ID.
    * @return MutantEntry or null if not found.
    */
-  fun getById(id: UUID): MutantEntry? = transaction {
+  fun getById(id: Int): MutantEntry? = transaction {
     MutantsTable.selectAll().where { MutantsTable.id eq id }.limit(1).firstOrNull()?.toEntry()
   }
 
@@ -70,7 +69,7 @@ object MutantsRepository {
    * @throws ExposedSQLException if the insertion fails due to a database error other than a unique
    *   constraint violation on the mutant key.
    */
-  fun insertIfMissingAndGetId(mutant: MutantEntry): UUID? = db {
+  fun insertIfMissingAndGetId(mutant: MutantEntry): Int? = db {
     MutantsTable.insertIgnoreAndGetId { m ->
           m[MutantsTable.createdAt] = mutant.createdAt
           m[MutantsTable.mutantNumber] = mutant.mutantNumber
@@ -109,7 +108,7 @@ object MutantsRepository {
    *
    * @return List of all mutant IDs.
    */
-  fun getAllIds(): List<UUID> = transaction {
+  fun getAllIds(): List<Int> = transaction {
     MutantsTable.select(MutantsTable.id).orderBy(MutantsTable.mutantNumber to SortOrder.ASC).map {
       it[MutantsTable.id].value
     }

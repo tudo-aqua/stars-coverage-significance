@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.DistinctMutantEntry
@@ -49,25 +48,25 @@ fun main() {
  * @param mutants The mutants as they come from the DB.
  * @return The mutants that are behavioral distinct.
  */
-fun filter(listOfFailures: List<MutantFailure>, mutants: List<UUID>): List<UUID> {
+fun filter(listOfFailures: List<MutantFailure>, mutants: List<Int>): List<Int> {
   println("Start comparing mutants...")
-  val behavioralDistinctMutants = mutableListOf<MutableList<UUID>>()
-  mutants.forEachIndexed { index, mutantUuid ->
+  val behavioralDistinctMutants = mutableListOf<MutableList<Int>>()
+  mutants.forEachIndexed { index, mutantId ->
     print("$index: ")
     for (existingMutant in behavioralDistinctMutants) {
-      if (mutantsIdentical(listOfFailures, existingMutant.first(), mutantUuid)) {
-        println("Mutant $mutantUuid is identical to $existingMutant")
-        existingMutant.add(mutantUuid)
+      if (mutantsIdentical(listOfFailures, existingMutant.first(), mutantId)) {
+        println("Mutant $mutantId is identical to $existingMutant")
+        existingMutant.add(mutantId)
         return@forEachIndexed
       }
     }
 
-    println("Mutant $mutantUuid is new")
-    behavioralDistinctMutants.add(mutableListOf(mutantUuid))
+    println("Mutant $mutantId is new")
+    behavioralDistinctMutants.add(mutableListOf(mutantId))
   }
 
-  behavioralDistinctMutants.forEachIndexed { index, uUIDS ->
-    println("$index: ${uUIDS.joinToString(",")})")
+  behavioralDistinctMutants.forEachIndexed { index, ids ->
+    println("$index: ${ids.joinToString(",")})")
   }
 
   println("Saving behavioral distinct mutants to file...")
@@ -82,7 +81,7 @@ fun filter(listOfFailures: List<MutantFailure>, mutants: List<UUID>): List<UUID>
   return behavioralDistinctMutants.map { it.first() }
 }
 
-private fun mutantsIdentical(data: List<MutantFailure>, mutant1ID: UUID, mutant2ID: UUID): Boolean {
+private fun mutantsIdentical(data: List<MutantFailure>, mutant1ID: Int, mutant2ID: Int): Boolean {
   val failuresMutant1 =
       data.filter { it.mutantID == mutant1ID }.sortedBy { it.startingScenarioConfigurationID }
   val failuresMutant2 =

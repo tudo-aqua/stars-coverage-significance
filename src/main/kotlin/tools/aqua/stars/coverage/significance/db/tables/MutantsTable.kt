@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 
@@ -28,7 +28,7 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
  * @property mutantNumber Unique number identifying the mutant.
  * @property className Name of the class the mutant belongs to.
  */
-object MutantsTable : UUIDTable("mutants") {
+object MutantsTable : IntIdTable("mutants") {
   val createdAt = timestamp("created_at")
 
   val mutantNumber = integer("mutant_number")

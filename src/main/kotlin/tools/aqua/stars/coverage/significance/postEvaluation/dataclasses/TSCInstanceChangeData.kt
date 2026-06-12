@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
 /**
@@ -32,8 +31,8 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation
  *   observation window if no change occurred.
  */
 data class TSCInstanceChangeData(
-    val mutantId: UUID,
-    val scenarioConfigId: UUID,
+    val mutantId: Int,
+    val scenarioConfigId: Int,
     val millisUntilFirstChange: Long?,
     val failedMonitorsUntilChange: Set<MonitorViolation>,
 )

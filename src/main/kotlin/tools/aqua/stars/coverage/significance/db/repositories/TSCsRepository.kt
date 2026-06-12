@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
@@ -62,7 +61,7 @@ object TSCsRepository {
    * @param entry Entry to upsert.
    * @return Upserted entry id.
    */
-  fun upsertAndGetId(entry: TSCEntry): UUID = transaction {
+  fun upsertAndGetId(entry: TSCEntry): Int = transaction {
     val existing = getByJson(entry.tscJson)
     if (existing != null) return@transaction existing.id ?: error("No id for existing entry.")
 
@@ -80,7 +79,7 @@ object TSCsRepository {
    * @param entry Entry to insert.
    * @return The ID of the inserted entry.
    */
-  fun insertIfMissingAndReturnId(entry: TSCEntry): UUID = db {
+  fun insertIfMissingAndReturnId(entry: TSCEntry): Int = db {
     require(entry.id == null) { "insert() expects entry.id == null." }
 
     TSCsTable.insertIgnore { row ->
@@ -125,7 +124,7 @@ object TSCsRepository {
    * @param entry Entry to insert.
    * @return Inserted entry id.
    */
-  fun insertAndGetId(entry: TSCEntry): UUID = transaction {
+  fun insertAndGetId(entry: TSCEntry): Int = transaction {
     require(entry.id == null) { "insert() expects entry.id == null." }
 
     val newId =
@@ -146,7 +145,7 @@ object TSCsRepository {
    * @param id Id of the entry to retrieve.
    * @return Entry with the given id or null if not found.
    */
-  fun getById(id: UUID): TSCEntry? = transaction {
+  fun getById(id: Int): TSCEntry? = transaction {
     TSCsTable.selectAll().where { TSCsTable.id eq id }.limit(1).firstOrNull()?.toEntry()
   }
 

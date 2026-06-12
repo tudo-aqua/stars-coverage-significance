@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable
 
 /**
@@ -33,9 +32,9 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenc
  *   test run, scenario configuration, and mutant.
  */
 data class MetricTotalTickDifferenceEntry(
-    val id: UUID? = null,
-    val runId: UUID,
-    val scenarioConfigId: UUID,
-    val mutantId: UUID,
+    val id: Int? = null,
+    val runId: Int,
+    val scenarioConfigId: Int,
+    val mutantId: Int,
     val totalTickDifferenceMillis: Long
 )

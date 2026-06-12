@@ -62,8 +62,8 @@ object ScenarioByMonitorCrossTable {
     path.writeText(
         killingMatrix.toList().joinToString(
             prefix = "Scenario, ${mutantsKilled.joinToString(",")}\n", separator = "\n") {
-                (scenarioUUID, killingList) ->
-              "$scenarioUUID,${killingList.toList().joinToString(",") { it.second.toString() }}"
+                (scenarioId, killingList) ->
+              "$scenarioId,${killingList.toList().joinToString(",") { it.second.toString() }}"
             })
   }
 }

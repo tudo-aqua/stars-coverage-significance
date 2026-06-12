@@ -19,7 +19,6 @@ package tools.aqua.stars.data.sumo.xml
 
 import java.io.File
 import java.nio.file.Path
-import java.util.UUID
 import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
 import kotlin.math.round
@@ -994,9 +993,9 @@ object SumoImporter {
         tickTimeMillis = tickMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = collisionsInTick,
-        scenarioConfigId = UUID.randomUUID(),
-        runId = UUID.randomUUID(),
-        mutantId = UUID.randomUUID(),
+        scenarioConfigId = 0,
+        runId = 0,
+        mutantId = 0,
         ego = ego,
         egoManeuver = null)
   }

@@ -20,7 +20,7 @@ from pathlib import Path
 import polars as pl
 
 
-# UUID and timestamp columns are excluded — they carry no signal for the classifier.
+# ID and timestamp columns are excluded — they carry no signal for the classifier.
 # All seven next-tick monitor columns are kept so the same Parquet file can be
 # reused for other target columns without re-exporting.
 QUERY = """

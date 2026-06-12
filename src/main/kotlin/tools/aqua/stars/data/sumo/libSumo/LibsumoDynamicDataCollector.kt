@@ -18,7 +18,7 @@
 package tools.aqua.stars.data.sumo.libSumo
 
 import java.nio.file.Path
-import java.util.*
+import java.util.ArrayList
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
 import org.eclipse.sumo.libsumo.Simulation
@@ -82,9 +82,9 @@ class LibsumoDynamicDataCollector(
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
-      runId: UUID,
+      runId: Int,
       scenario: GeneratedScenario,
-      mutantId: UUID
+      mutantId: Int
   ): List<TimeStep> =
       runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutantId)
 
@@ -102,9 +102,9 @@ class LibsumoDynamicDataCollector(
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
-      runId: UUID,
+      runId: Int,
       scenario: ScenarioStartingConfigurationEntry,
-      mutantId: UUID,
+      mutantId: Int,
       onlyFirstTick: Boolean = false,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
@@ -230,10 +230,10 @@ class LibsumoDynamicDataCollector(
   }
 
   private fun getCurrentTimeStep(
-      runId: UUID,
-      scenarioConfigId: UUID?,
+      runId: Int,
+      scenarioConfigId: Int?,
       egoId: String,
-      mutantId: UUID?,
+      mutantId: Int?,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList(),
       egoManeuver: MutantManeuver?

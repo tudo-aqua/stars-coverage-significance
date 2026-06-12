@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.manualTesting
 
-import java.util.*
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
@@ -50,12 +49,12 @@ fun main() {
   DbBootstrap.connect()
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
-  val runId = UUID.randomUUID()
+  val runId = 0
   val mutantIds =
       setOf(
-          UUID.fromString("ccb1de0c-e03f-4168-bbfe-4f89a3e4e1f9"),
-          //          UUID.fromString("9f39fa7b-c68f-4197-a27e-de7b57fc967b"),
-          //          UUID.fromString("b32511f8-4e4f-48a7-b50d-c66ccd67b475"),
+          1, // replace with actual mutant ID from DB
+          //          2,
+          //          3,
       )
   //
   //  val scenarioIds = db {
@@ -67,9 +66,9 @@ fun main() {
   //        .distinct()
   //        .toMutableList()
   //  }
-  //  scenarioIds += UUID.fromString("0e9b71df-ad81-4881-aaae-7a00e272f60e")
+  //  scenarioIds += 1 // replace with actual scenario ID from DB
 
-  val scenarioIds = setOf(UUID.fromString("2b7827d6-5832-435f-9736-885a80b4666a"))
+  val scenarioIds = setOf(1) // replace with actual scenario ID from DB
 
   val tickSequences = mutableListOf<TickSequence<TimeStep>>()
 
@@ -106,7 +105,7 @@ fun main() {
       //                            positionMeters = 130.0f,
       //                            type = GridVehicleType.CALM),
       //                    ))
-      //            .toScenarioStartingConfigurationEntry(id = UUID.randomUUID())
+      //            .toScenarioStartingConfigurationEntry(id = 0)
 
       val libSumoTicks =
           libsumoDynamicDataCollector.runGeneratedScenario(

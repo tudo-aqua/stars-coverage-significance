@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a mutant entry in the database.
@@ -29,7 +28,7 @@ import java.util.UUID
  * @property className Name of the class that the mutant is applied to.
  */
 data class MutantEntry(
-    val id: UUID? = null,
+    val id: Int? = null,
     val createdAt: Instant,
     val mutantNumber: Int,
     val className: String

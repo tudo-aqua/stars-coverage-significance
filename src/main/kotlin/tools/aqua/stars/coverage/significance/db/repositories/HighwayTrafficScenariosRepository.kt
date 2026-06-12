@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.repositories
 
 import java.time.Instant
-import java.util.UUID
 import org.jetbrains.exposed.sql.Count
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
@@ -95,7 +94,7 @@ object HighwayTrafficScenariosRepository {
    *
    * @return The list containing all instance ids.
    */
-  fun getInstanceIds(): List<UUID> = db {
+  fun getInstanceIds(): List<Int> = db {
     HighwayTrafficScenariosTable.select(HighwayTrafficScenariosTable.tscInstance).map {
       it[HighwayTrafficScenariosTable.tscInstance].value
     }

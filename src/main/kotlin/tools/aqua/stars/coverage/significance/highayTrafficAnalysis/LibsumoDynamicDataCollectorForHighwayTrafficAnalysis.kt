@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.highayTrafficAnalysis
 
 import java.nio.file.Path
 import java.util.ArrayList
-import java.util.UUID
 import kotlin.io.path.Path
 import kotlin.math.ln
 import kotlin.random.Random
@@ -38,6 +37,7 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.HighwayTrafficScena
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
+import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.CENTER_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.LEFT_LANE
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.RIGHT_LANE
@@ -63,10 +63,12 @@ fun main() {
 
   val tsc = tsc()
 
+  val tscEntryId = TSCsRepository.getByJson(tsc.getJsonString())?.id
+  checkNotNull(tscEntryId) { "TSC not found in DB; run PrepareDatabaseAndSeed first." }
   val collector =
       LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
           tsc = tsc,
-          tscId = UUID.fromString("34fcc47b-8cda-4bb0-af8e-860fab472a85"),
+          tscId = tscEntryId,
       )
 
   val tscInstances = mutableListOf<TSCInstance<*, *, *, *>>()
@@ -115,7 +117,7 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     netFileName: String = NETWORK_FILE_NAME,
     vTypeAdditionalFile: String = "vTypesHighway.add.xml",
     val tsc: TSC<Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds> = tsc(),
-    val tscId: UUID,
+    val tscId: Int,
     val stepLength: Double = 0.1,
     val simulationDurationSeconds: Double = 120.0,
     val snapshotIntervalSeconds: Double = 20.0,
@@ -268,7 +270,7 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
       }
     }
 
-    var tickToTscInstanceIdMap: Map<TimeStep, UUID?> = emptyMap()
+    var tickToTscInstanceIdMap: Map<TimeStep, Int?> = emptyMap()
     db {
       tickToTscInstanceIdMap =
           tickToTscInstancesMap
@@ -292,8 +294,8 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
               vehicleType = tick.ego.vehicleType.toString(),
               tick = tick.tickTimeMillis,
               lane = tick.ego.currentLane.laneIndex,
-              speed = tick.ego.speedKmPerHour.toDouble(),
-              position = tick.ego.positionOnLaneMeters.toDouble(),
+              speed = tick.ego.speedKmPerHour,
+              position = tick.ego.positionOnLaneMeters,
               tscInstanceId = tscInstanceId ?: error("TSC Instance not found"),
           )
         })
@@ -441,14 +443,14 @@ class LibsumoDynamicDataCollectorForHighwayTrafficAnalysis(
     checkNotNull(ego) { "Ego not found" }
 
     return TimeStep(
-        runId = UUID.randomUUID(),
+        runId = 0,
         identifier = "",
-        scenarioConfigId = UUID.randomUUID(),
+        scenarioConfigId = 0,
         sourceIdentifier = "$seed $crowdiness ${ego.vehicleId} t=$tickTimeMillis",
         tickTimeMillis = tickTimeMillis,
         vehiclesInTick = vehiclesInTick,
         collisionsInTick = emptyList(),
-        mutantId = UUID.randomUUID(),
+        mutantId = 0,
         ego = ego,
         egoManeuver = null)
   }

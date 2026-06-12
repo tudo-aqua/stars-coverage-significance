@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
-import java.util.UUID
 import kotlin.collections.component1
 import kotlin.collections.component2
 import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
@@ -36,13 +35,13 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 /**
  * Metric evaluating the first change in a TSC instance over time.
  *
- * @property evaluationRunEntryId [UUID] of the evaluation run.
- * @property tscEntryId [UUID] of the TSC being evaluated.
+ * @property evaluationRunEntryId [Int] of the evaluation run.
+ * @property tscEntryId [Int] of the TSC being evaluated.
  * @property dependsOn [Any]? object that this metric depends on.
  */
 class FirstTSCInstanceChangeMetric(
-    val evaluationRunEntryId: UUID,
-    val tscEntryId: UUID,
+    val evaluationRunEntryId: Int,
+    val tscEntryId: Int,
     override val dependsOn: Any? = null,
 ) :
     TSCAndTSCInstanceAndTickMetricProvider<
@@ -70,7 +69,7 @@ class FirstTSCInstanceChangeMetric(
    * Map storing the first change tick for each source identifier.
    * - Map<sourceIdentifier,FirstChangeData>.
    */
-  val instanceChangeMap: MutableMap<Pair<String, UUID>, FirstChangeData> = mutableMapOf()
+  val instanceChangeMap: MutableMap<Pair<String, Int>, FirstChangeData> = mutableMapOf()
 
   /**
    * Evaluates the metric for the given TSC, TSC instance, and tick.

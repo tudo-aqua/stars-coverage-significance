@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.validation.predicates
 
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.tsc.isOnLeftLane
 import tools.aqua.stars.coverage.significance.tsc.isOnLeftLaneOf
 import tools.aqua.stars.coverage.significance.tsc.isOnMiddleLane
@@ -71,7 +70,7 @@ object PredicateTestHelper {
       TimeStep(
           identifier = "tick-0",
           sourceIdentifier = "Test",
-          mutantId = UUID.randomUUID(),
+          mutantId = 0,
           tickTimeMillis = tickTimeMillis,
           vehiclesInTick = vehicles,
           collisionsInTick =
@@ -87,8 +86,8 @@ object PredicateTestHelper {
                     rawAttributes = emptyMap())
               },
           ego = ego,
-          runId = UUID.randomUUID(),
-          scenarioConfigId = UUID.randomUUID(),
+          runId = 0,
+          scenarioConfigId = 0,
           egoManeuver = null)
 
   /** Creates a test [Vehicle] with the given parameters. */

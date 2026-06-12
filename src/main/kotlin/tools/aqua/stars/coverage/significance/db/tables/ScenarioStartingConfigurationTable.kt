@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
 
 /**
@@ -44,7 +44,7 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingCon
  * @property bottomCenterPosition Position of the vehicle in the bottom center of the grid.
  * @property bottomRightPosition Position of the vehicle in the bottom right corner of the grid.
  */
-object ScenarioStartingConfigurationTable : UUIDTable("scenario_starting_configurations") {
+object ScenarioStartingConfigurationTable : IntIdTable("scenario_starting_configurations") {
   val sequenceNumber = long("seq").autoIncrement().uniqueIndex()
   val humanReadableScenarioId = varchar("humanReadableScenarioId", 256).uniqueIndex()
 

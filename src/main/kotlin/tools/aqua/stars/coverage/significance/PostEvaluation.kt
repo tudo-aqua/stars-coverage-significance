@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance
 
-import java.util.*
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DistinctMutantsRepository
@@ -40,10 +39,10 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.b
 // region Mutants
 // ----------------------------------------------------------------------------------------------------
 /** All Mutant IDs. */
-val mutantIds: List<UUID> by lazy { db { MutantsRepository.getAllIds() } }
+val mutantIds: List<Int> by lazy { db { MutantsRepository.getAllIds() } }
 
 /** All behavioral distinct Mutant IDs. */
-val distinctMutantIds: List<UUID> by lazy { db { DistinctMutantsRepository.getAllIds() } }
+val distinctMutantIds: List<Int> by lazy { db { DistinctMutantsRepository.getAllIds() } }
 // ----------------------------------------------------------------------------------------------------
 // endregion
 
@@ -106,7 +105,7 @@ val tscInstanceTransitions: List<TSCInstanceTransition> by lazy {
 val monitorCombinations: List<Set<MonitorViolation>> by lazy { db { buildMonitorCombinations() } }
 
 /** All scenario IDs. */
-val scenarioIds: List<UUID> by lazy {
+val scenarioIds: List<Int> by lazy {
   db { TSCInstancesRepository.getAllScenariosWithJSON().map { it.scenarioInstanceId } }
 }
 

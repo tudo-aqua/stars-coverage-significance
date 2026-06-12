@@ -17,8 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.utils
 
-import java.util.UUID
-
 /** Command-line argument parsing utilities. */
 object CliArgs {
 
@@ -37,15 +35,14 @@ object CliArgs {
   }
 
   /**
-   * Requires a UUID argument from the command-line arguments.
+   * Requires an Int argument from the command-line arguments.
    *
    * @param args Array of command-line arguments.
    * @param name Name of the argument to retrieve.
-   * @return The value of the required UUID argument.
-   * @throws IllegalArgumentException if the argument is not found or is not a valid UUID
+   * @return The value of the required Int argument.
+   * @throws IllegalArgumentException if the argument is not found or is not a valid Int
    */
-  fun requireUuid(args: Array<String>, name: String): UUID =
-      UUID.fromString(requireString(args, name))
+  fun requireInt(args: Array<String>, name: String): Int = requireString(args, name).toInt()
 
   /**
    * Requires a Long argument from the command-line arguments.

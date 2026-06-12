@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.seed
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.max
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantScenarioChunkJob
@@ -35,7 +34,7 @@ object ChunkJobSeeder {
    * @param chunkSize Number of scenarios per chunk (e.g., 500, 1000, 2000).
    * @param scenarioCount Total number of scenarios available.
    */
-  fun seedChunks(runId: UUID, mutantIds: List<UUID>, chunkSize: Long, scenarioCount: Long) =
+  fun seedChunks(runId: Int, mutantIds: List<Int>, chunkSize: Long, scenarioCount: Long) =
       transaction {
         require(chunkSize > 0) { "chunkSize must be > 0" }
         require(mutantIds.isNotEmpty()) { "mutantIds must not be empty" }

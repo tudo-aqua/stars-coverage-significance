@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 /**
@@ -25,7 +25,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  *
  * @property createdAt Timestamp of the evaluation run.
  */
-object EvaluationRunsTable : UUIDTable("evaluation_runs") {
+object EvaluationRunsTable : IntIdTable("evaluation_runs") {
   val createdAt = timestamp("created_at")
 
   init {

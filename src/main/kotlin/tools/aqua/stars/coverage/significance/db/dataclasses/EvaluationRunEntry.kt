@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
 
 /**
@@ -28,6 +27,6 @@ import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
  * @property createdAt Timestamp of when the evaluation run was created.
  */
 data class EvaluationRunEntry(
-    val id: UUID? = null,
+    val id: Int? = null,
     val createdAt: Instant = Instant.now(),
 )

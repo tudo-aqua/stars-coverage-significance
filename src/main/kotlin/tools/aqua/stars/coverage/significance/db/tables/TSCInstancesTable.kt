@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.javatime.timestamp
 
@@ -28,7 +28,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property createdAt Timestamp of the TSC instance.
  * @property instanceJson JSON representation of the TSC instance.
  */
-object TSCInstancesTable : UUIDTable("tsc_instances") {
+object TSCInstancesTable : IntIdTable("tsc_instances") {
   val tsc =
       reference(
           name = "tsc_id",

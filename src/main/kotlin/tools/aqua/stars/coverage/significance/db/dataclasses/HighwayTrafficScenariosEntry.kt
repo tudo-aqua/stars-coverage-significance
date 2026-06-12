@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a row in the HighwayTrafficScenariosTable.
@@ -37,15 +36,15 @@ import java.util.UUID
  * @property createdAt The timestamp of when the entry was created.
  */
 data class HighwayTrafficScenariosEntry(
-    val id: UUID? = null,
+    val id: Int? = null,
     val seed: Int,
     val crowdiness: Int,
     val vehicleId: String,
     val vehicleType: String,
     val tick: Long,
     val lane: Int,
-    val position: Double,
-    val speed: Double,
-    val tscInstanceId: UUID,
+    val position: Float,
+    val speed: Float,
+    val tscInstanceId: Int,
     val createdAt: Instant = Instant.now(),
 )

@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.manualTesting
 
 import java.nio.file.Path
 import java.util.ArrayList
-import java.util.UUID
 import kotlin.collections.plusAssign
 import kotlin.io.path.Path
 import org.eclipse.sumo.libsumo.Route
@@ -83,7 +82,7 @@ class LibsumoDynamicDataCollectorTest(
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
-      runId: UUID,
+      runId: Int,
       scenario: ScenarioStartingConfigurationEntry,
       mutant: Mutant,
       traciModes: TraCIModes = TraCIModes(speedMode = 96, laneChangeMode = 512),
@@ -234,10 +233,10 @@ class LibsumoDynamicDataCollectorTest(
   }
 
   private fun getCurrentTimeStep(
-      runId: UUID,
-      scenarioConfigId: UUID?,
+      runId: Int,
+      scenarioConfigId: Int?,
       egoId: String,
-      mutantId: UUID?,
+      mutantId: Int?,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList()
   ): TimeStep? {

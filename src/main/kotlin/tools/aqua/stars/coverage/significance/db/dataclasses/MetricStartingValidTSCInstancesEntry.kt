@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 
 /**
@@ -31,9 +30,9 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCIn
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricStartingValidTSCInstancesEntry(
-    val id: UUID? = null,
-    val tscId: UUID,
-    val tscInstanceId: UUID,
-    val scenarioConfigId: UUID,
+    val id: Int? = null,
+    val tscId: Int,
+    val tscInstanceId: Int,
+    val scenarioConfigId: Int,
     val createdAt: Instant = Instant.now(),
 )

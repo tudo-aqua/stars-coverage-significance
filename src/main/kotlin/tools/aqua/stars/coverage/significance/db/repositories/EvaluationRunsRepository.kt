@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.insertAndGetId
@@ -48,7 +47,7 @@ object EvaluationRunsRepository {
    * @param entry Entry to insert.
    * @return ID of inserted entry.
    */
-  fun insertAndGetId(entry: EvaluationRunEntry): UUID = transaction {
+  fun insertAndGetId(entry: EvaluationRunEntry): Int = transaction {
     require(entry.id == null) { "insert() expects entry.id == null." }
 
     val newId = EvaluationRunsTable.insertAndGetId { row -> row[createdAt] = entry.createdAt }.value
@@ -77,7 +76,7 @@ object EvaluationRunsRepository {
    * @param id Id of the entry to retrieve.
    * @return Entry with the given id or null if not found.
    */
-  fun getById(id: UUID): EvaluationRunEntry? = transaction {
+  fun getById(id: Int): EvaluationRunEntry? = transaction {
     EvaluationRunsTable.selectAll()
         .where { EvaluationRunsTable.id eq id }
         .limit(1)

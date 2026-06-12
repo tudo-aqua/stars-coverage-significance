@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.workers
 
 import java.sql.SQLException
-import java.util.UUID
 import kotlin.collections.map
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import tools.aqua.stars.core.evaluation.TSCEvaluation
@@ -64,7 +63,7 @@ fun main(args: Array<String>) {
       }
 
   val workerId = CliArgs.requireString(finalArgs, "workerId")
-  val runId = CliArgs.requireUuid(finalArgs, "runId")
+  val runId = CliArgs.requireInt(finalArgs, "runId")
 
   while (true) {
     val job =
@@ -126,7 +125,7 @@ fun main(args: Array<String>) {
               MetricTotalTickDifferenceEntry(
                   mutantId = job.mutantId,
                   runId = runId,
-                  scenarioConfigId = UUID.fromString(identifier),
+                  scenarioConfigId = identifier.toInt(),
                   totalTickDifferenceMillis = tickDifference?.differenceMillis ?: 0L)
           MetricTotalTickDifferenceRepository.insertIfMissingAndReturnId(dbEntry)
         }
@@ -152,7 +151,7 @@ fun main(args: Array<String>) {
  * @param evaluationRunId The ID of the evaluation run.
  * @return The started process.
  */
-fun startEvaluationWorkerProcess(workerId: String, evaluationRunId: UUID): Process =
+fun startEvaluationWorkerProcess(workerId: String, evaluationRunId: Int): Process =
     startJavaProcess(
         mainClass = "tools.aqua.stars.coverage.significance.workers.EvaluationWorkerKt",
         args =

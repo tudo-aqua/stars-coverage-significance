@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
@@ -102,7 +101,7 @@ object TSCInstanceTransitionAnalysis {
    * @param transitions The list of transitions to derive instance IDs from.
    * @return The ordered list of instance IDs.
    */
-  private fun deriveOrderedInstanceIds(transitions: List<TSCInstanceTransition>): List<UUID> =
+  private fun deriveOrderedInstanceIds(transitions: List<TSCInstanceTransition>): List<Int> =
       (transitions.map { it.fromInstanceId } + transitions.map { it.toInstanceId })
           .distinct()
           .sorted()
@@ -120,8 +119,8 @@ object TSCInstanceTransitionAnalysis {
    * @param values A function to extract the value from a transition.
    */
   private fun writeCsvAndHeatmap(
-      instanceIds: List<UUID>,
-      idToIndex: Map<UUID, Int>,
+      instanceIds: List<Int>,
+      idToIndex: Map<Int, Int>,
       labels: List<String>,
       title: String,
       subtitle: String,

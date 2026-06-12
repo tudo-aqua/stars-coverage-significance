@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Data class representing a row in the HighwayTrafficLongTailTable.
@@ -31,8 +30,8 @@ import java.util.UUID
  * @property createdAt The timestamp of when the entry was created.
  */
 data class HighwayTrafficLongTailEntry(
-    val id: UUID? = null,
-    val tscInstanceId: UUID,
+    val id: Int? = null,
+    val tscInstanceId: Int,
     val tscInstanceJson: String,
     val longTailValue: Long,
     val createdAt: Instant

@@ -17,7 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 /**
@@ -28,7 +28,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property longTail Long tail value.
  * @property createdAt Timestamp of when the long tail value was created.
  */
-object HighwayTrafficLongTailTable : UUIDTable("highway_traffic_long_tail") {
+object HighwayTrafficLongTailTable : IntIdTable("highway_traffic_long_tail") {
   val tscInstance =
       reference(
           "tsc_instance_id",

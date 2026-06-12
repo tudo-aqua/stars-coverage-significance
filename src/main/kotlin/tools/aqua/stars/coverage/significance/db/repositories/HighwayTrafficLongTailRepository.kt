@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.selectAll
@@ -43,7 +42,7 @@ object HighwayTrafficLongTailRepository {
    *
    * @return The list containing all instance ids.
    */
-  fun getInstanceIds(): List<UUID> = db {
+  fun getInstanceIds(): List<Int> = db {
     HighwayTrafficLongTailTable.select(HighwayTrafficScenariosTable.tscInstance).map {
       it[HighwayTrafficScenariosTable.tscInstance].value
     }

@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation
 
-import java.util.UUID
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -94,7 +93,7 @@ object MutantKillingPostEvaluation {
 
   private fun evaluateCoverage(
       scenarioFailures: List<ScenarioFailure>,
-      allScenarios: List<UUID>,
+      allScenarios: List<Int>,
       coverage: Int,
       selectedMonitors: Set<MonitorViolation>,
       seed: Long

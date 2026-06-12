@@ -19,7 +19,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 import kotlin.io.path.writeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -41,7 +40,7 @@ object ScenarioByScenarioCrossTable {
     val consoleProgress = ConsoleProgress(total = scenarioIds.size * scenarioIds.size)
     println("Starting ScenarioByScenarioCrossTable.")
     val heatmap =
-        Array(scenarioIds.size) { Array<Triple<UUID, UUID, Int>?>(scenarioIds.size) { null } }
+        Array(scenarioIds.size) { Array<Triple<Int, Int, Int>?>(scenarioIds.size) { null } }
 
     scenarioIds
         .mapIndexed { outerIndex, outerScenarioId ->

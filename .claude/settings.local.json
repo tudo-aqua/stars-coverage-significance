@@ -16,7 +16,10 @@
       "Bash(python -c \"import pandas as pd; df = pd.read_csv\\('scripts/stars_public_metric_failed_monitors.csv', low_memory=False, nrows=5\\); print\\(df.dtypes\\); print\\(\\); print\\(df.head\\(2\\).to_string\\(\\)\\)\")",
       "Bash(python -c ' *)",
       "Bash(pip install *)",
-      "Bash(python scripts/decision_tree_g0.py scripts/test.parquet)"
+      "Bash(python scripts/decision_tree_g0.py scripts/test.parquet)",
+      "Bash(Get-ChildItem *)",
+      "Bash(./gradlew compileKotlin compileTestKotlin)",
+      "Bash(./gradlew clean *)"
     ]
   }
 }

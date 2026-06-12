@@ -17,16 +17,14 @@
 
 package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 
-import java.util.UUID
+typealias TSCId = Int
 
-typealias TSCId = UUID
+typealias TSCInstanceId = Int
 
-typealias TSCInstanceId = UUID
+typealias MutantId = Int
 
-typealias MutantId = UUID
-
-typealias ScenarioInstanceId = UUID
+typealias ScenarioInstanceId = Int
 
 typealias ScenarioInstanceJSON = String
 
-typealias HighwayTrafficScenarioInstanceId = UUID
+typealias HighwayTrafficScenarioInstanceId = Int

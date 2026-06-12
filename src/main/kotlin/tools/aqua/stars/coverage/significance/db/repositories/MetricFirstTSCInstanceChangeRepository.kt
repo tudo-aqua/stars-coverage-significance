@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
@@ -80,7 +79,7 @@ object MetricFirstTSCInstanceChangeRepository {
    *
    * @param id ID of the entry to retrieve.
    */
-  fun getById(id: UUID): MetricFirstTSCInstanceChangeEntry? = transaction {
+  fun getById(id: Int): MetricFirstTSCInstanceChangeEntry? = transaction {
     MetricFirstTSCInstanceChangeTable.selectAll()
         .where { MetricFirstTSCInstanceChangeTable.id eq id }
         .limit(1)
@@ -97,9 +96,9 @@ object MetricFirstTSCInstanceChangeRepository {
    * @return The matching [MetricFirstTSCInstanceChangeEntry], or null if not found.
    */
   fun getByKey(
-      runId: UUID,
-      tscId: UUID,
-      scenarioConfigId: UUID
+      runId: Int,
+      tscId: Int,
+      scenarioConfigId: Int
   ): MetricFirstTSCInstanceChangeEntry? = transaction {
     MetricFirstTSCInstanceChangeTable.selectAll()
         .where {

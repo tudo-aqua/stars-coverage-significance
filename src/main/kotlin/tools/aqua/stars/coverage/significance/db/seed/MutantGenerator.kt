@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.seed
 
 import java.time.Instant
-import java.util.UUID
 import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.sumo.Mutant
@@ -66,7 +65,7 @@ object MutantGenerator {
    * @return The ID of the inserted baseline mutant entry.
    * @throws IllegalStateException if the baseline mutant entry could not be inserted.
    */
-  fun seedBaseline(): UUID {
+  fun seedBaseline(): Int {
     println("Seeding database with baseline mutant...")
     val baseLineMutant =
         MutantEntry(
@@ -91,7 +90,7 @@ object MutantGenerator {
   fun seed(
       numberOfMutants: Int? = null,
       onlyInsertMutantsWithMutantNumber: List<Int>? = null
-  ): List<UUID> {
+  ): List<Int> {
     println("Seeding database with mutants...")
     var mutants = generateAll()
     if (onlyInsertMutantsWithMutantNumber != null) {

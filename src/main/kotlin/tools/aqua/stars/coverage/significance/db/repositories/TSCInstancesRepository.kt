@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
-import java.util.UUID
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
@@ -38,7 +37,7 @@ object TSCInstancesRepository {
    * @param tscId The ID of the TSC to count instances for.
    * @return The number of TSC instances associated with the given TSC ID.
    */
-  fun countByTSC(tscId: UUID): Long = db {
+  fun countByTSC(tscId: Int): Long = db {
     TSCInstancesTable.selectAll().where(TSCInstancesTable.tsc eq tscId).count()
   }
 
@@ -49,7 +48,7 @@ object TSCInstancesRepository {
    * @param tscEntryId The ID of the TSC entry.
    * @return The matching row, or null if none exists.
    */
-  fun getByInstanceJson(instanceJson: String, tscEntryId: UUID): TSCInstanceEntry? = transaction {
+  fun getByInstanceJson(instanceJson: String, tscEntryId: Int): TSCInstanceEntry? = transaction {
     TSCInstancesTable.selectAll()
         .where {
           (TSCInstancesTable.tsc eq tscEntryId) and (TSCInstancesTable.instanceJson eq instanceJson)
@@ -65,7 +64,7 @@ object TSCInstancesRepository {
    * @param id ID of the entry to retrieve.
    * @return The matching entry, or null if not found.
    */
-  fun getById(id: UUID): TSCInstanceEntry? = transaction {
+  fun getById(id: Int): TSCInstanceEntry? = transaction {
     TSCInstancesTable.selectAll()
         .where { TSCInstancesTable.id eq id }
         .limit(1)
@@ -79,7 +78,7 @@ object TSCInstancesRepository {
    * @param entry Entry to insert.
    * @return The ID of the inserted entry.
    */
-  fun insertIfAbsentReturnId(entry: TSCInstanceEntry): UUID = transaction {
+  fun insertIfAbsentReturnId(entry: TSCInstanceEntry): Int = transaction {
     require(entry.id == null) { "insertIfAbsentReturnId() expects entry.id == null." }
 
     TSCInstancesTable.insertIgnore { st ->
