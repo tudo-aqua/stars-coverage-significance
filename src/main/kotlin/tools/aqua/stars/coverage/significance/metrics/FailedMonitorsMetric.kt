@@ -149,6 +149,10 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               tick = currentTickTime,
               egoManeuverSpeed = tick.egoManeuver?.newSpeedMps?.toFloat(),
               egoManeuverLangeChange = tick.egoManeuver?.laneChangeDirection,
+              egoSpeedMps = egoSpeed,
+              egoAccelMps2 = egoAccel,
+              egoFrontBumperPosMeters = egoFrontBumperPos,
+              egoBackBumperPosMeters = egoBackBumperPos,
               monitorG0Failed = false,
               monitorG1Failed = false,
               monitorG2Failed = false,
@@ -157,17 +161,6 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               monitorI1Failed = false,
               monitorI2Failed = false,
               surroundingDistFront = surroundingDistances?.frontMeters?.toFloat(),
-              surroundingDistRear = surroundingDistances?.rearMeters?.toFloat(),
-              surroundingDistFrontLeft = surroundingDistances?.frontLeftMeters?.toFloat(),
-              surroundingDistFrontRight = surroundingDistances?.frontRightMeters?.toFloat(),
-              surroundingDistRearLeft = surroundingDistances?.rearLeftMeters?.toFloat(),
-              surroundingDistRearRight = surroundingDistances?.rearRightMeters?.toFloat(),
-              surroundingDistLeft = surroundingDistances?.leftMeters?.toFloat(),
-              surroundingDistRight = surroundingDistances?.rightMeters?.toFloat(),
-              egoSpeedMps = egoSpeed,
-              egoAccelMps2 = egoAccel,
-              egoFrontBumperPosMeters = egoFrontBumperPos,
-              egoBackBumperPosMeters = egoBackBumperPos,
               surroundingFrontSpeedMps = surroundingDistances?.frontSpeedMps?.toFloat(),
               surroundingFrontFrontBumperPosMeters =
                   surroundingDistances?.frontFrontBumperPositionMeters?.toFloat(),
@@ -184,6 +177,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       surroundingDistances?.frontSpeedMps,
                       egoSpeed),
               surroundingFrontTgSeconds = tgEgo(surroundingDistances?.frontMeters, egoSpeed),
+              surroundingDistRear = surroundingDistances?.rearMeters?.toFloat(),
               surroundingRearSpeedMps = surroundingDistances?.rearSpeedMps?.toFloat(),
               surroundingRearFrontBumperPosMeters =
                   surroundingDistances?.rearFrontBumperPositionMeters?.toFloat(),
@@ -201,6 +195,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       egoSpeed),
               surroundingRearTgSeconds =
                   tgNeighbor(surroundingDistances?.rearMeters, surroundingDistances?.rearSpeedMps),
+              surroundingDistFrontLeft = surroundingDistances?.frontLeftMeters?.toFloat(),
               surroundingFrontLeftSpeedMps = surroundingDistances?.frontLeftSpeedMps?.toFloat(),
               surroundingFrontLeftFrontBumperPosMeters =
                   surroundingDistances?.frontLeftFrontBumperPositionMeters?.toFloat(),
@@ -218,6 +213,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       egoSpeed),
               surroundingFrontLeftTgSeconds =
                   tgEgo(surroundingDistances?.frontLeftMeters, egoSpeed),
+              surroundingDistFrontRight = surroundingDistances?.frontRightMeters?.toFloat(),
               surroundingFrontRightSpeedMps = surroundingDistances?.frontRightSpeedMps?.toFloat(),
               surroundingFrontRightFrontBumperPosMeters =
                   surroundingDistances?.frontRightFrontBumperPositionMeters?.toFloat(),
@@ -235,6 +231,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       egoSpeed),
               surroundingFrontRightTgSeconds =
                   tgEgo(surroundingDistances?.frontRightMeters, egoSpeed),
+              surroundingDistRearLeft = surroundingDistances?.rearLeftMeters?.toFloat(),
               surroundingRearLeftSpeedMps = surroundingDistances?.rearLeftSpeedMps?.toFloat(),
               surroundingRearLeftFrontBumperPosMeters =
                   surroundingDistances?.rearLeftFrontBumperPositionMeters?.toFloat(),
@@ -253,6 +250,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               surroundingRearLeftTgSeconds =
                   tgNeighbor(
                       surroundingDistances?.rearLeftMeters, surroundingDistances?.rearLeftSpeedMps),
+              surroundingDistRearRight = surroundingDistances?.rearRightMeters?.toFloat(),
               surroundingRearRightSpeedMps = surroundingDistances?.rearRightSpeedMps?.toFloat(),
               surroundingRearRightFrontBumperPosMeters =
                   surroundingDistances?.rearRightFrontBumperPositionMeters?.toFloat(),
@@ -272,6 +270,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   tgNeighbor(
                       surroundingDistances?.rearRightMeters,
                       surroundingDistances?.rearRightSpeedMps),
+              surroundingDistLeft = surroundingDistances?.leftMeters?.toFloat(),
               surroundingLeftSpeedMps = surroundingDistances?.leftSpeedMps?.toFloat(),
               surroundingLeftFrontBumperPosMeters =
                   surroundingDistances?.leftFrontBumperPositionMeters?.toFloat(),
@@ -288,6 +287,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       surroundingDistances?.leftSpeedMps,
                       egoSpeed),
               surroundingLeftTgSeconds = tgEgo(surroundingDistances?.leftMeters, egoSpeed),
+              surroundingDistRight = surroundingDistances?.rightMeters?.toFloat(),
               surroundingRightSpeedMps = surroundingDistances?.rightSpeedMps?.toFloat(),
               surroundingRightFrontBumperPosMeters =
                   surroundingDistances?.rightFrontBumperPositionMeters?.toFloat(),

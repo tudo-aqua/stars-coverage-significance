@@ -125,6 +125,10 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val egoManeuverSpeed = float("ego_maneuver_speed").nullable()
   val egoManeuverLaneChange =
       enumerationByName("ego_maneuver_lane_change", 20, LaneChangeDirection::class).nullable()
+  val egoSpeedMps = float("ego_speed_mps").nullable()
+  val egoAccelMps2 = float("ego_accel_mps2").nullable()
+  val egoFrontBumperPosMeters = float("ego_front_bumper_pos_meters").nullable()
+  val egoBackBumperPosMeters = float("ego_back_bumper_pos_meters").nullable()
   val monitorG0Failed = bool("monitor_g0_Accidents_failed").default(false)
   val monitorG1Failed = bool("monitor_g1_SafeDistanceToPrecedingVehicle_failed").default(false)
   val monitorG2Failed = bool("monitor_g2_emergencyBraking_failed").default(false)
@@ -142,17 +146,6 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val nextTickMonitorI2Failed =
       bool("next_tick_monitor_i2_DrivingFasterThenLeftTraffic_failed").nullable()
   val surroundingDistFront = float("surrounding_dist_front").nullable()
-  val surroundingDistRear = float("surrounding_dist_rear").nullable()
-  val surroundingDistFrontLeft = float("surrounding_dist_front_left").nullable()
-  val surroundingDistFrontRight = float("surrounding_dist_front_right").nullable()
-  val surroundingDistRearLeft = float("surrounding_dist_rear_left").nullable()
-  val surroundingDistRearRight = float("surrounding_dist_rear_right").nullable()
-  val surroundingDistLeft = float("surrounding_dist_left").nullable()
-  val surroundingDistRight = float("surrounding_dist_right").nullable()
-  val egoSpeedMps = float("ego_speed_mps").nullable()
-  val egoAccelMps2 = float("ego_accel_mps2").nullable()
-  val egoFrontBumperPosMeters = float("ego_front_bumper_pos_meters").nullable()
-  val egoBackBumperPosMeters = float("ego_back_bumper_pos_meters").nullable()
   val surroundingFrontSpeedMps = float("surrounding_front_speed_mps").nullable()
   val surroundingFrontFrontBumperPosMeters =
       float("surrounding_front_front_bumper_pos_meters").nullable()
@@ -163,6 +156,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingFrontAccelDiffMps2 = float("surrounding_front_accel_diff_mps2").nullable()
   val surroundingFrontTtcSeconds = float("surrounding_front_ttc_s").nullable()
   val surroundingFrontTgSeconds = float("surrounding_front_tg_s").nullable()
+  val surroundingDistRear = float("surrounding_dist_rear").nullable()
   val surroundingRearSpeedMps = float("surrounding_rear_speed_mps").nullable()
   val surroundingRearFrontBumperPosMeters =
       float("surrounding_rear_front_bumper_pos_meters").nullable()
@@ -173,6 +167,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingRearAccelDiffMps2 = float("surrounding_rear_accel_diff_mps2").nullable()
   val surroundingRearTtcSeconds = float("surrounding_rear_ttc_s").nullable()
   val surroundingRearTgSeconds = float("surrounding_rear_tg_s").nullable()
+  val surroundingDistFrontLeft = float("surrounding_dist_front_left").nullable()
   val surroundingFrontLeftSpeedMps = float("surrounding_front_left_speed_mps").nullable()
   val surroundingFrontLeftFrontBumperPosMeters =
       float("surrounding_front_left_front_bumper_pos_meters").nullable()
@@ -184,6 +179,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("surrounding_front_left_accel_diff_mps2").nullable()
   val surroundingFrontLeftTtcSeconds = float("surrounding_front_left_ttc_s").nullable()
   val surroundingFrontLeftTgSeconds = float("surrounding_front_left_tg_s").nullable()
+  val surroundingDistFrontRight = float("surrounding_dist_front_right").nullable()
   val surroundingFrontRightSpeedMps = float("surrounding_front_right_speed_mps").nullable()
   val surroundingFrontRightFrontBumperPosMeters =
       float("surrounding_front_right_front_bumper_pos_meters").nullable()
@@ -196,6 +192,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("surrounding_front_right_accel_diff_mps2").nullable()
   val surroundingFrontRightTtcSeconds = float("surrounding_front_right_ttc_s").nullable()
   val surroundingFrontRightTgSeconds = float("surrounding_front_right_tg_s").nullable()
+  val surroundingDistRearLeft = float("surrounding_dist_rear_left").nullable()
   val surroundingRearLeftSpeedMps = float("surrounding_rear_left_speed_mps").nullable()
   val surroundingRearLeftFrontBumperPosMeters =
       float("surrounding_rear_left_front_bumper_pos_meters").nullable()
@@ -206,6 +203,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingRearLeftAccelDiffMps2 = float("surrounding_rear_left_accel_diff_mps2").nullable()
   val surroundingRearLeftTtcSeconds = float("surrounding_rear_left_ttc_s").nullable()
   val surroundingRearLeftTgSeconds = float("surrounding_rear_left_tg_s").nullable()
+  val surroundingDistRearRight = float("surrounding_dist_rear_right").nullable()
   val surroundingRearRightSpeedMps = float("surrounding_rear_right_speed_mps").nullable()
   val surroundingRearRightFrontBumperPosMeters =
       float("surrounding_rear_right_front_bumper_pos_meters").nullable()
@@ -217,6 +215,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("surrounding_rear_right_accel_diff_mps2").nullable()
   val surroundingRearRightTtcSeconds = float("surrounding_rear_right_ttc_s").nullable()
   val surroundingRearRightTgSeconds = float("surrounding_rear_right_tg_s").nullable()
+  val surroundingDistLeft = float("surrounding_dist_left").nullable()
   val surroundingLeftSpeedMps = float("surrounding_left_speed_mps").nullable()
   val surroundingLeftFrontBumperPosMeters =
       float("surrounding_left_front_bumper_pos_meters").nullable()
@@ -227,6 +226,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingLeftAccelDiffMps2 = float("surrounding_left_accel_diff_mps2").nullable()
   val surroundingLeftTtcSeconds = float("surrounding_left_ttc_s").nullable()
   val surroundingLeftTgSeconds = float("surrounding_left_tg_s").nullable()
+  val surroundingDistRight = float("surrounding_dist_right").nullable()
   val surroundingRightSpeedMps = float("surrounding_right_speed_mps").nullable()
   val surroundingRightFrontBumperPosMeters =
       float("surrounding_right_front_bumper_pos_meters").nullable()
