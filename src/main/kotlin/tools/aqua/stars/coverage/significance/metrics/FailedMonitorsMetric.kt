@@ -44,6 +44,7 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G4TrafficFl
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I1Stopping
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I2FasterThanLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.getJsonString
+import tools.aqua.stars.sumo.HighwayLane
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -149,6 +150,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               tick = currentTickTime,
               egoManeuverSpeed = tick.egoManeuver?.newSpeedMps?.toFloat(),
               egoManeuverLangeChange = tick.egoManeuver?.laneChangeDirection,
+              egoLane = HighwayLane.fromLaneIndex(tick.ego.currentLane.laneIndex),
               egoSpeedMps = egoSpeed,
               egoAccelMps2 = egoAccel,
               egoFrontBumperPosMeters = egoFrontBumperPos,

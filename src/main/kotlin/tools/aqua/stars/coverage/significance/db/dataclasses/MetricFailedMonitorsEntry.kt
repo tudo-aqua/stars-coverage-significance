@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
+import tools.aqua.stars.sumo.HighwayLane
 import tools.aqua.stars.sumo.LaneChangeDirection
 
 /**
@@ -37,6 +38,7 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property tick The current tick.
  * @property egoManeuverSpeed The ego maneuver speed.
  * @property egoManeuverLangeChange The ego maneuver lane change.
+ * @property egoLane The lane the ego vehicle is currently on.
  * @property egoSpeedMps Ego vehicle speed (m/s).
  * @property egoAccelMps2 Ego vehicle acceleration (m/s²).
  * @property egoFrontBumperPosMeters Ego front bumper lane position (m).
@@ -154,6 +156,7 @@ data class MetricFailedMonitorsEntry(
     val tick: Long,
     val egoManeuverSpeed: Float?,
     val egoManeuverLangeChange: LaneChangeDirection?,
+    val egoLane: HighwayLane? = null,
     val egoSpeedMps: Float? = null,
     val egoAccelMps2: Float? = null,
     val egoFrontBumperPosMeters: Float? = null,

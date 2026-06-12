@@ -34,6 +34,7 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
 import tools.aqua.stars.coverage.significance.utils.getJsonString
+import tools.aqua.stars.sumo.HighwayLane
 import tools.aqua.stars.sumo.LaneChangeDirection
 
 /**
@@ -51,6 +52,7 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property tick TSC instance tick.
  * @property egoManeuverSpeed Ego maneuver speed.
  * @property egoManeuverLaneChange Ego maneuver lane change.
+ * @property egoLane Lane the ego vehicle is currently on.
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
@@ -125,6 +127,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val egoManeuverSpeed = float("ego_maneuver_speed").nullable()
   val egoManeuverLaneChange =
       enumerationByName("ego_maneuver_lane_change", 20, LaneChangeDirection::class).nullable()
+  val egoLane = enumerationByName("ego_lane", 6, HighwayLane::class).nullable()
   val egoSpeedMps = float("ego_speed_mps").nullable()
   val egoAccelMps2 = float("ego_accel_mps2").nullable()
   val egoFrontBumperPosMeters = float("ego_front_bumper_pos_meters").nullable()

@@ -112,6 +112,7 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.tick] = e.tick
       this[MetricFailedMonitorsTable.egoManeuverSpeed] = e.egoManeuverSpeed
       this[MetricFailedMonitorsTable.egoManeuverLaneChange] = e.egoManeuverLangeChange
+      this[MetricFailedMonitorsTable.egoLane] = e.egoLane
       this[MetricFailedMonitorsTable.egoSpeedMps] = e.egoSpeedMps
       this[MetricFailedMonitorsTable.egoAccelMps2] = e.egoAccelMps2
       this[MetricFailedMonitorsTable.egoFrontBumperPosMeters] = e.egoFrontBumperPosMeters
@@ -277,6 +278,7 @@ object MetricFailedMonitorsRepository {
               row[tick] = entry.tick
               row[egoManeuverSpeed] = entry.egoManeuverSpeed
               row[egoManeuverLaneChange] = entry.egoManeuverLangeChange
+              row[egoLane] = entry.egoLane
               row[egoSpeedMps] = entry.egoSpeedMps
               row[egoAccelMps2] = entry.egoAccelMps2
               row[egoFrontBumperPosMeters] = entry.egoFrontBumperPosMeters
@@ -426,6 +428,7 @@ object MetricFailedMonitorsRepository {
                   st[tick] = entry.tick
                   st[egoManeuverSpeed] = entry.egoManeuverSpeed
                   st[egoManeuverLaneChange] = entry.egoManeuverLangeChange
+                  st[egoLane] = entry.egoLane
                   st[egoSpeedMps] = entry.egoSpeedMps
                   st[egoAccelMps2] = entry.egoAccelMps2
                   st[egoFrontBumperPosMeters] = entry.egoFrontBumperPosMeters
@@ -589,6 +592,7 @@ object MetricFailedMonitorsRepository {
           tick = this[MetricFailedMonitorsTable.tick],
           egoManeuverSpeed = this[MetricFailedMonitorsTable.egoManeuverSpeed],
           egoManeuverLangeChange = this[MetricFailedMonitorsTable.egoManeuverLaneChange],
+          egoLane = this[MetricFailedMonitorsTable.egoLane],
           egoSpeedMps = this[MetricFailedMonitorsTable.egoSpeedMps],
           egoAccelMps2 = this[MetricFailedMonitorsTable.egoAccelMps2],
           egoFrontBumperPosMeters = this[MetricFailedMonitorsTable.egoFrontBumperPosMeters],
