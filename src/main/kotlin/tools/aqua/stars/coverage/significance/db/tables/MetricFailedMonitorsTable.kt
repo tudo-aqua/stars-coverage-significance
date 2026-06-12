@@ -75,6 +75,27 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingDistRearRight Distance to nearest vehicle behind on the right lane (m).
  * @property surroundingDistLeft Distance to nearest vehicle on the left lane, any position (m).
  * @property surroundingDistRight Distance to nearest vehicle on the right lane, any position (m).
+ * @property collisionTimeSeconds Time at which the ego-relevant collision occurred (s).
+ * @property collisionType SUMO collision type string.
+ * @property collisionLane Lane on which the collision occurred.
+ * @property collisionPositionOnLaneMeters Position on lane where the collision occurred (m).
+ * @property collisionColliderVehicleId Vehicle ID of the collider.
+ * @property collisionColliderLane Lane of the collider vehicle at collision time.
+ * @property collisionColliderSpeedMps Speed of the collider vehicle at collision time (m/s).
+ * @property collisionColliderAccelMps2 Acceleration of the collider vehicle at collision time
+ *   (m/s²).
+ * @property collisionColliderFrontBumperPosMeters Front bumper position of the collider vehicle at
+ *   collision time (m).
+ * @property collisionColliderBackBumperPosMeters Back bumper position of the collider vehicle at
+ *   collision time (m).
+ * @property collisionVictimVehicleId Vehicle ID of the victim.
+ * @property collisionVictimLane Lane of the victim vehicle at collision time.
+ * @property collisionVictimSpeedMps Speed of the victim vehicle at collision time (m/s).
+ * @property collisionVictimAccelMps2 Acceleration of the victim vehicle at collision time (m/s²).
+ * @property collisionVictimFrontBumperPosMeters Front bumper position of the victim vehicle at
+ *   collision time (m).
+ * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
+ *   collision time (m).
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
@@ -240,6 +261,28 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingRightAccelDiffMps2 = float("surrounding_right_accel_diff_mps2").nullable()
   val surroundingRightTtcSeconds = float("surrounding_right_ttc_s").nullable()
   val surroundingRightTgSeconds = float("surrounding_right_tg_s").nullable()
+  val collisionTimeSeconds = float("collision_time_seconds").nullable()
+  val collisionType = text("collision_type").nullable()
+  val collisionLane = enumerationByName("collision_lane", 6, HighwayLane::class).nullable()
+  val collisionPositionOnLaneMeters = float("collision_position_on_lane_meters").nullable()
+  val collisionColliderVehicleId = text("collision_collider_vehicle_id").nullable()
+  val collisionColliderLane =
+      enumerationByName("collision_collider_lane", 6, HighwayLane::class).nullable()
+  val collisionColliderSpeedMps = float("collision_collider_speed_mps").nullable()
+  val collisionColliderAccelMps2 = float("collision_collider_accel_mps2").nullable()
+  val collisionColliderFrontBumperPosMeters =
+      float("collision_collider_front_bumper_pos_meters").nullable()
+  val collisionColliderBackBumperPosMeters =
+      float("collision_collider_back_bumper_pos_meters").nullable()
+  val collisionVictimVehicleId = text("collision_victim_vehicle_id").nullable()
+  val collisionVictimLane =
+      enumerationByName("collision_victim_lane", 6, HighwayLane::class).nullable()
+  val collisionVictimSpeedMps = float("collision_victim_speed_mps").nullable()
+  val collisionVictimAccelMps2 = float("collision_victim_accel_mps2").nullable()
+  val collisionVictimFrontBumperPosMeters =
+      float("collision_victim_front_bumper_pos_meters").nullable()
+  val collisionVictimBackBumperPosMeters =
+      float("collision_victim_back_bumper_pos_meters").nullable()
   val createdAt = timestamp("created_at")
 
   init {

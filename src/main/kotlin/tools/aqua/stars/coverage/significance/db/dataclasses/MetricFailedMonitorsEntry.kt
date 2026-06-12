@@ -141,6 +141,33 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingRightAccelDiffMps2 Acceleration difference to the right neighbour (m/s²).
  * @property surroundingRightTtcSeconds Time-to-collision to the right neighbour (s).
  * @property surroundingRightTgSeconds Time gap to the right neighbour (s).
+ * @property collisionTimeSeconds Time at which the ego-relevant collision occurred (s), null if no
+ *   collision.
+ * @property collisionType SUMO collision type string, null if no collision or type absent.
+ * @property collisionLane Lane on which the collision occurred, null if no collision.
+ * @property collisionPositionOnLaneMeters Position on lane where the collision occurred (m), null
+ *   if no collision.
+ * @property collisionColliderVehicleId Vehicle ID of the collider, null if no collision.
+ * @property collisionColliderLane Lane of the collider vehicle at collision time, null if no
+ *   collision.
+ * @property collisionColliderSpeedMps Speed of the collider vehicle at collision time (m/s), null
+ *   if no collision.
+ * @property collisionColliderAccelMps2 Acceleration of the collider vehicle at collision time
+ *   (m/s²), null if no collision.
+ * @property collisionColliderFrontBumperPosMeters Front bumper position of the collider vehicle at
+ *   collision time (m), null if no collision.
+ * @property collisionColliderBackBumperPosMeters Back bumper position of the collider vehicle at
+ *   collision time (m), null if no collision.
+ * @property collisionVictimVehicleId Vehicle ID of the victim, null if no collision.
+ * @property collisionVictimLane Lane of the victim vehicle at collision time, null if no collision.
+ * @property collisionVictimSpeedMps Speed of the victim vehicle at collision time (m/s), null if
+ *   no collision.
+ * @property collisionVictimAccelMps2 Acceleration of the victim vehicle at collision time (m/s²),
+ *   null if no collision.
+ * @property collisionVictimFrontBumperPosMeters Front bumper position of the victim vehicle at
+ *   collision time (m), null if no collision.
+ * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
+ *   collision time (m), null if no collision.
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricFailedMonitorsEntry(
@@ -247,5 +274,21 @@ data class MetricFailedMonitorsEntry(
     val surroundingRightAccelDiffMps2: Float? = null,
     val surroundingRightTtcSeconds: Float? = null,
     val surroundingRightTgSeconds: Float? = null,
+    val collisionTimeSeconds: Float? = null,
+    val collisionType: String? = null,
+    val collisionLane: HighwayLane? = null,
+    val collisionPositionOnLaneMeters: Float? = null,
+    val collisionColliderVehicleId: String? = null,
+    val collisionColliderLane: HighwayLane? = null,
+    val collisionColliderSpeedMps: Float? = null,
+    val collisionColliderAccelMps2: Float? = null,
+    val collisionColliderFrontBumperPosMeters: Float? = null,
+    val collisionColliderBackBumperPosMeters: Float? = null,
+    val collisionVictimVehicleId: String? = null,
+    val collisionVictimLane: HighwayLane? = null,
+    val collisionVictimSpeedMps: Float? = null,
+    val collisionVictimAccelMps2: Float? = null,
+    val collisionVictimFrontBumperPosMeters: Float? = null,
+    val collisionVictimBackBumperPosMeters: Float? = null,
     val createdAt: Instant = Instant.now(),
 )

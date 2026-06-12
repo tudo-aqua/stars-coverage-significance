@@ -135,6 +135,11 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
     val egoAccel = tick.ego.accelerationMetersPerSecondSquared
     val egoFrontBumperPos = tick.ego.frontBumperPositionOnLaneMeters
     val egoBackBumperPos = tick.ego.backBumperPositionOnLaneMeters
+    val egoCollision =
+        tick.collisionsInTick.firstOrNull {
+          it.colliderVehicle.vehicleId == tick.ego.vehicleId ||
+              it.victimVehicle.vehicleId == tick.ego.vehicleId
+        }
 
     val failedMonitorsEntry =
         tscMap.getOrPut(Triple(tick.mutantId, tick.scenarioConfigId, currentTickTime)) {
@@ -306,6 +311,35 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                       surroundingDistances?.rightSpeedMps,
                       egoSpeed),
               surroundingRightTgSeconds = tgEgo(surroundingDistances?.rightMeters, egoSpeed),
+              collisionTimeSeconds = egoCollision?.collisionTimeSeconds,
+              collisionType = egoCollision?.collisionType?.takeIf { it.isNotEmpty() },
+              collisionLane =
+                  egoCollision?.lane?.laneIndex?.let { HighwayLane.fromLaneIndex(it) },
+              collisionPositionOnLaneMeters = egoCollision?.positionOnLaneMeters,
+              collisionColliderVehicleId = egoCollision?.colliderVehicle?.vehicleId,
+              collisionColliderLane =
+                  egoCollision?.colliderVehicle?.currentLane?.laneIndex?.let {
+                    HighwayLane.fromLaneIndex(it)
+                  },
+              collisionColliderSpeedMps = egoCollision?.colliderVehicle?.speedMetersPerSecond,
+              collisionColliderAccelMps2 =
+                  egoCollision?.colliderVehicle?.accelerationMetersPerSecondSquared,
+              collisionColliderFrontBumperPosMeters =
+                  egoCollision?.colliderVehicle?.frontBumperPositionOnLaneMeters,
+              collisionColliderBackBumperPosMeters =
+                  egoCollision?.colliderVehicle?.backBumperPositionOnLaneMeters,
+              collisionVictimVehicleId = egoCollision?.victimVehicle?.vehicleId,
+              collisionVictimLane =
+                  egoCollision?.victimVehicle?.currentLane?.laneIndex?.let {
+                    HighwayLane.fromLaneIndex(it)
+                  },
+              collisionVictimSpeedMps = egoCollision?.victimVehicle?.speedMetersPerSecond,
+              collisionVictimAccelMps2 =
+                  egoCollision?.victimVehicle?.accelerationMetersPerSecondSquared,
+              collisionVictimFrontBumperPosMeters =
+                  egoCollision?.victimVehicle?.frontBumperPositionOnLaneMeters,
+              collisionVictimBackBumperPosMeters =
+                  egoCollision?.victimVehicle?.backBumperPositionOnLaneMeters,
           )
         }
     val violatedMonitors = tscInstance.rootNode.validateMonitors(tick.identifier)

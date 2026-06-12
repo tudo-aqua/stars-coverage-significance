@@ -251,6 +251,28 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.surroundingRightTtcSeconds] = e.surroundingRightTtcSeconds
       this[MetricFailedMonitorsTable.surroundingRightTgSeconds] = e.surroundingRightTgSeconds
 
+      this[MetricFailedMonitorsTable.collisionTimeSeconds] = e.collisionTimeSeconds
+      this[MetricFailedMonitorsTable.collisionType] = e.collisionType
+      this[MetricFailedMonitorsTable.collisionLane] = e.collisionLane
+      this[MetricFailedMonitorsTable.collisionPositionOnLaneMeters] =
+          e.collisionPositionOnLaneMeters
+      this[MetricFailedMonitorsTable.collisionColliderVehicleId] = e.collisionColliderVehicleId
+      this[MetricFailedMonitorsTable.collisionColliderLane] = e.collisionColliderLane
+      this[MetricFailedMonitorsTable.collisionColliderSpeedMps] = e.collisionColliderSpeedMps
+      this[MetricFailedMonitorsTable.collisionColliderAccelMps2] = e.collisionColliderAccelMps2
+      this[MetricFailedMonitorsTable.collisionColliderFrontBumperPosMeters] =
+          e.collisionColliderFrontBumperPosMeters
+      this[MetricFailedMonitorsTable.collisionColliderBackBumperPosMeters] =
+          e.collisionColliderBackBumperPosMeters
+      this[MetricFailedMonitorsTable.collisionVictimVehicleId] = e.collisionVictimVehicleId
+      this[MetricFailedMonitorsTable.collisionVictimLane] = e.collisionVictimLane
+      this[MetricFailedMonitorsTable.collisionVictimSpeedMps] = e.collisionVictimSpeedMps
+      this[MetricFailedMonitorsTable.collisionVictimAccelMps2] = e.collisionVictimAccelMps2
+      this[MetricFailedMonitorsTable.collisionVictimFrontBumperPosMeters] =
+          e.collisionVictimFrontBumperPosMeters
+      this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters] =
+          e.collisionVictimBackBumperPosMeters
+
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
   }
@@ -387,6 +409,25 @@ object MetricFailedMonitorsRepository {
               row[surroundingRightAccelDiffMps2] = entry.surroundingRightAccelDiffMps2
               row[surroundingRightTtcSeconds] = entry.surroundingRightTtcSeconds
               row[surroundingRightTgSeconds] = entry.surroundingRightTgSeconds
+
+              row[collisionTimeSeconds] = entry.collisionTimeSeconds
+              row[collisionType] = entry.collisionType
+              row[collisionLane] = entry.collisionLane
+              row[collisionPositionOnLaneMeters] = entry.collisionPositionOnLaneMeters
+              row[collisionColliderVehicleId] = entry.collisionColliderVehicleId
+              row[collisionColliderLane] = entry.collisionColliderLane
+              row[collisionColliderSpeedMps] = entry.collisionColliderSpeedMps
+              row[collisionColliderAccelMps2] = entry.collisionColliderAccelMps2
+              row[collisionColliderFrontBumperPosMeters] =
+                  entry.collisionColliderFrontBumperPosMeters
+              row[collisionColliderBackBumperPosMeters] =
+                  entry.collisionColliderBackBumperPosMeters
+              row[collisionVictimVehicleId] = entry.collisionVictimVehicleId
+              row[collisionVictimLane] = entry.collisionVictimLane
+              row[collisionVictimSpeedMps] = entry.collisionVictimSpeedMps
+              row[collisionVictimAccelMps2] = entry.collisionVictimAccelMps2
+              row[collisionVictimFrontBumperPosMeters] = entry.collisionVictimFrontBumperPosMeters
+              row[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
               row[createdAt] = entry.createdAt
             }
@@ -543,6 +584,27 @@ object MetricFailedMonitorsRepository {
                   st[surroundingRightAccelDiffMps2] = entry.surroundingRightAccelDiffMps2
                   st[surroundingRightTtcSeconds] = entry.surroundingRightTtcSeconds
                   st[surroundingRightTgSeconds] = entry.surroundingRightTgSeconds
+
+                  st[collisionTimeSeconds] = entry.collisionTimeSeconds
+                  st[collisionType] = entry.collisionType
+                  st[collisionLane] = entry.collisionLane
+                  st[collisionPositionOnLaneMeters] = entry.collisionPositionOnLaneMeters
+                  st[collisionColliderVehicleId] = entry.collisionColliderVehicleId
+                  st[collisionColliderLane] = entry.collisionColliderLane
+                  st[collisionColliderSpeedMps] = entry.collisionColliderSpeedMps
+                  st[collisionColliderAccelMps2] = entry.collisionColliderAccelMps2
+                  st[collisionColliderFrontBumperPosMeters] =
+                      entry.collisionColliderFrontBumperPosMeters
+                  st[collisionColliderBackBumperPosMeters] =
+                      entry.collisionColliderBackBumperPosMeters
+                  st[collisionVictimVehicleId] = entry.collisionVictimVehicleId
+                  st[collisionVictimLane] = entry.collisionVictimLane
+                  st[collisionVictimSpeedMps] = entry.collisionVictimSpeedMps
+                  st[collisionVictimAccelMps2] = entry.collisionVictimAccelMps2
+                  st[collisionVictimFrontBumperPosMeters] =
+                      entry.collisionVictimFrontBumperPosMeters
+                  st[collisionVictimBackBumperPosMeters] =
+                      entry.collisionVictimBackBumperPosMeters
 
                   st[createdAt] = entry.createdAt
                 }
@@ -728,6 +790,27 @@ object MetricFailedMonitorsRepository {
               this[MetricFailedMonitorsTable.surroundingRightAccelDiffMps2],
           surroundingRightTtcSeconds = this[MetricFailedMonitorsTable.surroundingRightTtcSeconds],
           surroundingRightTgSeconds = this[MetricFailedMonitorsTable.surroundingRightTgSeconds],
+          collisionTimeSeconds = this[MetricFailedMonitorsTable.collisionTimeSeconds],
+          collisionType = this[MetricFailedMonitorsTable.collisionType],
+          collisionLane = this[MetricFailedMonitorsTable.collisionLane],
+          collisionPositionOnLaneMeters =
+              this[MetricFailedMonitorsTable.collisionPositionOnLaneMeters],
+          collisionColliderVehicleId = this[MetricFailedMonitorsTable.collisionColliderVehicleId],
+          collisionColliderLane = this[MetricFailedMonitorsTable.collisionColliderLane],
+          collisionColliderSpeedMps = this[MetricFailedMonitorsTable.collisionColliderSpeedMps],
+          collisionColliderAccelMps2 = this[MetricFailedMonitorsTable.collisionColliderAccelMps2],
+          collisionColliderFrontBumperPosMeters =
+              this[MetricFailedMonitorsTable.collisionColliderFrontBumperPosMeters],
+          collisionColliderBackBumperPosMeters =
+              this[MetricFailedMonitorsTable.collisionColliderBackBumperPosMeters],
+          collisionVictimVehicleId = this[MetricFailedMonitorsTable.collisionVictimVehicleId],
+          collisionVictimLane = this[MetricFailedMonitorsTable.collisionVictimLane],
+          collisionVictimSpeedMps = this[MetricFailedMonitorsTable.collisionVictimSpeedMps],
+          collisionVictimAccelMps2 = this[MetricFailedMonitorsTable.collisionVictimAccelMps2],
+          collisionVictimFrontBumperPosMeters =
+              this[MetricFailedMonitorsTable.collisionVictimFrontBumperPosMeters],
+          collisionVictimBackBumperPosMeters =
+              this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
       )
 }
