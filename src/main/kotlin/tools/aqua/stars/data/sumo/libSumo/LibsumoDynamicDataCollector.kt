@@ -81,11 +81,7 @@ class LibsumoDynamicDataCollector(
    * @param mutantId Id of the mutant which should be simulated.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
-  fun runGeneratedScenario(
-      runId: Int,
-      scenario: GeneratedScenario,
-      mutantId: Int
-  ): List<TimeStep> =
+  fun runGeneratedScenario(runId: Int, scenario: GeneratedScenario, mutantId: Int): List<TimeStep> =
       runGeneratedScenario(runId, scenario.toScenarioStartingConfigurationEntry(), mutantId)
 
   /**

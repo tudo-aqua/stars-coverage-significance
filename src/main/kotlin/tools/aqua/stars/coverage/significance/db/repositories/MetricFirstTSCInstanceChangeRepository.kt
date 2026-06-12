@@ -95,21 +95,18 @@ object MetricFirstTSCInstanceChangeRepository {
    * @param scenarioConfigId ID of the scenario starting configuration.
    * @return The matching [MetricFirstTSCInstanceChangeEntry], or null if not found.
    */
-  fun getByKey(
-      runId: Int,
-      tscId: Int,
-      scenarioConfigId: Int
-  ): MetricFirstTSCInstanceChangeEntry? = transaction {
-    MetricFirstTSCInstanceChangeTable.selectAll()
-        .where {
-          (MetricFirstTSCInstanceChangeTable.run eq runId) and
-              (MetricFirstTSCInstanceChangeTable.tsc eq tscId) and
-              (MetricFirstTSCInstanceChangeTable.scenarioConfig eq scenarioConfigId)
-        }
-        .limit(1)
-        .firstOrNull()
-        ?.toEntry()
-  }
+  fun getByKey(runId: Int, tscId: Int, scenarioConfigId: Int): MetricFirstTSCInstanceChangeEntry? =
+      transaction {
+        MetricFirstTSCInstanceChangeTable.selectAll()
+            .where {
+              (MetricFirstTSCInstanceChangeTable.run eq runId) and
+                  (MetricFirstTSCInstanceChangeTable.tsc eq tscId) and
+                  (MetricFirstTSCInstanceChangeTable.scenarioConfig eq scenarioConfigId)
+            }
+            .limit(1)
+            .firstOrNull()
+            ?.toEntry()
+      }
 
   /**
    * Converts a [ResultRow] to a [MetricFirstTSCInstanceChangeEntry].

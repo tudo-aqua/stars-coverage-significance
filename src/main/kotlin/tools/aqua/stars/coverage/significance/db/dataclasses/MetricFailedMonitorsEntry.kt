@@ -103,8 +103,8 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingRearLeftSpeedMps Speed of the rear-left neighbour (m/s).
  * @property surroundingRearLeftFrontBumperPosMeters Front bumper position of the rear-left
  *   neighbour (m).
- * @property surroundingRearLeftBackBumperPosMeters Back bumper position of the rear-left
- *   neighbour (m).
+ * @property surroundingRearLeftBackBumperPosMeters Back bumper position of the rear-left neighbour
+ *   (m).
  * @property surroundingRearLeftAccelMps2 Acceleration of the rear-left neighbour (m/s²).
  * @property surroundingRearLeftSpeedDiffMps Speed difference to the rear-left neighbour (m/s).
  * @property surroundingRearLeftAccelDiffMps2 Acceleration difference to the rear-left neighbour
@@ -160,8 +160,8 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  *   collision time (m), null if no collision.
  * @property collisionVictimVehicleId Vehicle ID of the victim, null if no collision.
  * @property collisionVictimLane Lane of the victim vehicle at collision time, null if no collision.
- * @property collisionVictimSpeedMps Speed of the victim vehicle at collision time (m/s), null if
- *   no collision.
+ * @property collisionVictimSpeedMps Speed of the victim vehicle at collision time (m/s), null if no
+ *   collision.
  * @property collisionVictimAccelMps2 Acceleration of the victim vehicle at collision time (m/s²),
  *   null if no collision.
  * @property collisionVictimFrontBumperPosMeters Front bumper position of the victim vehicle at

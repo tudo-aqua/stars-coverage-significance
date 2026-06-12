@@ -23,7 +23,4 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
  * @property scenarioInstanceId Scenario instance ID.
  * @property mutants Mutant failures.
  */
-data class ScenarioInstanceFailures(
-    val scenarioInstanceId: Int,
-    val mutants: List<MutantFailures>
-)
+data class ScenarioInstanceFailures(val scenarioInstanceId: Int, val mutants: List<MutantFailures>)

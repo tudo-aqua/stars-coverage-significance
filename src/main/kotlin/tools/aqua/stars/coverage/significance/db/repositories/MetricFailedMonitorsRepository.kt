@@ -420,8 +420,7 @@ object MetricFailedMonitorsRepository {
               row[collisionColliderAccelMps2] = entry.collisionColliderAccelMps2
               row[collisionColliderFrontBumperPosMeters] =
                   entry.collisionColliderFrontBumperPosMeters
-              row[collisionColliderBackBumperPosMeters] =
-                  entry.collisionColliderBackBumperPosMeters
+              row[collisionColliderBackBumperPosMeters] = entry.collisionColliderBackBumperPosMeters
               row[collisionVictimVehicleId] = entry.collisionVictimVehicleId
               row[collisionVictimLane] = entry.collisionVictimLane
               row[collisionVictimSpeedMps] = entry.collisionVictimSpeedMps
@@ -603,8 +602,7 @@ object MetricFailedMonitorsRepository {
                   st[collisionVictimAccelMps2] = entry.collisionVictimAccelMps2
                   st[collisionVictimFrontBumperPosMeters] =
                       entry.collisionVictimFrontBumperPosMeters
-                  st[collisionVictimBackBumperPosMeters] =
-                      entry.collisionVictimBackBumperPosMeters
+                  st[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
                   st[createdAt] = entry.createdAt
                 }

@@ -199,8 +199,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("surrounding_front_left_back_bumper_pos_meters").nullable()
   val surroundingFrontLeftAccelMps2 = float("surrounding_front_left_accel_mps2").nullable()
   val surroundingFrontLeftSpeedDiffMps = float("surrounding_front_left_speed_diff_mps").nullable()
-  val surroundingFrontLeftAccelDiffMps2 =
-      float("surrounding_front_left_accel_diff_mps2").nullable()
+  val surroundingFrontLeftAccelDiffMps2 = float("surrounding_front_left_accel_diff_mps2").nullable()
   val surroundingFrontLeftTtcSeconds = float("surrounding_front_left_ttc_s").nullable()
   val surroundingFrontLeftTgSeconds = float("surrounding_front_left_tg_s").nullable()
   val surroundingDistFrontRight = float("surrounding_dist_front_right").nullable()
@@ -210,8 +209,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingFrontRightBackBumperPosMeters =
       float("surrounding_front_right_back_bumper_pos_meters").nullable()
   val surroundingFrontRightAccelMps2 = float("surrounding_front_right_accel_mps2").nullable()
-  val surroundingFrontRightSpeedDiffMps =
-      float("surrounding_front_right_speed_diff_mps").nullable()
+  val surroundingFrontRightSpeedDiffMps = float("surrounding_front_right_speed_diff_mps").nullable()
   val surroundingFrontRightAccelDiffMps2 =
       float("surrounding_front_right_accel_diff_mps2").nullable()
   val surroundingFrontRightTtcSeconds = float("surrounding_front_right_ttc_s").nullable()
@@ -235,8 +233,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("surrounding_rear_right_back_bumper_pos_meters").nullable()
   val surroundingRearRightAccelMps2 = float("surrounding_rear_right_accel_mps2").nullable()
   val surroundingRearRightSpeedDiffMps = float("surrounding_rear_right_speed_diff_mps").nullable()
-  val surroundingRearRightAccelDiffMps2 =
-      float("surrounding_rear_right_accel_diff_mps2").nullable()
+  val surroundingRearRightAccelDiffMps2 = float("surrounding_rear_right_accel_diff_mps2").nullable()
   val surroundingRearRightTtcSeconds = float("surrounding_rear_right_ttc_s").nullable()
   val surroundingRearRightTgSeconds = float("surrounding_rear_right_tg_s").nullable()
   val surroundingDistLeft = float("surrounding_dist_left").nullable()

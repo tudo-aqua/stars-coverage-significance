@@ -44,11 +44,11 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G4TrafficFl
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I1Stopping
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I2FasterThanLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.getJsonString
-import tools.aqua.stars.sumo.HighwayLane
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
+import tools.aqua.stars.sumo.HighwayLane
 
 /**
  * Metric that tracks which monitors have failed for each TSC instance at each tick.
@@ -313,8 +313,7 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
               surroundingRightTgSeconds = tgEgo(surroundingDistances?.rightMeters, egoSpeed),
               collisionTimeSeconds = egoCollision?.collisionTimeSeconds,
               collisionType = egoCollision?.collisionType?.takeIf { it.isNotEmpty() },
-              collisionLane =
-                  egoCollision?.lane?.laneIndex?.let { HighwayLane.fromLaneIndex(it) },
+              collisionLane = egoCollision?.lane?.laneIndex?.let { HighwayLane.fromLaneIndex(it) },
               collisionPositionOnLaneMeters = egoCollision?.positionOnLaneMeters,
               collisionColliderVehicleId = egoCollision?.colliderVehicle?.vehicleId,
               collisionColliderLane =
