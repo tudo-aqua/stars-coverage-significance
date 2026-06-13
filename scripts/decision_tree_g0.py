@@ -32,7 +32,9 @@ FEATURE_COLS = [
     "monitor_i2_DrivingFasterThenLeftTraffic_failed",
     # Ego maneuver
     "ego_maneuver_speed",
-    "ego_maneuver_lane_change",
+    "lane_change_none",
+    "lane_change_left",
+    "lane_change_right",
     # Ego state
     "ego_speed_mps",
     "ego_accel_mps2",
@@ -148,13 +150,12 @@ def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
     # Drop rows where target is null (last tick of a scenario has no next tick)
     df = df.filter(pl.col(TARGET_COL).is_not_null())
 
-    # Encode lane-change enum as integer; null → -1
+    # One-hot encode lane-change direction; null → all zeros (no maneuver data)
+    lc = pl.col("ego_maneuver_lane_change")
     df = df.with_columns(
-        pl.col("ego_maneuver_lane_change")
-        .cast(pl.Categorical)
-        .to_physical()
-        .fill_null(-1)
-        .alias("ego_maneuver_lane_change")
+        (lc == "NO_LANE_CHANGE").cast(pl.Int8).alias("lane_change_none"),
+        (lc == "CHANGE_LEFT").cast(pl.Int8).alias("lane_change_left"),
+        (lc == "CHANGE_RIGHT").cast(pl.Int8).alias("lane_change_right"),
     )
 
     # Cast boolean monitor columns to int8 — works for Bool dtype and "true"/"false" strings
