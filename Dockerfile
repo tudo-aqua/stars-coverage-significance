@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(. /etc/os-release && echo $VERSION_CODENAME) main" \
       > /etc/apt/sources.list.d/adoptium.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends temurin-21-jdk graphviz \
+    && apt-get install -y --no-install-recommends temurin-21-jdk graphviz libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
@@ -30,7 +30,8 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     polars \
     connectorx \
     graphviz \
-    pyarrow
+    pyarrow \
+    scikit-learn
 
 # Clone repository into the image
 ARG REPO_URL=https://github.com/tudo-aqua/stars-coverage-significance

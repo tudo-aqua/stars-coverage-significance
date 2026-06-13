@@ -256,15 +256,15 @@ Exports the `metric_failed_monitors` table from PostgreSQL to a Parquet file usi
 | `--partitions` | `96` | Number of parallel read partitions; set to match available CPU cores |
 
 ```bash
-python scripts/export_parquet.py \
+python3 scripts/export_parquet.py \
   --uri postgresql://stars:stars@host:5432/db \
   --output metric_failed_monitors.parquet
 
 # Fewer partitions on a smaller machine
-python scripts/export_parquet.py \
-  --uri postgresql://stars:stars@host:5432/db \
+python3 scripts/export_parquet.py \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
   --output metric_failed_monitors.parquet \
-  --partitions 8
+  --partitions 1
 ```
 
 ---
@@ -283,12 +283,13 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 
 ```bash
 # Basic run
-python scripts/decision_tree_g0.py metric_failed_monitors.parquet
+python3 scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot 2>&1 | tee tree.log
 
 # Limit depth and export a dot file for visualization
-python scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+python3 scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --max-depth 5 \
   --output tree.dot
+   2>&1 | tee tree.log
 
 # Render the dot file to PNG
 dot -Tpng tree.dot -o tree.png
