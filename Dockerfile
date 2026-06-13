@@ -29,7 +29,8 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     lightgbm \
     polars \
     connectorx \
-    graphviz
+    graphviz \
+    pyarrow
 
 # Clone repository into the image
 ARG REPO_URL=https://github.com/tudo-aqua/stars-coverage-significance

@@ -273,13 +273,13 @@ python scripts/export_parquet.py \
 
 Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using current-tick monitor state, ego maneuver, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`.
 
-| Argument | Default | Description |
-|---|---|---|
+| Argument | Default      | Description |
+|---|--------------|---|
 | `parquet` | *(required)* | Path to the Parquet input file |
-| `--max-depth` | unlimited | Maximum depth of the tree |
-| `--num-leaves` | `31` | Maximum number of leaves |
-| `--n-jobs` | `96` | CPU threads used by LightGBM; set to match available cores |
-| `--output` | *(none)* | Write a Graphviz `.dot` file to this path |
+| `--max-depth` | unlimited    | Maximum depth of the tree |
+| `--num-leaves` | `31`         | Maximum number of leaves |
+| `--n-jobs` | `48`         | CPU threads used by LightGBM; set to match available cores |
+| `--output` | *(none)*     | Write a Graphviz `.dot` file to this path |
 
 ```bash
 # Basic run
