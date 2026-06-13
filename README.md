@@ -283,10 +283,10 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 
 ```bash
 # Basic run
-python3 scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot 2>&1 | tee tree.log
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot 2>&1 | tee tree.log
 
 # Limit depth and export a dot file for visualization
-python3 scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --max-depth 5 \
   --output tree.dot
    2>&1 | tee tree.log
