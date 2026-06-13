@@ -240,7 +240,6 @@ def main() -> None:
                 tree_index=0,
                 show_info=["split_gain", "internal_count", "leaf_count"],
                 precision=4,
-                feature_names=FEATURE_COLS,
             )
             with open(args.output, "w") as f:
                 f.write(graph.source)
