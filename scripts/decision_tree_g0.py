@@ -140,10 +140,17 @@ def _bool_to_int8(col_name: str) -> pl.Expr:
     )
 
 
-def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
-    df = pl.read_parquet(path, columns=FEATURE_COLS + [TARGET_COL])
+PARQUET_COLS = [
+    "ego_maneuver_lane_change" if c in ("lane_change_none", "lane_change_left", "lane_change_right") else c
+    for c in FEATURE_COLS
+]
+PARQUET_COLS = list(dict.fromkeys(PARQUET_COLS))  # deduplicate, preserve order
 
-    missing = [c for c in FEATURE_COLS + [TARGET_COL] if c not in df.columns]
+
+def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
+    df = pl.read_parquet(path, columns=PARQUET_COLS + [TARGET_COL])
+
+    missing = [c for c in PARQUET_COLS + [TARGET_COL] if c not in df.columns]
     if missing:
         sys.exit(f"Missing columns in Parquet file: {missing}")
 
