@@ -171,10 +171,6 @@ def load_and_prepare(path: str) -> tuple[pd.DataFrame, np.ndarray]:
     return X, y
 
 
-def _decode_categorical_bitmask(bitmask: int, categories: list[str]) -> list[str]:
-    return [cat for i, cat in enumerate(categories) if bitmask & (1 << i)]
-
-
 def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
     """Recursively print a LightGBM tree node in sklearn export_text style."""
     prefix = "|   " * depth
@@ -191,10 +187,11 @@ def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
     decision = node.get("decision_type", "<=")
 
     if decision == "==" and fname == "ego_maneuver_lane_change":
-        # Categorical split: threshold is a bitmask of category indices that go left
-        left_cats = _decode_categorical_bitmask(int(threshold), LANE_CHANGE_CATEGORIES)
-        right_cats = [c for c in LANE_CHANGE_CATEGORIES if c not in left_cats]
-        print(f"{prefix}|--- {fname} in {{{', '.join(left_cats)}}}")
+        # Categorical split: threshold is the category index that goes left
+        idx = int(threshold)
+        left_cat = LANE_CHANGE_CATEGORIES[idx] if idx < len(LANE_CHANGE_CATEGORIES) else str(idx)
+        right_cats = [c for i, c in enumerate(LANE_CHANGE_CATEGORIES) if i != idx]
+        print(f"{prefix}|--- {fname} = {left_cat}")
         _print_node(node["left_child"], feature_names, depth + 1)
         print(f"{prefix}|--- {fname} in {{{', '.join(right_cats)}}}")
         _print_node(node["right_child"], feature_names, depth + 1)
@@ -206,6 +203,20 @@ def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
     _print_node(node["left_child"], feature_names, depth + 1)
     print(f"{prefix}|--- {fname} > {display_threshold}")
     _print_node(node["right_child"], feature_names, depth + 1)
+
+
+def _decode_dot_lane_change(dot_source: str) -> str:
+    """Replace integer category codes in the dot output with enum names."""
+    import re
+    def replace(m: re.Match) -> str:
+        idx = int(m.group(1))
+        name = LANE_CHANGE_CATEGORIES[idx] if idx < len(LANE_CHANGE_CATEGORIES) else str(idx)
+        return f"=<B>{name}</B>"
+    return re.sub(
+        r'(?<=<B>ego_maneuver_lane_change</B> )=<B>(\d+)</B>',
+        replace,
+        dot_source,
+    )
 
 
 def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
@@ -257,7 +268,7 @@ def main() -> None:
                 precision=4,
             )
             with open(args.output, "w") as f:
-                f.write(graph.source)
+                f.write(_decode_dot_lane_change(graph.source))
             print(f"\nGraphviz dot file written to: {args.output}")
             print("Render with:  dot -Tpng tree.dot -o tree.png")
         except Exception as exc:
