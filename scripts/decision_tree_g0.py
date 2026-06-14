@@ -224,6 +224,7 @@ def main() -> None:
         learning_rate=1.0,          # no shrinkage for a single tree
         max_depth=args.max_depth if args.max_depth else -1,
         num_leaves=args.num_leaves,
+        min_split_gain=1.0,
         n_jobs=args.n_jobs,
         class_weight="balanced",    # compensates for the ~1.4% positive rate
         random_state=0,
