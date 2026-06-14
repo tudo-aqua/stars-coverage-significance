@@ -18,6 +18,7 @@ import sys
 
 import lightgbm as lgb
 import numpy as np
+import pandas as pd
 import polars as pl
 
 
@@ -32,9 +33,7 @@ FEATURE_COLS = [
     "monitor_i2_DrivingFasterThenLeftTraffic_failed",
     # Ego maneuver
     "ego_maneuver_speed",
-    "lane_change_none",
-    "lane_change_left",
-    "lane_change_right",
+    "ego_maneuver_lane_change",
     # Ego state
     "ego_speed_mps",
     "ego_accel_mps2",
@@ -140,30 +139,18 @@ def _bool_to_int8(col_name: str) -> pl.Expr:
     )
 
 
-PARQUET_COLS = [
-    "ego_maneuver_lane_change" if c in ("lane_change_none", "lane_change_left", "lane_change_right") else c
-    for c in FEATURE_COLS
-]
-PARQUET_COLS = list(dict.fromkeys(PARQUET_COLS))  # deduplicate, preserve order
+LANE_CHANGE_CATEGORIES = ["NO_LANE_CHANGE", "CHANGE_LEFT", "CHANGE_RIGHT"]
 
 
-def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
-    df = pl.read_parquet(path, columns=PARQUET_COLS + [TARGET_COL])
+def load_and_prepare(path: str) -> tuple[pd.DataFrame, np.ndarray]:
+    df = pl.read_parquet(path, columns=FEATURE_COLS + [TARGET_COL])
 
-    missing = [c for c in PARQUET_COLS + [TARGET_COL] if c not in df.columns]
+    missing = [c for c in FEATURE_COLS + [TARGET_COL] if c not in df.columns]
     if missing:
         sys.exit(f"Missing columns in Parquet file: {missing}")
 
     # Drop rows where target is null (last tick of a scenario has no next tick)
     df = df.filter(pl.col(TARGET_COL).is_not_null())
-
-    # One-hot encode lane-change direction; null → all zeros (no maneuver data)
-    lc = pl.col("ego_maneuver_lane_change")
-    df = df.with_columns(
-        (lc == "NO_LANE_CHANGE").cast(pl.Int8).alias("lane_change_none"),
-        (lc == "CHANGE_LEFT").cast(pl.Int8).alias("lane_change_left"),
-        (lc == "CHANGE_RIGHT").cast(pl.Int8).alias("lane_change_right"),
-    )
 
     # Cast boolean monitor columns to int8 — works for Bool dtype and "true"/"false" strings
     df = df.with_columns(
@@ -173,10 +160,19 @@ def load_and_prepare(path: str) -> tuple[np.ndarray, np.ndarray]:
 
     # Nulls in continuous columns (no vehicle in that grid cell) are left as NaN
     # so LightGBM can route them to the optimal branch natively.
-    X = df.select(FEATURE_COLS).to_numpy(allow_copy=True)
-    y = df.select(TARGET_COL).to_numpy().ravel()
+    pdf = df.to_pandas()
+    pdf["ego_maneuver_lane_change"] = pd.Categorical(
+        pdf["ego_maneuver_lane_change"], categories=LANE_CHANGE_CATEGORIES
+    )
+
+    X = pdf[FEATURE_COLS]
+    y = pdf[TARGET_COL].to_numpy()
 
     return X, y
+
+
+def _decode_categorical_bitmask(bitmask: int, categories: list[str]) -> list[str]:
+    return [cat for i, cat in enumerate(categories) if bitmask & (1 << i)]
 
 
 def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
@@ -193,6 +189,16 @@ def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
     fname = feature_names[node["split_feature"]]
     threshold = node["threshold"]
     decision = node.get("decision_type", "<=")
+
+    if decision == "==" and fname == "ego_maneuver_lane_change":
+        # Categorical split: threshold is a bitmask of category indices that go left
+        left_cats = _decode_categorical_bitmask(int(threshold), LANE_CHANGE_CATEGORIES)
+        right_cats = [c for c in LANE_CHANGE_CATEGORIES if c not in left_cats]
+        print(f"{prefix}|--- {fname} in {{{', '.join(left_cats)}}}")
+        _print_node(node["left_child"], feature_names, depth + 1)
+        print(f"{prefix}|--- {fname} in {{{', '.join(right_cats)}}}")
+        _print_node(node["right_child"], feature_names, depth + 1)
+        return
 
     # LightGBM represents boolean 0/1 splits as ~1e-35 floats; display as 0
     display_threshold = 0 if isinstance(threshold, float) and abs(threshold) < 1e-10 else threshold
@@ -230,7 +236,7 @@ def main() -> None:
         random_state=0,
         verbose=-1,
     )
-    clf.fit(X, y, feature_name=FEATURE_COLS)
+    clf.fit(X, y)
 
     booster = clf.booster_
     model_info = booster.dump_model()
@@ -240,7 +246,7 @@ def main() -> None:
     raw_preds = booster.predict(X)
     train_acc = np.mean((raw_preds > 0.5).astype(int) == y)
     print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}\n")
-    print_tree(booster, FEATURE_COLS)
+    print_tree(booster, list(X.columns))
 
     if args.output:
         try:
