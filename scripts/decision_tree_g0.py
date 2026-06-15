@@ -384,7 +384,24 @@ def main() -> None:
     raw_preds = booster.predict(X)
     train_acc = np.mean((raw_preds > 0.5).astype(int) == y)
     print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}\n")
-    print_tree(booster, list(X.columns))
+
+    feature_names = list(X.columns)
+    gain  = booster.feature_importance(importance_type="gain")
+    split = booster.feature_importance(importance_type="split")
+    importance = (
+        pl.DataFrame({
+            "feature": feature_names,
+            "gain":    gain.tolist(),
+            "splits":  split.tolist(),
+        })
+        .filter(pl.col("splits") > 0)
+        .sort("gain", descending=True)
+    )
+    print("Feature importances (used splits only, sorted by gain):")
+    print(importance.to_pandas().to_string(index=False))
+    print()
+
+    print_tree(booster, feature_names)
 
     if args.annotate or args.uri or args.output:
         leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
