@@ -193,6 +193,7 @@ def _write_leaf_ids_to_db(
     conn = psycopg2.connect(uri)
     try:
         with conn.cursor() as cur:
+            cur.execute("UPDATE metric_failed_monitors SET leaf_node_id = NULL")
             psycopg2.extras.execute_values(
                 cur,
                 "UPDATE metric_failed_monitors AS t"
