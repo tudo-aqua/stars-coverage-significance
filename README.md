@@ -264,7 +264,7 @@ python3 scripts/export_parquet.py \
 python3 scripts/export_parquet.py \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
   --output metric_failed_monitors.parquet \
-  --partitions 1
+  --partitions 4
 ```
 
 ---

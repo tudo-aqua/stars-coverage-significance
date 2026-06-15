@@ -180,6 +180,33 @@ def _decode_dot_lane_change(dot_source: str) -> str:
     )
 
 
+def _replace_leaf_labels(dot_source: str, leaf_stats: dict[int, dict]) -> str:
+    """Replace LightGBM leaf labels with majority class and accident/no-accident counts.
+
+    Works line-by-line to avoid regex issues with <br/> inside graphviz HTML labels.
+    """
+    import re
+    lines = dot_source.split("\n")
+    result = []
+    for line in lines:
+        m = re.match(r"^(\s*)(leaf(\d+))\s*\[label=", line)
+        if m:
+            leaf_id = int(m.group(3))
+            stats = leaf_stats.get(leaf_id, {})
+            n_acc = stats.get("n_accidents", 0)
+            n_no_acc = stats.get("n_no_accidents", 0)
+            cls = "accident" if n_acc > n_no_acc else "no-accident"
+            label = (
+                f"<{cls}<br/>"
+                f"accidents: {n_acc:,}<br/>"
+                f"no-accidents: {n_no_acc:,}>"
+            )
+            result.append(f"{m.group(1)}{m.group(2)} [label={label}] ;")
+        else:
+            result.append(line)
+    return "\n".join(result)
+
+
 def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
     model = booster.dump_model()
     _print_node(model["tree_info"][0]["tree_structure"], feature_names)
@@ -358,7 +385,7 @@ def main() -> None:
     print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}\n")
     print_tree(booster, list(X.columns))
 
-    if args.annotate or args.uri:
+    if args.annotate or args.uri or args.output:
         leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
 
         leaf_stats = (
@@ -369,10 +396,20 @@ def main() -> None:
                 pl.col("accident").sum().alias("n_accidents"),
                 pl.col("accident").mean().alias("accident_rate"),
             )
+            .with_columns(
+                (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents")
+            )
             .sort("leaf_node_id")
         )
+        leaf_stats_dict: dict[int, dict] = {
+            row["leaf_node_id"]: row for row in leaf_stats.to_dicts()
+        }
         print(f"\nLeaf node summary ({len(leaf_stats)} leaves):")
-        print(leaf_stats.to_pandas().to_string(index=False, float_format="{:.4f}".format))
+        print(
+            leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate"])
+            .to_pandas()
+            .to_string(index=False, float_format="{:.4f}".format)
+        )
 
     if args.annotate:
         annotated = X.copy()
@@ -390,11 +427,13 @@ def main() -> None:
             graph = lgb.create_tree_digraph(
                 booster,
                 tree_index=0,
-                show_info=["split_gain", "internal_count", "leaf_count"],
+                show_info=["split_gain", "internal_count"],
                 precision=4,
             )
+            dot_source = _decode_dot_lane_change(graph.source)
+            dot_source = _replace_leaf_labels(dot_source, leaf_stats_dict)
             with open(args.output, "w") as f:
-                f.write(_decode_dot_lane_change(graph.source))
+                f.write(dot_source)
             print(f"\nGraphviz dot file written to: {args.output}")
             print("Render with:  dot -Tpng tree.dot -o tree.png")
         except Exception as exc:
