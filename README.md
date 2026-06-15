@@ -280,6 +280,8 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--num-leaves` | `31`         | Maximum number of leaves |
 | `--n-jobs` | `48`         | CPU threads used by LightGBM; set to match available cores |
 | `--output` | *(none)*     | Write a Graphviz `.dot` file to this path |
+| `--annotate` | *(none)*     | Write a Parquet file containing features + target + `leaf_node_id` for every row |
+| `--uri` | *(none)*     | Write `leaf_node_id` back to the database: `postgresql://user:pass@host:port/db` |
 
 #### Feature groups
 
@@ -309,6 +311,11 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --no-distances --no-neighbor-kinematics \
   --output tree.dot \
+  2>&1 | tee tree.log
+
+# Write leaf_node_id back to the database for every row
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
   2>&1 | tee tree.log
 
 # Render the dot file to PNG

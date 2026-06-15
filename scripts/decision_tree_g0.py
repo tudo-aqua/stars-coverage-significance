@@ -19,6 +19,7 @@ Feature groups (all enabled by default, disable with --no-<group>):
 Dependencies:
     pip install polars lightgbm numpy pandas
     pip install graphviz   # only needed for --output
+    pip install psycopg2   # only needed for --uri
 """
 
 import argparse
@@ -97,8 +98,11 @@ def _bool_to_int8(col_name: str) -> pl.Expr:
     )
 
 
-def load_and_prepare(path: str, feature_cols: list[str]) -> tuple[pd.DataFrame, np.ndarray]:
-    df = pl.read_parquet(path, columns=feature_cols + [TARGET_COL])
+def load_and_prepare(
+    path: str, feature_cols: list[str]
+) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """Returns (X, y, row_ids) where row_ids are the database primary keys."""
+    df = pl.read_parquet(path, columns=["id"] + feature_cols + [TARGET_COL])
 
     missing = [c for c in feature_cols + [TARGET_COL] if c not in df.columns]
     if missing:
@@ -120,10 +124,11 @@ def load_and_prepare(path: str, feature_cols: list[str]) -> tuple[pd.DataFrame, 
             pdf["ego_maneuver_lane_change"], categories=LANE_CHANGE_CATEGORIES
         )
 
+    row_ids = pdf["id"].to_numpy()
     X = pdf[feature_cols]
     y = pdf[TARGET_COL].to_numpy()
 
-    return X, y
+    return X, y, row_ids
 
 
 def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
@@ -177,6 +182,32 @@ def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
     _print_node(model["tree_info"][0]["tree_structure"], feature_names)
 
 
+def _write_leaf_ids_to_db(
+    uri: str, row_ids: np.ndarray, leaf_ids: np.ndarray, chunk_size: int = 10_000
+) -> None:
+    """Batch-update metric_failed_monitors.leaf_node_id via a single VALUES-list UPDATE per chunk."""
+    import psycopg2
+    import psycopg2.extras
+
+    pairs = list(zip(row_ids.tolist(), leaf_ids.tolist()))
+    conn = psycopg2.connect(uri)
+    try:
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_values(
+                cur,
+                "UPDATE metric_failed_monitors AS t"
+                " SET leaf_node_id = v.leaf"
+                " FROM (VALUES %s) AS v(id, leaf)"
+                " WHERE t.id = v.id",
+                pairs,
+                page_size=chunk_size,
+            )
+        conn.commit()
+        print(f"\nUpdated {len(pairs):,} rows in the database with leaf_node_id.")
+    finally:
+        conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -187,6 +218,10 @@ def main() -> None:
     parser.add_argument("--num-leaves", type=int, default=31, help="Maximum number of leaves (default: 31)")
     parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
     parser.add_argument("--output", default=None, help="Write Graphviz .dot file to this path")
+    parser.add_argument("--annotate", default=None, metavar="PATH",
+                        help="Write a Parquet file with a 'leaf_node_id' column added to every row")
+    parser.add_argument("--uri", default=None, metavar="POSTGRES_URI",
+                        help="Write leaf_node_id back to the database (postgresql://user:pass@host:port/db)")
 
     # Feature group toggles — all enabled by default
     group_args = parser.add_argument_group("feature groups (all on by default)")
@@ -248,7 +283,7 @@ def main() -> None:
         print(f"Feature groups disabled: {', '.join(disabled)}")
     print(f"Total feature columns:   {len(feature_cols)}\n")
 
-    X, y = load_and_prepare(args.parquet, feature_cols)
+    X, y, row_ids = load_and_prepare(args.parquet, feature_cols)
     print(f"Loaded {len(X):,} rows  |  positives: {y.sum():,} ({y.mean():.1%})")
 
     clf = lgb.LGBMClassifier(
@@ -272,6 +307,21 @@ def main() -> None:
     train_acc = np.mean((raw_preds > 0.5).astype(int) == y)
     print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}\n")
     print_tree(booster, list(X.columns))
+
+    if args.annotate or args.uri:
+        leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
+        print(f"\nUnique leaf nodes used: {len(np.unique(leaf_ids))}")
+
+    if args.annotate:
+        annotated = X.copy()
+        annotated["id"] = row_ids
+        annotated[TARGET_COL] = y
+        annotated["leaf_node_id"] = leaf_ids
+        pl.from_pandas(annotated).write_parquet(args.annotate)
+        print(f"Annotated Parquet written to: {args.annotate}")
+
+    if args.uri:
+        _write_leaf_ids_to_db(args.uri, row_ids, leaf_ids)
 
     if args.output:
         try:
