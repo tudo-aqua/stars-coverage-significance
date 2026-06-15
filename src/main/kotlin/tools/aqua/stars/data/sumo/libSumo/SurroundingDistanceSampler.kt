@@ -21,24 +21,8 @@ import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.SurroundingVehicleDistances
 
 /**
- * Longitudinal gap (m) from the ego's bounding box within which a vehicle on an adjacent lane is
- * considered to be *beside* the ego (middle row of the 3×3 grid) rather than ahead or behind it.
- *
- * ```
- * ┌────────────┬──────────┬─────────────┐
- * │ front-left │  front   │ front-right │
- * ├────────────┼──────────┼─────────────┤
- * │    left    │   ego    │    right    │  ← "besides" zone (gap ≤ this constant)
- * ├────────────┼──────────┼─────────────┤
- * │  rear-left │   rear   │  rear-right │
- * └────────────┴──────────┴─────────────┘
- * ```
- */
-const val VEHICLE_BESIDES_MAX_DISTANCE_METERS = 3.0
-
-/**
- * Samples bumper-to-bumper longitudinal distances from [egoId] to the nearest vehicle in each cell
- * of the surrounding 3×3 grid.
+ * Samples bumper-to-bumper longitudinal distances from [egoId] to the nearest vehicle in each of
+ * the six surrounding cells (front, rear, front-left, front-right, rear-left, rear-right).
  *
  * ## Bounding-box distance
  * Every vehicle's longitudinal extent is computed from the SUMO lane position (= front bumper) and
@@ -49,16 +33,24 @@ const val VEHICLE_BESIDES_MAX_DISTANCE_METERS = 3.0
  * ```
  *
  * The gap between two bounding boxes is:
- * - `gapAhead = veh_rear − ego_front` (≥ 0 when vehicle is fully ahead)
- * - `gapBehind = ego_rear − veh_front` (≥ 0 when vehicle is fully behind)
- * - Both negative → bounding boxes **overlap** longitudinally.
+ * - `gapAhead = veh_rear − ego_front` (≥ 0 when vehicle is fully ahead of ego)
+ * - `gapBehind = ego_rear − veh_front` (≥ 0 when vehicle is fully behind ego)
+ * - Both negative → bounding boxes **overlap** longitudinally (ignored — overlap is a collision
+ *   state and not tracked as a distinct cell).
  *
  * ## Cell assignment (adjacent-lane vehicles only)
- * The bounding-box distance is `min(gapAhead, gapBehind)` clamped to 0 for overlaps. | box distance
- * | direction | cell | |---|---|---| | ≤ [VEHICLE_BESIDES_MAX_DISTANCE_METERS] | – | **left** /
- * **right** (distance = box dist; 0 for overlap) | | > threshold | ahead | **front-left** /
- * **front-right** (distance = gapAhead) | | > threshold | behind | **rear-left** / **rear-right**
- * (distance = gapBehind) |
+ * | condition                            | cell                             | distance    |
+ * |--------------------------------------|----------------------------------|-------------|
+ * | `gapAhead ≥ 0`                       | **front-left** / **front-right** | `gapAhead`  |
+ * | `gapBehind ≥ 0` (and `gapAhead < 0`) | **rear-left** / **rear-right**   | `gapBehind` |
+ * | both negative (overlap)              | front or rear cell (see below)   | `0`         |
+ *
+ * When both gaps are negative the bounding boxes overlap longitudinally (vehicle is directly
+ * beside ego). Distance is recorded as `0`. The cell is determined by which gap is closer to
+ * zero: `gapBehind ≥ gapAhead` → rear cell; otherwise → front cell.
+ *
+ * The nearest vehicle (smallest distance) wins each cell. There is no fixed zone threshold: a
+ * vehicle 0.1 m ahead on the left lane occupies the front-left cell.
  *
  * ## Scope
  * Only vehicles on the same road edge and an immediately adjacent lane (`|laneIndex diff| ≤ 1`) are
@@ -73,8 +65,6 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
 
   var snapFront: NeighborSnapshot? = null
   var snapRear: NeighborSnapshot? = null
-  var snapLeft: NeighborSnapshot? = null
-  var snapRight: NeighborSnapshot? = null
   var snapFrontLeft: NeighborSnapshot? = null
   var snapRearLeft: NeighborSnapshot? = null
   var snapFrontRight: NeighborSnapshot? = null
@@ -107,31 +97,37 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
               nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel))
       // Both negative = same-lane collision; ignore for distance purposes.
     } else {
-      // ── Adjacent lane: assign to besides-zone or corner cell ──────────────────────────────────
+      // ── Adjacent lane: assign to front or rear cell; ignore longitudinal overlaps ─────────────
       val isLeft = laneDiff == 1 // SUMO: higher index = left
 
-      // Bounding-box distance (0 when boxes would overlap if on the same lane).
-      val boxDist: Double =
-          when {
-            gapAhead >= 0.0 -> gapAhead
-            gapBehind >= 0.0 -> gapBehind
-            else -> 0.0 // longitudinal overlap → beside ego
+      when {
+        gapAhead >= 0.0 -> {
+          // Vehicle is (at least partially) ahead of ego on the adjacent lane.
+          val snap = NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel)
+          if (isLeft) snapFrontLeft = nearer(snapFrontLeft, snap)
+          else snapFrontRight = nearer(snapFrontRight, snap)
+        }
+        gapBehind >= 0.0 -> {
+          // Vehicle is (at least partially) behind ego on the adjacent lane.
+          val snap = NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel)
+          if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
+          else snapRearRight = nearer(snapRearRight, snap)
+        }
+        else -> {
+          // Both gaps negative: bounding boxes overlap longitudinally (vehicle is directly beside
+          // ego). Distance is 0. Assign to the cell whose gap is closer to zero — i.e. whichever
+          // end of the ego the vehicle is nearer to determines front vs rear.
+          val snap = NeighborSnapshot(0.0, vehSpeed, vehFront, vehRear, vehAccel)
+          if (gapBehind >= gapAhead) {
+            // Vehicle centre is behind ego centre → rear cell.
+            if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
+            else snapRearRight = nearer(snapRearRight, snap)
+          } else {
+            // Vehicle centre is ahead of ego centre → front cell.
+            if (isLeft) snapFrontLeft = nearer(snapFrontLeft, snap)
+            else snapFrontRight = nearer(snapFrontRight, snap)
           }
-
-      if (boxDist <= VEHICLE_BESIDES_MAX_DISTANCE_METERS) {
-        // Vehicle is in the "besides" zone (middle row of the 3×3 grid).
-        val snap = NeighborSnapshot(boxDist, vehSpeed, vehFront, vehRear, vehAccel)
-        if (isLeft) snapLeft = nearer(snapLeft, snap) else snapRight = nearer(snapRight, snap)
-      } else if (gapAhead > VEHICLE_BESIDES_MAX_DISTANCE_METERS) {
-        // Vehicle is clearly ahead — corner cell.
-        val snap = NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel)
-        if (isLeft) snapFrontLeft = nearer(snapFrontLeft, snap)
-        else snapFrontRight = nearer(snapFrontRight, snap)
-      } else {
-        // Vehicle is clearly behind — corner cell.
-        val snap = NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel)
-        if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
-        else snapRearRight = nearer(snapRearRight, snap)
+        }
       }
     }
   }
@@ -143,8 +139,6 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
       frontRightMeters = snapFrontRight?.distMeters,
       rearLeftMeters = snapRearLeft?.distMeters,
       rearRightMeters = snapRearRight?.distMeters,
-      leftMeters = snapLeft?.distMeters,
-      rightMeters = snapRight?.distMeters,
       frontSpeedMps = snapFront?.speedMps,
       frontFrontBumperPositionMeters = snapFront?.frontBumperPositionMeters,
       frontBackBumperPositionMeters = snapFront?.backBumperPositionMeters,
@@ -169,14 +163,6 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
       rearRightFrontBumperPositionMeters = snapRearRight?.frontBumperPositionMeters,
       rearRightBackBumperPositionMeters = snapRearRight?.backBumperPositionMeters,
       rearRightAccelMps2 = snapRearRight?.accelMps2,
-      leftSpeedMps = snapLeft?.speedMps,
-      leftFrontBumperPositionMeters = snapLeft?.frontBumperPositionMeters,
-      leftBackBumperPositionMeters = snapLeft?.backBumperPositionMeters,
-      leftAccelMps2 = snapLeft?.accelMps2,
-      rightSpeedMps = snapRight?.speedMps,
-      rightFrontBumperPositionMeters = snapRight?.frontBumperPositionMeters,
-      rightBackBumperPositionMeters = snapRight?.backBumperPositionMeters,
-      rightAccelMps2 = snapRight?.accelMps2,
   )
 }
 

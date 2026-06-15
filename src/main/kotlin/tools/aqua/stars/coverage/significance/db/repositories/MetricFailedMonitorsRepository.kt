@@ -26,6 +26,7 @@ import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.db
@@ -226,31 +227,6 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.surroundingRearRightTgSeconds] =
           e.surroundingRearRightTgSeconds
 
-      this[MetricFailedMonitorsTable.surroundingDistLeft] = e.surroundingDistLeft
-      this[MetricFailedMonitorsTable.surroundingLeftSpeedMps] = e.surroundingLeftSpeedMps
-      this[MetricFailedMonitorsTable.surroundingLeftFrontBumperPosMeters] =
-          e.surroundingLeftFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingLeftBackBumperPosMeters] =
-          e.surroundingLeftBackBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingLeftAccelMps2] = e.surroundingLeftAccelMps2
-      this[MetricFailedMonitorsTable.surroundingLeftSpeedDiffMps] = e.surroundingLeftSpeedDiffMps
-      this[MetricFailedMonitorsTable.surroundingLeftAccelDiffMps2] = e.surroundingLeftAccelDiffMps2
-      this[MetricFailedMonitorsTable.surroundingLeftTtcSeconds] = e.surroundingLeftTtcSeconds
-      this[MetricFailedMonitorsTable.surroundingLeftTgSeconds] = e.surroundingLeftTgSeconds
-
-      this[MetricFailedMonitorsTable.surroundingDistRight] = e.surroundingDistRight
-      this[MetricFailedMonitorsTable.surroundingRightSpeedMps] = e.surroundingRightSpeedMps
-      this[MetricFailedMonitorsTable.surroundingRightFrontBumperPosMeters] =
-          e.surroundingRightFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingRightBackBumperPosMeters] =
-          e.surroundingRightBackBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingRightAccelMps2] = e.surroundingRightAccelMps2
-      this[MetricFailedMonitorsTable.surroundingRightSpeedDiffMps] = e.surroundingRightSpeedDiffMps
-      this[MetricFailedMonitorsTable.surroundingRightAccelDiffMps2] =
-          e.surroundingRightAccelDiffMps2
-      this[MetricFailedMonitorsTable.surroundingRightTtcSeconds] = e.surroundingRightTtcSeconds
-      this[MetricFailedMonitorsTable.surroundingRightTgSeconds] = e.surroundingRightTgSeconds
-
       this[MetricFailedMonitorsTable.collisionTimeSeconds] = e.collisionTimeSeconds
       this[MetricFailedMonitorsTable.collisionType] = e.collisionType
       this[MetricFailedMonitorsTable.collisionLane] = e.collisionLane
@@ -274,6 +250,7 @@ object MetricFailedMonitorsRepository {
           e.collisionVictimBackBumperPosMeters
 
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
+      this[MetricFailedMonitorsTable.leafNodeId] = e.leafNodeId
     }
   }
 
@@ -390,26 +367,6 @@ object MetricFailedMonitorsRepository {
               row[surroundingRearRightTtcSeconds] = entry.surroundingRearRightTtcSeconds
               row[surroundingRearRightTgSeconds] = entry.surroundingRearRightTgSeconds
 
-              row[surroundingDistLeft] = entry.surroundingDistLeft
-              row[surroundingLeftSpeedMps] = entry.surroundingLeftSpeedMps
-              row[surroundingLeftFrontBumperPosMeters] = entry.surroundingLeftFrontBumperPosMeters
-              row[surroundingLeftBackBumperPosMeters] = entry.surroundingLeftBackBumperPosMeters
-              row[surroundingLeftAccelMps2] = entry.surroundingLeftAccelMps2
-              row[surroundingLeftSpeedDiffMps] = entry.surroundingLeftSpeedDiffMps
-              row[surroundingLeftAccelDiffMps2] = entry.surroundingLeftAccelDiffMps2
-              row[surroundingLeftTtcSeconds] = entry.surroundingLeftTtcSeconds
-              row[surroundingLeftTgSeconds] = entry.surroundingLeftTgSeconds
-
-              row[surroundingDistRight] = entry.surroundingDistRight
-              row[surroundingRightSpeedMps] = entry.surroundingRightSpeedMps
-              row[surroundingRightFrontBumperPosMeters] = entry.surroundingRightFrontBumperPosMeters
-              row[surroundingRightBackBumperPosMeters] = entry.surroundingRightBackBumperPosMeters
-              row[surroundingRightAccelMps2] = entry.surroundingRightAccelMps2
-              row[surroundingRightSpeedDiffMps] = entry.surroundingRightSpeedDiffMps
-              row[surroundingRightAccelDiffMps2] = entry.surroundingRightAccelDiffMps2
-              row[surroundingRightTtcSeconds] = entry.surroundingRightTtcSeconds
-              row[surroundingRightTgSeconds] = entry.surroundingRightTgSeconds
-
               row[collisionTimeSeconds] = entry.collisionTimeSeconds
               row[collisionType] = entry.collisionType
               row[collisionLane] = entry.collisionLane
@@ -429,6 +386,7 @@ object MetricFailedMonitorsRepository {
               row[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
               row[createdAt] = entry.createdAt
+              row[leafNodeId] = entry.leafNodeId
             }
             .value
 
@@ -561,29 +519,6 @@ object MetricFailedMonitorsRepository {
                   st[surroundingRearRightTtcSeconds] = entry.surroundingRearRightTtcSeconds
                   st[surroundingRearRightTgSeconds] = entry.surroundingRearRightTgSeconds
 
-                  st[surroundingDistLeft] = entry.surroundingDistLeft
-                  st[surroundingLeftSpeedMps] = entry.surroundingLeftSpeedMps
-                  st[surroundingLeftFrontBumperPosMeters] =
-                      entry.surroundingLeftFrontBumperPosMeters
-                  st[surroundingLeftBackBumperPosMeters] = entry.surroundingLeftBackBumperPosMeters
-                  st[surroundingLeftAccelMps2] = entry.surroundingLeftAccelMps2
-                  st[surroundingLeftSpeedDiffMps] = entry.surroundingLeftSpeedDiffMps
-                  st[surroundingLeftAccelDiffMps2] = entry.surroundingLeftAccelDiffMps2
-                  st[surroundingLeftTtcSeconds] = entry.surroundingLeftTtcSeconds
-                  st[surroundingLeftTgSeconds] = entry.surroundingLeftTgSeconds
-
-                  st[surroundingDistRight] = entry.surroundingDistRight
-                  st[surroundingRightSpeedMps] = entry.surroundingRightSpeedMps
-                  st[surroundingRightFrontBumperPosMeters] =
-                      entry.surroundingRightFrontBumperPosMeters
-                  st[surroundingRightBackBumperPosMeters] =
-                      entry.surroundingRightBackBumperPosMeters
-                  st[surroundingRightAccelMps2] = entry.surroundingRightAccelMps2
-                  st[surroundingRightSpeedDiffMps] = entry.surroundingRightSpeedDiffMps
-                  st[surroundingRightAccelDiffMps2] = entry.surroundingRightAccelDiffMps2
-                  st[surroundingRightTtcSeconds] = entry.surroundingRightTtcSeconds
-                  st[surroundingRightTgSeconds] = entry.surroundingRightTgSeconds
-
                   st[collisionTimeSeconds] = entry.collisionTimeSeconds
                   st[collisionType] = entry.collisionType
                   st[collisionLane] = entry.collisionLane
@@ -605,6 +540,7 @@ object MetricFailedMonitorsRepository {
                   st[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
                   st[createdAt] = entry.createdAt
+                  st[leafNodeId] = entry.leafNodeId
                 }
             .single()
 
@@ -763,31 +699,6 @@ object MetricFailedMonitorsRepository {
               this[MetricFailedMonitorsTable.surroundingRearRightTtcSeconds],
           surroundingRearRightTgSeconds =
               this[MetricFailedMonitorsTable.surroundingRearRightTgSeconds],
-          surroundingDistLeft = this[MetricFailedMonitorsTable.surroundingDistLeft],
-          surroundingLeftSpeedMps = this[MetricFailedMonitorsTable.surroundingLeftSpeedMps],
-          surroundingLeftFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingLeftFrontBumperPosMeters],
-          surroundingLeftBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingLeftBackBumperPosMeters],
-          surroundingLeftAccelMps2 = this[MetricFailedMonitorsTable.surroundingLeftAccelMps2],
-          surroundingLeftSpeedDiffMps = this[MetricFailedMonitorsTable.surroundingLeftSpeedDiffMps],
-          surroundingLeftAccelDiffMps2 =
-              this[MetricFailedMonitorsTable.surroundingLeftAccelDiffMps2],
-          surroundingLeftTtcSeconds = this[MetricFailedMonitorsTable.surroundingLeftTtcSeconds],
-          surroundingLeftTgSeconds = this[MetricFailedMonitorsTable.surroundingLeftTgSeconds],
-          surroundingDistRight = this[MetricFailedMonitorsTable.surroundingDistRight],
-          surroundingRightSpeedMps = this[MetricFailedMonitorsTable.surroundingRightSpeedMps],
-          surroundingRightFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRightFrontBumperPosMeters],
-          surroundingRightBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRightBackBumperPosMeters],
-          surroundingRightAccelMps2 = this[MetricFailedMonitorsTable.surroundingRightAccelMps2],
-          surroundingRightSpeedDiffMps =
-              this[MetricFailedMonitorsTable.surroundingRightSpeedDiffMps],
-          surroundingRightAccelDiffMps2 =
-              this[MetricFailedMonitorsTable.surroundingRightAccelDiffMps2],
-          surroundingRightTtcSeconds = this[MetricFailedMonitorsTable.surroundingRightTtcSeconds],
-          surroundingRightTgSeconds = this[MetricFailedMonitorsTable.surroundingRightTgSeconds],
           collisionTimeSeconds = this[MetricFailedMonitorsTable.collisionTimeSeconds],
           collisionType = this[MetricFailedMonitorsTable.collisionType],
           collisionLane = this[MetricFailedMonitorsTable.collisionLane],
@@ -810,5 +721,28 @@ object MetricFailedMonitorsRepository {
           collisionVictimBackBumperPosMeters =
               this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
+          leafNodeId = this[MetricFailedMonitorsTable.leafNodeId],
       )
+}
+
+/**
+ * Batch-updates [MetricFailedMonitorsTable.leafNodeId] for a set of rows identified by their
+ * primary key.
+ *
+ * Uses a single `UPDATE … FROM (VALUES …)` statement per chunk to avoid N round-trips. Rows
+ * whose `id` is not found are silently skipped (no error).
+ *
+ * @param idToLeafNode Map of row `id` → leaf-node index to write.
+ * @param chunkSize Rows per SQL statement (default 10 000).
+ */
+fun MetricFailedMonitorsRepository.batchUpdateLeafNodeIds(
+    idToLeafNode: Map<Int, Int>,
+    chunkSize: Int = 10_000,
+) = db {
+  if (idToLeafNode.isEmpty()) return@db
+  idToLeafNode.entries.chunked(chunkSize) { chunk ->
+    val values = chunk.joinToString(",") { (rowId, leaf) -> "($rowId,$leaf)" }
+    TransactionManager.current()
+        .exec("UPDATE metric_failed_monitors AS t SET leaf_node_id = v.leaf FROM (VALUES $values) AS v(id, leaf) WHERE t.id = v.id")
+  }
 }

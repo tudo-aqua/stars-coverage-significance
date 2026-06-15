@@ -50,12 +50,16 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property previouslyChangedTSCInstance Previously changed TSC instance.
  * @property previouslyChangedTSCInstanceTick Previously changed TSC instance tick.
  * @property tick TSC instance tick.
- * @property egoManeuverSpeed Ego maneuver speed.
- * @property egoManeuverLaneChange Ego maneuver lane change.
+ * @property egoManeuverSpeed Ego planned maneuver speed (m/s).
+ * @property egoManeuverLaneChange Ego planned lane-change direction.
  * @property egoLane Lane the ego vehicle is currently on.
+ * @property egoSpeedMps Ego vehicle speed (m/s).
+ * @property egoAccelMps2 Ego vehicle acceleration (m/s²).
+ * @property egoFrontBumperPosMeters Ego front bumper lane position (m).
+ * @property egoBackBumperPosMeters Ego back bumper lane position (m).
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
- * @property monitorG2Failed Whether monitor G2 failed.
+ * @property monitorG2Failed Whether monitor G2 failed.s
  * @property monitorG3Failed Whether monitor G3 failed.
  * @property monitorG4Failed Whether monitor G4 failed.
  * @property monitorI1Failed Whether monitor I1 failed.
@@ -67,14 +71,90 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property nextTickMonitorG4Failed Whether monitor G4 failed in the next tick (null = last tick).
  * @property nextTickMonitorI1Failed Whether monitor I1 failed in the next tick (null = last tick).
  * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
- * @property surroundingDistFront Distance to nearest vehicle ahead on the same lane (m).
- * @property surroundingDistRear Distance to nearest vehicle behind on the same lane (m).
- * @property surroundingDistFrontLeft Distance to nearest vehicle ahead on the left lane (m).
- * @property surroundingDistFrontRight Distance to nearest vehicle ahead on the right lane (m).
- * @property surroundingDistRearLeft Distance to nearest vehicle behind on the left lane (m).
- * @property surroundingDistRearRight Distance to nearest vehicle behind on the right lane (m).
- * @property surroundingDistLeft Distance to nearest vehicle on the left lane, any position (m).
- * @property surroundingDistRight Distance to nearest vehicle on the right lane, any position (m).
+ * @property surroundingDistFront Bumper-to-bumper distance to the nearest vehicle fully ahead on
+ *   the same lane (m).
+ * @property surroundingFrontSpeedMps Speed of the front neighbour (m/s).
+ * @property surroundingFrontFrontBumperPosMeters Front bumper position of the front neighbour (m).
+ * @property surroundingFrontBackBumperPosMeters Back bumper position of the front neighbour (m).
+ * @property surroundingFrontAccelMps2 Acceleration of the front neighbour (m/s²).
+ * @property surroundingFrontSpeedDiffMps Speed difference to the front neighbour (neighbourSpeed −
+ *   egoSpeed, m/s).
+ * @property surroundingFrontAccelDiffMps2 Acceleration difference to the front neighbour
+ *   (neighbourAccel − egoAccel, m/s²).
+ * @property surroundingFrontTtcSeconds Time-to-collision to the front neighbour (s); null when not
+ *   closing.
+ * @property surroundingFrontTgSeconds Time gap to the front neighbour from ego's perspective (s).
+ * @property surroundingDistRear Bumper-to-bumper distance to the nearest vehicle fully behind on
+ *   the same lane (m).
+ * @property surroundingRearSpeedMps Speed of the rear neighbour (m/s).
+ * @property surroundingRearFrontBumperPosMeters Front bumper position of the rear neighbour (m).
+ * @property surroundingRearBackBumperPosMeters Back bumper position of the rear neighbour (m).
+ * @property surroundingRearAccelMps2 Acceleration of the rear neighbour (m/s²).
+ * @property surroundingRearSpeedDiffMps Speed difference to the rear neighbour (m/s).
+ * @property surroundingRearAccelDiffMps2 Acceleration difference to the rear neighbour (m/s²).
+ * @property surroundingRearTtcSeconds Time-to-collision to the rear neighbour (s); null when not
+ *   closing.
+ * @property surroundingRearTgSeconds Time gap to the rear neighbour from follower's perspective
+ *   (s).
+ * @property surroundingDistFrontLeft Bumper-to-bumper distance to the nearest vehicle whose rear
+ *   bumper is at or ahead of the ego's front bumper on the left lane (m; 0 when touching).
+ * @property surroundingFrontLeftSpeedMps Speed of the front-left neighbour (m/s).
+ * @property surroundingFrontLeftFrontBumperPosMeters Front bumper position of the front-left
+ *   neighbour (m).
+ * @property surroundingFrontLeftBackBumperPosMeters Back bumper position of the front-left
+ *   neighbour (m).
+ * @property surroundingFrontLeftAccelMps2 Acceleration of the front-left neighbour (m/s²).
+ * @property surroundingFrontLeftSpeedDiffMps Speed difference to the front-left neighbour (m/s).
+ * @property surroundingFrontLeftAccelDiffMps2 Acceleration difference to the front-left neighbour
+ *   (m/s²).
+ * @property surroundingFrontLeftTtcSeconds Time-to-collision to the front-left neighbour (s; 0 when
+ *   touching, null when not closing).
+ * @property surroundingFrontLeftTgSeconds Time gap to the front-left neighbour (s; 0 when
+ *   touching).
+ * @property surroundingDistFrontRight Bumper-to-bumper distance to the nearest vehicle whose rear
+ *   bumper is at or ahead of the ego's front bumper on the right lane (m; 0 when touching).
+ * @property surroundingFrontRightSpeedMps Speed of the front-right neighbour (m/s).
+ * @property surroundingFrontRightFrontBumperPosMeters Front bumper position of the front-right
+ *   neighbour (m).
+ * @property surroundingFrontRightBackBumperPosMeters Back bumper position of the front-right
+ *   neighbour (m).
+ * @property surroundingFrontRightAccelMps2 Acceleration of the front-right neighbour (m/s²).
+ * @property surroundingFrontRightSpeedDiffMps Speed difference to the front-right neighbour (m/s).
+ * @property surroundingFrontRightAccelDiffMps2 Acceleration difference to the front-right neighbour
+ *   (m/s²).
+ * @property surroundingFrontRightTtcSeconds Time-to-collision to the front-right neighbour (s; 0
+ *   when touching, null when not closing).
+ * @property surroundingFrontRightTgSeconds Time gap to the front-right neighbour (s; 0 when
+ *   touching).
+ * @property surroundingDistRearLeft Bumper-to-bumper distance to the nearest vehicle whose front
+ *   bumper is at or behind the ego's rear bumper on the left lane (m; 0 when touching).
+ * @property surroundingRearLeftSpeedMps Speed of the rear-left neighbour (m/s).
+ * @property surroundingRearLeftFrontBumperPosMeters Front bumper position of the rear-left
+ *   neighbour (m).
+ * @property surroundingRearLeftBackBumperPosMeters Back bumper position of the rear-left neighbour
+ *   (m).
+ * @property surroundingRearLeftAccelMps2 Acceleration of the rear-left neighbour (m/s²).
+ * @property surroundingRearLeftSpeedDiffMps Speed difference to the rear-left neighbour (m/s).
+ * @property surroundingRearLeftAccelDiffMps2 Acceleration difference to the rear-left neighbour
+ *   (m/s²).
+ * @property surroundingRearLeftTtcSeconds Time-to-collision to the rear-left neighbour (s; 0 when
+ *   touching, null when not closing).
+ * @property surroundingRearLeftTgSeconds Time gap to the rear-left neighbour (s; 0 when touching).
+ * @property surroundingDistRearRight Bumper-to-bumper distance to the nearest vehicle whose front
+ *   bumper is at or behind the ego's rear bumper on the right lane (m; 0 when touching).
+ * @property surroundingRearRightSpeedMps Speed of the rear-right neighbour (m/s).
+ * @property surroundingRearRightFrontBumperPosMeters Front bumper position of the rear-right
+ *   neighbour (m).
+ * @property surroundingRearRightBackBumperPosMeters Back bumper position of the rear-right
+ *   neighbour (m).
+ * @property surroundingRearRightAccelMps2 Acceleration of the rear-right neighbour (m/s²).
+ * @property surroundingRearRightSpeedDiffMps Speed difference to the rear-right neighbour (m/s).
+ * @property surroundingRearRightAccelDiffMps2 Acceleration difference to the rear-right neighbour
+ *   (m/s²).
+ * @property surroundingRearRightTtcSeconds Time-to-collision to the rear-right neighbour (s; 0 when
+ *   touching, null when not closing).
+ * @property surroundingRearRightTgSeconds Time gap to the rear-right neighbour (s; 0 when
+ *   touching).
  * @property collisionTimeSeconds Time at which the ego-relevant collision occurred (s).
  * @property collisionType SUMO collision type string.
  * @property collisionLane Lane on which the collision occurred.
@@ -97,6 +177,8 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
  *   collision time (m).
  * @property createdAt Timestamp of creation.
+ * @property leafNodeId Leaf-node index assigned by the decision-tree classifier (null until
+ *   annotated by the classifier script).
  */
 object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val tsc =
@@ -236,28 +318,6 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val surroundingRearRightAccelDiffMps2 = float("surrounding_rear_right_accel_diff_mps2").nullable()
   val surroundingRearRightTtcSeconds = float("surrounding_rear_right_ttc_s").nullable()
   val surroundingRearRightTgSeconds = float("surrounding_rear_right_tg_s").nullable()
-  val surroundingDistLeft = float("surrounding_dist_left").nullable()
-  val surroundingLeftSpeedMps = float("surrounding_left_speed_mps").nullable()
-  val surroundingLeftFrontBumperPosMeters =
-      float("surrounding_left_front_bumper_pos_meters").nullable()
-  val surroundingLeftBackBumperPosMeters =
-      float("surrounding_left_back_bumper_pos_meters").nullable()
-  val surroundingLeftAccelMps2 = float("surrounding_left_accel_mps2").nullable()
-  val surroundingLeftSpeedDiffMps = float("surrounding_left_speed_diff_mps").nullable()
-  val surroundingLeftAccelDiffMps2 = float("surrounding_left_accel_diff_mps2").nullable()
-  val surroundingLeftTtcSeconds = float("surrounding_left_ttc_s").nullable()
-  val surroundingLeftTgSeconds = float("surrounding_left_tg_s").nullable()
-  val surroundingDistRight = float("surrounding_dist_right").nullable()
-  val surroundingRightSpeedMps = float("surrounding_right_speed_mps").nullable()
-  val surroundingRightFrontBumperPosMeters =
-      float("surrounding_right_front_bumper_pos_meters").nullable()
-  val surroundingRightBackBumperPosMeters =
-      float("surrounding_right_back_bumper_pos_meters").nullable()
-  val surroundingRightAccelMps2 = float("surrounding_right_accel_mps2").nullable()
-  val surroundingRightSpeedDiffMps = float("surrounding_right_speed_diff_mps").nullable()
-  val surroundingRightAccelDiffMps2 = float("surrounding_right_accel_diff_mps2").nullable()
-  val surroundingRightTtcSeconds = float("surrounding_right_ttc_s").nullable()
-  val surroundingRightTgSeconds = float("surrounding_right_tg_s").nullable()
   val collisionTimeSeconds = float("collision_time_seconds").nullable()
   val collisionType = text("collision_type").nullable()
   val collisionLane = enumerationByName("collision_lane", 6, HighwayLane::class).nullable()
@@ -281,6 +341,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val collisionVictimBackBumperPosMeters =
       float("collision_victim_back_bumper_pos_meters").nullable()
   val createdAt = timestamp("created_at")
+  val leafNodeId = integer("leaf_node_id").nullable()
 
   init {
     index(true, tsc, run, startingScenarioConfiguration, mutant, tick)

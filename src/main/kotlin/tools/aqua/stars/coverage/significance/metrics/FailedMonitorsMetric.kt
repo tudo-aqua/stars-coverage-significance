@@ -277,40 +277,6 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   tgNeighbor(
                       surroundingDistances?.rearRightMeters,
                       surroundingDistances?.rearRightSpeedMps),
-              surroundingDistLeft = surroundingDistances?.leftMeters?.toFloat(),
-              surroundingLeftSpeedMps = surroundingDistances?.leftSpeedMps?.toFloat(),
-              surroundingLeftFrontBumperPosMeters =
-                  surroundingDistances?.leftFrontBumperPositionMeters?.toFloat(),
-              surroundingLeftBackBumperPosMeters =
-                  surroundingDistances?.leftBackBumperPositionMeters?.toFloat(),
-              surroundingLeftAccelMps2 = surroundingDistances?.leftAccelMps2?.toFloat(),
-              surroundingLeftSpeedDiffMps =
-                  surroundingDistances?.leftSpeedMps?.let { (it - egoSpeed).toFloat() },
-              surroundingLeftAccelDiffMps2 =
-                  surroundingDistances?.leftAccelMps2?.let { (it - egoAccel).toFloat() },
-              surroundingLeftTtcSeconds =
-                  ttcBeside(
-                      surroundingDistances?.leftMeters,
-                      surroundingDistances?.leftSpeedMps,
-                      egoSpeed),
-              surroundingLeftTgSeconds = tgEgo(surroundingDistances?.leftMeters, egoSpeed),
-              surroundingDistRight = surroundingDistances?.rightMeters?.toFloat(),
-              surroundingRightSpeedMps = surroundingDistances?.rightSpeedMps?.toFloat(),
-              surroundingRightFrontBumperPosMeters =
-                  surroundingDistances?.rightFrontBumperPositionMeters?.toFloat(),
-              surroundingRightBackBumperPosMeters =
-                  surroundingDistances?.rightBackBumperPositionMeters?.toFloat(),
-              surroundingRightAccelMps2 = surroundingDistances?.rightAccelMps2?.toFloat(),
-              surroundingRightSpeedDiffMps =
-                  surroundingDistances?.rightSpeedMps?.let { (it - egoSpeed).toFloat() },
-              surroundingRightAccelDiffMps2 =
-                  surroundingDistances?.rightAccelMps2?.let { (it - egoAccel).toFloat() },
-              surroundingRightTtcSeconds =
-                  ttcBeside(
-                      surroundingDistances?.rightMeters,
-                      surroundingDistances?.rightSpeedMps,
-                      egoSpeed),
-              surroundingRightTgSeconds = tgEgo(surroundingDistances?.rightMeters, egoSpeed),
               collisionTimeSeconds = egoCollision?.collisionTimeSeconds,
               collisionType = egoCollision?.collisionType?.takeIf { it.isNotEmpty() },
               collisionLane = egoCollision?.lane?.laneIndex?.let { HighwayLane.fromLaneIndex(it) },
@@ -381,41 +347,37 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
     }
   }
 
-  /** TTC when ego is behind [neighborSpeed]: `dist / (egoSpeed − neighborSpeed)` when closing. */
+  /** TTC when ego is behind neighbor: `dist / (egoSpeed − neighborSpeed)` when closing. */
   private fun ttcAhead(dist: Double?, neighborSpeed: Double?, egoSpeed: Float): Float? {
     dist ?: return null
+    if (dist == 0.0) return 0.0f
     neighborSpeed ?: return null
     val closing = egoSpeed - neighborSpeed
-    return if (dist > 0 && closing > 0) (dist / closing).toFloat() else null
+    return if (closing > 0) (dist / closing).toFloat() else null
   }
 
   /** TTC when neighbor is behind ego: `dist / (neighborSpeed − egoSpeed)` when closing. */
   private fun ttcBehind(dist: Double?, neighborSpeed: Double?, egoSpeed: Float): Float? {
     dist ?: return null
+    if (dist == 0.0) return 0.0f
     neighborSpeed ?: return null
     val closing = neighborSpeed - egoSpeed
-    return if (dist > 0 && closing > 0) (dist / closing).toFloat() else null
-  }
-
-  /** TTC for a beside-zone neighbour: `dist / |egoSpeed − neighborSpeed|` when speeds differ. */
-  private fun ttcBeside(dist: Double?, neighborSpeed: Double?, egoSpeed: Float): Float? {
-    dist ?: return null
-    neighborSpeed ?: return null
-    val closing = kotlin.math.abs(egoSpeed - neighborSpeed)
     return if (closing > 0) (dist / closing).toFloat() else null
   }
 
-  /** Time gap from ego's perspective: `dist / egoSpeed` (front and beside directions). */
+  /** Time gap from ego's perspective: `dist / egoSpeed` (front directions). */
   private fun tgEgo(dist: Double?, egoSpeed: Float): Float? {
     dist ?: return null
-    return if (dist > 0 && egoSpeed > 0) (dist / egoSpeed).toFloat() else null
+    if (dist == 0.0) return 0.0f
+    return if (egoSpeed > 0) (dist / egoSpeed).toFloat() else null
   }
 
   /** Time gap from the follower's perspective: `dist / neighborSpeed` (rear directions). */
   private fun tgNeighbor(dist: Double?, neighborSpeed: Double?): Float? {
     dist ?: return null
+    if (dist == 0.0) return 0.0f
     neighborSpeed ?: return null
-    return if (dist > 0 && neighborSpeed > 0) (dist / neighborSpeed).toFloat() else null
+    return if (neighborSpeed > 0) (dist / neighborSpeed).toFloat() else null
   }
 
   override fun printPostEvaluationResult() {
