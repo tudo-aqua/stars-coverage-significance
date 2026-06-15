@@ -198,7 +198,7 @@ def _replace_leaf_labels(dot_source: str, leaf_stats: dict[int, dict]) -> str:
             p = stats.get("p", float("nan"))
             cls = "accident" if n_acc > n_no_acc else "no-accident"
             label = (
-                f"<{cls} (p={p:.3f})<br/>"
+                f"<leaf {leaf_id}: {cls} (p={p:.3f})<br/>"
                 f"accidents: {n_acc:,}<br/>"
                 f"no-accidents: {n_no_acc:,}>"
             )
