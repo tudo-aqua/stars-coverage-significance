@@ -289,7 +289,8 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 |---|---|---|
 | `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` … `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
 | `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
-| `--ego-state` / `--no-ego-state` | 4 | Ego kinematics: `ego_speed_mps`, `ego_accel_mps2`, front/back bumper position |
+| `--ego-kinematics` / `--no-ego-kinematics` | 2 | Ego speed and acceleration: `ego_speed_mps`, `ego_accel_mps2` |
+| `--ego-position` / `--no-ego-position` | 2 | Ego lane position: `ego_front_bumper_pos_meters`, `ego_back_bumper_pos_meters` |
 | `--distances` / `--no-distances` | 8 | Bumper-to-bumper distance to nearest neighbour per grid cell (`surrounding_dist_*`) |
 | `--neighbor-kinematics` / `--no-neighbor-kinematics` | 48 | Per-neighbour speed, acceleration, bumper positions, and diffs |
 | `--time-gaps` / `--no-time-gaps` | 16 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |

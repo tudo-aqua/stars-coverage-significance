@@ -10,8 +10,9 @@ Usage:
 Feature groups (all enabled by default, disable with --no-<group>):
     --monitors            Current-tick monitor states (7 cols)
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
-    --ego-state           Ego kinematics: speed, accel, bumper positions (4 cols)
-    --distances           Bumper-to-bumper distances per grid cell (8 cols)
+    --ego-kinematics      Ego speed and acceleration (2 cols)
+    --ego-position        Ego front/back bumper lane position (2 cols)
+    --distances           Bumper-to-bumper distances per grid cell (6 cols)
     --neighbor-kinematics Per-neighbour speed, accel, position, diffs (48 cols)
     --time-gaps           Per-neighbour TTC and time gap (16 cols)
 
@@ -34,7 +35,6 @@ _NEIGHBORS = [
     "front", "rear",
     "front_left", "front_right",
     "rear_left", "rear_right",
-    "left", "right",
 ]
 
 FEATURE_GROUPS: dict[str, list[str]] = {
@@ -51,9 +51,11 @@ FEATURE_GROUPS: dict[str, list[str]] = {
         "ego_maneuver_speed",
         "ego_maneuver_lane_change",
     ],
-    "ego-state": [
+    "ego-kinematics": [
         "ego_speed_mps",
         "ego_accel_mps2",
+    ],
+    "ego-position": [
         "ego_front_bumper_pos_meters",
         "ego_back_bumper_pos_meters",
     ],
@@ -197,8 +199,12 @@ def main() -> None:
         help="Ego maneuver: planned speed, lane-change direction (2 cols)",
     )
     group_args.add_argument(
-        "--ego-state", default=True, action=argparse.BooleanOptionalAction,
-        help="Ego kinematics: speed, accel, front/back bumper position (4 cols)",
+        "--ego-kinematics", default=True, action=argparse.BooleanOptionalAction,
+        help="Ego speed and acceleration (2 cols)",
+    )
+    group_args.add_argument(
+        "--ego-position", default=True, action=argparse.BooleanOptionalAction,
+        help="Ego front/back bumper lane position (2 cols)",
     )
     group_args.add_argument(
         "--distances", default=True, action=argparse.BooleanOptionalAction,
@@ -218,7 +224,8 @@ def main() -> None:
     group_flags = {
         "monitors":            args.monitors,
         "ego-maneuver":        args.ego_maneuver,
-        "ego-state":           args.ego_state,
+        "ego-kinematics":      args.ego_kinematics,
+        "ego-position":        args.ego_position,
         "distances":           args.distances,
         "neighbor-kinematics": args.neighbor_kinematics,
         "time-gaps":           args.time_gaps,
