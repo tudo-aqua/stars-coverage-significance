@@ -281,15 +281,34 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--n-jobs` | `48`         | CPU threads used by LightGBM; set to match available cores |
 | `--output` | *(none)*     | Write a Graphviz `.dot` file to this path |
 
+#### Feature groups
+
+All feature groups are enabled by default. Disable any group with `--no-<group>`:
+
+| Flag | Columns | Description |
+|---|---|---|
+| `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` … `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
+| `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
+| `--ego-state` / `--no-ego-state` | 4 | Ego kinematics: `ego_speed_mps`, `ego_accel_mps2`, front/back bumper position |
+| `--distances` / `--no-distances` | 8 | Bumper-to-bumper distance to nearest neighbour per grid cell (`surrounding_dist_*`) |
+| `--neighbor-kinematics` / `--no-neighbor-kinematics` | 48 | Per-neighbour speed, acceleration, bumper positions, and diffs |
+| `--time-gaps` / `--no-time-gaps` | 16 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |
+
 ```bash
-# Basic run
+# Basic run (all feature groups enabled)
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot 2>&1 | tee tree.log
 
 # Limit depth and export a dot file for visualization
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --max-depth 5 \
-  --output tree.dot
-   2>&1 | tee tree.log
+  --output tree.dot \
+  2>&1 | tee tree.log
+
+# Focus on time gaps only — disable raw distances and per-neighbour kinematics
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --no-distances --no-neighbor-kinematics \
+  --output tree.dot \
+  2>&1 | tee tree.log
 
 # Render the dot file to PNG
 dot -Tpng tree.dot -o tree.png
