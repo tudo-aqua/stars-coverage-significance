@@ -30,6 +30,7 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     polars \
     connectorx \
     graphviz \
+    psycopg2-binary \
     pyarrow \
     scikit-learn
 

@@ -240,7 +240,7 @@ docker run --name stars-coverage-significance-post-evaluation stars-evaluation:l
 All Python dependencies are installed in the Docker image. To run the scripts outside Docker, install them first:
 
 ```bash
-pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz
+pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz psycopg2-binary
 ```
 
 ---
@@ -309,7 +309,8 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 
 # Focus on time gaps only — disable raw distances and per-neighbour kinematics
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
-  --no-distances --no-neighbor-kinematics \
+  --no-distances --no-neighbor-kinematics --no-ego-position \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
   --output tree.dot \
   2>&1 | tee tree.log
 
