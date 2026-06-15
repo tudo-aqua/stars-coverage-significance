@@ -311,7 +311,19 @@ def main() -> None:
 
     if args.annotate or args.uri:
         leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
-        print(f"\nUnique leaf nodes used: {len(np.unique(leaf_ids))}")
+
+        leaf_stats = (
+            pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y.astype(int)})
+            .group_by("leaf_node_id")
+            .agg(
+                pl.len().alias("n_rows"),
+                pl.col("accident").sum().alias("n_accidents"),
+                pl.col("accident").mean().alias("accident_rate"),
+            )
+            .sort("leaf_node_id")
+        )
+        print(f"\nLeaf node summary ({len(leaf_stats)} leaves):")
+        print(leaf_stats.to_pandas().to_string(index=False, float_format="{:.4f}".format))
 
     if args.annotate:
         annotated = X.copy()
