@@ -309,9 +309,14 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   2>&1 | tee tree.log
 
 # Focus on time gaps only — disable raw distances and per-neighbour kinematics
-python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
-  --no-distances --no-neighbor-kinematics --no-ego-position \
-  --output tree.dot \
+  python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+    --no-monitors \
+    --no-ego-maneuver \
+    --no-ego-position \
+    --no-distances \
+    --no-neighbor-kinematics \
+    --num-leaves 16 \
+    --output tree.dot \
   2>&1 | tee tree.log
 
 # Write leaf_node_id back to the database for every row (16 parallel connections)

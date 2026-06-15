@@ -19,7 +19,8 @@
       "Bash(python scripts/decision_tree_g0.py scripts/test.parquet)",
       "Bash(Get-ChildItem *)",
       "Bash(./gradlew compileKotlin compileTestKotlin)",
-      "Bash(./gradlew clean *)"
+      "Bash(./gradlew clean *)",
+      "Bash(xargs grep -l \"surroundingDist\\\\|surrounding.*distance\\\\|TTC\\\\|time.*collision\")"
     ]
   }
 }
