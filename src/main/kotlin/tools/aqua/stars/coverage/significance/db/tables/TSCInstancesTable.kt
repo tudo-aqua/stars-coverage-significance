@@ -27,6 +27,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property tsc TSC.
  * @property createdAt Timestamp of the TSC instance.
  * @property instanceJson JSON representation of the TSC instance.
+ * @property humanReadableString Human-readable string representation of the TSC instance.
  */
 object TSCInstancesTable : IntIdTable("tsc_instances") {
   val tsc =

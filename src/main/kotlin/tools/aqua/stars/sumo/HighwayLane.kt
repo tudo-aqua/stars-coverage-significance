@@ -28,6 +28,7 @@ enum class HighwayLane {
   /** The leftmost lane (lane index 2). */
   LEFT;
 
+  /** Holds static methods for [HighwayLane] enum values. */
   companion object {
     /** Returns the [HighwayLane] for the given SUMO lane index, or null for unknown indices. */
     fun fromLaneIndex(index: Int): HighwayLane? =
