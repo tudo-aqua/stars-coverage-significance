@@ -195,9 +195,10 @@ def _replace_leaf_labels(dot_source: str, leaf_stats: dict[int, dict]) -> str:
             stats = leaf_stats.get(leaf_id, {})
             n_acc = stats.get("n_accidents", 0)
             n_no_acc = stats.get("n_no_accidents", 0)
+            p = stats.get("p", float("nan"))
             cls = "accident" if n_acc > n_no_acc else "no-accident"
             label = (
-                f"<{cls}<br/>"
+                f"<{cls} (p={p:.3f})<br/>"
                 f"accidents: {n_acc:,}<br/>"
                 f"no-accidents: {n_no_acc:,}>"
             )
@@ -388,6 +389,16 @@ def main() -> None:
     if args.annotate or args.uri or args.output:
         leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
 
+        # Collect model p value per leaf index from the tree structure.
+        leaf_p: dict[int, float] = {}
+        def _collect_leaf_p(node: dict) -> None:
+            if "split_feature" not in node:
+                leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
+            else:
+                _collect_leaf_p(node["left_child"])
+                _collect_leaf_p(node["right_child"])
+        _collect_leaf_p(model_info["tree_info"][0]["tree_structure"])
+
         leaf_stats = (
             pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y.astype(int)})
             .group_by("leaf_node_id")
@@ -397,7 +408,10 @@ def main() -> None:
                 pl.col("accident").mean().alias("accident_rate"),
             )
             .with_columns(
-                (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents")
+                (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents"),
+                pl.col("leaf_node_id").map_elements(
+                    lambda lid: leaf_p.get(lid, float("nan")), return_dtype=pl.Float64
+                ).alias("p"),
             )
             .sort("leaf_node_id")
         )
@@ -406,7 +420,7 @@ def main() -> None:
         }
         print(f"\nLeaf node summary ({len(leaf_stats)} leaves):")
         print(
-            leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate"])
+            leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate", "p"])
             .to_pandas()
             .to_string(index=False, float_format="{:.4f}".format)
         )
