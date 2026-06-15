@@ -311,8 +311,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 # Focus on time gaps only — disable raw distances and per-neighbour kinematics
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --no-distances --no-neighbor-kinematics --no-ego-position \
-  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
-  --db-workers 16 \
   --output tree.dot \
   2>&1 | tee tree.log
 

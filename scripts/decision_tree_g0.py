@@ -8,6 +8,9 @@ Usage:
     python decision_tree_g0.py <path-to-parquet> [options]
 
 Feature groups (all enabled by default, disable with --no-<group>):
+    --num-leaves N        Maximum leaves (default: 256; increase if mixed leaves remain)
+    --min-split-gain F    Minimum gain to allow a split (default: 0.0 = any improvement)
+    --min-data-in-leaf N  Minimum samples per leaf (default: 20)
     --monitors            Current-tick monitor states (7 cols)
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
     --ego-kinematics      Ego speed and acceleration (2 cols)
@@ -255,7 +258,11 @@ def main() -> None:
     )
     parser.add_argument("parquet", help="Path to the Parquet export of metric_failed_monitors")
     parser.add_argument("--max-depth", type=int, default=None, help="Maximum tree depth (-1 = unlimited)")
-    parser.add_argument("--num-leaves", type=int, default=31, help="Maximum number of leaves (default: 31)")
+    parser.add_argument("--num-leaves", type=int, default=256, help="Maximum number of leaves (default: 256)")
+    parser.add_argument("--min-split-gain", type=float, default=0.0,
+                        help="Minimum loss reduction to make a split; 0.0 = split on any improvement (default: 0.0)")
+    parser.add_argument("--min-data-in-leaf", type=int, default=20,
+                        help="Minimum number of samples required in a leaf (default: 20)")
     parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
     parser.add_argument("--output", default=None, help="Write Graphviz .dot file to this path")
     parser.add_argument("--annotate", default=None, metavar="PATH",
@@ -333,7 +340,8 @@ def main() -> None:
         learning_rate=1.0,
         max_depth=args.max_depth if args.max_depth else -1,
         num_leaves=args.num_leaves,
-        min_split_gain=1.0,
+        min_split_gain=args.min_split_gain,
+        min_child_samples=args.min_data_in_leaf,
         n_jobs=args.n_jobs,
         class_weight="balanced",
         random_state=0,
