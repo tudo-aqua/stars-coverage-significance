@@ -183,30 +183,69 @@ def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
 
 
 def _write_leaf_ids_to_db(
-    uri: str, row_ids: np.ndarray, leaf_ids: np.ndarray, chunk_size: int = 10_000
+    uri: str,
+    row_ids: np.ndarray,
+    leaf_ids: np.ndarray,
+    workers: int = 8,
+    page_size: int = 50_000,
 ) -> None:
-    """Batch-update metric_failed_monitors.leaf_node_id via a single VALUES-list UPDATE per chunk."""
+    """Clear and re-populate metric_failed_monitors.leaf_node_id in parallel.
+
+    The NULL-clear runs first in its own transaction so there is no window where
+    old and new values coexist. Then `workers` threads each open their own
+    connection and update a non-overlapping slice of rows. psycopg2 releases the
+    GIL during network I/O, so threads provide real parallelism here.
+    """
+    import math
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     import psycopg2
     import psycopg2.extras
 
     pairs = list(zip(row_ids.tolist(), leaf_ids.tolist()))
+    n = len(pairs)
+
+    # ── 1. Clear existing values ──────────────────────────────────────────────
     conn = psycopg2.connect(uri)
     try:
         with conn.cursor() as cur:
             cur.execute("UPDATE metric_failed_monitors SET leaf_node_id = NULL")
-            psycopg2.extras.execute_values(
-                cur,
-                "UPDATE metric_failed_monitors AS t"
-                " SET leaf_node_id = v.leaf"
-                " FROM (VALUES %s) AS v(id, leaf)"
-                " WHERE t.id = v.id",
-                pairs,
-                page_size=chunk_size,
-            )
         conn.commit()
-        print(f"\nUpdated {len(pairs):,} rows in the database with leaf_node_id.")
     finally:
         conn.close()
+
+    # ── 2. Split pairs evenly across workers ─────────────────────────────────
+    slice_size = math.ceil(n / workers)
+    slices = [pairs[i : i + slice_size] for i in range(0, n, slice_size)]
+
+    completed = 0
+
+    def _update_slice(chunk: list) -> int:
+        c = psycopg2.connect(uri)
+        try:
+            with c.cursor() as cur:
+                psycopg2.extras.execute_values(
+                    cur,
+                    "UPDATE metric_failed_monitors AS t"
+                    " SET leaf_node_id = v.leaf"
+                    " FROM (VALUES %s) AS v(id, leaf)"
+                    " WHERE t.id = v.id",
+                    chunk,
+                    page_size=page_size,
+                )
+            c.commit()
+        finally:
+            c.close()
+        return len(chunk)
+
+    print(f"\nWriting leaf_node_id to database ({n:,} rows, {len(slices)} workers) …")
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_update_slice, s): s for s in slices}
+        for fut in as_completed(futures):
+            completed += fut.result()
+            print(f"  {completed:,} / {n:,} rows updated", end="\r", flush=True)
+
+    print(f"\nDone. {completed:,} rows updated with leaf_node_id.")
 
 
 def main() -> None:
@@ -223,6 +262,8 @@ def main() -> None:
                         help="Write a Parquet file with a 'leaf_node_id' column added to every row")
     parser.add_argument("--uri", default=None, metavar="POSTGRES_URI",
                         help="Write leaf_node_id back to the database (postgresql://user:pass@host:port/db)")
+    parser.add_argument("--db-workers", type=int, default=8, metavar="N",
+                        help="Parallel database connections used when writing leaf_node_id (default: 8)")
 
     # Feature group toggles — all enabled by default
     group_args = parser.add_argument_group("feature groups (all on by default)")
@@ -334,7 +375,7 @@ def main() -> None:
         print(f"Annotated Parquet written to: {args.annotate}")
 
     if args.uri:
-        _write_leaf_ids_to_db(args.uri, row_ids, leaf_ids)
+        _write_leaf_ids_to_db(args.uri, row_ids, leaf_ids, workers=args.db_workers)
 
     if args.output:
         try:

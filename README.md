@@ -282,6 +282,7 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--output` | *(none)*     | Write a Graphviz `.dot` file to this path |
 | `--annotate` | *(none)*     | Write a Parquet file containing features + target + `leaf_node_id` for every row |
 | `--uri` | *(none)*     | Write `leaf_node_id` back to the database: `postgresql://user:pass@host:port/db` |
+| `--db-workers` | `8`          | Parallel database connections used when writing `leaf_node_id` via `--uri` |
 
 #### Feature groups
 
@@ -311,12 +312,14 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --no-distances --no-neighbor-kinematics --no-ego-position \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 16 \
   --output tree.dot \
   2>&1 | tee tree.log
 
-# Write leaf_node_id back to the database for every row
+# Write leaf_node_id back to the database for every row (16 parallel connections)
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 16 \
   2>&1 | tee tree.log
 
 # Render the dot file to PNG
