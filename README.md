@@ -314,7 +314,7 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
     --no-monitors \
     --no-ego-maneuver \
     --no-ego-position \
-    --no-ego-kinematics \
+    --no-ego-accel \
     --no-distances \
     --no-neighbor-kinematics \
     --num-leaves 16 \
