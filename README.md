@@ -292,7 +292,8 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 |---|---|---|
 | `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` … `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
 | `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
-| `--ego-kinematics` / `--no-ego-kinematics` | 2 | Ego speed and acceleration: `ego_speed_mps`, `ego_accel_mps2` |
+| `--ego-speed` / `--no-ego-speed` | 1 | Ego speed: `ego_speed_mps` |
+| `--ego-accel` / `--no-ego-accel` | 1 | Ego acceleration: `ego_accel_mps2` |
 | `--ego-position` / `--no-ego-position` | 2 | Ego lane position: `ego_front_bumper_pos_meters`, `ego_back_bumper_pos_meters` |
 | `--distances` / `--no-distances` | 8 | Bumper-to-bumper distance to nearest neighbour per grid cell (`surrounding_dist_*`) |
 | `--neighbor-kinematics` / `--no-neighbor-kinematics` | 48 | Per-neighbour speed, acceleration, bumper positions, and diffs |
@@ -313,6 +314,7 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
     --no-monitors \
     --no-ego-maneuver \
     --no-ego-position \
+    --no-ego-kinematics \
     --no-distances \
     --no-neighbor-kinematics \
     --num-leaves 16 \

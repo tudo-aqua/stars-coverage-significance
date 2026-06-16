@@ -13,7 +13,8 @@ Feature groups (all enabled by default, disable with --no-<group>):
     --min-data-in-leaf N  Minimum samples per leaf (default: 20)
     --monitors            Current-tick monitor states (7 cols)
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
-    --ego-kinematics      Ego speed and acceleration (2 cols)
+    --ego-speed           Ego speed (1 col)
+    --ego-accel           Ego acceleration (1 col)
     --ego-position        Ego front/back bumper lane position (2 cols)
     --distances           Bumper-to-bumper distances per grid cell (6 cols)
     --neighbor-kinematics Per-neighbour speed, accel, position, diffs (48 cols)
@@ -55,8 +56,10 @@ FEATURE_GROUPS: dict[str, list[str]] = {
         "ego_maneuver_speed",
         "ego_maneuver_lane_change",
     ],
-    "ego-kinematics": [
+    "ego-speed": [
         "ego_speed_mps",
+    ],
+    "ego-accel": [
         "ego_accel_mps2",
     ],
     "ego-position": [
@@ -311,8 +314,12 @@ def main() -> None:
         help="Ego maneuver: planned speed, lane-change direction (2 cols)",
     )
     group_args.add_argument(
-        "--ego-kinematics", default=True, action=argparse.BooleanOptionalAction,
-        help="Ego speed and acceleration (2 cols)",
+        "--ego-speed", default=True, action=argparse.BooleanOptionalAction,
+        help="Ego speed: ego_speed_mps (1 col)",
+    )
+    group_args.add_argument(
+        "--ego-accel", default=True, action=argparse.BooleanOptionalAction,
+        help="Ego acceleration: ego_accel_mps2 (1 col)",
     )
     group_args.add_argument(
         "--ego-position", default=True, action=argparse.BooleanOptionalAction,
@@ -336,7 +343,8 @@ def main() -> None:
     group_flags = {
         "monitors":            args.monitors,
         "ego-maneuver":        args.ego_maneuver,
-        "ego-kinematics":      args.ego_kinematics,
+        "ego-speed":           args.ego_speed,
+        "ego-accel":           args.ego_accel,
         "ego-position":        args.ego_position,
         "distances":           args.distances,
         "neighbor-kinematics": args.neighbor_kinematics,
