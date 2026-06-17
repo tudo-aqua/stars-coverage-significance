@@ -86,6 +86,11 @@ object BaselinePostEvaluation {
    *   second list contains the number of mutants killed in each scenario with monitors.
    */
   private fun evaluateMutantKillingRandom(): Pair<List<Int>, List<Int>> {
+    if (sum == 0L) {
+      println("  Longtail distribution is empty — skipping random evaluation.")
+      return emptyList<Int>() to emptyList()
+    }
+
     val drawnScenarios =
         (0..REPETITIONS).map {
           (0..TEST_SUITE_SIZE).map {
