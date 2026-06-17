@@ -20,17 +20,18 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
-import org.jetbrains.exposed.sql.statements.StatementType
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.count
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 
 /**
  * Post-evaluation that counts, per (leaf_node_id, mutant_id), the number of rows in
  * `metric_failed_monitors` where `next_tick_monitor_g0_Accidents_failed = true`.
  *
- * Call [evaluate] with the leaf node IDs the decision-tree classifier labelled as accident leaves.
- * The result is written as a pivot CSV to
+ * Call [evaluate] to derive accident leaf node IDs from the database automatically, or supply them
+ * explicitly via [evaluate]. The result is written as a pivot CSV to
  * `postEvaluation/mutant_killing_by_leaf_node/mutantKillingByLeafNode.csv`. Render the stacked bar
  * chart with the accompanying Python script.
  */
@@ -53,21 +54,14 @@ object MutantKillingByLeafNodePostEvaluation {
   }
 
   private fun fetchAccidentLeafIds(): List<Int> = db {
-    val sql =
-        """
-        SELECT DISTINCT "leaf_node_id"
-        FROM metric_failed_monitors
-        WHERE "leaf_node_id" IS NOT NULL
-          AND "next_tick_monitor_g0_Accidents_failed" = true
-        ORDER BY "leaf_node_id"
-        """
-            .trimIndent()
-
-    TransactionManager.current().exec(sql, explicitStatementType = StatementType.SELECT) { rs ->
-      val result = mutableListOf<Int>()
-      while (rs.next()) result += rs.getInt("leaf_node_id")
-      result
-    } ?: emptyList()
+    MetricFailedMonitorsTable.select(MetricFailedMonitorsTable.leafNodeId)
+        .where {
+          MetricFailedMonitorsTable.leafNodeId.isNotNull() and
+              (MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true)
+        }
+        .withDistinct()
+        .mapNotNull { it[MetricFailedMonitorsTable.leafNodeId] }
+        .sorted()
   }
 
   /**
@@ -87,30 +81,21 @@ object MutantKillingByLeafNodePostEvaluation {
   }
 
   private fun queryLeafMutantCounts(leafIds: List<Int>): List<LeafMutantCount> = db {
-    val leafIdList = leafIds.joinToString(",")
-    val sql =
-        """
-        SELECT "leaf_node_id", "mutant_id", COUNT(*) AS row_count
-        FROM metric_failed_monitors
-        WHERE "leaf_node_id" IN ($leafIdList)
-          AND "next_tick_monitor_g0_Accidents_failed" = true
-        GROUP BY "leaf_node_id", "mutant_id"
-        ORDER BY "leaf_node_id", "mutant_id"
-        """
-            .trimIndent()
-
-    TransactionManager.current().exec(sql, explicitStatementType = StatementType.SELECT) { rs ->
-      val result = mutableListOf<LeafMutantCount>()
-      while (rs.next()) {
-        result +=
-            LeafMutantCount(
-                leafNodeId = rs.getInt("leaf_node_id"),
-                mutantId = rs.getInt("mutant_id"),
-                count = rs.getLong("row_count"),
-            )
-      }
-      result
-    } ?: emptyList()
+    val countExpr = MetricFailedMonitorsTable.id.count()
+    MetricFailedMonitorsTable.select(
+            MetricFailedMonitorsTable.leafNodeId, MetricFailedMonitorsTable.mutant, countExpr)
+        .where {
+          MetricFailedMonitorsTable.leafNodeId.inList(leafIds) and
+              (MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true)
+        }
+        .groupBy(MetricFailedMonitorsTable.leafNodeId, MetricFailedMonitorsTable.mutant)
+        .map { row ->
+          LeafMutantCount(
+              leafNodeId = row[MetricFailedMonitorsTable.leafNodeId]!!,
+              mutantId = row[MetricFailedMonitorsTable.mutant].value,
+              count = row[countExpr],
+          )
+        }
   }
 
   private fun writeCsv(rows: List<LeafMutantCount>, leafIds: List<Int>) {
