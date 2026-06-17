@@ -26,44 +26,35 @@ import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
-import tools.aqua.stars.coverage.significance.failedMonitorMappingByLeaf
 import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
 /**
  * Object responsible for performing post-evaluation of baseline data, particularly focusing on the
  * evaluation of mutant killing in simulated traffic scenarios. This includes operations for
- * analyzing uniform-random, grid-based, and leaf-node-stratified traffic distributions.
+ * analyzing both random and grid-based traffic distributions.
  */
 object BaselinePostEvaluation {
 
-  /** The longtail distribution of the TSC instances, sorted descending by weight. */
+  /** The longtail distribution of the TSC instances. */
   val longtail by lazy {
     longtailDistribution
-        .map { it.tscInstanceId to it.longTailValue }
-        .sortedByDescending { it.second }
+      .map { it.tscInstanceId to it.longTailValue }
+      .sortedByDescending { it.second }
   }
 
-  /** The sum of longtail values, used as the range for weighted random sampling. */
-  val sum by lazy { longtail.sumOf { it.second } }
-
-  /** All scenario instances, used for uniform random and grid sampling. */
+  /** The grid-based traffic instances. */
   val gridInstances by lazy { failedMonitorMapping.flatMap { it.scenarioInstanceFailures } }
 
-  /**
-   * Scenario instances grouped by decision-tree leaf node ID.
-   *
-   * Each group contains the scenario instances that have at least one tick classified into that
-   * leaf. Used by [evaluateMutantKillingLeaf] to build a leaf-stratified test suite.
-   */
-  val leafGroups by lazy { failedMonitorMappingByLeaf }
+  /** The sum of longtail values. */
+  val sum by lazy { longtail.sumOf { it.second } }
 
   /** The random number generator used for sampling. */
   val rnd = Random(42L)
 
   /**
-   * Evaluates the mutant killing in simulated traffic scenarios. This includes random traffic,
-   * grid-based traffic, and leaf-node-stratified traffic distributions.
+   * Evaluates the mutant killing in simulated traffic scenarios. This includes both random traffic
+   * and grid-based traffic distributions.
    */
   fun evaluate() {
     println("Evaluating mutants killed in random traffic")
@@ -73,27 +64,42 @@ object BaselinePostEvaluation {
     println("Evaluating mutants killed in grid-based traffic")
     val valuesGrid = evaluateMutantKillingGrid()
     save(valuesGrid, "grid")
-
-    println("Evaluating mutants killed in leaf-node-stratified traffic")
-    val valuesLeaf = evaluateMutantKillingLeaf()
-    save(valuesLeaf, "leaf")
   }
 
   /**
-   * Evaluates the mutant killing by drawing [TEST_SUITE_SIZE] instances uniformly at random (with
-   * replacement) from all available scenario instances, with no distribution weighting.
+   * Evaluates the mutant killing in simulated traffic scenarios using a random distribution.
    *
-   * @return Pair of lists: first list contains the number of mutants killed in each repetition,
-   *   second list contains the number of mutants killed including monitor differentiation.
+   * @return Pair of lists: first list contains the number of mutants killed in each scenario,
+   *   second list contains the number of mutants killed in each scenario with monitors.
    */
   private fun evaluateMutantKillingRandom(): Pair<List<Int>, List<Int>> {
-    val results =
-        (0..REPETITIONS).map {
-          val testSuite = (0 until TEST_SUITE_SIZE).map { gridInstances.random(rnd) }
-          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
-        }
+    val drawnScenarios =
+      (0..REPETITIONS).map {
+        (0..TEST_SUITE_SIZE).map {
+          val randomValue = rnd.nextLong(sum)
 
-    return results.map { it.first } to results.map { it.second }
+          val iterator = longtail.iterator()
+          var currentElement = iterator.next()
+          var currentValue = currentElement.second
+
+          while (currentValue < randomValue && iterator.hasNext()) {
+            currentElement = iterator.next()
+            currentValue += currentElement.second
+          }
+
+          // choose one random instance
+          val randomItem =
+            failedMonitorMapping
+              .filter { it.scenarioId == currentElement.first }
+              .flatMap { it.scenarioInstanceFailures }
+              .random()
+
+          return@map randomItem
+        }
+      }
+
+    return drawnScenarios.map { evaluateKilling(it) } to
+        drawnScenarios.map { evaluateKillingWithMonitors(it) }
   }
 
   /**
@@ -103,43 +109,10 @@ object BaselinePostEvaluation {
    *   second list contains the number of mutants killed in each scenario with monitors.
    */
   private fun evaluateMutantKillingGrid(): Pair<List<Int>, List<Int>> {
-    val results =
-        (0..REPETITIONS).map {
-          val testSuite = gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE)
-          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
-        }
+    val drawnScenarios = (0..REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
 
-    return results.map { it.first } to results.map { it.second }
-  }
-
-  /**
-   * Evaluates the mutant killing in simulated traffic scenarios using leaf-node stratification.
-   *
-   * For each repetition a test suite of [TEST_SUITE_SIZE] is built by cycling through the leaf node
-   * groups in order and drawing one scenario instance per leaf per cycle. This ensures the test
-   * suite is spread across all decision-tree leaf categories rather than being drawn uniformly or
-   * weighted by longtail frequency.
-   *
-   * @return Pair of lists: first list contains the number of mutants killed in each repetition,
-   *   second list contains the number of mutants killed including monitor differentiation.
-   */
-  private fun evaluateMutantKillingLeaf(): Pair<List<Int>, List<Int>> {
-    val results =
-        (0..REPETITIONS).map {
-          val groups = leafGroups.map { it.scenarioInstanceFailures.shuffled(rnd).toMutableList() }
-          val testSuite = mutableListOf<ScenarioInstanceFailures>()
-          var i = 0
-          while (testSuite.size < TEST_SUITE_SIZE) {
-            val group = groups[i % groups.size]
-            val instance = group.removeFirst()
-            group.add(instance) // rotate so every instance is eventually reused
-            testSuite.add(instance)
-            i++
-          }
-          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
-        }
-
-    return results.map { it.first } to results.map { it.second }
+    return drawnScenarios.map { evaluateKilling(it) } to
+        drawnScenarios.map { evaluateKillingWithMonitors(it) }
   }
 
   /**
@@ -150,11 +123,11 @@ object BaselinePostEvaluation {
    */
   private fun evaluateKilling(drawnScenarioFailures: List<ScenarioInstanceFailures>): Int {
     val relevantMonitors =
-        drawnScenarioFailures.flatMap { scenarioInstance ->
-          scenarioInstance.mutants.filter { mutant ->
-            mutant.mutantId in distinctMutantIds && mutant.violations.any()
-          }
+      drawnScenarioFailures.flatMap { scenarioInstance ->
+        scenarioInstance.mutants.filter { mutant ->
+          mutant.mutantId in distinctMutantIds && mutant.violations.any()
         }
+      }
 
     val mutantsKilled = relevantMonitors.map { it.mutantId }.toSet().count()
 
@@ -168,14 +141,14 @@ object BaselinePostEvaluation {
    * @return Number of mutants killed in the given list of scenario failures, including monitors.
    */
   private fun evaluateKillingWithMonitors(
-      drawnScenarioFailures: List<ScenarioInstanceFailures>
+    drawnScenarioFailures: List<ScenarioInstanceFailures>
   ): Int {
     val relevantMonitors =
-        drawnScenarioFailures.flatMap { scenarioInstance ->
-          scenarioInstance.mutants.filter { mutant ->
-            mutant.mutantId in distinctMutantIds && mutant.violations.any()
-          }
+      drawnScenarioFailures.flatMap { scenarioInstance ->
+        scenarioInstance.mutants.filter { mutant ->
+          mutant.mutantId in distinctMutantIds && mutant.violations.any()
         }
+      }
 
     val mutantsKilled = relevantMonitors.map { it.mutantId to it.violations }.toSet().count()
 
@@ -192,32 +165,33 @@ object BaselinePostEvaluation {
   private fun save(values: Pair<List<Int>, List<Int>>, identifier: String) {
     val csvFileName = "baseline_${identifier}.csv"
     val path: Path =
-        Path.of(
-            POST_EVALUATION_BASE_DIR,
-            "baseline",
-            csvFileName,
-        )
+      Path.of(
+        POST_EVALUATION_BASE_DIR,
+        "baseline",
+        csvFileName,
+      )
     Files.createDirectories(path.parent)
 
     path.writeText(
-        values.first.joinToString(
-            prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
-              it.toString()
-            })
+      values.first.joinToString(
+        prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
+        it.toString()
+      })
 
     val csvFileNameWithMonitors = "baseline_with_monitors_${identifier}.csv"
     val pathWithMonitors: Path =
-        Path.of(
-            POST_EVALUATION_BASE_DIR,
-            "baseline_with_monitors",
-            csvFileNameWithMonitors,
-        )
+      Path.of(
+        POST_EVALUATION_BASE_DIR,
+        "baseline_with_monitors",
+        csvFileNameWithMonitors,
+      )
     Files.createDirectories(pathWithMonitors.parent)
 
     pathWithMonitors.writeText(
-        values.second.joinToString(
-            prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
-              it.toString()
-            })
+      values.second.joinToString(
+        prefix = "Coverage, Mutants killed ${identifier}\n", separator = "\n") {
+        it.toString()
+      })
   }
 }
+
