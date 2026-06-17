@@ -345,13 +345,13 @@ Histogram of time-until-first-TSC-instance-change. Reads all `*.csv` files in it
 python postEvaluation/tsc_instance_change_analysis/tsc_instance_change_barplot.py
 ```
 
-#### `baseline_next_tick/baseline_next_tick_scatter.py` and `baseline_with_monitors/baseline_next_tick_scatter.py`
+#### `baseline_next_tick/baseline_next_tick_scatter.py` and `baseline_next_tick/baseline_next_tick_scatter.py`
 
 Scatter plots of mutants killed from randomly drawing vs TSC-based vs learned Decision tree.
 
 ```bash
 python3 postEvaluation/baseline_next_tick/baseline_next_tick_scatter.py
-python3 postEvaluation/baseline_with_monitors/baseline_next_tick_boxplot.py
+python3 postEvaluation/baseline_next_tick/baseline_next_tick_boxplot.py
 ```
 
 #### `baseline/baseline_scatter.py` and `baseline_with_monitors/baseline_scatter.py`
