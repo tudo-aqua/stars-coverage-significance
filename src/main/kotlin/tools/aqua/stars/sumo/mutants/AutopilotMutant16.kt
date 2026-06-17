@@ -155,7 +155,12 @@ class AutopilotMutant16 : Mutant() {
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
-    if (gap < hardBrakeGapFactor * desiredGap) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 166 Id:
+     * 4beb5343-6631-4b78-ba7f-7232b9569778, Old Operator: *, New Operator: -
+     */
+    if (gap < hardBrakeGapFactor - desiredGap) {
       val penalty = absVal(gapError) * 0.3
       val hardProposal = vLeader - penalty
       if (hardProposal < vTarget) vTarget = hardProposal
@@ -399,12 +404,7 @@ class AutopilotMutant16 : Mutant() {
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 410 Id:
-     * e20f6996-8143-4164-92e5-9797ea9ae18e, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!wantLeft && wantRight) return null
+    if (!wantLeft && !wantRight) return null
 
     val bitRight = 1
     val bitAhead = 2

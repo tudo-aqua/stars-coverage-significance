@@ -151,7 +151,12 @@ class AutopilotMutant5 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * 04bf5bfd-24db-4ac9-a3c0-f9bea5c25bd7, Old Operator: *, New Operator: +
+     */
+    val followProposal = vLeader + gapGain + gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -335,11 +340,7 @@ class AutopilotMutant5 : Mutant() {
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 346 Id:
-       * 2452364c-6b97-4f4c-98e0-15d9f035389e, Old Operator: -, New Operator: RemoveOperator.
-       */
-      val tooCloseBehind = delta >= laneChangeSideBackGapInMeters
+      val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
       if (tooCloseBehind && tooCloseAhead) return false

@@ -2,7 +2,9 @@
   "general": {
     "operators": [
       "UnaryRemovalOperator",
-      "LogicalReplacementOperator"
+      "LogicalReplacementOperator",
+      "LiteralChangeOperator",
+      "ArithmeticReplacementOperator"
     ]
   },
   "ignore": {

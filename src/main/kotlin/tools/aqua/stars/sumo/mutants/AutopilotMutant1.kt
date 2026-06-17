@@ -110,11 +110,7 @@ class AutopilotMutant1 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 121 Id:
-   * 02a0ff18-777d-42d3-aec3-ac053ca63fe1, Old Operator: -, New Operator: RemoveOperator.
-   */
-  private var lastLaneChangeSimTimeInSeconds = 1e9
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): MutantManeuver {
@@ -139,7 +135,12 @@ class AutopilotMutant1 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 146
+       * Id: 1917c89f-83ad-48d1-a71e-bfe8213dd102, Old Operator: +, New Operator: *
+       */
+      minGapToLeadingInMeters * timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps

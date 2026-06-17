@@ -145,7 +145,12 @@ class AutopilotMutant25 : Mutant() {
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
     val gapError = gap - desiredGap
-    val relSpeed = vLeader - vEgo
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 156 Id:
+     * ac7e8024-1578-405a-bdd2-3dfc5a4878c8, Old Operator: -, New Operator: +
+     */
+    val relSpeed = vLeader + vEgo
 
     // Start with cruising, then restrict downwards.
     var vTarget = cruiseSpeedInMps
@@ -311,12 +316,7 @@ class AutopilotMutant25 : Mutant() {
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 322 Id:
-     * 986afa8f-1e11-4d2f-a80c-95a402e0d8ef, Old Operator: &&, New Operator: ||
-     */
-    if (!wantLeft || !wantRight) return false
+    if (!wantLeft && !wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)
     val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)

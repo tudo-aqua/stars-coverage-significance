@@ -155,7 +155,12 @@ class AutopilotMutant20 : Mutant() {
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
-    if (gap < hardBrakeGapFactor * desiredGap) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 166 Id:
+     * 89e211fb-18f9-401f-a60d-1f1dfabde60e, Old Operator: *, New Operator: +
+     */
+    if (gap < hardBrakeGapFactor + desiredGap) {
       val penalty = absVal(gapError) * 0.3
       val hardProposal = vLeader - penalty
       if (hardProposal < vTarget) vTarget = hardProposal
@@ -350,12 +355,7 @@ class AutopilotMutant20 : Mutant() {
 
     if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 361 Id:
-     * 3156ed74-649c-49e3-b389-543f8b85d3ae, Old Operator: &&, New Operator: ||
-     */
-    if (!leftOk || rightOk) return right.dir
+    if (!leftOk && rightOk) return right.dir
 
     // both feasible
     return if (left.score > right.score) left.dir

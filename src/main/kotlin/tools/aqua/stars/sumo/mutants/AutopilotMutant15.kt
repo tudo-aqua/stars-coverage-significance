@@ -135,7 +135,12 @@ class AutopilotMutant15 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 146
+       * Id: 4a3627ff-22c4-49fd-8218-995af10301fa, Old Operator: *, New Operator: /
+       */
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds / vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -278,12 +283,7 @@ class AutopilotMutant15 : Mutant() {
   ): LaneEval {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 289 Id:
-     * cd8041ed-4b90-4020-896d-1f79bf2373fa, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!wantLeft && wantRight) {
+    if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 

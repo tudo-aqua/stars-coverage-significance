@@ -144,7 +144,11 @@ class AutopilotMutant30 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
-    val gapError = gap - desiredGap
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 155 Id:
+     * cf489c38-39ce-4685-b94a-f34c9e056616, Old Operator: -, New Operator: +
+     */
+    val gapError = gap + desiredGap
     val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
@@ -338,11 +342,7 @@ class AutopilotMutant30 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 349 Id:
-       * ff24e82d-34be-4e2e-8b93-5e01c8d11c9c, Old Operator: &&, New Operator: ||
-       */
-      if (tooCloseBehind || tooCloseAhead) return false
+      if (tooCloseBehind && tooCloseAhead) return false
     }
 
     return true

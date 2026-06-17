@@ -151,7 +151,12 @@ class AutopilotMutant9 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * 1473e88a-f359-49ca-8d2c-a38d84831995, Old Operator: *, New Operator: -
+     */
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain - relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -311,12 +316,7 @@ class AutopilotMutant9 : Mutant() {
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 322 Id:
-     * 7a63607e-98cb-46ee-bd5b-ebea1101e4da, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!wantLeft && wantRight) return false
+    if (!wantLeft && !wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)
     val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)

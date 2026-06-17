@@ -151,7 +151,12 @@ class AutopilotMutant27 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * c4d2a8f0-9925-4ced-9642-3ff62ad0b553, Old Operator: +, New Operator: -
+     */
+    val followProposal = vLeader + gapGain * gapError - relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -263,12 +268,7 @@ class AutopilotMutant27 : Mutant() {
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 274 Id:
-     * b1a79993-46cd-4c95-9e97-40dc4a591563, Old Operator: &&, New Operator: ||
-     */
-    return tooClose || leaderSlower
+    return tooClose && leaderSlower
   }
 
   private data class LaneEval(val dir: Int, val feasible: Boolean, val score: Double)

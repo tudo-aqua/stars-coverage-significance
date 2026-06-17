@@ -151,7 +151,12 @@ class AutopilotMutant6 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * 0bd4dad9-64fd-4159-bee5-8dd8fe2c4154, Old Operator: *, New Operator: %
+     */
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain % relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -225,11 +230,7 @@ class AutopilotMutant6 : Mutant() {
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 236 Id:
-   * 42a93b03-d044-4879-b314-3a075f125536, Old Operator: -, New Operator: RemoveOperator.
-   */
-  private fun absVal(x: Double): Double = if (x < 0.0) x else x
+  private fun absVal(x: Double): Double = if (x < 0.0) -x else x
 
   // -------------------- Lane change --------------------
   private fun maybeLaneChange(

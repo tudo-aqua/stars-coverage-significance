@@ -135,7 +135,12 @@ class AutopilotMutant19 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 146
+       * Id: 50cf5234-502a-4a29-9965-82497a84d5e3, Old Operator: *, New Operator: %
+       */
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds % vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -216,12 +221,7 @@ class AutopilotMutant19 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 227 Id:
-     * fefe5d90-8e44-46d3-9372-ae69a483a5de, Old Operator: -, New Operator: RemoveOperator.
-     */
-    val dvMaxDown = maxDecelerationInMps2 * dt
+    val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted

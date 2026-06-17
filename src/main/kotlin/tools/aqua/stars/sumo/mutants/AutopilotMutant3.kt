@@ -135,7 +135,12 @@ class AutopilotMutant3 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 146
+       * Id: 9391a5c2-b480-4eb3-b9b9-9748a6d2a027, Old Operator: +, New Operator: /
+       */
+      minGapToLeadingInMeters / timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -330,11 +335,7 @@ class AutopilotMutant3 : Mutant() {
             otherLaneIndex > egoLaneIndex
           }
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 341 Id:
-       * 137fe929-8833-4aa7-85bd-6770ae8e6dcc, Old Operator: !, New Operator: RemoveOperator
-       */
-      if (isOnChosenSide) continue
+      if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos

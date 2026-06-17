@@ -151,7 +151,12 @@ class AutopilotMutant11 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * 2114ec82-2827-4b09-afc2-b5ecac16aece, Old Operator: +, New Operator: %
+     */
+    val followProposal = vLeader + gapGain * gapError % relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -278,12 +283,7 @@ class AutopilotMutant11 : Mutant() {
   ): LaneEval {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 289 Id:
-     * a4f26de7-a720-4a87-b10e-7f04d74d9959, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (wantLeft && !wantRight) {
+    if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 

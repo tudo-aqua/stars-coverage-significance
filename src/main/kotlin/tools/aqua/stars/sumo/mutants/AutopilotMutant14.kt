@@ -144,7 +144,11 @@ class AutopilotMutant14 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
-    val gapError = gap - desiredGap
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 155 Id:
+     * 3f68c065-9057-46d2-aebf-6b40e6a0215e, Old Operator: -, New Operator: /
+     */
+    val gapError = gap / desiredGap
     val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
@@ -348,11 +352,7 @@ class AutopilotMutant14 : Mutant() {
     val leftOk = left.feasible
     val rightOk = right.feasible
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 359 Id:
-     * cb0d21a1-c712-49ba-97e8-a7b36bbc7868, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (leftOk && !rightOk) return null
+    if (!leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 

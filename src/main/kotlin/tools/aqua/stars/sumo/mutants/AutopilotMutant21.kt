@@ -151,7 +151,12 @@ class AutopilotMutant21 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
+     * 8ea853e3-859b-408c-992a-892f6b182c24, Old Operator: *, New Operator: +
+     */
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain + relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -367,12 +372,7 @@ class AutopilotMutant21 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 378 Id:
-     * 3984c0e8-2d1a-40f8-a0d7-4c9b33ecec5e, Old Operator: &&, New Operator: ||
-     */
-    if (!wantLeft || !wantRight) return false // dir == 0
+    if (!wantLeft && !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)
