@@ -39,7 +39,7 @@ def plot_strategy(values: np.ndarray, label: str, out_stem: Path) -> None:
     ax.scatter(
         np.zeros(len(values)) + jitter,
         values,
-        s=10,
+        s=100,
         alpha=0.35,
         linewidths=0,
         c="black",
@@ -51,7 +51,7 @@ def plot_strategy(values: np.ndarray, label: str, out_stem: Path) -> None:
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
     ax.set_xlim(-0.5, 0.5)
-    ax.set_ylim(-1, values.max() + 5)
+    ax.set_ylim(-1, 5)
 
     fig.tight_layout()
     for suffix in (".png", ".pdf"):
