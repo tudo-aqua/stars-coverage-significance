@@ -29,7 +29,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingByLeafNodePostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.TSCInstanceTransitionAnalysis
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
@@ -125,7 +124,7 @@ fun main() {
 
   //  LongTailDistributionPostEvaluation.evaluate()
 
-  MutantKillingByLeafNodePostEvaluation.evaluate(accidentLeafIds = listOf(3, 8, 9, 11, 278, 40))
+  MutantKillingByLeafNodePostEvaluation.evaluate()
 
   /**
    * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
@@ -134,7 +133,7 @@ fun main() {
   //  TSCInstanceChangeAnalysis.evaluate()
 
   /** Build transition automaton between TSC instances and render heatmaps. */
-//  TSCInstanceTransitionAnalysis.evaluate()
+  //  TSCInstanceTransitionAnalysis.evaluate()
 
   /** Populate the database with longtail distribution from random highway traffic */
   //  PopulateHighwayTrafficLongTailTable.populate()

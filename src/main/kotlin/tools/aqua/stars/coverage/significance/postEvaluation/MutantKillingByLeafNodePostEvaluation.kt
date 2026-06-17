@@ -41,6 +41,36 @@ object MutantKillingByLeafNodePostEvaluation {
   private data class LeafMutantCount(val leafNodeId: Int, val mutantId: Int, val count: Long)
 
   /**
+   * Derives accident leaf node IDs from the database, then calls [evaluate] with them.
+   *
+   * A leaf is considered an accident leaf when at least one row in `metric_failed_monitors` has
+   * that `leaf_node_id` and `next_tick_monitor_g0_Accidents_failed = true`.
+   */
+  fun evaluate() {
+    val accidentLeafIds = fetchAccidentLeafIds()
+    println("  Accident leaf node IDs: $accidentLeafIds")
+    evaluate(accidentLeafIds)
+  }
+
+  private fun fetchAccidentLeafIds(): List<Int> = db {
+    val sql =
+        """
+        SELECT DISTINCT "leaf_node_id"
+        FROM metric_failed_monitors
+        WHERE "leaf_node_id" IS NOT NULL
+          AND "next_tick_monitor_g0_Accidents_failed" = true
+        ORDER BY "leaf_node_id"
+        """
+            .trimIndent()
+
+    TransactionManager.current().exec(sql, explicitStatementType = StatementType.SELECT) { rs ->
+      val result = mutableListOf<Int>()
+      while (rs.next()) result += rs.getInt("leaf_node_id")
+      result
+    } ?: emptyList()
+  }
+
+  /**
    * Queries accident rows for the given leaf nodes and writes the pivot CSV.
    *
    * @param accidentLeafIds Leaf node IDs identified as accident leaves by the classifier (e.g.
