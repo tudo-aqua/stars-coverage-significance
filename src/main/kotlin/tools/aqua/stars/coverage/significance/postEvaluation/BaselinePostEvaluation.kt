@@ -33,18 +33,21 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Scenari
 /**
  * Object responsible for performing post-evaluation of baseline data, particularly focusing on the
  * evaluation of mutant killing in simulated traffic scenarios. This includes operations for
- * analyzing both random and grid-based traffic distributions.
+ * analyzing uniform-random, grid-based, and leaf-node-stratified traffic distributions.
  */
 object BaselinePostEvaluation {
 
-  /** The longtail distribution of the TSC instances. */
+  /** The longtail distribution of the TSC instances, sorted descending by weight. */
   val longtail by lazy {
     longtailDistribution
         .map { it.tscInstanceId to it.longTailValue }
         .sortedByDescending { it.second }
   }
 
-  /** All scenario instances, used for uniform random sampling. */
+  /** The sum of longtail values, used as the range for weighted random sampling. */
+  val sum by lazy { longtail.sumOf { it.second } }
+
+  /** All scenario instances, used for uniform random and grid sampling. */
   val gridInstances by lazy { failedMonitorMapping.flatMap { it.scenarioInstanceFailures } }
 
   /**
@@ -54,9 +57,6 @@ object BaselinePostEvaluation {
    * leaf. Used by [evaluateMutantKillingLeaf] to build a leaf-stratified test suite.
    */
   val leafGroups by lazy { failedMonitorMappingByLeaf }
-
-  /** The sum of longtail values. */
-  val sum by lazy { longtail.sumOf { it.second } }
 
   /** The random number generator used for sampling. */
   val rnd = Random(42L)
@@ -80,44 +80,20 @@ object BaselinePostEvaluation {
   }
 
   /**
-   * Evaluates the mutant killing in simulated traffic scenarios using a random distribution.
+   * Evaluates the mutant killing by drawing [TEST_SUITE_SIZE] instances uniformly at random (with
+   * replacement) from all available scenario instances, with no distribution weighting.
    *
-   * @return Pair of lists: first list contains the number of mutants killed in each scenario,
-   *   second list contains the number of mutants killed in each scenario with monitors.
+   * @return Pair of lists: first list contains the number of mutants killed in each repetition,
+   *   second list contains the number of mutants killed including monitor differentiation.
    */
   private fun evaluateMutantKillingRandom(): Pair<List<Int>, List<Int>> {
-    if (sum == 0L) {
-      println("  Longtail distribution is empty — skipping random evaluation.")
-      return emptyList<Int>() to emptyList()
-    }
-
-    val drawnScenarios =
+    val results =
         (0..REPETITIONS).map {
-          (0..TEST_SUITE_SIZE).map {
-            val randomValue = rnd.nextLong(sum)
-
-            val iterator = longtail.iterator()
-            var currentElement = iterator.next()
-            var currentValue = currentElement.second
-
-            while (currentValue < randomValue && iterator.hasNext()) {
-              currentElement = iterator.next()
-              currentValue += currentElement.second
-            }
-
-            // choose one random instance
-            val randomItem =
-                failedMonitorMapping
-                    .filter { it.scenarioId == currentElement.first }
-                    .flatMap { it.scenarioInstanceFailures }
-                    .random()
-
-            return@map randomItem
-          }
+          val testSuite = (0 until TEST_SUITE_SIZE).map { gridInstances.random(rnd) }
+          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
         }
 
-    return drawnScenarios.map { evaluateKilling(it) } to
-        drawnScenarios.map { evaluateKillingWithMonitors(it) }
+    return results.map { it.first } to results.map { it.second }
   }
 
   /**
@@ -127,10 +103,13 @@ object BaselinePostEvaluation {
    *   second list contains the number of mutants killed in each scenario with monitors.
    */
   private fun evaluateMutantKillingGrid(): Pair<List<Int>, List<Int>> {
-    val drawnScenarios = (0..REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
+    val results =
+        (0..REPETITIONS).map {
+          val testSuite = gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE)
+          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
+        }
 
-    return drawnScenarios.map { evaluateKilling(it) } to
-        drawnScenarios.map { evaluateKillingWithMonitors(it) }
+    return results.map { it.first } to results.map { it.second }
   }
 
   /**
@@ -145,7 +124,7 @@ object BaselinePostEvaluation {
    *   second list contains the number of mutants killed including monitor differentiation.
    */
   private fun evaluateMutantKillingLeaf(): Pair<List<Int>, List<Int>> {
-    val drawnScenarios =
+    val results =
         (0..REPETITIONS).map {
           val groups = leafGroups.map { it.scenarioInstanceFailures.shuffled(rnd).toMutableList() }
           val testSuite = mutableListOf<ScenarioInstanceFailures>()
@@ -157,11 +136,10 @@ object BaselinePostEvaluation {
             testSuite.add(instance)
             i++
           }
-          testSuite
+          evaluateKilling(testSuite) to evaluateKillingWithMonitors(testSuite)
         }
 
-    return drawnScenarios.map { evaluateKilling(it) } to
-        drawnScenarios.map { evaluateKillingWithMonitors(it) }
+    return results.map { it.first } to results.map { it.second }
   }
 
   /**
