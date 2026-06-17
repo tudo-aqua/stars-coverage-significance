@@ -18,7 +18,6 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -361,18 +360,10 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
    * @return Mapping of scenario failures for each scenario instance.
    */
   fun buildFailedMonitorMapping(): List<ScenarioFailure> {
-    val failedMonitors = MetricFailedMonitorsTable
-    val joinedWithTSCInstances =
-        failedMonitors.join(
-            otherTable = MetricStartingValidTSCInstancesTable,
-            onColumn = startingScenarioConfiguration,
-            otherColumn = MetricStartingValidTSCInstancesTable.scenarioConfig,
-            joinType = JoinType.LEFT)
-
     val query =
-        joinedWithTSCInstances.select(
+        select(
+            currentTSCInstance,
             mutant,
-            MetricStartingValidTSCInstancesTable.tscInstance,
             startingScenarioConfiguration,
             monitorG0Failed,
             monitorG1Failed,
@@ -385,7 +376,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
     val result = mutableMapOf<Int, MutableMap<Int, MutableList<MutantFailures>>>()
 
     for (row in query) {
-      val tscInstanceId = row[MetricStartingValidTSCInstancesTable.tscInstance].value
+      val tscInstanceId = row[currentTSCInstance].value
       val scenarioInstanceId = row[startingScenarioConfiguration].value
       val mutantId = row[mutant].value
       val violations = row.toMonitorViolations()
