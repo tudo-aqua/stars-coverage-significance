@@ -350,8 +350,8 @@ python postEvaluation/tsc_instance_change_analysis/tsc_instance_change_barplot.p
 Scatter plots of mutants killed vs. TSC classes covered. Reads all `*.csv` files in the respective directory.
 
 ```bash
-python postEvaluation/baseline/baseline_scatter.py
-python postEvaluation/baseline_with_monitors/baseline_scatter.py
+python3 postEvaluation/baseline/baseline_scatter.py
+python3 postEvaluation/baseline_with_monitors/baseline_scatter.py
 ```
 
 #### `count_of_mutants_killed_per_monitor/countOfMutantsKilledPerMonitor.py`

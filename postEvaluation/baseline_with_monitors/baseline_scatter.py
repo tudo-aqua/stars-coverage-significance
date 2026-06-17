@@ -54,7 +54,7 @@ def main(input_csv: Path):
     fig.savefig(csv_path.with_suffix(".png"), bbox_inches="tight")
     fig.savefig(csv_path.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved scatter plot to {csv_path.with_suffix(".pdf")}")
+    print(f"Saved scatter plot to {csv_path.with_suffix('.pdf')}")
 
 
 if __name__ == "__main__":
