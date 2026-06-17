@@ -26,6 +26,7 @@ import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.distinctMutantIds
 import tools.aqua.stars.coverage.significance.failedMonitorMapping
+import tools.aqua.stars.coverage.significance.failedMonitorMappingByLeaf
 import tools.aqua.stars.coverage.significance.longtailDistribution
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 
@@ -43,8 +44,16 @@ object BaselinePostEvaluation {
         .sortedByDescending { it.second }
   }
 
-  /** The grid-based traffic instances. */
+  /** All scenario instances, used for uniform random sampling. */
   val gridInstances by lazy { failedMonitorMapping.flatMap { it.scenarioInstanceFailures } }
+
+  /**
+   * Scenario instances grouped by decision-tree leaf node ID.
+   *
+   * Each group contains the scenario instances that have at least one tick classified into that
+   * leaf. Used by [evaluateMutantKillingLeaf] to build a leaf-stratified test suite.
+   */
+  val leafGroups by lazy { failedMonitorMappingByLeaf }
 
   /** The sum of longtail values. */
   val sum by lazy { longtail.sumOf { it.second } }
@@ -53,8 +62,8 @@ object BaselinePostEvaluation {
   val rnd = Random(42L)
 
   /**
-   * Evaluates the mutant killing in simulated traffic scenarios. This includes both random traffic
-   * and grid-based traffic distributions.
+   * Evaluates the mutant killing in simulated traffic scenarios. This includes random traffic,
+   * grid-based traffic, and leaf-node-stratified traffic distributions.
    */
   fun evaluate() {
     println("Evaluating mutants killed in random traffic")
@@ -64,6 +73,10 @@ object BaselinePostEvaluation {
     println("Evaluating mutants killed in grid-based traffic")
     val valuesGrid = evaluateMutantKillingGrid()
     save(valuesGrid, "grid")
+
+    println("Evaluating mutants killed in leaf-node-stratified traffic")
+    val valuesLeaf = evaluateMutantKillingLeaf()
+    save(valuesLeaf, "leaf")
   }
 
   /**
@@ -110,6 +123,37 @@ object BaselinePostEvaluation {
    */
   private fun evaluateMutantKillingGrid(): Pair<List<Int>, List<Int>> {
     val drawnScenarios = (0..REPETITIONS).map { gridInstances.shuffled(rnd).take(TEST_SUITE_SIZE) }
+
+    return drawnScenarios.map { evaluateKilling(it) } to
+        drawnScenarios.map { evaluateKillingWithMonitors(it) }
+  }
+
+  /**
+   * Evaluates the mutant killing in simulated traffic scenarios using leaf-node stratification.
+   *
+   * For each repetition a test suite of [TEST_SUITE_SIZE] is built by cycling through the leaf node
+   * groups in order and drawing one scenario instance per leaf per cycle. This ensures the test
+   * suite is spread across all decision-tree leaf categories rather than being drawn uniformly or
+   * weighted by longtail frequency.
+   *
+   * @return Pair of lists: first list contains the number of mutants killed in each repetition,
+   *   second list contains the number of mutants killed including monitor differentiation.
+   */
+  private fun evaluateMutantKillingLeaf(): Pair<List<Int>, List<Int>> {
+    val drawnScenarios =
+        (0..REPETITIONS).map {
+          val groups = leafGroups.map { it.scenarioInstanceFailures.shuffled(rnd).toMutableList() }
+          val testSuite = mutableListOf<ScenarioInstanceFailures>()
+          var i = 0
+          while (testSuite.size < TEST_SUITE_SIZE) {
+            val group = groups[i % groups.size]
+            val instance = group.removeFirst()
+            group.add(instance) // rotate so every instance is eventually reused
+            testSuite.add(instance)
+            i++
+          }
+          testSuite
+        }
 
     return drawnScenarios.map { evaluateKilling(it) } to
         drawnScenarios.map { evaluateKillingWithMonitors(it) }

@@ -515,6 +515,25 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   }
 
   /**
+   * Returns a mapping from each leaf node ID to the distinct scenario starting-configuration IDs
+   * that have at least one tick classified into that leaf.
+   *
+   * The result can be joined in-memory with [buildFailedMonitorMapping] to obtain a
+   * [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.LeafFailure] list for
+   * leaf-stratified test-suite sampling.
+   *
+   * @return Map of `leaf_node_id` → list of `scenario_config_id` values.
+   */
+  fun buildLeafToScenarioConfigMapping(): Map<Int, List<Int>> =
+      select(leafNodeId, startingScenarioConfiguration)
+          .where { leafNodeId.isNotNull() }
+          .withDistinct()
+          .groupBy(
+              { it[leafNodeId]!! },
+              { it[startingScenarioConfiguration].value },
+          )
+
+  /**
    * Returns aggregated transition counts between TSC instances for the given TSC.
    *
    * Every row in metric_failed_monitors where [lastTickTSCInstance] is non-null counts as a
