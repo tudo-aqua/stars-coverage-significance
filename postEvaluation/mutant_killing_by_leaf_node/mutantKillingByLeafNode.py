@@ -19,19 +19,32 @@ def main() -> None:
     df = df[df.sum(axis=1) > 0].T
 
     n_leaves = len(df)
+    n_mutants = len(df.columns)
     fig, ax = plt.subplots(figsize=(max(6, n_leaves * 1.2), 6))
-    df.plot(kind="bar", stacked=True, ax=ax, width=0.7, legend=False)
+    df.plot(kind="bar", stacked=True, ax=ax, width=0.7, legend=True)
 
     ax.set_xlabel("Leaf Node ID")
     ax.set_ylabel("Rows with next_tick_g0_Accidents_failed = true")
     ax.set_title("Accident Rows per Leaf Node, Broken Down by Mutant")
     ax.tick_params(axis="x", rotation=0)
-    n_mutants = len(df.columns)
-    ax.annotate(
-        f"{n_mutants} mutants (one color each)",
-        xy=(0.01, 0.99), xycoords="axes fraction",
-        va="top", ha="left", fontsize=8, color="grey",
+
+    # Legend outside the plot area; one entry per mutant column
+    ax.legend(
+        title="Mutant ID",
+        bbox_to_anchor=(1.01, 1),
+        loc="upper left",
+        borderaxespad=0,
+        fontsize=7,
+        title_fontsize=8,
     )
+
+    # Total count label on top of each bar
+    totals = df.sum(axis=1)
+    for i, total in enumerate(totals):
+        ax.text(
+            i, total, f"{int(total):,}",
+            ha="center", va="bottom", fontsize=9, fontweight="bold",
+        )
 
     fig.tight_layout()
     out_path = Path(__file__).parent / "mutantKillingByLeafNode.png"
