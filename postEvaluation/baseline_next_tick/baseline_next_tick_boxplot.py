@@ -44,7 +44,7 @@ def main() -> None:
 
     bp = ax.boxplot(
         data,
-        labels=labels,
+        tick_labels=labels,
         patch_artist=True,
         widths=0.5,
         medianprops=dict(color="black", linewidth=BOX_LINEWIDTH),
