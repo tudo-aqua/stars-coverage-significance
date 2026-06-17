@@ -45,9 +45,9 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.SurroundingVehicleDist
  * | `gapBehind ≥ 0` (and `gapAhead < 0`) | **rear-left** / **rear-right**   | `gapBehind` |
  * | both negative (overlap)              | front or rear cell (see below)   | `0`         |
  *
- * When both gaps are negative the bounding boxes overlap longitudinally (vehicle is directly
- * beside ego). Distance is recorded as `0`. The cell is determined by which gap is closer to
- * zero: `gapBehind ≥ gapAhead` → rear cell; otherwise → front cell.
+ * When both gaps are negative the bounding boxes overlap longitudinally (vehicle is directly beside
+ * ego). Distance is recorded as `0`. The cell is determined by which gap is closer to zero:
+ * `gapBehind ≥ gapAhead` → rear cell; otherwise → front cell.
  *
  * The nearest vehicle (smallest distance) wins each cell. There is no fixed zone threshold: a
  * vehicle 0.1 m ahead on the left lane occupies the front-left cell.

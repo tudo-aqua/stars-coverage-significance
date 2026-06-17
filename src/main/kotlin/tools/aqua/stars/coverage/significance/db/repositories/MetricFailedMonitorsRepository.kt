@@ -729,8 +729,8 @@ object MetricFailedMonitorsRepository {
  * Batch-updates [MetricFailedMonitorsTable.leafNodeId] for a set of rows identified by their
  * primary key.
  *
- * Uses a single `UPDATE … FROM (VALUES …)` statement per chunk to avoid N round-trips. Rows
- * whose `id` is not found are silently skipped (no error).
+ * Uses a single `UPDATE … FROM (VALUES …)` statement per chunk to avoid N round-trips. Rows whose
+ * `id` is not found are silently skipped (no error).
  *
  * @param idToLeafNode Map of row `id` → leaf-node index to write.
  * @param chunkSize Rows per SQL statement (default 10 000).
@@ -743,6 +743,7 @@ fun MetricFailedMonitorsRepository.batchUpdateLeafNodeIds(
   idToLeafNode.entries.chunked(chunkSize) { chunk ->
     val values = chunk.joinToString(",") { (rowId, leaf) -> "($rowId,$leaf)" }
     TransactionManager.current()
-        .exec("UPDATE metric_failed_monitors AS t SET leaf_node_id = v.leaf FROM (VALUES $values) AS v(id, leaf) WHERE t.id = v.id")
+        .exec(
+            "UPDATE metric_failed_monitors AS t SET leaf_node_id = v.leaf FROM (VALUES $values) AS v(id, leaf) WHERE t.id = v.id")
   }
 }

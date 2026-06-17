@@ -30,8 +30,8 @@ package tools.aqua.stars.data.sumo.dataclasses.dynamicData
  *   distance = `gapAhead` (0 when touching).
  * - `gapBehind ≥ 0` (vehicle front at or behind ego rear) → **rear-left** / **rear-right**;
  *   distance = `gapBehind` (0 when touching).
- * - Both negative (longitudinal overlap, vehicle directly beside ego) → front or rear cell
- *   based on which gap is closer to zero; distance = 0.
+ * - Both negative (longitudinal overlap, vehicle directly beside ego) → front or rear cell based on
+ *   which gap is closer to zero; distance = 0.
  *
  * @property frontMeters Bumper-to-bumper gap to the nearest vehicle fully ahead on the same lane
  *   (m).
