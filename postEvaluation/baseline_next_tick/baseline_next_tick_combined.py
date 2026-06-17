@@ -91,7 +91,7 @@ def main() -> None:
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
     ax.set_xlim(-0.5, (len(STRATEGIES) - 1) * GROUP_SPACING + BOX_OFFSET + 0.6)
-    ax.set_ylim(-1, max(v.max() for v in data) + 5)
+    ax.set_ylim(-1, 5)
 
     fig.tight_layout()
     for suffix in (".png", ".pdf"):

@@ -352,6 +352,7 @@ Scatter plots of mutants killed from randomly drawing vs TSC-based vs learned De
 ```bash
 python3 postEvaluation/baseline_next_tick/baseline_next_tick_scatter.py
 python3 postEvaluation/baseline_next_tick/baseline_next_tick_boxplot.py
+python3 postEvaluation/baseline_next_tick/baseline_next_tick_combined.py
 ```
 
 #### `baseline/baseline_scatter.py` and `baseline_with_monitors/baseline_scatter.py`
