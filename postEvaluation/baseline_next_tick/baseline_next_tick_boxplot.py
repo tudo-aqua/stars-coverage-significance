@@ -57,7 +57,7 @@ def main() -> None:
     ax.tick_params(axis="both", labelsize=TICK_FONTSIZE)
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
-    ax.set_ylim(0, max(v.max() for v in data) + 5)
+    ax.set_ylim(-1, max(v.max() for v in data) + 5)
 
     fig.tight_layout()
     for suffix in (".png", ".pdf"):
