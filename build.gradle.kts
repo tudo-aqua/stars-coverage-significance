@@ -163,7 +163,7 @@ val runPostEvaluation by
       classpath = sourceSets.main.get().runtimeClasspath
 
       // optional
-      jvmArgs = listOf("-Xmx64g")
+      jvmArgs = listOf("-Xmx300g")
       // args = listOf("--flag", "value")
     }
 
