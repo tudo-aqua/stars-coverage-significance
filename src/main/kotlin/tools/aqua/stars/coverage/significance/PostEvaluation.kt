@@ -26,13 +26,12 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildLeafToScenarioConfigMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselinePostEvaluation
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
+import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingByLeafNodePostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.LeafFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
 import tools.aqua.stars.coverage.significance.tsc.tsc
@@ -93,27 +92,6 @@ val longtailDistribution by lazy {
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
 
 /**
- * Mapping of leaf node IDs to the scenario instances that have at least one tick in that leaf.
- *
- * Built by joining the DB leaf→scenario-config mapping with the already-loaded
- * [failedMonitorMapping]. Each [LeafFailure] contains all [ScenarioInstanceFailures] whose
- * starting-configuration ID appears in the corresponding leaf node.
- */
-val failedMonitorMappingByLeaf: List<LeafFailure> by lazy {
-  val leafToConfigIds = db { buildLeafToScenarioConfigMapping() }
-  val configIdToFailures =
-      failedMonitorMapping
-          .flatMap { it.scenarioInstanceFailures }
-          .associateBy { it.scenarioInstanceId }
-  leafToConfigIds.map { (leafId, configIds) ->
-    LeafFailure(
-        leafId = leafId,
-        scenarioInstanceFailures = configIds.mapNotNull { configIdToFailures[it] },
-    )
-  }
-}
-
-/**
  * Per-(mutant, scenarioConfiguration) TSC instance change times and accumulated monitor failures.
  */
 val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy {
@@ -142,6 +120,10 @@ const val REPETITIONS: Int = 100
 /** The size of the test suite. */
 const val TEST_SUITE_SIZE: Int = 300
 
+val tickWiseNextTickMonitorViolations: List<NextTickPostEvaluationDatabaseEntry> by lazy {
+  db { buildTickWiseNextTickMonitorViolations() }
+}
+
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
@@ -163,10 +145,16 @@ fun main() {
   //  PopulateHighwayTrafficLongTailTable.populate()
 
   /**
-   * Baseline comparing TSC approach with purely random draw and draw from generated starting
-   * scenarios
+   * Baseline comparing TSC approach and Decision Tree approach with purely random draw and draw
+   * from generated starting scenarios.
    */
-  BaselinePostEvaluation.evaluate()
+  BaselineNextTickPostEvaluation.evaluate()
+
+  /**
+   * Baseline comparing TSC approach with purely random draw and draw from generated starting
+   * scenarios.
+   */
+  //  BaselinePostEvaluation.evaluate()
   //  BaselinePostEvaluation2.evaluate()
 
   /** Evaluate longtail distribution from random highway traffic */

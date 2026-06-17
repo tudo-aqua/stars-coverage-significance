@@ -25,6 +25,7 @@ import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.ScenarioInstanceFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
@@ -382,7 +383,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       val violations = row.toMonitorViolations()
 
       val scenarios = result.getOrPut(tscInstanceId) { mutableMapOf() }
-      val mutants = scenarios.getOrPut(scenarioInstanceId) { mutableListOf() }
+      val mutants = scenarios.getOrPut(mutantId) { mutableListOf() }
 
       mutants += MutantFailures(mutantId = mutantId, violations = violations)
     }
@@ -523,6 +524,26 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
               { it[leafNodeId]!! },
               { it[startingScenarioConfiguration].value },
           )
+
+  /**
+   * All rows from [MetricFailedMonitorsTable] projected to the four columns needed for sampling.
+   * Loaded once and reused across all sampling strategies.
+   */
+  fun buildTickWiseNextTickMonitorViolations(): List<NextTickPostEvaluationDatabaseEntry> =
+      MetricFailedMonitorsTable.select(
+              leafNodeId,
+              mutant,
+              nextTickMonitorG0Failed,
+              currentTSCInstance,
+          )
+          .map { row ->
+            NextTickPostEvaluationDatabaseEntry(
+                leafNodeId = row[leafNodeId],
+                mutantId = row[mutant].value,
+                nextTickG0Failed = row[nextTickMonitorG0Failed],
+                tscInstanceId = row[currentTSCInstance].value,
+            )
+          }
 
   /**
    * Returns aggregated transition counts between TSC instances for the given TSC.
