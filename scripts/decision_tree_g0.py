@@ -630,7 +630,7 @@ def main() -> None:
             # Generate DOT source once; reused for DB storage and file writes.
             dot_source = _generate_dot(booster, leaf_stats_dict)
 
-        # ── DB: insert run and write leaf assignments ──────────────────────────
+        # ── DB: insert run record (leaf assignments written after capture exits) ─
         if args.uri:
             import psycopg2
             conn = psycopg2.connect(args.uri)
@@ -642,9 +642,10 @@ def main() -> None:
                 conn.close()
             print(f"Run {run_id} recorded: {len(train_mutants):,} train mutants, "
                   f"{len(test_mutants):,} test mutants.")
-            _write_leaf_ids_to_db(args.uri, run_id, row_ids_eval, leaf_ids, workers=args.db_workers)
 
     # ── Post-capture: persist artifacts and write run-named files ─────────────
+    # This runs before the leaf insertion so dot_source and log_text land in
+    # the DB while the long write is still in progress.
     log_text = log_buf.getvalue()
 
     if run_id is not None:
@@ -662,6 +663,10 @@ def main() -> None:
 
         _update_run_artifacts(args.uri, run_id, log_text, dot_source)
         print(f"Run {run_id} artifacts saved to database.")
+
+    # ── Leaf assignment insertion (slow — runs after artifacts are saved) ──────
+    if args.uri and run_id is not None and leaf_ids is not None:
+        _write_leaf_ids_to_db(args.uri, run_id, row_ids_eval, leaf_ids, workers=args.db_workers)
 
     # ── Explicit path overrides ────────────────────────────────────────────────
     if args.output:
