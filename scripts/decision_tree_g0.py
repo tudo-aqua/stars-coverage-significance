@@ -27,8 +27,11 @@ Dependencies:
 """
 
 import argparse
+import contextlib
+import io
 import math
 import sys
+from pathlib import Path
 
 import lightgbm as lgb
 import numpy as np
@@ -106,9 +109,9 @@ def _bool_to_int8(col_name: str) -> pl.Expr:
 
 def load_and_prepare(
     path: str, feature_cols: list[str]
-) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
-    """Returns (X, y, row_ids) where row_ids are the database primary keys."""
-    df = pl.read_parquet(path, columns=["id"] + feature_cols + [TARGET_COL])
+) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
+    """Returns (X, y, row_ids, mutant_ids) where row_ids are the DB primary keys."""
+    df = pl.read_parquet(path, columns=["id", "mutant_id"] + feature_cols + [TARGET_COL])
 
     missing = [c for c in feature_cols + [TARGET_COL] if c not in df.columns]
     if missing:
@@ -131,10 +134,11 @@ def load_and_prepare(
         )
 
     row_ids = pdf["id"].to_numpy()
+    mutant_ids = pdf["mutant_id"].to_numpy()
     X = pdf[feature_cols]
     y = pdf[TARGET_COL].to_numpy()
 
-    return X, y, row_ids
+    return X, y, row_ids, mutant_ids
 
 
 def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
@@ -218,17 +222,18 @@ def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
 
 def _write_leaf_ids_to_db(
     uri: str,
+    run_id: int,
     row_ids: np.ndarray,
     leaf_ids: np.ndarray,
-    workers: int = 8,
-    page_size: int = 50_000,
+    workers: int = 48,
+    page_size: int = 100_000,
 ) -> None:
-    """Clear and re-populate metric_failed_monitors.leaf_node_id in parallel.
+    """Insert leaf node assignments into decision_tree_leaf_assignments in parallel.
 
-    The NULL-clear runs first in its own transaction so there is no window where
-    old and new values coexist. Then `workers` threads each open their own
-    connection and update a non-overlapping slice of rows. psycopg2 releases the
-    GIL during network I/O, so threads provide real parallelism here.
+    Each worker opens its own connection and inserts a non-overlapping slice of
+    (run_id, metric_failed_monitor_id, leaf_node_id) rows. psycopg2 releases the
+    GIL during network I/O so threads provide real parallelism.
+    ON CONFLICT DO NOTHING makes re-runs safe.
     """
     import math
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -239,32 +244,22 @@ def _write_leaf_ids_to_db(
     pairs = list(zip(row_ids.tolist(), leaf_ids.tolist()))
     n = len(pairs)
 
-    # ── 1. Clear existing values ──────────────────────────────────────────────
-    conn = psycopg2.connect(uri)
-    try:
-        with conn.cursor() as cur:
-            cur.execute("UPDATE metric_failed_monitors SET leaf_node_id = NULL")
-        conn.commit()
-    finally:
-        conn.close()
-
-    # ── 2. Split pairs evenly across workers ─────────────────────────────────
     slice_size = math.ceil(n / workers)
     slices = [pairs[i : i + slice_size] for i in range(0, n, slice_size)]
 
     completed = 0
 
-    def _update_slice(chunk: list) -> int:
+    def _insert_slice(chunk: list) -> int:
+        records = [(run_id, row_id, leaf) for row_id, leaf in chunk]
         c = psycopg2.connect(uri)
         try:
             with c.cursor() as cur:
                 psycopg2.extras.execute_values(
                     cur,
-                    "UPDATE metric_failed_monitors AS t"
-                    " SET leaf_node_id = v.leaf"
-                    " FROM (VALUES %s) AS v(id, leaf)"
-                    " WHERE t.id = v.id",
-                    chunk,
+                    "INSERT INTO decision_tree_leaf_assignments"
+                    " (run_id, metric_failed_monitor_id, leaf_node_id)"
+                    " VALUES %s ON CONFLICT DO NOTHING",
+                    records,
                     page_size=page_size,
                 )
             c.commit()
@@ -272,14 +267,148 @@ def _write_leaf_ids_to_db(
             c.close()
         return len(chunk)
 
-    print(f"\nWriting leaf_node_id to database ({n:,} rows, {len(slices)} workers) …")
+    print(f"\nInserting leaf assignments into DB (run {run_id}, {n:,} rows, {len(slices)} workers) …")
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(_update_slice, s): s for s in slices}
+        futures = {pool.submit(_insert_slice, s): s for s in slices}
         for fut in as_completed(futures):
             completed += fut.result()
-            print(f"  {completed:,} / {n:,} rows updated", end="\r", flush=True)
+            print(f"  {completed:,} / {n:,} rows inserted", end="\r", flush=True)
 
-    print(f"\nDone. {completed:,} rows updated with leaf_node_id.")
+    print(f"\nDone. {completed:,} leaf assignments inserted for run {run_id}.")
+
+
+@contextlib.contextmanager
+def _capture_stdout():
+    """Tee sys.stdout to a StringIO buffer; yield the buffer."""
+    buf = io.StringIO()
+    real = sys.stdout
+
+    class _Tee:
+        def write(self, data: str) -> int:
+            real.write(data)
+            buf.write(data)
+            return len(data)
+
+        def flush(self) -> None:
+            real.flush()
+
+        def isatty(self) -> bool:
+            return getattr(real, "isatty", lambda: False)()
+
+    sys.stdout = _Tee()
+    try:
+        yield buf
+    finally:
+        sys.stdout = real
+
+
+def _generate_dot(booster: lgb.Booster, leaf_stats_dict: dict) -> "str | None":
+    """Build the enriched Graphviz DOT source for the single-tree model.
+
+    Returns the DOT string, or None if graphviz is not installed.
+    """
+    try:
+        graph = lgb.create_tree_digraph(
+            booster,
+            tree_index=0,
+            show_info=["split_gain", "internal_count"],
+            precision=4,
+        )
+        dot = _decode_dot_lane_change(graph.source)
+        return _replace_leaf_labels(dot, leaf_stats_dict)
+    except Exception as exc:
+        print(f"Warning: could not generate DOT ({exc}). Install graphviz: pip install graphviz")
+        return None
+
+
+def _update_run_artifacts(
+    uri: str, run_id: int, log_text: str, dot_source: "str | None"
+) -> None:
+    """Persist log text and DOT source back to the decision_tree_runs row."""
+    import psycopg2
+
+    conn = psycopg2.connect(uri)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE decision_tree_runs"
+                " SET log_text = %s, dot_source = %s"
+                " WHERE id = %s",
+                (log_text, dot_source, run_id),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _ensure_tracking_tables(conn) -> None:
+    """Create or migrate decision tree tracking tables."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS decision_tree_runs (
+                id               SERIAL PRIMARY KEY,
+                created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                train_fraction   DOUBLE PRECISION NOT NULL,
+                seed             INT NOT NULL,
+                n_train_mutants  INT NOT NULL,
+                n_test_mutants   INT NOT NULL,
+                log_text         TEXT,
+                dot_source       TEXT
+            )
+        """)
+        # Migrate tables created before log_text / dot_source were added.
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS log_text TEXT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS dot_source TEXT")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS decision_tree_mutant_splits (
+                run_id     INT  NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
+                mutant_id  INT  NOT NULL,
+                trained_on BOOL NOT NULL,
+                PRIMARY KEY (run_id, mutant_id)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS decision_tree_leaf_assignments (
+                run_id                   INT NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
+                metric_failed_monitor_id INT NOT NULL REFERENCES metric_failed_monitors(id) ON DELETE CASCADE,
+                leaf_node_id             INT NOT NULL,
+                PRIMARY KEY (run_id, metric_failed_monitor_id)
+            )
+        """)
+    conn.commit()
+
+
+def _insert_run(
+    conn,
+    train_fraction: float,
+    seed: int,
+    train_mutants: set[int],
+    test_mutants: set[int],
+) -> int:
+    """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
+    import psycopg2.extras
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO decision_tree_runs "
+            "  (train_fraction, seed, n_train_mutants, n_test_mutants) "
+            "VALUES (%s, %s, %s, %s) RETURNING id",
+            (train_fraction, seed, len(train_mutants), len(test_mutants)),
+        )
+        run_id = cur.fetchone()[0]
+        records = (
+            [(run_id, m, True)  for m in sorted(train_mutants)] +
+            [(run_id, m, False) for m in sorted(test_mutants)]
+        )
+        psycopg2.extras.execute_values(
+            cur,
+            "INSERT INTO decision_tree_mutant_splits (run_id, mutant_id, trained_on) "
+            "VALUES %s",
+            records,
+            page_size=10_000,
+        )
+    conn.commit()
+    return run_id
 
 
 def main() -> None:
@@ -295,13 +424,22 @@ def main() -> None:
     parser.add_argument("--min-data-in-leaf", type=int, default=20,
                         help="Minimum number of samples required in a leaf (default: 20)")
     parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
-    parser.add_argument("--output", default=None, help="Write Graphviz .dot file to this path")
+    parser.add_argument("--train-fraction", type=float, default=1.0, metavar="F",
+                        help="Fraction of rows used for training (0 < F <= 1.0, default: 1.0 = all data). "
+                             "The held-out test split is what gets annotated and written to the DB.")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed for the train/test split (default: 42)")
+    parser.add_argument("--output", default=None, metavar="PATH",
+                        help="Write Graphviz .dot file to an explicit path (overrides --out-dir naming)")
     parser.add_argument("--annotate", default=None, metavar="PATH",
                         help="Write a Parquet file with a 'leaf_node_id' column added to every row")
     parser.add_argument("--uri", default=None, metavar="POSTGRES_URI",
-                        help="Write leaf_node_id back to the database (postgresql://user:pass@host:port/db)")
-    parser.add_argument("--db-workers", type=int, default=8, metavar="N",
-                        help="Parallel database connections used when writing leaf_node_id (default: 8)")
+                        help="Record run in the database and write leaf assignments (postgresql://user:pass@host:port/db)")
+    parser.add_argument("--db-workers", type=int, default=48, metavar="N",
+                        help="Parallel database connections used when writing leaf assignments (default: 48)")
+    parser.add_argument("--out-dir", default=None, metavar="PATH",
+                        help="Directory for run-named outputs: run_<id>.dot and run_<id>.log. "
+                             "Defaults to the parquet file's directory when --uri is used.")
 
     # Feature group toggles — all enabled by default
     group_args = parser.add_argument_group("feature groups (all on by default)")
@@ -363,120 +501,185 @@ def main() -> None:
 
     enabled  = [g for g, on in group_flags.items() if on]
     disabled = [g for g, on in group_flags.items() if not on]
-    print(f"Feature groups enabled:  {', '.join(enabled)}")
-    if disabled:
-        print(f"Feature groups disabled: {', '.join(disabled)}")
-    print(f"Total feature columns:   {len(feature_cols)}\n")
 
-    X, y, row_ids = load_and_prepare(args.parquet, feature_cols)
-    print(f"Loaded {len(X):,} rows  |  positives: {y.sum():,} ({y.mean():.1%})")
+    # ── Capture stdout so the full run log can be stored in the database ──────
+    run_id: "int | None" = None
+    dot_source: "str | None" = None
+    leaf_ids = None
 
-    clf = lgb.LGBMClassifier(
-        n_estimators=1,
-        learning_rate=1.0,
-        max_depth=args.max_depth if args.max_depth else -1,
-        num_leaves=args.num_leaves,
-        min_split_gain=args.min_split_gain,
-        min_child_samples=args.min_data_in_leaf,
-        n_jobs=args.n_jobs,
-        class_weight="balanced",
-        random_state=0,
-        verbose=-1,
-    )
-    clf.fit(X, y)
+    with _capture_stdout() as log_buf:
+        print(f"Feature groups enabled:  {', '.join(enabled)}")
+        if disabled:
+            print(f"Feature groups disabled: {', '.join(disabled)}")
+        print(f"Total feature columns:   {len(feature_cols)}\n")
 
-    booster = clf.booster_
-    model_info = booster.dump_model()
-    num_leaves = model_info["tree_info"][0]["num_leaves"]
+        X, y, row_ids, mutant_ids = load_and_prepare(args.parquet, feature_cols)
+        print(f"Loaded {len(X):,} rows  |  positives: {y.sum():,} ({y.mean():.1%})")
 
-    raw_preds = booster.predict(X)
-    train_acc = np.mean((raw_preds > 0.5).astype(int) == y)
-    print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}\n")
+        # ── Mutant-based train / test split ───────────────────────────────────
+        # Split over unique mutant IDs so no mutant leaks across train/test.
+        # All rows are annotated; trained_on is tracked per mutant in the DB.
+        unique_mutants = np.unique(mutant_ids)
+        if args.train_fraction < 1.0:
+            rng = np.random.default_rng(args.seed)
+            rng.shuffle(unique_mutants)
+            n_train_mut = int(len(unique_mutants) * args.train_fraction)
+            train_mutants = set(unique_mutants[:n_train_mut].tolist())
+            test_mutants  = set(unique_mutants[n_train_mut:].tolist())
 
-    feature_names = list(X.columns)
-    gain  = booster.feature_importance(importance_type="gain")
-    split = booster.feature_importance(importance_type="split")
-    importance = (
-        pl.DataFrame({
-            "feature": feature_names,
-            "gain":    gain.tolist(),
-            "splits":  split.tolist(),
-        })
-        .filter(pl.col("splits") > 0)
-        .sort("gain", descending=True)
-    )
-    print("Feature importances (used splits only, sorted by gain):")
-    print(importance.to_pandas().to_string(index=False))
-    print()
-
-    print_tree(booster, feature_names)
-
-    if args.annotate or args.uri or args.output:
-        leaf_ids = booster.predict(X, pred_leaf=True)[:, 0].astype(int)
-
-        # Collect model p value per leaf index from the tree structure.
-        leaf_p: dict[int, float] = {}
-        def _collect_leaf_p(node: dict) -> None:
-            if "split_feature" not in node:
-                leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
-            else:
-                _collect_leaf_p(node["left_child"])
-                _collect_leaf_p(node["right_child"])
-        _collect_leaf_p(model_info["tree_info"][0]["tree_structure"])
-
-        leaf_stats = (
-            pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y.astype(int)})
-            .group_by("leaf_node_id")
-            .agg(
-                pl.len().alias("n_rows"),
-                pl.col("accident").sum().alias("n_accidents"),
-                pl.col("accident").mean().alias("accident_rate"),
+            train_mask = np.isin(mutant_ids, list(train_mutants))
+            X_train, y_train = X.iloc[train_mask], y[train_mask]
+            print(
+                f"Mutants — train: {len(train_mutants):,}  |  test: {len(test_mutants):,}\n"
+                f"Rows    — train: {train_mask.sum():,} ({y_train.mean():.1%} pos)"
+                f"  |  all (annotated): {len(X):,}\n"
             )
-            .with_columns(
-                (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents"),
-                pl.col("leaf_node_id").map_elements(
-                    lambda lid: leaf_p.get(lid, float("nan")), return_dtype=pl.Float64
-                ).alias("p"),
+        else:
+            train_mutants = set(unique_mutants.tolist())
+            test_mutants  = set()
+            X_train, y_train = X, y
+
+        # Predict on ALL rows so every row gets a leaf label.
+        X_eval, y_eval, row_ids_eval = X, y, row_ids
+
+        clf = lgb.LGBMClassifier(
+            n_estimators=1,
+            learning_rate=1.0,
+            max_depth=args.max_depth if args.max_depth else -1,
+            num_leaves=args.num_leaves,
+            min_split_gain=args.min_split_gain,
+            min_child_samples=args.min_data_in_leaf,
+            n_jobs=args.n_jobs,
+            class_weight="balanced",
+            random_state=0,
+            verbose=-1,
+        )
+        clf.fit(X_train, y_train)
+
+        booster = clf.booster_
+        model_info = booster.dump_model()
+        num_leaves = model_info["tree_info"][0]["num_leaves"]
+
+        raw_preds = booster.predict(X_train)
+        train_acc = np.mean((raw_preds > 0.5).astype(int) == y_train)
+        print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}", end="")
+        if args.train_fraction < 1.0:
+            eval_preds = booster.predict(X_eval)
+            eval_acc = np.mean((eval_preds > 0.5).astype(int) == y_eval)
+            print(f"  |  Test accuracy: {eval_acc:.4f}", end="")
+        print("\n")
+
+        feature_names = list(X.columns)
+        gain  = booster.feature_importance(importance_type="gain")
+        split = booster.feature_importance(importance_type="split")
+        importance = (
+            pl.DataFrame({
+                "feature": feature_names,
+                "gain":    gain.tolist(),
+                "splits":  split.tolist(),
+            })
+            .filter(pl.col("splits") > 0)
+            .sort("gain", descending=True)
+        )
+        print("Feature importances (used splits only, sorted by gain):")
+        print(importance.to_pandas().to_string(index=False))
+        print()
+
+        print_tree(booster, feature_names)
+
+        # ── Leaf IDs, per-leaf statistics, and DOT source ─────────────────────
+        if args.annotate or args.uri or args.output:
+            leaf_ids = booster.predict(X_eval, pred_leaf=True)[:, 0].astype(int)
+
+            leaf_p: dict[int, float] = {}
+            def _collect_leaf_p(node: dict) -> None:
+                if "split_feature" not in node:
+                    leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
+                else:
+                    _collect_leaf_p(node["left_child"])
+                    _collect_leaf_p(node["right_child"])
+            _collect_leaf_p(model_info["tree_info"][0]["tree_structure"])
+
+            split_label = "test split" if args.train_fraction < 1.0 else "all data"
+            leaf_stats = (
+                pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y_eval.astype(int)})
+                .group_by("leaf_node_id")
+                .agg(
+                    pl.len().alias("n_rows"),
+                    pl.col("accident").sum().alias("n_accidents"),
+                    pl.col("accident").mean().alias("accident_rate"),
+                )
+                .with_columns(
+                    (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents"),
+                    pl.col("leaf_node_id").map_elements(
+                        lambda lid: leaf_p.get(lid, float("nan")), return_dtype=pl.Float64
+                    ).alias("p"),
+                )
+                .sort("leaf_node_id")
             )
-            .sort("leaf_node_id")
-        )
-        leaf_stats_dict: dict[int, dict] = {
-            row["leaf_node_id"]: row for row in leaf_stats.to_dicts()
-        }
-        print(f"\nLeaf node summary ({len(leaf_stats)} leaves):")
-        print(
-            leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate", "p"])
-            .to_pandas()
-            .to_string(index=False, float_format="{:.4f}".format)
-        )
+            leaf_stats_dict: dict[int, dict] = {
+                row["leaf_node_id"]: row for row in leaf_stats.to_dicts()
+            }
+            print(f"\nLeaf node summary ({len(leaf_stats)} leaves, {split_label}):")
+            print(
+                leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate", "p"])
+                .to_pandas()
+                .to_string(index=False, float_format="{:.4f}".format)
+            )
 
-    if args.annotate:
-        annotated = X.copy()
-        annotated["id"] = row_ids
-        annotated[TARGET_COL] = y
-        annotated["leaf_node_id"] = leaf_ids
-        pl.from_pandas(annotated).write_parquet(args.annotate)
-        print(f"Annotated Parquet written to: {args.annotate}")
+            # Generate DOT source once; reused for DB storage and file writes.
+            dot_source = _generate_dot(booster, leaf_stats_dict)
 
-    if args.uri:
-        _write_leaf_ids_to_db(args.uri, row_ids, leaf_ids, workers=args.db_workers)
+        # ── DB: insert run and write leaf assignments ──────────────────────────
+        if args.uri:
+            import psycopg2
+            conn = psycopg2.connect(args.uri)
+            try:
+                _ensure_tracking_tables(conn)
+                run_id = _insert_run(conn, args.train_fraction, args.seed,
+                                     train_mutants, test_mutants)
+            finally:
+                conn.close()
+            print(f"Run {run_id} recorded: {len(train_mutants):,} train mutants, "
+                  f"{len(test_mutants):,} test mutants.")
+            _write_leaf_ids_to_db(args.uri, run_id, row_ids_eval, leaf_ids, workers=args.db_workers)
 
+    # ── Post-capture: persist artifacts and write run-named files ─────────────
+    log_text = log_buf.getvalue()
+
+    if run_id is not None:
+        out_dir = Path(args.out_dir) if args.out_dir else Path(args.parquet).parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        if dot_source is not None:
+            dot_path = out_dir / f"run_{run_id}.dot"
+            dot_path.write_text(dot_source)
+            print(f"DOT file written to: {dot_path}")
+
+        log_path = out_dir / f"run_{run_id}.log"
+        log_path.write_text(log_text)
+        print(f"Log written to: {log_path}")
+
+        _update_run_artifacts(args.uri, run_id, log_text, dot_source)
+        print(f"Run {run_id} artifacts saved to database.")
+
+    # ── Explicit path overrides ────────────────────────────────────────────────
     if args.output:
-        try:
-            graph = lgb.create_tree_digraph(
-                booster,
-                tree_index=0,
-                show_info=["split_gain", "internal_count"],
-                precision=4,
-            )
-            dot_source = _decode_dot_lane_change(graph.source)
-            dot_source = _replace_leaf_labels(dot_source, leaf_stats_dict)
+        if dot_source is not None:
             with open(args.output, "w") as f:
                 f.write(dot_source)
             print(f"\nGraphviz dot file written to: {args.output}")
             print("Render with:  dot -Tpng tree.dot -o tree.png")
-        except Exception as exc:
-            print(f"Warning: could not write dot file ({exc}). Install graphviz: pip install graphviz")
+        else:
+            print("Warning: DOT source unavailable; --output file not written.")
+
+    if args.annotate and leaf_ids is not None:
+        annotated = X_eval.copy()
+        annotated["id"] = row_ids_eval
+        annotated[TARGET_COL] = y_eval
+        annotated["leaf_node_id"] = leaf_ids
+        pl.from_pandas(annotated).write_parquet(args.annotate)
+        print(f"Annotated Parquet written to: {args.annotate}")
 
 
 if __name__ == "__main__":

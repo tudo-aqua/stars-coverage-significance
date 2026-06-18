@@ -319,6 +319,8 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
     --no-neighbor-kinematics \
     --num-leaves 16 \
     --output tree.dot \
+    --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+    --db-workers 16 \
   2>&1 | tee tree.log
 
 # Write leaf_node_id back to the database for every row (16 parallel connections)

@@ -18,7 +18,10 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.javatime.timestamp
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import tools.aqua.stars.core.tsc.TSC
@@ -177,8 +180,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
  *   collision time (m).
  * @property createdAt Timestamp of creation.
- * @property leafNodeId Leaf-node index assigned by the decision-tree classifier (null until
- *   annotated by the classifier script).
  */
 object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val tsc =
@@ -341,7 +342,6 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   val collisionVictimBackBumperPosMeters =
       float("collision_victim_back_bumper_pos_meters").nullable()
   val createdAt = timestamp("created_at")
-  val leafNodeId = integer("leaf_node_id").nullable()
 
   init {
     index(true, tsc, run, startingScenarioConfiguration, mutant, tick)
@@ -508,7 +508,9 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
 
   /**
    * Returns a mapping from each leaf node ID to the distinct scenario starting-configuration IDs
-   * that have at least one tick classified into that leaf.
+   * that have at least one tick classified into that leaf, using the most recent decision tree run.
+   *
+   * Returns an empty map if no decision tree run has been recorded yet.
    *
    * The result can be joined in-memory with [buildFailedMonitorMapping] to obtain a
    * [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.LeafFailure] list for
@@ -516,34 +518,79 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
    *
    * @return Map of `leaf_node_id` → list of `scenario_config_id` values.
    */
-  fun buildLeafToScenarioConfigMapping(): Map<Int, List<Int>> =
-      select(leafNodeId, startingScenarioConfiguration)
-          .where { leafNodeId.isNotNull() }
-          .withDistinct()
-          .groupBy(
-              { it[leafNodeId]!! },
-              { it[startingScenarioConfiguration].value },
-          )
+  fun buildLeafToScenarioConfigMapping(): Map<Int, List<Int>> {
+    val latestRunId =
+        DecisionTreeRunsTable.selectAll()
+            .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+            .limit(1)
+            .firstOrNull()
+            ?.get(DecisionTreeRunsTable.id) ?: return emptyMap()
+
+    return MetricFailedMonitorsTable.join(
+            DecisionTreeLeafAssignmentsTable,
+            JoinType.INNER,
+            onColumn = MetricFailedMonitorsTable.id,
+            otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
+            additionalConstraint = { DecisionTreeLeafAssignmentsTable.runId eq latestRunId })
+        .select(
+            DecisionTreeLeafAssignmentsTable.leafNodeId,
+            MetricFailedMonitorsTable.startingScenarioConfiguration)
+        .withDistinct()
+        .groupBy(
+            { it[DecisionTreeLeafAssignmentsTable.leafNodeId] },
+            { it[MetricFailedMonitorsTable.startingScenarioConfiguration].value },
+        )
+  }
 
   /**
-   * All rows from [MetricFailedMonitorsTable] projected to the four columns needed for sampling.
+   * All rows from [MetricFailedMonitorsTable] projected to the four columns needed for sampling,
+   * joined with leaf node assignments from the most recent decision tree run.
+   *
+   * If no decision tree run exists yet, all [NextTickPostEvaluationDatabaseEntry.leafNodeId] values
+   * will be `null` (leaf-stratified sampling will produce empty groups).
+   *
    * Loaded once and reused across all sampling strategies.
    */
-  fun buildTickWiseNextTickMonitorViolations(): List<NextTickPostEvaluationDatabaseEntry> =
-      MetricFailedMonitorsTable.select(
-              leafNodeId,
-              mutant,
-              nextTickMonitorG0Failed,
-              currentTSCInstance,
-          )
+  fun buildTickWiseNextTickMonitorViolations(): List<NextTickPostEvaluationDatabaseEntry> {
+    val latestRunId =
+        DecisionTreeRunsTable.selectAll()
+            .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+            .limit(1)
+            .firstOrNull()
+            ?.get(DecisionTreeRunsTable.id)
+
+    if (latestRunId == null) {
+      return MetricFailedMonitorsTable.select(mutant, nextTickMonitorG0Failed, currentTSCInstance)
           .map { row ->
             NextTickPostEvaluationDatabaseEntry(
-                leafNodeId = row[leafNodeId],
+                leafNodeId = null,
                 mutantId = row[mutant].value,
                 nextTickG0Failed = row[nextTickMonitorG0Failed],
                 tscInstanceId = row[currentTSCInstance].value,
             )
           }
+    }
+
+    return MetricFailedMonitorsTable.join(
+            DecisionTreeLeafAssignmentsTable,
+            JoinType.LEFT,
+            onColumn = MetricFailedMonitorsTable.id,
+            otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
+            additionalConstraint = { DecisionTreeLeafAssignmentsTable.runId eq latestRunId })
+        .select(
+            DecisionTreeLeafAssignmentsTable.leafNodeId,
+            MetricFailedMonitorsTable.mutant,
+            MetricFailedMonitorsTable.nextTickMonitorG0Failed,
+            MetricFailedMonitorsTable.currentTSCInstance)
+        .map { row ->
+          NextTickPostEvaluationDatabaseEntry(
+              leafNodeId = row[DecisionTreeLeafAssignmentsTable.leafNodeId],
+              mutantId = row[MetricFailedMonitorsTable.mutant].value,
+              nextTickG0Failed = row[MetricFailedMonitorsTable.nextTickMonitorG0Failed],
+              tscInstanceId = row[MetricFailedMonitorsTable.currentTSCInstance].value,
+          )
+        }
+  }
 
   /**
    * Returns aggregated transition counts between TSC instances for the given TSC.

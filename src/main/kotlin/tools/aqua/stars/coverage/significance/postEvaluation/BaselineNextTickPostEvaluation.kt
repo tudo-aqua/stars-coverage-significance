@@ -24,6 +24,8 @@ import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
+import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 import tools.aqua.stars.coverage.significance.tickWiseNextTickMonitorViolations
@@ -65,12 +67,12 @@ object BaselineNextTickPostEvaluation {
         .toList()
   }
 
-  /** Runs all sampling strategies and saves the results. */
+  /** Runs all sampling strategies on the full tick dataset and saves the results. */
   fun evaluate() {
     println("Starting BaselineNextTickPostEvaluation.")
 
     println("  Evaluating uniform-random tick sampling.")
-    save(evaluateRandomDrawFromWholeDataset(), "random")
+    save(evaluateRandomDraw(tickWiseNextTickMonitorViolations), "random")
 
     println("  Evaluating TSC-instance-stratified tick sampling.")
     save(evaluateRoundRobin(tscGroups), "tsc")
@@ -82,17 +84,54 @@ object BaselineNextTickPostEvaluation {
   }
 
   /**
-   * Draws [TEST_SUITE_SIZE] ticks uniformly at random (with replacement) from
-   * [tickWiseNextTickMonitorViolations], [REPETITIONS] times. Each repetition counts the number of
-   * distinct mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true`
-   * in the sample.
+   * Loads the test-set mutant IDs from the most recent decision tree run, restricts the tick
+   * dataset to those mutants, and then runs all three sampling strategies on the filtered subset.
+   * Results are saved with a `_split` suffix to distinguish them from the full-dataset results.
    *
+   * Does nothing if no decision tree run has been recorded in the database yet.
+   */
+  fun evaluateSplit() {
+    println("Starting BaselineNextTickPostEvaluation (split mode).")
+
+    val testMutantIds = db { DecisionTreeRunsRepository.getLatestRunTestMutantIds() }
+    if (testMutantIds == null) {
+      println("  No decision tree run found in database. Skipping split evaluation.")
+      return
+    }
+    println("  Loaded ${testMutantIds.size} test-set mutant IDs from latest run.")
+
+    val testMutantIdSet = testMutantIds.toHashSet()
+    val filteredTicks = tickWiseNextTickMonitorViolations.filter { it.mutantId in testMutantIdSet }
+    println("  Filtered to ${filteredTicks.size} ticks for test-set mutants.")
+
+    val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
+    val filteredLeafGroups =
+        filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
+
+    println("  Evaluating uniform-random tick sampling (split).")
+    save(evaluateRandomDraw(filteredTicks), "random_split")
+
+    println("  Evaluating TSC-instance-stratified tick sampling (split).")
+    save(evaluateRoundRobin(filteredTscGroups), "tsc_split")
+
+    println("  Evaluating decision-tree-leaf-stratified tick sampling (split).")
+    save(evaluateRoundRobin(filteredLeafGroups), "leaf_split")
+
+    println("Finished BaselineNextTickPostEvaluation (split mode).")
+  }
+
+  /**
+   * Draws [TEST_SUITE_SIZE] ticks uniformly at random (with replacement) from [pool], [REPETITIONS]
+   * times. Each repetition counts the number of distinct mutant IDs for which
+   * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in the sample.
+   *
+   * @param pool Tick entries to sample from.
    * @return One killed-mutant count per repetition.
    */
-  private fun evaluateRandomDrawFromWholeDataset(): List<Int> =
+  private fun evaluateRandomDraw(pool: List<NextTickPostEvaluationDatabaseEntry>): List<Int> =
       (0..REPETITIONS).map {
         (0 until TEST_SUITE_SIZE)
-            .map { tickWiseNextTickMonitorViolations.random(rnd) }
+            .map { pool.random(rnd) }
             .filter { it.nextTickG0Failed == true }
             .map { it.mutantId }
             .toSet()

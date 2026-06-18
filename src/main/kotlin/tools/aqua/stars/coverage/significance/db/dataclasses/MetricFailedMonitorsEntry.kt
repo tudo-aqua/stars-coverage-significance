@@ -162,8 +162,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
  *   collision time (m), null if no collision.
  * @property createdAt Timestamp of when the metric entry was created.
- * @property leafNodeId Leaf-node index assigned by the decision-tree classifier (null until
- *   annotated by the classifier script).
  */
 data class MetricFailedMonitorsEntry(
     val id: Int? = null,
@@ -268,5 +266,4 @@ data class MetricFailedMonitorsEntry(
     val collisionVictimFrontBumperPosMeters: Float? = null,
     val collisionVictimBackBumperPosMeters: Float? = null,
     val createdAt: Instant = Instant.now(),
-    val leafNodeId: Int? = null,
 )

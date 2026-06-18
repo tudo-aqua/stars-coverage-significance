@@ -20,10 +20,15 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.count
+import org.jetbrains.exposed.sql.selectAll
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.db
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentsTable
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 
 /**
@@ -54,13 +59,23 @@ object MutantKillingByLeafNodePostEvaluation {
   }
 
   private fun fetchAccidentLeafIds(): List<Int> = db {
-    MetricFailedMonitorsTable.select(MetricFailedMonitorsTable.leafNodeId)
-        .where {
-          MetricFailedMonitorsTable.leafNodeId.isNotNull() and
-              (MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true)
-        }
+    val latestRunId =
+        DecisionTreeRunsTable.selectAll()
+            .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+            .limit(1)
+            .firstOrNull()
+            ?.get(DecisionTreeRunsTable.id) ?: return@db emptyList()
+
+    MetricFailedMonitorsTable.join(
+            DecisionTreeLeafAssignmentsTable,
+            JoinType.INNER,
+            onColumn = MetricFailedMonitorsTable.id,
+            otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
+            additionalConstraint = { DecisionTreeLeafAssignmentsTable.runId eq latestRunId })
+        .select(DecisionTreeLeafAssignmentsTable.leafNodeId)
+        .where { MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true }
         .withDistinct()
-        .mapNotNull { it[MetricFailedMonitorsTable.leafNodeId] }
+        .map { it[DecisionTreeLeafAssignmentsTable.leafNodeId] }
         .sorted()
   }
 
@@ -81,17 +96,32 @@ object MutantKillingByLeafNodePostEvaluation {
   }
 
   private fun queryLeafMutantCounts(leafIds: List<Int>): List<LeafMutantCount> = db {
+    val latestRunId =
+        DecisionTreeRunsTable.selectAll()
+            .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+            .limit(1)
+            .firstOrNull()
+            ?.get(DecisionTreeRunsTable.id) ?: return@db emptyList()
+
     val countExpr = MetricFailedMonitorsTable.id.count()
-    MetricFailedMonitorsTable.select(
-            MetricFailedMonitorsTable.leafNodeId, MetricFailedMonitorsTable.mutant, countExpr)
+    MetricFailedMonitorsTable.join(
+            DecisionTreeLeafAssignmentsTable,
+            JoinType.INNER,
+            onColumn = MetricFailedMonitorsTable.id,
+            otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
+            additionalConstraint = { DecisionTreeLeafAssignmentsTable.runId eq latestRunId })
+        .select(
+            DecisionTreeLeafAssignmentsTable.leafNodeId,
+            MetricFailedMonitorsTable.mutant,
+            countExpr)
         .where {
-          MetricFailedMonitorsTable.leafNodeId.inList(leafIds) and
+          DecisionTreeLeafAssignmentsTable.leafNodeId.inList(leafIds) and
               (MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true)
         }
-        .groupBy(MetricFailedMonitorsTable.leafNodeId, MetricFailedMonitorsTable.mutant)
+        .groupBy(DecisionTreeLeafAssignmentsTable.leafNodeId, MetricFailedMonitorsTable.mutant)
         .map { row ->
           LeafMutantCount(
-              leafNodeId = row[MetricFailedMonitorsTable.leafNodeId]!!,
+              leafNodeId = row[DecisionTreeLeafAssignmentsTable.leafNodeId],
               mutantId = row[MetricFailedMonitorsTable.mutant].value,
               count = row[countExpr],
           )

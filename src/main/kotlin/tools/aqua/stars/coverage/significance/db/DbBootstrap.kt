@@ -24,6 +24,9 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentsTable
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeMutantSplitsTable
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
 import tools.aqua.stars.coverage.significance.db.tables.DistinctMutantsTable
 import tools.aqua.stars.coverage.significance.db.tables.EvaluationRunsTable
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficAnalysisJobsTable
@@ -177,7 +180,10 @@ object DbBootstrap {
           MutantScenarioChunkJobsTable,
           MetricTotalTickDifferenceTable,
           DistinctMutantsTable,
-          HighwayTrafficLongTailTable)
+          HighwayTrafficLongTailTable,
+          DecisionTreeRunsTable,
+          DecisionTreeMutantSplitsTable,
+          DecisionTreeLeafAssignmentsTable)
     }
   }
 

@@ -149,6 +149,7 @@ fun main() {
    * from generated starting scenarios.
    */
   BaselineNextTickPostEvaluation.evaluate()
+  BaselineNextTickPostEvaluation.evaluateSplit()
 
   /**
    * Baseline comparing TSC approach with purely random draw and draw from generated starting

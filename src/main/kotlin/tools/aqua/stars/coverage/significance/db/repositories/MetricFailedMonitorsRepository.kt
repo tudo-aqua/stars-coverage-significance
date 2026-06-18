@@ -26,7 +26,6 @@ import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.db
@@ -250,7 +249,6 @@ object MetricFailedMonitorsRepository {
           e.collisionVictimBackBumperPosMeters
 
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
-      this[MetricFailedMonitorsTable.leafNodeId] = e.leafNodeId
     }
   }
 
@@ -386,7 +384,6 @@ object MetricFailedMonitorsRepository {
               row[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
               row[createdAt] = entry.createdAt
-              row[leafNodeId] = entry.leafNodeId
             }
             .value
 
@@ -540,7 +537,6 @@ object MetricFailedMonitorsRepository {
                   st[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
                   st[createdAt] = entry.createdAt
-                  st[leafNodeId] = entry.leafNodeId
                 }
             .single()
 
@@ -721,29 +717,5 @@ object MetricFailedMonitorsRepository {
           collisionVictimBackBumperPosMeters =
               this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
-          leafNodeId = this[MetricFailedMonitorsTable.leafNodeId],
       )
-}
-
-/**
- * Batch-updates [MetricFailedMonitorsTable.leafNodeId] for a set of rows identified by their
- * primary key.
- *
- * Uses a single `UPDATE … FROM (VALUES …)` statement per chunk to avoid N round-trips. Rows whose
- * `id` is not found are silently skipped (no error).
- *
- * @param idToLeafNode Map of row `id` → leaf-node index to write.
- * @param chunkSize Rows per SQL statement (default 10 000).
- */
-fun MetricFailedMonitorsRepository.batchUpdateLeafNodeIds(
-    idToLeafNode: Map<Int, Int>,
-    chunkSize: Int = 10_000,
-) = db {
-  if (idToLeafNode.isEmpty()) return@db
-  idToLeafNode.entries.chunked(chunkSize) { chunk ->
-    val values = chunk.joinToString(",") { (rowId, leaf) -> "($rowId,$leaf)" }
-    TransactionManager.current()
-        .exec(
-            "UPDATE metric_failed_monitors AS t SET leaf_node_id = v.leaf FROM (VALUES $values) AS v(id, leaf) WHERE t.id = v.id")
-  }
 }
