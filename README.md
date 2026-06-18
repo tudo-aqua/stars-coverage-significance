@@ -273,16 +273,23 @@ python3 scripts/export_parquet.py \
 
 Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using current-tick monitor state, ego maneuver, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`.
 
-| Argument | Default      | Description |
-|---|--------------|---|
-| `parquet` | *(required)* | Path to the Parquet input file |
-| `--max-depth` | unlimited    | Maximum depth of the tree |
-| `--num-leaves` | `31`         | Maximum number of leaves |
-| `--n-jobs` | `48`         | CPU threads used by LightGBM; set to match available cores |
-| `--output` | *(none)*     | Write a Graphviz `.dot` file to this path |
-| `--annotate` | *(none)*     | Write a Parquet file containing features + target + `leaf_node_id` for every row |
-| `--uri` | *(none)*     | Write `leaf_node_id` back to the database: `postgresql://user:pass@host:port/db` |
-| `--db-workers` | `8`          | Parallel database connections used when writing `leaf_node_id` via `--uri` |
+| Argument | Default | Description |
+|---|---|---|
+| `parquet` | *(required)* | Path to the Parquet export of `metric_failed_monitors` |
+| `--max-depth` | unlimited | Maximum depth of the tree |
+| `--num-leaves` | `256` | Maximum number of leaves |
+| `--min-split-gain` | `0.0` | Minimum loss reduction required to make a split; `0.0` splits on any improvement |
+| `--min-data-in-leaf` | `20` | Minimum number of samples required in a leaf |
+| `--n-jobs` | `96` | CPU threads used by LightGBM; set to match available cores |
+| `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
+| `--seed` | `42` | Random seed for the mutant train/test shuffle |
+| `--output` | *(none)* | Write a Graphviz `.dot` file to an explicit path (overrides the run-named file from `--out-dir`) |
+| `--annotate` | *(none)* | Write a Parquet file containing features + target + `leaf_node_id` for every row |
+| `--uri` | *(none)* | Record the run and write leaf assignments to the database: `postgresql://user:pass@host:port/db` |
+| `--db-workers` | `48` | Parallel database connections used when writing leaf assignments via `--uri` |
+| `--out-dir` | parquet's directory | Directory for run-named output files (`run_<id>.dot`, `run_<id>.log`); only used when `--uri` is set |
+
+When `--uri` is provided the script automatically captures the full stdout log and the DOT source, stores both in the `decision_tree_runs` table, and writes `run_<id>.dot` / `run_<id>.log` to `--out-dir`.
 
 #### Feature groups
 
@@ -300,37 +307,40 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 | `--time-gaps` / `--no-time-gaps` | 16 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |
 
 ```bash
-# Basic run (all feature groups enabled)
-python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot 2>&1 | tee tree.log
+# Basic run — all feature groups, no DB write
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot
 
-# Limit depth and export a dot file for visualization
+# Limit depth and render a dot file
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --max-depth 5 \
-  --output tree.dot \
-  2>&1 | tee tree.log
+  --output tree.dot
+
+# Train/test split: 80 % of mutants for training, rest for evaluation
+# Run is recorded in the DB; run_<id>.dot and run_<id>.log are written automatically
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --train-fraction 0.8 \
+  --seed 42 \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 48 \
+  --out-dir /results/runs
 
 # Focus on time gaps only — disable raw distances and per-neighbour kinematics
-  python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
-    --no-monitors \
-    --no-ego-maneuver \
-    --no-ego-position \
-    --no-ego-accel \
-    --no-distances \
-    --no-neighbor-kinematics \
-    --num-leaves 16 \
-    --output tree.dot \
-    --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
-    --db-workers 16 \
-  2>&1 | tee tree.log
-
-# Write leaf_node_id back to the database for every row (16 parallel connections)
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --train-fraction 1.0 \
+  --seed 42 \
+  --no-monitors \
+  --no-ego-maneuver \
+  --no-ego-position \
+  --no-ego-accel \
+  --no-distances \
+  --no-neighbor-kinematics \
+  --num-leaves 16 \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
-  --db-workers 16 \
-  2>&1 | tee tree.log
+  --db-workers 48 \
+  --out-dir /results/runs
 
-# Render the dot file to PNG
-dot -Tpng tree.dot -o tree.png
+# Render a stored dot file to PNG
+dot -Tpng run_42.dot -o run_42.png
 ```
 
 ---
