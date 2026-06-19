@@ -148,7 +148,7 @@ fun main() {
    * Baseline comparing TSC approach and Decision Tree approach with purely random draw and draw
    * from generated starting scenarios.
    */
-  //  BaselineNextTickPostEvaluation.evaluate()
+  BaselineNextTickPostEvaluation.evaluate()
   BaselineNextTickPostEvaluation.evaluateSplit()
 
   /**

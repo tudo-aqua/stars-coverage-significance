@@ -94,7 +94,7 @@ object BaselineNextTickPostEvaluation {
     println("Starting BaselineNextTickPostEvaluation (split mode).")
 
     val testMutantIds = db { DecisionTreeRunsRepository.getLatestRunTestMutantIds() }
-    if (testMutantIds == null) {
+    if (testMutantIds.isNullOrEmpty()) {
       println("  No decision tree run found in database. Skipping split evaluation.")
       return
     }
