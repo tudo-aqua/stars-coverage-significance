@@ -31,7 +31,7 @@ def read_results(csv_path: Path) -> np.ndarray:
     return np.array(values, dtype=float)
 
 
-def plot_strategy(values: np.ndarray, label: str, out_stem: Path) -> None:
+def plot_strategy(values: np.ndarray, label: str, out_stem: Path, y_max: float) -> None:
     rng = np.random.default_rng(42)
     fig, ax = plt.subplots(figsize=(24, 24))
 
@@ -51,7 +51,7 @@ def plot_strategy(values: np.ndarray, label: str, out_stem: Path) -> None:
     for spine in ax.spines.values():
         spine.set_linewidth(AXES_LINEWIDTH)
     ax.set_xlim(-0.5, 0.5)
-    ax.set_ylim(-1, 5)
+    ax.set_ylim(-1, y_max + 1)
 
     fig.tight_layout()
     for suffix in (".png", ".pdf"):
@@ -63,9 +63,11 @@ def plot_strategy(values: np.ndarray, label: str, out_stem: Path) -> None:
 def main() -> None:
     base = Path(__file__).resolve().parent
 
+    all_data = {key: read_results(base / f"baseline_next_tick_{key}.csv") for key, _ in STRATEGIES}
+    y_max = float(max(v.max() for v in all_data.values()))
+
     for key, label in STRATEGIES:
-        values = read_results(base / f"baseline_next_tick_{key}.csv")
-        plot_strategy(values, label, base / f"baseline_next_tick_scatter_{key}")
+        plot_strategy(all_data[key], label, base / f"baseline_next_tick_scatter_{key}", y_max)
 
 
 if __name__ == "__main__":
