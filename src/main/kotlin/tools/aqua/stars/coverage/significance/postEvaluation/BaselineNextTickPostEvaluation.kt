@@ -95,7 +95,7 @@ object BaselineNextTickPostEvaluation {
 
     val testMutantIds = db { DecisionTreeRunsRepository.getLatestRunTestMutantIds() }
     if (testMutantIds.isNullOrEmpty()) {
-      println("  No decision tree run found in database. Skipping split evaluation.")
+      println("  No decision tree run with a test set of mutants found in database. Skipping split evaluation.")
       return
     }
     println("  Loaded ${testMutantIds.size} test-set mutant IDs from latest run.")
