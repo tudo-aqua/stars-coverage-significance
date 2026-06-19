@@ -120,6 +120,9 @@ const val REPETITIONS: Int = 100
 /** The size of the test suite. */
 const val TEST_SUITE_SIZE: Int = 300
 
+/** Suite sizes evaluated by [BaselineNextTickPostEvaluation]. */
+val NEXT_TICK_SUITE_SIZES: List<Int> = listOf(100, 200, 300, 500, 800, 1000, 2000)
+
 val tickWiseNextTickMonitorViolations: List<NextTickPostEvaluationDatabaseEntry> by lazy {
   db { buildTickWiseNextTickMonitorViolations() }
 }

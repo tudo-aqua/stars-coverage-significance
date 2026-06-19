@@ -21,9 +21,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.random.Random
+import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
-import tools.aqua.stars.coverage.significance.TEST_SUITE_SIZE
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
@@ -67,18 +67,25 @@ object BaselineNextTickPostEvaluation {
         .toList()
   }
 
-  /** Runs all sampling strategies on the full tick dataset and saves the results. */
+  /**
+   * Runs all sampling strategies on the full tick dataset for every suite size in
+   * [NEXT_TICK_SUITE_SIZES]. Results are written to `baseline_next_tick/size_<n>/`.
+   */
   fun evaluate() {
     println("Starting BaselineNextTickPostEvaluation.")
 
-    println("  Evaluating uniform-random tick sampling.")
-    save(evaluateRandomDraw(tickWiseNextTickMonitorViolations), "random")
+    for (suiteSize in NEXT_TICK_SUITE_SIZES) {
+      println("  Suite size $suiteSize:")
 
-    println("  Evaluating TSC-instance-stratified tick sampling.")
-    save(evaluateRoundRobin(tscGroups), "tsc")
+      println("    Evaluating uniform-random tick sampling.")
+      save(evaluateRandomDraw(tickWiseNextTickMonitorViolations, suiteSize), "random", suiteSize)
 
-    println("  Evaluating decision-tree-leaf-stratified tick sampling.")
-    save(evaluateRoundRobin(leafGroups), "leaf")
+      println("    Evaluating TSC-instance-stratified tick sampling.")
+      save(evaluateRoundRobin(tscGroups, suiteSize), "tsc", suiteSize)
+
+      println("    Evaluating decision-tree-leaf-stratified tick sampling.")
+      save(evaluateRoundRobin(leafGroups, suiteSize), "leaf", suiteSize)
+    }
 
     println("Finished BaselineNextTickPostEvaluation.")
   }
@@ -109,29 +116,37 @@ object BaselineNextTickPostEvaluation {
     val filteredLeafGroups =
         filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
 
-    println("  Evaluating uniform-random tick sampling (split).")
-    save(evaluateRandomDraw(filteredTicks), "random_split")
+    for (suiteSize in NEXT_TICK_SUITE_SIZES) {
+      println("  Suite size $suiteSize (split):")
 
-    println("  Evaluating TSC-instance-stratified tick sampling (split).")
-    save(evaluateRoundRobin(filteredTscGroups), "tsc_split")
+      println("    Evaluating uniform-random tick sampling (split).")
+      save(evaluateRandomDraw(filteredTicks, suiteSize), "random_split", suiteSize)
 
-    println("  Evaluating decision-tree-leaf-stratified tick sampling (split).")
-    save(evaluateRoundRobin(filteredLeafGroups), "leaf_split")
+      println("    Evaluating TSC-instance-stratified tick sampling (split).")
+      save(evaluateRoundRobin(filteredTscGroups, suiteSize), "tsc_split", suiteSize)
+
+      println("    Evaluating decision-tree-leaf-stratified tick sampling (split).")
+      save(evaluateRoundRobin(filteredLeafGroups, suiteSize), "leaf_split", suiteSize)
+    }
 
     println("Finished BaselineNextTickPostEvaluation (split mode).")
   }
 
   /**
-   * Draws [TEST_SUITE_SIZE] ticks uniformly at random (with replacement) from [pool], [REPETITIONS]
+   * Draws [suiteSize] ticks uniformly at random (with replacement) from [pool], [REPETITIONS]
    * times. Each repetition counts the number of distinct mutant IDs for which
    * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in the sample.
    *
    * @param pool Tick entries to sample from.
+   * @param suiteSize Number of ticks to draw per repetition.
    * @return One killed-mutant count per repetition.
    */
-  private fun evaluateRandomDraw(pool: List<NextTickPostEvaluationDatabaseEntry>): List<Int> =
+  private fun evaluateRandomDraw(
+      pool: List<NextTickPostEvaluationDatabaseEntry>,
+      suiteSize: Int,
+  ): List<Int> =
       (0..REPETITIONS).map {
-        (0 until TEST_SUITE_SIZE)
+        (0 until suiteSize)
             .map { pool.random(rnd) }
             .filter { it.nextTickG0Failed == true }
             .map { it.mutantId }
@@ -140,23 +155,25 @@ object BaselineNextTickPostEvaluation {
       }
 
   /**
-   * Builds a test suite of [TEST_SUITE_SIZE] ticks by cycling round-robin through [groups], drawing
-   * one tick per group per cycle. Each group is shuffled independently before each repetition. When
-   * a group is exhausted it wraps around (rotation). Repeats [REPETITIONS] times and counts unique
+   * Builds a test suite of [suiteSize] ticks by cycling round-robin through [groups], drawing one
+   * tick per group per cycle. Each group is shuffled independently before each repetition. When a
+   * group is exhausted it wraps around (rotation). Repeats [REPETITIONS] times and counts unique
    * mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in each
    * suite.
    *
    * @param groups Pre-partitioned tick lists (e.g., by TSC instance or leaf node).
+   * @param suiteSize Number of ticks to include in each test suite.
    * @return One killed-mutant count per repetition.
    */
   private fun evaluateRoundRobin(
-      groups: List<List<NextTickPostEvaluationDatabaseEntry>>
+      groups: List<List<NextTickPostEvaluationDatabaseEntry>>,
+      suiteSize: Int,
   ): List<Int> =
       (0..REPETITIONS).map {
         val mutableGroups = groups.map { it.shuffled(rnd).toMutableList() }
         val testSuite = mutableListOf<NextTickPostEvaluationDatabaseEntry>()
         var i = 0
-        while (testSuite.size < TEST_SUITE_SIZE) {
+        while (testSuite.size < suiteSize) {
           val group = mutableGroups[i % mutableGroups.size]
           val tick = group.removeFirst()
           group.add(tick)
@@ -167,13 +184,14 @@ object BaselineNextTickPostEvaluation {
       }
 
   /**
-   * Saves [results] as a single-column CSV under [BASE_PATH].
+   * Saves [results] as a single-column CSV under `[BASE_PATH]/size_<suiteSize>/`.
    *
    * @param results One killed-mutant count per repetition.
    * @param identifier Sampling strategy label used in the file name (e.g. `"random"`).
+   * @param suiteSize Suite size used for this evaluation run, determines the subfolder.
    */
-  private fun save(results: List<Int>, identifier: String) {
-    val path = BASE_PATH.resolve("baseline_next_tick_${identifier}.csv")
+  private fun save(results: List<Int>, identifier: String, suiteSize: Int) {
+    val path = BASE_PATH.resolve("size_$suiteSize/baseline_next_tick_${identifier}.csv")
     Files.createDirectories(path.parent)
     path.writeText(
         results.joinToString(
@@ -182,6 +200,6 @@ object BaselineNextTickPostEvaluation {
         ) {
           it.toString()
         })
-    println("  CSV written to: $path")
+    println("    CSV written to: $path")
   }
 }
