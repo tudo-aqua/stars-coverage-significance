@@ -30,7 +30,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingByLeafNodePostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
@@ -133,7 +132,7 @@ fun main() {
 
   //  LongTailDistributionPostEvaluation.evaluate()
 
-  MutantKillingByLeafNodePostEvaluation.evaluate()
+  //  MutantKillingByLeafNodePostEvaluation.evaluate()
 
   /**
    * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
@@ -151,7 +150,7 @@ fun main() {
    * Baseline comparing TSC approach and Decision Tree approach with purely random draw and draw
    * from generated starting scenarios.
    */
-  BaselineNextTickPostEvaluation.evaluate()
+  //  BaselineNextTickPostEvaluation.evaluate()
   BaselineNextTickPostEvaluation.evaluateSplit()
 
   /**
