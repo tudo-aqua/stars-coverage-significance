@@ -27,6 +27,7 @@ import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
+import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 import tools.aqua.stars.coverage.significance.tickWiseNextTickMonitorViolations
 
@@ -70,9 +71,26 @@ object BaselineNextTickPostEvaluation {
   /**
    * Runs all sampling strategies on the full tick dataset for every suite size in
    * [NEXT_TICK_SUITE_SIZES]. Results are written to `baseline_next_tick/size_<n>/`.
+   *
+   * The leaf strategy uses leaf assignments from the most recent run with `train_fraction = 1.0`
+   * (i.e. no train/test split). If no such run exists, the leaf strategy is skipped.
    */
   fun evaluate() {
     println("Starting BaselineNextTickPostEvaluation.")
+
+    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    val fullRunLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
+        if (fullRunId != null) {
+          println("  Using leaf assignments from full run ${fullRunId.value}.")
+          db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
+              .filter { it.leafNodeId != null }
+              .groupBy { it.leafNodeId }
+              .values
+              .toList()
+        } else {
+          println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
+          emptyList()
+        }
 
     for (suiteSize in NEXT_TICK_SUITE_SIZES) {
       println("  Suite size $suiteSize:")
@@ -83,8 +101,10 @@ object BaselineNextTickPostEvaluation {
       println("    Evaluating TSC-instance-stratified tick sampling.")
       save(evaluateRoundRobin(tscGroups, suiteSize), "tsc", suiteSize)
 
-      println("    Evaluating decision-tree-leaf-stratified tick sampling.")
-      save(evaluateRoundRobin(leafGroups, suiteSize), "leaf", suiteSize)
+      if (fullRunLeafGroups.isNotEmpty()) {
+        println("    Evaluating decision-tree-leaf-stratified tick sampling.")
+        save(evaluateRoundRobin(fullRunLeafGroups, suiteSize), "leaf", suiteSize)
+      }
     }
 
     println("Finished BaselineNextTickPostEvaluation.")

@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SortOrder
@@ -551,13 +552,16 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
    *
    * Loaded once and reused across all sampling strategies.
    */
-  fun buildTickWiseNextTickMonitorViolations(): List<NextTickPostEvaluationDatabaseEntry> {
+  fun buildTickWiseNextTickMonitorViolations(
+      forRunId: EntityID<Int>? = null
+  ): List<NextTickPostEvaluationDatabaseEntry> {
     val latestRunId =
-        DecisionTreeRunsTable.selectAll()
-            .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
-            .limit(1)
-            .firstOrNull()
-            ?.get(DecisionTreeRunsTable.id)
+        forRunId
+            ?: DecisionTreeRunsTable.selectAll()
+                .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+                .limit(1)
+                .firstOrNull()
+                ?.get(DecisionTreeRunsTable.id)
 
     if (latestRunId == null) {
       return MetricFailedMonitorsTable.select(mutant, nextTickMonitorG0Failed, currentTSCInstance)

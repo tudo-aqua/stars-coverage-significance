@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.repositories
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
@@ -26,6 +27,19 @@ import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
 
 /** Repository for querying [DecisionTreeRunsTable] and [DecisionTreeMutantSplitsTable]. */
 object DecisionTreeRunsRepository {
+
+  /**
+   * Returns the ID of the most recent decision tree run where the full dataset was used for
+   * training (`train_fraction = 1.0`), or `null` if no such run exists.
+   */
+  fun getLatestFullRunId(): EntityID<Int>? = transaction {
+    DecisionTreeRunsTable.selectAll()
+        .where { DecisionTreeRunsTable.trainFraction eq 1.0 }
+        .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.get(DecisionTreeRunsTable.id)
+  }
 
   /**
    * Returns all test-set mutant IDs (`trained_on = false`) from the most recent decision tree run,
