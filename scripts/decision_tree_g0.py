@@ -587,48 +587,47 @@ def main() -> None:
 
         print_tree(booster, feature_names)
 
-        # ── Leaf IDs, per-leaf statistics, and DOT source ─────────────────────
-        if args.annotate or args.uri or args.output:
-            leaf_ids = booster.predict(X_eval, pred_leaf=True)[:, 0].astype(int)
+        # ── Leaf IDs, per-leaf statistics, and DOT source ────────────────────
+        leaf_ids = booster.predict(X_eval, pred_leaf=True)[:, 0].astype(int)
 
-            leaf_p: dict[int, float] = {}
-            def _collect_leaf_p(node: dict) -> None:
-                if "split_feature" not in node:
-                    leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
-                else:
-                    _collect_leaf_p(node["left_child"])
-                    _collect_leaf_p(node["right_child"])
-            _collect_leaf_p(model_info["tree_info"][0]["tree_structure"])
+        leaf_p: dict[int, float] = {}
+        def _collect_leaf_p(node: dict) -> None:
+            if "split_feature" not in node:
+                leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
+            else:
+                _collect_leaf_p(node["left_child"])
+                _collect_leaf_p(node["right_child"])
+        _collect_leaf_p(model_info["tree_info"][0]["tree_structure"])
 
-            split_label = "test split" if args.train_fraction < 1.0 else "all data"
-            leaf_stats = (
-                pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y_eval.astype(int)})
-                .group_by("leaf_node_id")
-                .agg(
-                    pl.len().alias("n_rows"),
-                    pl.col("accident").sum().alias("n_accidents"),
-                    pl.col("accident").mean().alias("accident_rate"),
-                )
-                .with_columns(
-                    (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents"),
-                    pl.col("leaf_node_id").map_elements(
-                        lambda lid: leaf_p.get(lid, float("nan")), return_dtype=pl.Float64
-                    ).alias("p"),
-                )
-                .sort("leaf_node_id")
+        split_label = "test split" if args.train_fraction < 1.0 else "all data"
+        leaf_stats = (
+            pl.DataFrame({"leaf_node_id": leaf_ids, "accident": y_eval.astype(int)})
+            .group_by("leaf_node_id")
+            .agg(
+                pl.len().alias("n_rows"),
+                pl.col("accident").sum().alias("n_accidents"),
+                pl.col("accident").mean().alias("accident_rate"),
             )
-            leaf_stats_dict: dict[int, dict] = {
-                row["leaf_node_id"]: row for row in leaf_stats.to_dicts()
-            }
-            print(f"\nLeaf node summary ({len(leaf_stats)} leaves, {split_label}):")
-            print(
-                leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate", "p"])
-                .to_pandas()
-                .to_string(index=False, float_format="{:.4f}".format)
+            .with_columns(
+                (pl.col("n_rows") - pl.col("n_accidents")).alias("n_no_accidents"),
+                pl.col("leaf_node_id").map_elements(
+                    lambda lid: leaf_p.get(lid, float("nan")), return_dtype=pl.Float64
+                ).alias("p"),
             )
+            .sort("leaf_node_id")
+        )
+        leaf_stats_dict: dict[int, dict] = {
+            row["leaf_node_id"]: row for row in leaf_stats.to_dicts()
+        }
+        print(f"\nLeaf node summary ({len(leaf_stats)} leaves, {split_label}):")
+        print(
+            leaf_stats.select(["leaf_node_id", "n_rows", "n_accidents", "n_no_accidents", "accident_rate", "p"])
+            .to_pandas()
+            .to_string(index=False, float_format="{:.4f}".format)
+        )
 
-            # Generate DOT source once; reused for DB storage and file writes.
-            dot_source = _generate_dot(booster, leaf_stats_dict)
+        # Generate DOT source; reused for file writes and DB storage.
+        dot_source = _generate_dot(booster, leaf_stats_dict)
 
         # ── DB: insert run record (leaf assignments written after capture exits) ─
         if args.uri:
@@ -643,24 +642,25 @@ def main() -> None:
             print(f"Run {run_id} recorded: {len(train_mutants):,} train mutants, "
                   f"{len(test_mutants):,} test mutants.")
 
-    # ── Post-capture: persist artifacts and write run-named files ─────────────
-    # This runs before the leaf insertion so dot_source and log_text land in
-    # the DB while the long write is still in progress.
+    # ── Post-capture: persist artifacts and write files ───────────────────────
+    # Runs before leaf insertion so artifacts land in DB/disk while that slow
+    # write is still in progress.
     log_text = log_buf.getvalue()
 
+    out_dir = Path(args.out_dir) if args.out_dir else Path(args.parquet).parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = f"run_{run_id}" if run_id is not None else Path(args.parquet).stem
+
+    if dot_source is not None:
+        dot_path = out_dir / f"{stem}.dot"
+        dot_path.write_text(dot_source)
+        print(f"DOT file written to: {dot_path}")
+
+    log_path = out_dir / f"{stem}.log"
+    log_path.write_text(log_text)
+    print(f"Log written to: {log_path}")
+
     if run_id is not None:
-        out_dir = Path(args.out_dir) if args.out_dir else Path(args.parquet).parent
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        if dot_source is not None:
-            dot_path = out_dir / f"run_{run_id}.dot"
-            dot_path.write_text(dot_source)
-            print(f"DOT file written to: {dot_path}")
-
-        log_path = out_dir / f"run_{run_id}.log"
-        log_path.write_text(log_text)
-        print(f"Log written to: {log_path}")
-
         _update_run_artifacts(args.uri, run_id, log_text, dot_source)
         print(f"Run {run_id} artifacts saved to database.")
 
