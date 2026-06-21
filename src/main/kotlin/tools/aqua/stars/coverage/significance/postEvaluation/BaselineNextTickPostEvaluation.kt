@@ -30,64 +30,55 @@ import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRe
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
-import tools.aqua.stars.coverage.significance.tickWiseNextTickMonitorViolations
 
 /**
  * Post-evaluation that simulates test suites by sampling individual ticks directly from
  * [MetricFailedMonitorsTable] and measuring how many distinct mutants are killed, i.e. have at
  * least one tick in the sample where [MetricFailedMonitorsTable.nextTickMonitorG0Failed] is `true`.
  *
- * Three sampling strategies are planned:
- * 1. Uniform random from the full table (implemented).
- * 2. TSC-instance-stratified sampling (planned).
- * 3. Decision-tree-leaf-stratified sampling (planned).
+ * Three sampling strategies are evaluated:
+ * 1. Uniform random from the full table.
+ * 2. TSC-instance-stratified round-robin sampling.
+ * 3. Decision-tree-leaf-stratified round-robin sampling.
+ *
+ * All tick data is loaded from the database exactly once per evaluation call, then all groupings
+ * and repetitions operate on the in-memory list.
  */
 object BaselineNextTickPostEvaluation {
 
   private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "baseline_next_tick")
 
   /**
-   * All ticks grouped by their TSC instance ID. Used by [evaluateRoundRobin] for TSC-stratified
-   * sampling.
-   */
-  private val tscGroups: List<List<NextTickPostEvaluationDatabaseEntry>> by lazy {
-    tickWiseNextTickMonitorViolations.groupBy { it.tscInstanceId }.values.toList()
-  }
-
-  /**
-   * All ticks that have a leaf-node annotation, grouped by
-   * [NextTickPostEvaluationDatabaseEntry.leafNodeId]. Used by [evaluateRoundRobin] for
-   * decision-tree-leaf-stratified sampling.
-   */
-  private val leafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> by lazy {
-    tickWiseNextTickMonitorViolations
-        .filter { it.leafNodeId != null }
-        .groupBy { it.leafNodeId }
-        .values
-        .toList()
-  }
-
-  /**
    * Runs all sampling strategies on the full tick dataset for every suite size in
    * [NEXT_TICK_SUITE_SIZES]. Results are written to `baseline_next_tick/size_<n>/`.
    *
-   * The leaf strategy uses leaf assignments from the most recent run with `train_fraction = 1.0`
-   * (i.e. no train/test split). If no such run exists, the leaf strategy is skipped.
+   * Tick data is loaded once (with leaf assignments from the most recent full run where
+   * `train_fraction = 1.0`). All groupings are derived from that single in-memory list. If no full
+   * run exists, leaf assignments are taken from the most recent run of any fraction, and the leaf
+   * strategy is skipped.
    */
   fun evaluate() {
     println("Starting BaselineNextTickPostEvaluation.")
 
     val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
-    val fullRunLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
+    if (fullRunId != null) {
+      println("  Using leaf assignments from full run ${fullRunId.value}.")
+    } else {
+      println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
+    }
+
+    println("  Loading tick data into memory (this may take several minutes)…")
+    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
+    println("  Loaded ${allTicks.size} ticks.")
+
+    println("  Grouping ticks by TSC instance…")
+    val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
+
+    val leafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
         if (fullRunId != null) {
-          println("  Using leaf assignments from full run ${fullRunId.value}.")
-          db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
-              .filter { it.leafNodeId != null }
-              .groupBy { it.leafNodeId }
-              .values
-              .toList()
+          println("  Grouping ticks by leaf node…")
+          allTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
         } else {
-          println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
           emptyList()
         }
 
@@ -95,14 +86,14 @@ object BaselineNextTickPostEvaluation {
       println("  Suite size $suiteSize:")
 
       println("    Evaluating uniform-random tick sampling.")
-      save(evaluateRandomDraw(tickWiseNextTickMonitorViolations, suiteSize), "random", suiteSize)
+      save(evaluateRandomDraw(allTicks, suiteSize), "random", suiteSize)
 
       println("    Evaluating TSC-instance-stratified tick sampling.")
       save(evaluateRoundRobin(tscGroups, suiteSize), "tsc", suiteSize)
 
-      if (fullRunLeafGroups.isNotEmpty()) {
+      if (leafGroups.isNotEmpty()) {
         println("    Evaluating decision-tree-leaf-stratified tick sampling.")
-        save(evaluateRoundRobin(fullRunLeafGroups, suiteSize), "leaf", suiteSize)
+        save(evaluateRoundRobin(leafGroups, suiteSize), "leaf", suiteSize)
       }
     }
 
@@ -114,7 +105,8 @@ object BaselineNextTickPostEvaluation {
    * dataset to those mutants, and then runs all three sampling strategies on the filtered subset.
    * Results are saved with a `_split` suffix to distinguish them from the full-dataset results.
    *
-   * Does nothing if no decision tree run has been recorded in the database yet.
+   * Tick data (with leaf assignments from the most recent run) is loaded once and filtered
+   * in-memory. Does nothing if no decision tree run has been recorded in the database yet.
    */
   fun evaluateSplit() {
     println("Starting BaselineNextTickPostEvaluation (split mode).")
@@ -127,11 +119,18 @@ object BaselineNextTickPostEvaluation {
     }
     println("  Loaded ${testMutantIds.size} test-set mutant IDs from latest run.")
 
+    println("  Loading tick data into memory (this may take several minutes)…")
+    // forRunId = null → uses leaf assignments from the most recent run (the split run).
+    val allTicks = db { buildTickWiseNextTickMonitorViolations() }
+    println("  Loaded ${allTicks.size} ticks.")
+
     val testMutantIdSet = testMutantIds.toHashSet()
-    val filteredTicks = tickWiseNextTickMonitorViolations.filter { it.mutantId in testMutantIdSet }
+    val filteredTicks = allTicks.filter { it.mutantId in testMutantIdSet }
     println("  Filtered to ${filteredTicks.size} ticks for test-set mutants.")
 
+    println("  Grouping ticks by TSC instance…")
     val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
+    println("  Grouping ticks by leaf node…")
     val filteredLeafGroups =
         filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
 
@@ -187,8 +186,8 @@ object BaselineNextTickPostEvaluation {
    * counts unique mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is
    * `true` in each suite.
    *
-   * Groups are not shuffled — direct random indexing replaces the former shuffle+rotate pattern,
-   * avoiding O(pool_size) allocations per repetition. Repetitions run in parallel.
+   * Direct random indexing replaces the former shuffle+rotate pattern, avoiding O(pool_size)
+   * allocations per repetition. Repetitions run in parallel.
    *
    * @param groups Pre-partitioned tick lists (e.g., by TSC instance or leaf node).
    * @param suiteSize Number of ticks to include in each test suite.

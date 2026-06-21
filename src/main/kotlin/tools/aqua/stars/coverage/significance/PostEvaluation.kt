@@ -28,7 +28,6 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
@@ -121,10 +120,6 @@ const val TEST_SUITE_SIZE: Int = 300
 
 /** Suite sizes evaluated by [BaselineNextTickPostEvaluation]. */
 val NEXT_TICK_SUITE_SIZES: List<Int> = listOf(100, 200, 300, 500, 800, 1000, 2000)
-
-val tickWiseNextTickMonitorViolations: List<NextTickPostEvaluationDatabaseEntry> by lazy {
-  db { buildTickWiseNextTickMonitorViolations() }
-}
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
