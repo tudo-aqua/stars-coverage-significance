@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 import kotlin.io.path.writeText
 import kotlin.random.Random
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
@@ -44,8 +45,6 @@ import tools.aqua.stars.coverage.significance.tickWiseNextTickMonitorViolations
 object BaselineNextTickPostEvaluation {
 
   private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "baseline_next_tick")
-
-  private val rnd = Random(42L)
 
   /**
    * All ticks grouped by their TSC instance ID. Used by [evaluateRoundRobin] for TSC-stratified
@@ -157,6 +156,9 @@ object BaselineNextTickPostEvaluation {
    * times. Each repetition counts the number of distinct mutant IDs for which
    * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in the sample.
    *
+   * Repetitions run in parallel; each uses a deterministic seed derived from its index so results
+   * are reproducible regardless of thread scheduling.
+   *
    * @param pool Tick entries to sample from.
    * @param suiteSize Number of ticks to draw per repetition.
    * @return One killed-mutant count per repetition.
@@ -165,21 +167,28 @@ object BaselineNextTickPostEvaluation {
       pool: List<NextTickPostEvaluationDatabaseEntry>,
       suiteSize: Int,
   ): List<Int> =
-      (0..REPETITIONS).map {
-        (0 until suiteSize)
-            .map { pool.random(rnd) }
-            .filter { it.nextTickG0Failed == true }
-            .map { it.mutantId }
-            .toSet()
-            .size
-      }
+      (0..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val killed = HashSet<Int>()
+            repeat(suiteSize) {
+              val entry = pool[rng.nextInt(pool.size)]
+              if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+            }
+            killed.size
+          }
+          .collect(Collectors.toList())
 
   /**
    * Builds a test suite of [suiteSize] ticks by cycling round-robin through [groups], drawing one
-   * tick per group per cycle. Each group is shuffled independently before each repetition. When a
-   * group is exhausted it wraps around (rotation). Repeats [REPETITIONS] times and counts unique
-   * mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in each
-   * suite.
+   * tick uniformly at random from the current group at each slot. Repeats [REPETITIONS] times and
+   * counts unique mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is
+   * `true` in each suite.
+   *
+   * Groups are not shuffled — direct random indexing replaces the former shuffle+rotate pattern,
+   * avoiding O(pool_size) allocations per repetition. Repetitions run in parallel.
    *
    * @param groups Pre-partitioned tick lists (e.g., by TSC instance or leaf node).
    * @param suiteSize Number of ticks to include in each test suite.
@@ -189,19 +198,20 @@ object BaselineNextTickPostEvaluation {
       groups: List<List<NextTickPostEvaluationDatabaseEntry>>,
       suiteSize: Int,
   ): List<Int> =
-      (0..REPETITIONS).map {
-        val mutableGroups = groups.map { it.shuffled(rnd).toMutableList() }
-        val testSuite = mutableListOf<NextTickPostEvaluationDatabaseEntry>()
-        var i = 0
-        while (testSuite.size < suiteSize) {
-          val group = mutableGroups[i % mutableGroups.size]
-          val tick = group.removeFirst()
-          group.add(tick)
-          testSuite.add(tick)
-          i++
-        }
-        testSuite.filter { it.nextTickG0Failed == true }.map { it.mutantId }.toSet().size
-      }
+      (0..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val killed = HashSet<Int>()
+            repeat(suiteSize) { slot ->
+              val group = groups[slot % groups.size]
+              val entry = group[rng.nextInt(group.size)]
+              if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+            }
+            killed.size
+          }
+          .collect(Collectors.toList())
 
   /**
    * Saves [results] as a single-column CSV under `[BASE_PATH]/size_<suiteSize>/`.

@@ -22,7 +22,9 @@
       "Bash(./gradlew clean *)",
       "Bash(xargs grep -l \"surroundingDist\\\\|surrounding.*distance\\\\|TTC\\\\|time.*collision\")",
       "Bash(xargs grep -l \"Pair<List<Int>, List<Int>>\")",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(./gradlew spotlessApply -q)",
+      "Bash(./gradlew build *)"
     ]
   }
 }
