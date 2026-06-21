@@ -43,7 +43,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"Reading metric_failed_monitors with {args.partitions} parallel partitions …")
+    print(f"Reading metric_failed_monitors with {args.partitions} parallel partitions ...")
     try:
         # connectorx issues N parallel SELECT queries with non-overlapping WHERE
         # clauses on `tick`, then assembles the result as a zero-copy Arrow table.

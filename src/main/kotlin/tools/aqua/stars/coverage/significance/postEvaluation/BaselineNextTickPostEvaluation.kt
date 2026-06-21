@@ -67,16 +67,16 @@ object BaselineNextTickPostEvaluation {
       println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
     }
 
-    println("  Loading tick data into memory (this may take several minutes)…")
+    println("  Loading tick data into memory (this may take several minutes)...")
     val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
     println("  Loaded ${allTicks.size} ticks.")
 
-    println("  Grouping ticks by TSC instance…")
+    println("  Grouping ticks by TSC instance...")
     val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
 
     val leafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
         if (fullRunId != null) {
-          println("  Grouping ticks by leaf node…")
+          println("  Grouping ticks by leaf node...")
           allTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
         } else {
           emptyList()
@@ -119,7 +119,7 @@ object BaselineNextTickPostEvaluation {
     }
     println("  Loaded ${testMutantIds.size} test-set mutant IDs from latest run.")
 
-    println("  Loading tick data into memory (this may take several minutes)…")
+    println("  Loading tick data into memory (this may take several minutes)...")
     // forRunId = null → uses leaf assignments from the most recent run (the split run).
     val allTicks = db { buildTickWiseNextTickMonitorViolations() }
     println("  Loaded ${allTicks.size} ticks.")
@@ -128,9 +128,9 @@ object BaselineNextTickPostEvaluation {
     val filteredTicks = allTicks.filter { it.mutantId in testMutantIdSet }
     println("  Filtered to ${filteredTicks.size} ticks for test-set mutants.")
 
-    println("  Grouping ticks by TSC instance…")
+    println("  Grouping ticks by TSC instance...")
     val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
-    println("  Grouping ticks by leaf node…")
+    println("  Grouping ticks by leaf node...")
     val filteredLeafGroups =
         filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
 

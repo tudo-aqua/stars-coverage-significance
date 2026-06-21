@@ -267,7 +267,7 @@ def _write_leaf_ids_to_db(
             c.close()
         return len(chunk)
 
-    print(f"\nInserting leaf assignments into DB (run {run_id}, {n:,} rows, {len(slices)} workers) …")
+    print(f"\nInserting leaf assignments into DB (run {run_id}, {n:,} rows, {len(slices)} workers) ...")
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(_insert_slice, s): s for s in slices}
         for fut in as_completed(futures):
