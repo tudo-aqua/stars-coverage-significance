@@ -184,6 +184,17 @@ object DbBootstrap {
           DecisionTreeRunsTable,
           DecisionTreeMutantSplitsTable,
           DecisionTreeLeafAssignmentsTable)
+
+      exec(
+          """
+          CREATE OR REPLACE VIEW mutant_scenario_g0_violations AS
+          SELECT "mutant_id",
+                 "scenario_config_id",
+                 COALESCE(BOOL_OR("next_tick_monitor_g0_Accidents_failed"), false) AS any_g0_violation
+          FROM metric_failed_monitors
+          GROUP BY "mutant_id", "scenario_config_id"
+          """
+              .trimIndent())
     }
   }
 
