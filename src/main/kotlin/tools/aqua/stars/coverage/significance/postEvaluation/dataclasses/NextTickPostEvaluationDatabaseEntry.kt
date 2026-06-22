@@ -27,10 +27,12 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
  * @property nextTickG0Failed Whether the G0 accident monitor failed in the following tick (null for
  *   the last tick of a run).
  * @property tscInstanceId Current TSC instance active during this tick.
+ * @property scenarioConfigId ID of the scenario starting configuration this tick belongs to.
  */
 data class NextTickPostEvaluationDatabaseEntry(
     val leafNodeId: Int?,
     val mutantId: Int,
     val nextTickG0Failed: Boolean?,
     val tscInstanceId: Int,
+    val scenarioConfigId: Int,
 )

@@ -564,13 +564,15 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
                 ?.get(DecisionTreeRunsTable.id)
 
     if (latestRunId == null) {
-      return MetricFailedMonitorsTable.select(mutant, nextTickMonitorG0Failed, currentTSCInstance)
+      return MetricFailedMonitorsTable.select(
+              mutant, nextTickMonitorG0Failed, currentTSCInstance, startingScenarioConfiguration)
           .map { row ->
             NextTickPostEvaluationDatabaseEntry(
                 leafNodeId = null,
                 mutantId = row[mutant].value,
                 nextTickG0Failed = row[nextTickMonitorG0Failed],
                 tscInstanceId = row[currentTSCInstance].value,
+                scenarioConfigId = row[startingScenarioConfiguration].value,
             )
           }
     }
@@ -585,13 +587,15 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
             DecisionTreeLeafAssignmentsTable.leafNodeId,
             MetricFailedMonitorsTable.mutant,
             MetricFailedMonitorsTable.nextTickMonitorG0Failed,
-            MetricFailedMonitorsTable.currentTSCInstance)
+            MetricFailedMonitorsTable.currentTSCInstance,
+            MetricFailedMonitorsTable.startingScenarioConfiguration)
         .map { row ->
           NextTickPostEvaluationDatabaseEntry(
               leafNodeId = row[DecisionTreeLeafAssignmentsTable.leafNodeId],
               mutantId = row[MetricFailedMonitorsTable.mutant].value,
               nextTickG0Failed = row[MetricFailedMonitorsTable.nextTickMonitorG0Failed],
               tscInstanceId = row[MetricFailedMonitorsTable.currentTSCInstance].value,
+              scenarioConfigId = row[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
           )
         }
   }

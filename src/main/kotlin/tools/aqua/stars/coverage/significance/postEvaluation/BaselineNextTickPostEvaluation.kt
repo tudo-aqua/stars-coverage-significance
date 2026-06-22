@@ -29,6 +29,7 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0ViolationsView
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 
 /**
@@ -207,6 +208,195 @@ object BaselineNextTickPostEvaluation {
               val group = groups[slot % groups.size]
               val entry = group[rng.nextInt(group.size)]
               if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+            }
+            killed.size
+          }
+          .collect(Collectors.toList())
+
+  /**
+   * Variant of [evaluate] where the kill count per repetition is determined by looking up, for each
+   * drawn tick's scenario configuration, how many mutants were killed in that scenario according to
+   * [MutantScenarioG0ViolationsView]. A tick's contribution is the full set of mutants killed in
+   * its scenario rather than just the tick's own `nextTickG0Failed` flag.
+   *
+   * The view is loaded once; tick data and groupings are shared with the same single DB load as
+   * [evaluate].
+   */
+  fun evaluateWithStartingScenario() {
+    println("Starting BaselineNextTickPostEvaluation (scenario mode).")
+
+    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    if (fullRunId != null) {
+      println("  Using leaf assignments from full run ${fullRunId.value}.")
+    } else {
+      println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
+    }
+
+    println("  Loading tick data into memory (this may take several minutes)…")
+    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
+    println("  Loaded ${allTicks.size} ticks.")
+
+    println("  Loading scenario kill map from view…")
+    val scenarioKills = buildScenarioKillMap()
+    println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
+
+    println("  Grouping ticks by TSC instance…")
+    val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
+
+    val leafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
+        if (fullRunId != null) {
+          println("  Grouping ticks by leaf node…")
+          allTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
+        } else {
+          emptyList()
+        }
+
+    for (suiteSize in NEXT_TICK_SUITE_SIZES) {
+      println("  Suite size $suiteSize (scenario mode):")
+
+      println("    Evaluating uniform-random scenario sampling.")
+      save(
+          evaluateRandomDrawScenario(allTicks, scenarioKills, suiteSize),
+          "random_scenario",
+          suiteSize)
+
+      println("    Evaluating TSC-instance-stratified scenario sampling.")
+      save(
+          evaluateRoundRobinScenario(tscGroups, scenarioKills, suiteSize),
+          "tsc_scenario",
+          suiteSize)
+
+      if (leafGroups.isNotEmpty()) {
+        println("    Evaluating decision-tree-leaf-stratified scenario sampling.")
+        save(
+            evaluateRoundRobinScenario(leafGroups, scenarioKills, suiteSize),
+            "leaf_scenario",
+            suiteSize)
+      }
+    }
+
+    println("Finished BaselineNextTickPostEvaluation (scenario mode).")
+  }
+
+  /**
+   * Variant of [evaluateSplit] where kill counting uses [MutantScenarioG0ViolationsView] restricted
+   * to the test-set mutants: for each drawn tick, all test-set mutants killed in its scenario
+   * contribute to the result.
+   */
+  fun evaluateSplitWithStartingScenario() {
+    println("Starting BaselineNextTickPostEvaluation (scenario split mode).")
+
+    val testMutantIds = db { DecisionTreeRunsRepository.getLatestRunTestMutantIds() }
+    if (testMutantIds.isNullOrEmpty()) {
+      println(
+          "  No decision tree run with a test set of mutants found in database. Skipping scenario split evaluation.")
+      return
+    }
+    println("  Loaded ${testMutantIds.size} test-set mutant IDs from latest run.")
+    val testMutantIdSet = testMutantIds.toHashSet()
+
+    println("  Loading tick data into memory (this may take several minutes)…")
+    val allTicks = db { buildTickWiseNextTickMonitorViolations() }
+    println("  Loaded ${allTicks.size} ticks.")
+
+    val filteredTicks = allTicks.filter { it.mutantId in testMutantIdSet }
+    println("  Filtered to ${filteredTicks.size} ticks for test-set mutants.")
+
+    println("  Loading scenario kill map (test mutants only) from view…")
+    val scenarioKills = buildScenarioKillMap(testMutantIdSet)
+    println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
+
+    println("  Grouping ticks by TSC instance…")
+    val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
+    println("  Grouping ticks by leaf node…")
+    val filteredLeafGroups =
+        filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
+
+    for (suiteSize in NEXT_TICK_SUITE_SIZES) {
+      println("  Suite size $suiteSize (scenario split mode):")
+
+      println("    Evaluating uniform-random scenario sampling (split).")
+      save(
+          evaluateRandomDrawScenario(filteredTicks, scenarioKills, suiteSize),
+          "random_scenario_split",
+          suiteSize)
+
+      println("    Evaluating TSC-instance-stratified scenario sampling (split).")
+      save(
+          evaluateRoundRobinScenario(filteredTscGroups, scenarioKills, suiteSize),
+          "tsc_scenario_split",
+          suiteSize)
+
+      println("    Evaluating decision-tree-leaf-stratified scenario sampling (split).")
+      save(
+          evaluateRoundRobinScenario(filteredLeafGroups, scenarioKills, suiteSize),
+          "leaf_scenario_split",
+          suiteSize)
+    }
+
+    println("Finished BaselineNextTickPostEvaluation (scenario split mode).")
+  }
+
+  /**
+   * Builds a lookup map from scenario config ID to the set of mutant IDs killed in that scenario,
+   * derived from [MutantScenarioG0ViolationsView]. Only entries where
+   * [MutantScenarioG0ViolationsView.anyG0Violation] is `true` are included.
+   *
+   * @param mutantFilter If non-null, restricts kill entries to the given mutant IDs.
+   */
+  private fun buildScenarioKillMap(mutantFilter: Set<Int>? = null): Map<Int, Set<Int>> =
+      MutantScenarioG0ViolationsView.getAll()
+          .filter { it.anyG0Violation && (mutantFilter == null || it.mutantId in mutantFilter) }
+          .groupBy { it.scenarioConfigId }
+          .mapValues { (_, vs) -> vs.map { it.mutantId }.toSet() }
+
+  /**
+   * Draws [suiteSize] ticks uniformly at random from [pool], [REPETITIONS] times. For each drawn
+   * tick the full set of mutants killed in its scenario (from [scenarioKills]) is added to the
+   * result; the final count is the number of distinct mutant IDs killed across all drawn ticks in
+   * the repetition.
+   *
+   * Repetitions run in parallel with deterministic per-rep seeds.
+   */
+  private fun evaluateRandomDrawScenario(
+      pool: List<NextTickPostEvaluationDatabaseEntry>,
+      scenarioKills: Map<Int, Set<Int>>,
+      suiteSize: Int,
+  ): List<Int> =
+      (0..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val killed = HashSet<Int>()
+            repeat(suiteSize) {
+              val entry = pool[rng.nextInt(pool.size)]
+              scenarioKills[entry.scenarioConfigId]?.let { killed.addAll(it) }
+            }
+            killed.size
+          }
+          .collect(Collectors.toList())
+
+  /**
+   * Round-robin variant of [evaluateRandomDrawScenario]: cycles through [groups] and for each slot
+   * draws one tick uniformly at random from the current group, then credits the full set of mutants
+   * killed in that tick's scenario. Repetitions run in parallel.
+   */
+  private fun evaluateRoundRobinScenario(
+      groups: List<List<NextTickPostEvaluationDatabaseEntry>>,
+      scenarioKills: Map<Int, Set<Int>>,
+      suiteSize: Int,
+  ): List<Int> =
+      (0..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val killed = HashSet<Int>()
+            repeat(suiteSize) { slot ->
+              val group = groups[slot % groups.size]
+              val entry = group[rng.nextInt(group.size)]
+              scenarioKills[entry.scenarioConfigId]?.let { killed.addAll(it) }
             }
             killed.size
           }

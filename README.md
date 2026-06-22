@@ -297,7 +297,7 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 
 | Flag | Columns | Description |
 |---|---|---|
-| `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` … `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
+| `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` ... `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
 | `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
 | `--ego-speed` / `--no-ego-speed` | 1 | Ego speed: `ego_speed_mps` |
 | `--ego-accel` / `--no-ego-accel` | 1 | Ego acceleration: `ego_accel_mps2` |
@@ -326,18 +326,18 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 
 # Focus on time gaps only — disable raw distances and per-neighbour kinematics
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
-  --train-fraction 1.0 \
-  --seed 42 \
+  --train-fraction 0.5 \
+  --seed 4 \
   --no-monitors \
   --no-ego-maneuver \
   --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
-  --num-leaves 16 \
+  --num-leaves 75 \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
   --db-workers 48 \
-  --out-dir /results/runs
+  --out-dir ./results/runs
 
 # Render a stored dot file to PNG
 dot -Tpng run_42.dot -o run_42.png

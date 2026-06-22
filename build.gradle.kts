@@ -167,6 +167,34 @@ val runPostEvaluation by
       // args = listOf("--flag", "value")
     }
 
+val runBaselineNextTickWithStartingScenario by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Run the scenario-based next-tick baseline evaluation (evaluateWithStartingScenario)."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set(
+          "tools.aqua.stars.coverage.significance.RunBaselineNextTickWithStartingScenarioKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
+val runBaselineNextTickSplitWithStartingScenario by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Run the scenario-based next-tick split baseline evaluation (evaluateSplitWithStartingScenario)."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set(
+          "tools.aqua.stars.coverage.significance.RunBaselineNextTickSplitWithStartingScenarioKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
