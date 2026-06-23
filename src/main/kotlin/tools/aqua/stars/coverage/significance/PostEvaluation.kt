@@ -119,7 +119,8 @@ const val REPETITIONS: Int = 100
 const val TEST_SUITE_SIZE: Int = 300
 
 /** Suite sizes evaluated by [BaselineNextTickPostEvaluation]. */
-val NEXT_TICK_SUITE_SIZES: List<Int> = listOf(100, 200, 300, 500, 800, 1000, 2000)
+val NEXT_TICK_SUITE_SIZES: List<Int> =
+    listOf(1, 5, 10, 20, 30, 50, 80, 100, 200, 300, 500, 800, 1000, 2000)
 
 /** Post-evaluation of the coverage significance evaluation. */
 fun main() {
