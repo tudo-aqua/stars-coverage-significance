@@ -251,6 +251,13 @@ object BaselineNextTickPostEvaluation {
           emptyList()
         }
 
+    val leafGroupsWithAccidents =
+        leafGroups.filter { group -> group.any { it.nextTickG0Failed == true } }
+    if (leafGroups.isNotEmpty()) {
+      println(
+          "  ${leafGroupsWithAccidents.size} of ${leafGroups.size} leaf groups contain at least one accident tick.")
+    }
+
     for (suiteSize in NEXT_TICK_SUITE_SIZES) {
       println("  Suite size $suiteSize (scenario mode):")
 
@@ -271,6 +278,15 @@ object BaselineNextTickPostEvaluation {
         save(
             evaluateRoundRobinScenario(leafGroups, scenarioKills, suiteSize),
             "leaf_scenario",
+            suiteSize)
+      }
+
+      if (leafGroupsWithAccidents.isNotEmpty()) {
+        println(
+            "    Evaluating decision-tree-leaf-stratified scenario sampling (accident leaf groups only).")
+        save(
+            evaluateRoundRobinScenario(leafGroupsWithAccidents, scenarioKills, suiteSize),
+            "leaf_scenario_accidents",
             suiteSize)
       }
     }
@@ -312,6 +328,11 @@ object BaselineNextTickPostEvaluation {
     val filteredLeafGroups =
         filteredTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }.values.toList()
 
+    val filteredLeafGroupsWithAccidents =
+        filteredLeafGroups.filter { group -> group.any { it.nextTickG0Failed == true } }
+    println(
+        "  ${filteredLeafGroupsWithAccidents.size} of ${filteredLeafGroups.size} leaf groups contain at least one accident tick.")
+
     for (suiteSize in NEXT_TICK_SUITE_SIZES) {
       println("  Suite size $suiteSize (scenario split mode):")
 
@@ -332,6 +353,15 @@ object BaselineNextTickPostEvaluation {
           evaluateRoundRobinScenario(filteredLeafGroups, scenarioKills, suiteSize),
           "leaf_scenario_split",
           suiteSize)
+
+      if (filteredLeafGroupsWithAccidents.isNotEmpty()) {
+        println(
+            "    Evaluating decision-tree-leaf-stratified scenario sampling (accident leaf groups only, split).")
+        save(
+            evaluateRoundRobinScenario(filteredLeafGroupsWithAccidents, scenarioKills, suiteSize),
+            "leaf_scenario_accidents_split",
+            suiteSize)
+      }
     }
 
     println("Finished BaselineNextTickPostEvaluation (scenario split mode).")

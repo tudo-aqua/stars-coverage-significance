@@ -25,6 +25,7 @@ STRATEGIES = [
     ("random_scenario", "Random\n(Scenario)"),
     ("tsc_scenario", "TSC\n(Scenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
+    ("leaf_scenario_accidents", "Leaf\n(Scenario,\nAccidents)"),
 ]
 
 
