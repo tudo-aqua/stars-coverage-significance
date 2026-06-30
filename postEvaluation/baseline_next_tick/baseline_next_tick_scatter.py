@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Scatter plots for three sampling strategies across all suite sizes.
+"""Scatter plots for sampling strategies across all suite sizes.
 
 Auto-discovers size_<n>/ subdirectories and produces:
   - Per size: size_<n>/baseline_next_tick_scatter_<strategy>.[png|pdf]
-  - All sizes: baseline_next_tick_scatter_all.[png|pdf]
-    Grid layout: rows = strategies (Random / TSC / Leaf), columns = suite sizes.
+  - All sizes (full strategies):  baseline_next_tick_scatter_all.[png|pdf]
+  - All sizes (rare strategies):  baseline_next_tick_scatter_all_rare.[png|pdf]
+    Grid layout: rows = strategies, columns = suite sizes.
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ TICK_FONTSIZE = 75
 TICK_FONTSIZE_SMALL = 26
 AXES_LINEWIDTH = 2.5
 
-STRATEGIES = [
+STRATEGIES_FULL = [
     ("random", "Random"),
     ("tsc", "TSC"),
     ("leaf", "Leaf"),
@@ -26,11 +27,17 @@ STRATEGIES = [
     ("tsc_scenario", "TSC\n(Scenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
     ("leaf_scenario_accidents", "Leaf\n(Scenario,\nAccidents)"),
+]
+
+STRATEGIES_RARE = [
     ("random_scenario_rare", "Random\n(Scenario,\nRare)"),
     ("tsc_scenario_rare", "TSC\n(Scenario,\nRare)"),
     ("leaf_scenario_rare", "Leaf\n(Scenario,\nRare)"),
     ("leaf_scenario_accidents_rare", "Leaf\n(Scenario,\nAccidents,\nRare)"),
 ]
+
+STRATEGIES = STRATEGIES_FULL + STRATEGIES_RARE
+STRATEGY_GROUPS = [("", STRATEGIES_FULL), ("_rare", STRATEGIES_RARE)]
 
 
 def _discover_sizes(base: Path) -> list[tuple[int, Path]]:
@@ -94,72 +101,81 @@ def main() -> None:
         print("No size_<n>/ subdirectories found.")
         return
 
-    # Load all data; compute global y-axis max for the all-sizes plot.
-    all_data: dict[int, list[np.ndarray]] = {}
-    global_max = 0.0
+    # Load all data keyed by strategy key; track per-group global y-axis max.
+    all_data: dict[int, dict[str, np.ndarray]] = {}
+    group_global_max: dict[str, float] = {suffix: 0.0 for suffix, _ in STRATEGY_GROUPS}
     for size, size_dir in size_dirs:
-        arrays = []
+        data: dict[str, np.ndarray] = {}
         for key, _ in STRATEGIES:
             csv = _find_csv(size_dir, key)
-            arr = _read_results(csv) if csv is not None else np.array([], dtype=float)
-            arrays.append(arr)
-            if arr.size:
-                global_max = max(global_max, float(arr.max()))
-        all_data[size] = arrays
+            if csv is not None:
+                arr = _read_results(csv)
+                data[key] = arr
+                for suffix, group in STRATEGY_GROUPS:
+                    if any(k == key for k, _ in group):
+                        group_global_max[suffix] = max(group_global_max[suffix], float(arr.max()))
+        all_data[size] = data
 
-    # Per-size: one scatter file per strategy, written into the size subdirectory.
+    # Per-size: one scatter file per strategy (individual, unchanged).
     for size, size_dir in size_dirs:
-        arrays = all_data[size]
-        if not any(arr.size for arr in arrays):
+        data = all_data[size]
+        if not data:
             continue
-        local_max = max((arr.max() for arr in arrays if arr.size), default=0.0)
-        for (key, label), values in zip(STRATEGIES, arrays):
-            if not values.size:
+        local_max = max((v.max() for v in data.values()), default=0.0)
+        for key, label in STRATEGIES:
+            values = data.get(key)
+            if values is None or not values.size:
                 continue
             fig, ax = plt.subplots(figsize=(24, 24))
             _scatter_ax(ax, values, label, local_max + 1, rng, TICK_FONTSIZE, AXES_LINEWIDTH)
             fig.tight_layout()
             out = size_dir / f"baseline_next_tick_scatter_{key}"
-            for suffix in (".png", ".pdf"):
-                fig.savefig(out.with_suffix(suffix), bbox_inches="tight")
+            for ext in (".png", ".pdf"):
+                fig.savefig(out.with_suffix(ext), bbox_inches="tight")
             plt.close(fig)
         print(f"Saved per-strategy scatter plots to {size_dir.name}/")
 
-    # All-sizes combined: rows = strategies, columns = sizes (only sizes with data).
-    populated = [(size, d) for size, d in size_dirs if any(a.size for a in all_data[size])]
-    if not populated:
-        print("No CSV data found in any size_*/ subdirectory — skipping all-sizes plot.")
-        return
+    # All-sizes combined: one grid per strategy group.
+    for group_suffix, group_strategies in STRATEGY_GROUPS:
+        populated = [
+            (size, d)
+            for size, d in size_dirs
+            if any(key in all_data[size] for key, _ in group_strategies)
+        ]
+        if not populated:
+            print(f"No CSV data for group '{group_suffix}' — skipping all-sizes plot.")
+            continue
 
-    n_rows, n_cols = len(STRATEGIES), len(populated)
-    fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
-        figsize=(n_cols * 8, n_rows * 8),
-        squeeze=False,
-    )
-    for col, (size, _) in enumerate(populated):
-        for row, ((key, label), values) in enumerate(zip(STRATEGIES, all_data[size])):
-            ax = axes[row][col]
-            _scatter_ax(
-                ax, values, label, global_max + 1, rng, TICK_FONTSIZE_SMALL, AXES_LINEWIDTH
-            )
-            if row == 0:
-                ax.set_title(
-                    f"n = {size:,}",
-                    fontsize=TICK_FONTSIZE_SMALL + 4,
-                    fontweight="bold",
-                    pad=12,
-                )
-            if col == 0:
-                ax.set_ylabel(label, fontsize=TICK_FONTSIZE_SMALL + 4, labelpad=12)
+        n_rows = len(group_strategies)
+        n_cols = len(populated)
+        fig, axes = plt.subplots(
+            n_rows,
+            n_cols,
+            figsize=(n_cols * 8, n_rows * 8),
+            squeeze=False,
+        )
+        gmax = group_global_max[group_suffix]
+        for col, (size, _) in enumerate(populated):
+            for row, (key, label) in enumerate(group_strategies):
+                ax = axes[row][col]
+                values = all_data[size].get(key, np.array([], dtype=float))
+                _scatter_ax(ax, values, label, gmax + 1, rng, TICK_FONTSIZE_SMALL, AXES_LINEWIDTH)
+                if row == 0:
+                    ax.set_title(
+                        f"n = {size:,}",
+                        fontsize=TICK_FONTSIZE_SMALL + 4,
+                        fontweight="bold",
+                        pad=12,
+                    )
+                if col == 0:
+                    ax.set_ylabel(label, fontsize=TICK_FONTSIZE_SMALL + 4, labelpad=12)
 
-    fig.tight_layout()
-    out = base / "baseline_next_tick_scatter_all"
-    for suffix in (".png", ".pdf"):
-        fig.savefig(out.with_suffix(suffix), bbox_inches="tight")
-    plt.close(fig)
-    print(f"Saved all-sizes scatter to {out.with_suffix('.pdf')}")
+        fig.tight_layout()
+        out = base / f"baseline_next_tick_scatter_all{group_suffix}"
+        for ext in (".png", ".pdf"):
+            fig.savefig(out.with_suffix(ext), bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved all-sizes scatter to {out.with_suffix('.pdf')}")
 
 
 if __name__ == "__main__":
