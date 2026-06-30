@@ -243,7 +243,7 @@ object BaselineNextTickPostEvaluation {
     val scenarioKills = buildScenarioKillMap(allViolations)
     val rareMutantIds = buildRareMutantIds(allViolations)
     println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
-    println("  Found ${rareMutantIds.size} rare mutants (≤ $MAX_RARE_MUTANT_FAILURES violations).")
+    println("  Found ${rareMutantIds.size} rare mutants (<= $MAX_RARE_MUTANT_FAILURES violations).")
 
     println("  Grouping ticks by TSC instance...")
     val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
@@ -361,7 +361,7 @@ object BaselineNextTickPostEvaluation {
     val rareMutantIds = buildRareMutantIds(allViolations).intersect(testMutantIdSet)
     println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
     println(
-        "  Found ${rareMutantIds.size} rare mutants among test set (≤ $MAX_RARE_MUTANT_FAILURES violations).")
+        "  Found ${rareMutantIds.size} rare mutants among test set (<= $MAX_RARE_MUTANT_FAILURES violations).")
 
     println("  Grouping ticks by TSC instance...")
     val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
@@ -465,7 +465,7 @@ object BaselineNextTickPostEvaluation {
   private fun buildRareMutantIds(allViolations: List<MutantScenarioG0Violation>): Set<Int> =
       allViolations
           .groupBy { it.mutantId }
-          .filterValues { rows -> rows.count { it.anyG0Violation } <= MAX_RARE_MUTANT_FAILURES }
+          .filterValues { rows -> rows.count { it.anyG0Violation } in 1..MAX_RARE_MUTANT_FAILURES }
           .keys
 
   /**
