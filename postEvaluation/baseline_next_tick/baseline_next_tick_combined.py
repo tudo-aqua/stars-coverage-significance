@@ -29,6 +29,10 @@ STRATEGIES = [
     ("tsc_scenario", "TSC\n(Scenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
     ("leaf_scenario_accidents", "Leaf\n(Scenario,\nAccidents)"),
+    ("random_scenario_rare", "Random\n(Scenario,\nRare)"),
+    ("tsc_scenario_rare", "TSC\n(Scenario,\nRare)"),
+    ("leaf_scenario_rare", "Leaf\n(Scenario,\nRare)"),
+    ("leaf_scenario_accidents_rare", "Leaf\n(Scenario,\nAccidents,\nRare)"),
 ]
 
 # Within each strategy group: scatter at 0.0, box at 0.7; groups spaced 2.5 apart.

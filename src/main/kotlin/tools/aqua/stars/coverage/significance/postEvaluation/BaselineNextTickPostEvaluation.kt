@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.stream.Collectors
 import kotlin.io.path.writeText
 import kotlin.random.Random
+import tools.aqua.stars.coverage.significance.MAX_RARE_MUTANT_FAILURES
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
@@ -29,6 +30,7 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
+import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0Violation
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0ViolationsView
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 
@@ -237,8 +239,11 @@ object BaselineNextTickPostEvaluation {
     println("  Loaded ${allTicks.size} ticks.")
 
     println("  Loading scenario kill map from view...")
-    val scenarioKills = buildScenarioKillMap()
+    val allViolations = MutantScenarioG0ViolationsView.getAll()
+    val scenarioKills = buildScenarioKillMap(allViolations)
+    val rareMutantIds = buildRareMutantIds(allViolations)
     println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
+    println("  Found ${rareMutantIds.size} rare mutants (≤ $MAX_RARE_MUTANT_FAILURES violations).")
 
     println("  Grouping ticks by TSC instance...")
     val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
@@ -289,6 +294,38 @@ object BaselineNextTickPostEvaluation {
             "leaf_scenario_accidents",
             suiteSize)
       }
+
+      if (rareMutantIds.isNotEmpty()) {
+        println("    Evaluating uniform-random scenario sampling (rare mutants).")
+        save(
+            evaluateRandomDrawScenario(allTicks, scenarioKills, suiteSize, rareMutantIds),
+            "random_scenario_rare",
+            suiteSize)
+
+        println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants).")
+        save(
+            evaluateRoundRobinScenario(tscGroups, scenarioKills, suiteSize, rareMutantIds),
+            "tsc_scenario_rare",
+            suiteSize)
+
+        if (leafGroups.isNotEmpty()) {
+          println("    Evaluating decision-tree-leaf-stratified scenario sampling (rare mutants).")
+          save(
+              evaluateRoundRobinScenario(leafGroups, scenarioKills, suiteSize, rareMutantIds),
+              "leaf_scenario_rare",
+              suiteSize)
+        }
+
+        if (leafGroupsWithAccidents.isNotEmpty()) {
+          println(
+              "    Evaluating decision-tree-leaf-stratified scenario sampling (accident leaf groups, rare mutants).")
+          save(
+              evaluateRoundRobinScenario(
+                  leafGroupsWithAccidents, scenarioKills, suiteSize, rareMutantIds),
+              "leaf_scenario_accidents_rare",
+              suiteSize)
+        }
+      }
     }
 
     println("Finished BaselineNextTickPostEvaluation (scenario mode).")
@@ -319,8 +356,12 @@ object BaselineNextTickPostEvaluation {
     println("  Filtered to ${filteredTicks.size} ticks for test-set mutants.")
 
     println("  Loading scenario kill map (test mutants only) from view...")
-    val scenarioKills = buildScenarioKillMap(testMutantIdSet)
+    val allViolations = MutantScenarioG0ViolationsView.getAll()
+    val scenarioKills = buildScenarioKillMap(allViolations, testMutantIdSet)
+    val rareMutantIds = buildRareMutantIds(allViolations).intersect(testMutantIdSet)
     println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
+    println(
+        "  Found ${rareMutantIds.size} rare mutants among test set (≤ $MAX_RARE_MUTANT_FAILURES violations).")
 
     println("  Grouping ticks by TSC instance...")
     val filteredTscGroups = filteredTicks.groupBy { it.tscInstanceId }.values.toList()
@@ -362,23 +403,70 @@ object BaselineNextTickPostEvaluation {
             "leaf_scenario_accidents_split",
             suiteSize)
       }
+
+      if (rareMutantIds.isNotEmpty()) {
+        println("    Evaluating uniform-random scenario sampling (rare mutants, split).")
+        save(
+            evaluateRandomDrawScenario(filteredTicks, scenarioKills, suiteSize, rareMutantIds),
+            "random_scenario_rare_split",
+            suiteSize)
+
+        println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants, split).")
+        save(
+            evaluateRoundRobinScenario(filteredTscGroups, scenarioKills, suiteSize, rareMutantIds),
+            "tsc_scenario_rare_split",
+            suiteSize)
+
+        println(
+            "    Evaluating decision-tree-leaf-stratified scenario sampling (rare mutants, split).")
+        save(
+            evaluateRoundRobinScenario(filteredLeafGroups, scenarioKills, suiteSize, rareMutantIds),
+            "leaf_scenario_rare_split",
+            suiteSize)
+
+        if (filteredLeafGroupsWithAccidents.isNotEmpty()) {
+          println(
+              "    Evaluating decision-tree-leaf-stratified scenario sampling (accident leaf groups, rare mutants, split).")
+          save(
+              evaluateRoundRobinScenario(
+                  filteredLeafGroupsWithAccidents, scenarioKills, suiteSize, rareMutantIds),
+              "leaf_scenario_accidents_rare_split",
+              suiteSize)
+        }
+      }
     }
 
     println("Finished BaselineNextTickPostEvaluation (scenario split mode).")
   }
 
   /**
-   * Builds a lookup map from scenario config ID to the set of mutant IDs killed in that scenario,
-   * derived from [MutantScenarioG0ViolationsView]. Only entries where
-   * [MutantScenarioG0ViolationsView.anyG0Violation] is `true` are included.
+   * Builds a lookup map from scenario config ID to the set of mutant IDs killed in that scenario.
+   * Only entries where [MutantScenarioG0Violation.anyG0Violation] is `true` are included.
    *
+   * @param allViolations Pre-loaded rows from [MutantScenarioG0ViolationsView].
    * @param mutantFilter If non-null, restricts kill entries to the given mutant IDs.
    */
-  private fun buildScenarioKillMap(mutantFilter: Set<Int>? = null): Map<Int, Set<Int>> =
-      MutantScenarioG0ViolationsView.getAll()
+  private fun buildScenarioKillMap(
+      allViolations: List<MutantScenarioG0Violation>,
+      mutantFilter: Set<Int>? = null,
+  ): Map<Int, Set<Int>> =
+      allViolations
           .filter { it.anyG0Violation && (mutantFilter == null || it.mutantId in mutantFilter) }
           .groupBy { it.scenarioConfigId }
           .mapValues { (_, vs) -> vs.map { it.mutantId }.toSet() }
+
+  /**
+   * Returns the set of mutant IDs that are considered "rare": mutants for which the number of
+   * scenario configs with [MutantScenarioG0Violation.anyG0Violation] = `true` is at most
+   * [MAX_RARE_MUTANT_FAILURES].
+   *
+   * @param allViolations Pre-loaded rows from [MutantScenarioG0ViolationsView].
+   */
+  private fun buildRareMutantIds(allViolations: List<MutantScenarioG0Violation>): Set<Int> =
+      allViolations
+          .groupBy { it.mutantId }
+          .filterValues { rows -> rows.count { it.anyG0Violation } <= MAX_RARE_MUTANT_FAILURES }
+          .keys
 
   /**
    * Draws [suiteSize] ticks uniformly at random from [pool], [REPETITIONS] times. For each drawn
@@ -386,12 +474,15 @@ object BaselineNextTickPostEvaluation {
    * result; the final count is the number of distinct mutant IDs killed across all drawn ticks in
    * the repetition.
    *
+   * When [rareMutantIds] is non-null only kills of those mutants are counted.
+   *
    * Repetitions run in parallel with deterministic per-rep seeds.
    */
   private fun evaluateRandomDrawScenario(
       pool: List<NextTickPostEvaluationDatabaseEntry>,
       scenarioKills: Map<Int, Set<Int>>,
       suiteSize: Int,
+      rareMutantIds: Set<Int>? = null,
   ): List<Int> =
       (0..REPETITIONS)
           .toList()
@@ -401,7 +492,10 @@ object BaselineNextTickPostEvaluation {
             val killed = HashSet<Int>()
             repeat(suiteSize) {
               val entry = pool[rng.nextInt(pool.size)]
-              scenarioKills[entry.scenarioConfigId]?.let { killed.addAll(it) }
+              scenarioKills[entry.scenarioConfigId]?.let { kills ->
+                killed.addAll(
+                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
+              }
             }
             killed.size
           }
@@ -411,11 +505,14 @@ object BaselineNextTickPostEvaluation {
    * Round-robin variant of [evaluateRandomDrawScenario]: cycles through [groups] and for each slot
    * draws one tick uniformly at random from the current group, then credits the full set of mutants
    * killed in that tick's scenario. Repetitions run in parallel.
+   *
+   * When [rareMutantIds] is non-null only kills of those mutants are counted.
    */
   private fun evaluateRoundRobinScenario(
       groups: List<List<NextTickPostEvaluationDatabaseEntry>>,
       scenarioKills: Map<Int, Set<Int>>,
       suiteSize: Int,
+      rareMutantIds: Set<Int>? = null,
   ): List<Int> =
       (0..REPETITIONS)
           .toList()
@@ -426,7 +523,10 @@ object BaselineNextTickPostEvaluation {
             repeat(suiteSize) { slot ->
               val group = groups[slot % groups.size]
               val entry = group[rng.nextInt(group.size)]
-              scenarioKills[entry.scenarioConfigId]?.let { killed.addAll(it) }
+              scenarioKills[entry.scenarioConfigId]?.let { kills ->
+                killed.addAll(
+                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
+              }
             }
             killed.size
           }
