@@ -154,15 +154,16 @@ object BaselineNextTickPostEvaluation {
   }
 
   /**
-   * Draws [suiteSize] ticks uniformly at random (with replacement) from [pool], [REPETITIONS]
-   * times. Each repetition counts the number of distinct mutant IDs for which
+   * Draws up to [suiteSize] ticks uniformly at random **without replacement** from [pool],
+   * [REPETITIONS] times. Each repetition counts the number of distinct mutant IDs for which
    * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in the sample.
    *
-   * Repetitions run in parallel; each uses a deterministic seed derived from its index so results
-   * are reproducible regardless of thread scheduling.
+   * If the pool is smaller than [suiteSize] all items are drawn and the loop stops early.
+   * A `HashSet` of used indices avoids copying the pool and runs in O(1) expected time per draw
+   * when `suiteSize ≪ pool.size`. Repetitions run in parallel with deterministic per-rep seeds.
    *
    * @param pool Tick entries to sample from.
-   * @param suiteSize Number of ticks to draw per repetition.
+   * @param suiteSize Maximum number of ticks to draw per repetition.
    * @return One killed-mutant count per repetition.
    */
   private fun evaluateRandomDraw(
@@ -175,25 +176,30 @@ object BaselineNextTickPostEvaluation {
           .map { rep ->
             val rng = Random(42L + rep)
             val killed = HashSet<Int>()
-            repeat(suiteSize) {
-              val entry = pool[rng.nextInt(pool.size)]
-              if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+            val seen = HashSet<Int>(suiteSize * 2)
+            val limit = minOf(suiteSize, pool.size)
+            while (seen.size < limit) {
+              val idx = rng.nextInt(pool.size)
+              if (seen.add(idx)) {
+                val entry = pool[idx]
+                if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+              }
             }
             killed.size
           }
           .collect(Collectors.toList())
 
   /**
-   * Builds a test suite of [suiteSize] ticks by cycling round-robin through [groups], drawing one
-   * tick uniformly at random from the current group at each slot. Repeats [REPETITIONS] times and
-   * counts unique mutant IDs for which [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is
-   * `true` in each suite.
+   * Builds a test suite of up to [suiteSize] ticks by cycling round-robin through [groups],
+   * drawing one tick **without replacement** from the current group at each slot. Each group
+   * maintains its own `HashSet` of used indices so no tick is drawn twice within a repetition.
    *
-   * Direct random indexing replaces the former shuffle+rotate pattern, avoiding O(pool_size)
-   * allocations per repetition. Repetitions run in parallel.
+   * When a group is exhausted it is skipped; the loop stops early once every group is exhausted
+   * (detected by [groups].size consecutive exhausted-group visits) or [suiteSize] is reached.
+   * Repetitions run in parallel with deterministic per-rep seeds.
    *
    * @param groups Pre-partitioned tick lists (e.g., by TSC instance or leaf node).
-   * @param suiteSize Number of ticks to include in each test suite.
+   * @param suiteSize Maximum number of ticks to include in each test suite.
    * @return One killed-mutant count per repetition.
    */
   private fun evaluateRoundRobin(
@@ -205,11 +211,26 @@ object BaselineNextTickPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
+            val usedPerGroup = Array(groups.size) { HashSet<Int>() }
             val killed = HashSet<Int>()
-            repeat(suiteSize) { slot ->
-              val group = groups[slot % groups.size]
-              val entry = group[rng.nextInt(group.size)]
+            var drawn = 0
+            var slot = 0
+            var consecutiveExhausted = 0
+            while (drawn < suiteSize && consecutiveExhausted < groups.size) {
+              val g = slot % groups.size
+              slot++
+              val group = groups[g]
+              val used = usedPerGroup[g]
+              if (used.size >= group.size) {
+                consecutiveExhausted++
+                continue
+              }
+              consecutiveExhausted = 0
+              var idx: Int
+              do { idx = rng.nextInt(group.size) } while (!used.add(idx))
+              val entry = group[idx]
               if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
+              drawn++
             }
             killed.size
           }
@@ -469,10 +490,10 @@ object BaselineNextTickPostEvaluation {
           .keys
 
   /**
-   * Draws [suiteSize] ticks uniformly at random from [pool], [REPETITIONS] times. For each drawn
-   * tick the full set of mutants killed in its scenario (from [scenarioKills]) is added to the
-   * result; the final count is the number of distinct mutant IDs killed across all drawn ticks in
-   * the repetition.
+   * Draws up to [suiteSize] ticks uniformly at random **without replacement** from [pool],
+   * [REPETITIONS] times. For each drawn tick the full set of mutants killed in its scenario (from
+   * [scenarioKills]) is added to the result. If the pool is smaller than [suiteSize] all items are
+   * drawn and the loop stops early.
    *
    * When [rareMutantIds] is non-null only kills of those mutants are counted.
    *
@@ -490,11 +511,16 @@ object BaselineNextTickPostEvaluation {
           .map { rep ->
             val rng = Random(42L + rep)
             val killed = HashSet<Int>()
-            repeat(suiteSize) {
-              val entry = pool[rng.nextInt(pool.size)]
-              scenarioKills[entry.scenarioConfigId]?.let { kills ->
-                killed.addAll(
-                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
+            val seen = HashSet<Int>(suiteSize * 2)
+            val limit = minOf(suiteSize, pool.size)
+            while (seen.size < limit) {
+              val idx = rng.nextInt(pool.size)
+              if (seen.add(idx)) {
+                val entry = pool[idx]
+                scenarioKills[entry.scenarioConfigId]?.let { kills ->
+                  killed.addAll(
+                      if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
+                }
               }
             }
             killed.size
@@ -502,9 +528,12 @@ object BaselineNextTickPostEvaluation {
           .collect(Collectors.toList())
 
   /**
-   * Round-robin variant of [evaluateRandomDrawScenario]: cycles through [groups] and for each slot
-   * draws one tick uniformly at random from the current group, then credits the full set of mutants
-   * killed in that tick's scenario. Repetitions run in parallel.
+   * Round-robin variant of [evaluateRandomDrawScenario]: cycles through [groups], drawing one tick
+   * **without replacement** from the current group at each slot, then credits the full set of
+   * mutants killed in that tick's scenario. Each group maintains its own `HashSet` of used indices.
+   *
+   * Exhausted groups are skipped; the loop stops early once all groups are exhausted or [suiteSize]
+   * is reached. Repetitions run in parallel with deterministic per-rep seeds.
    *
    * When [rareMutantIds] is non-null only kills of those mutants are counted.
    */
@@ -519,14 +548,29 @@ object BaselineNextTickPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
+            val usedPerGroup = Array(groups.size) { HashSet<Int>() }
             val killed = HashSet<Int>()
-            repeat(suiteSize) { slot ->
-              val group = groups[slot % groups.size]
-              val entry = group[rng.nextInt(group.size)]
+            var drawn = 0
+            var slot = 0
+            var consecutiveExhausted = 0
+            while (drawn < suiteSize && consecutiveExhausted < groups.size) {
+              val g = slot % groups.size
+              slot++
+              val group = groups[g]
+              val used = usedPerGroup[g]
+              if (used.size >= group.size) {
+                consecutiveExhausted++
+                continue
+              }
+              consecutiveExhausted = 0
+              var idx: Int
+              do { idx = rng.nextInt(group.size) } while (!used.add(idx))
+              val entry = group[idx]
               scenarioKills[entry.scenarioConfigId]?.let { kills ->
                 killed.addAll(
                     if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
               }
+              drawn++
             }
             killed.size
           }
