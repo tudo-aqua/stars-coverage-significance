@@ -553,8 +553,8 @@ object BaselineNextTickPostEvaluation {
       suiteSize: Int,
       rareMutantIds: Set<Int>? = null,
   ): List<Int> {
-    val uniqueScenarioIdsPerGroup =
-        groups.map { group -> group.map { it.scenarioConfigId }.toIntArray() }
+    val scenarioIdListsPerGroup = groups.map { group -> group.map { it.scenarioConfigId } }
+    val uniqueScenarioCountPerGroup = scenarioIdListsPerGroup.map { it.distinct().size }
 
     return (0..REPETITIONS)
         .toList()
@@ -571,18 +571,18 @@ object BaselineNextTickPostEvaluation {
             val selectedGroup = slot % groups.size
             println("  Draw from Group $selectedGroup")
             slot++
-            val uniqueScenarioIds = uniqueScenarioIdsPerGroup[selectedGroup]
-            val alreadyTrackedStartingScenarios = startingScenariosUsedPerGroup[selectedGroup]
-            if (alreadyTrackedStartingScenarios.size >= uniqueScenarioIds.size) {
+            val scenarioIds = scenarioIdListsPerGroup[selectedGroup]
+            val alreadyUsed = startingScenariosUsedPerGroup[selectedGroup]
+            if (alreadyUsed.size >= uniqueScenarioCountPerGroup[selectedGroup]) {
               consecutiveExhausted++
               continue
             }
             consecutiveExhausted = 0
             var scenarioId: StartingScenarioId
             do {
-              scenarioId = uniqueScenarioIds[rng.nextInt(uniqueScenarioIds.size)]
+              scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
               println("    Draw Scenario $scenarioId")
-            } while (!alreadyTrackedStartingScenarios.add(scenarioId))
+            } while (!alreadyUsed.add(scenarioId))
             scenarioKills[scenarioId]?.let { kills ->
               killed.addAll(
                   if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
