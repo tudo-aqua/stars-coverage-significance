@@ -28,3 +28,5 @@ typealias ScenarioInstanceId = Int
 typealias ScenarioInstanceJSON = String
 
 typealias HighwayTrafficScenarioInstanceId = Int
+
+typealias StartingScenarioId = Int

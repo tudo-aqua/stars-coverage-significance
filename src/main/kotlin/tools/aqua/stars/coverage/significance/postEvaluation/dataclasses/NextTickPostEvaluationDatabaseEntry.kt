@@ -34,5 +34,5 @@ data class NextTickPostEvaluationDatabaseEntry(
     val mutantId: Int,
     val nextTickG0Failed: Boolean?,
     val tscInstanceId: Int,
-    val scenarioConfigId: Int,
+    val scenarioConfigId: StartingScenarioId,
 )
