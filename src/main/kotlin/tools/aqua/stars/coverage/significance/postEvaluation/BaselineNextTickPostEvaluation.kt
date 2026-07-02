@@ -272,6 +272,7 @@ object BaselineNextTickPostEvaluation {
 
     println("  Grouping ticks by TSC instance...")
     val tscGroups = allTicks.groupBy { it.tscInstanceId }.values.toList()
+    println("  Loaded ${tscGroups.size} TSC groups.")
 
     val leafGroups: List<List<NextTickPostEvaluationDatabaseEntry>> =
         if (fullRunId != null) {
@@ -280,6 +281,7 @@ object BaselineNextTickPostEvaluation {
         } else {
           emptyList()
         }
+    println("  Loaded ${leafGroups.size} decision-tree leaf groups.")
 
     val leafGroupsWithAccidents =
         leafGroups.filter { group -> group.any { it.nextTickG0Failed == true } }
@@ -551,9 +553,8 @@ object BaselineNextTickPostEvaluation {
       suiteSize: Int,
       rareMutantIds: Set<Int>? = null,
   ): List<Int> {
-    // Deduplicate scenario IDs per group once, outside the parallel stream.
     val uniqueScenarioIdsPerGroup =
-        groups.map { group -> group.map { it.scenarioConfigId }.distinct().toIntArray() }
+        groups.map { group -> group.map { it.scenarioConfigId }.toIntArray() }
 
     return (0..REPETITIONS)
         .toList()
@@ -568,6 +569,7 @@ object BaselineNextTickPostEvaluation {
           var consecutiveExhausted = 0
           while (drawn < suiteSize && consecutiveExhausted < groups.size) {
             val selectedGroup = slot % groups.size
+            println("  Draw from Group $selectedGroup")
             slot++
             val uniqueScenarioIds = uniqueScenarioIdsPerGroup[selectedGroup]
             val alreadyTrackedStartingScenarios = startingScenariosUsedPerGroup[selectedGroup]
@@ -579,6 +581,7 @@ object BaselineNextTickPostEvaluation {
             var scenarioId: StartingScenarioId
             do {
               scenarioId = uniqueScenarioIds[rng.nextInt(uniqueScenarioIds.size)]
+              println("    Draw Scenario $scenarioId")
             } while (!alreadyTrackedStartingScenarios.add(scenarioId))
             scenarioKills[scenarioId]?.let { kills ->
               killed.addAll(
