@@ -539,11 +539,15 @@ object BaselineNextTickPostEvaluation {
    * current group at each slot **without replacement**, then credits the full set of mutants killed
    * in that scenario via [scenarioKills].
    *
-   * Per group, a `Set` of already-drawn scenario IDs is maintained. A random index into the group's
-   * scenario-ID array is drawn and retried on collision; this is efficient because [suiteSize] is
-   * small relative to the number of unique scenarios per group. Exhausted groups are skipped; the
-   * loop stops early once all groups are exhausted or [suiteSize] is reached. Repetitions run in
-   * parallel with deterministic per-rep seeds.
+   * Each repetition starts at a random group. Exhausted groups are removed from the active rotation
+   * immediately so they are never visited again. The loop stops once [suiteSize] scenarios have
+   * been drawn or all groups are exhausted. Repetitions run in parallel with deterministic per-rep
+   * seeds.
+   *
+   * The draw within each group is weighted by tick count (scenarios with more ticks in the group
+   * are proportionally more likely to be drawn first). A rejected-candidate retry loop handles
+   * collisions; it is bounded because the exhaustion guard ensures at least one unused scenario
+   * remains before entering.
    *
    * When [rareMutantIds] is non-null only kills of those mutants are counted.
    */
@@ -560,34 +564,40 @@ object BaselineNextTickPostEvaluation {
         .toList()
         .parallelStream()
         .map { rep ->
+          println("  Start with repetition: $rep")
           val rng = Random(42L + rep)
-          val startingScenariosUsedPerGroup =
-              Array(groups.size) { mutableSetOf<StartingScenarioId>() }
+          val alreadyUsedPerGroup = Array(groups.size) { mutableSetOf<StartingScenarioId>() }
+          val activeGroups = (0 until groups.size).toMutableList()
           val killed = mutableSetOf<MutantId>()
           var drawn = 0
-          var slot = 0
-          var consecutiveExhausted = 0
-          while (drawn < suiteSize && consecutiveExhausted < groups.size) {
-            val selectedGroup = slot % groups.size
-            println("  Draw from Group $selectedGroup")
-            slot++
-            val scenarioIds = scenarioIdListsPerGroup[selectedGroup]
-            val alreadyUsed = startingScenariosUsedPerGroup[selectedGroup]
-            if (alreadyUsed.size >= uniqueScenarioCountPerGroup[selectedGroup]) {
-              consecutiveExhausted++
+          var pos = rng.nextInt(activeGroups.size)
+
+          while (drawn < suiteSize && activeGroups.isNotEmpty()) {
+            val groupIdx = activeGroups[pos]
+            println("  Draw from Group $groupIdx")
+            val alreadyUsed = alreadyUsedPerGroup[groupIdx]
+
+            if (alreadyUsed.size >= uniqueScenarioCountPerGroup[groupIdx]) {
+              println("  Group $groupIdx was exhausted")
+              activeGroups.removeAt(pos)
+              if (activeGroups.isEmpty()) break
+              pos %= activeGroups.size
               continue
             }
-            consecutiveExhausted = 0
+
+            val scenarioIds = scenarioIdListsPerGroup[groupIdx]
             var scenarioId: StartingScenarioId
             do {
               scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
               println("    Draw Scenario $scenarioId")
             } while (!alreadyUsed.add(scenarioId))
+
             scenarioKills[scenarioId]?.let { kills ->
               killed.addAll(
                   if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
             }
             drawn++
+            pos = (pos + 1) % activeGroups.size
           }
           killed.size
         }
