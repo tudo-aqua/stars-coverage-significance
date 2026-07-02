@@ -564,7 +564,7 @@ object BaselineNextTickPostEvaluation {
         .toList()
         .parallelStream()
         .map { rep ->
-          println("  Start with repetition: $rep")
+          //          println("  Start with repetition: $rep")
           val rng = Random(42L + rep)
           val alreadyUsedPerGroup = Array(groups.size) { mutableSetOf<StartingScenarioId>() }
           val activeGroups = (0 until groups.size).toMutableList()
@@ -574,11 +574,11 @@ object BaselineNextTickPostEvaluation {
 
           while (drawn < suiteSize && activeGroups.isNotEmpty()) {
             val groupIdx = activeGroups[pos]
-            println("  Draw from Group $groupIdx")
+            //            println("  Draw from Group $groupIdx")
             val alreadyUsed = alreadyUsedPerGroup[groupIdx]
 
             if (alreadyUsed.size >= uniqueScenarioCountPerGroup[groupIdx]) {
-              println("  Group $groupIdx was exhausted")
+              //              println("  Group $groupIdx was exhausted")
               activeGroups.removeAt(pos)
               if (activeGroups.isEmpty()) break
               pos %= activeGroups.size
@@ -589,7 +589,7 @@ object BaselineNextTickPostEvaluation {
             var scenarioId: StartingScenarioId
             do {
               scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
-              println("    Draw Scenario $scenarioId")
+              //              println("    Draw Scenario $scenarioId")
             } while (!alreadyUsed.add(scenarioId))
 
             scenarioKills[scenarioId]?.let { kills ->
