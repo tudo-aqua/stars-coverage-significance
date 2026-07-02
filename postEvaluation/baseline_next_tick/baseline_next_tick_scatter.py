@@ -24,6 +24,7 @@ STRATEGIES_FULL = [
     ("tsc", "TSC"),
     ("leaf", "Leaf"),
     ("random_scenario", "Random\n(Scenario)"),
+    ("random_scenario_replacement", "Random\n(Scenario,\nRepl.)"),
     ("tsc_scenario", "TSC\n(Scenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
     ("leaf_scenario_accidents", "Leaf\n(Scenario,\nAccidents)"),

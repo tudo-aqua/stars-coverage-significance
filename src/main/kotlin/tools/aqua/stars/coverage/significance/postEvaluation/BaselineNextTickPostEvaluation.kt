@@ -299,6 +299,12 @@ object BaselineNextTickPostEvaluation {
           "random_scenario",
           suiteSize)
 
+      println("    Evaluating uniform-random scenario sampling (with replacement).")
+      save(
+          evaluateRandomDrawScenarioWithReplacement(allTicks, scenarioKills, suiteSize),
+          "random_scenario_replacement",
+          suiteSize)
+
       println("    Evaluating TSC-instance-stratified scenario sampling.")
       save(
           evaluateRoundRobinScenario(tscGroups, scenarioKills, suiteSize),
@@ -327,6 +333,13 @@ object BaselineNextTickPostEvaluation {
         save(
             evaluateRandomDrawScenario(allTicks, scenarioKills, suiteSize, rareMutantIds),
             "random_scenario_rare",
+            suiteSize)
+
+        println("    Evaluating uniform-random scenario sampling (with replacement, rare mutants).")
+        save(
+            evaluateRandomDrawScenarioWithReplacement(
+                allTicks, scenarioKills, suiteSize, rareMutantIds),
+            "random_scenario_replacement_rare",
             suiteSize)
 
         println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants).")
@@ -410,6 +423,12 @@ object BaselineNextTickPostEvaluation {
           "random_scenario_split",
           suiteSize)
 
+      println("    Evaluating uniform-random scenario sampling (with replacement, split).")
+      save(
+          evaluateRandomDrawScenarioWithReplacement(filteredTicks, scenarioKills, suiteSize),
+          "random_scenario_replacement_split",
+          suiteSize)
+
       println("    Evaluating TSC-instance-stratified scenario sampling (split).")
       save(
           evaluateRoundRobinScenario(filteredTscGroups, scenarioKills, suiteSize),
@@ -436,6 +455,14 @@ object BaselineNextTickPostEvaluation {
         save(
             evaluateRandomDrawScenario(filteredTicks, scenarioKills, suiteSize, rareMutantIds),
             "random_scenario_rare_split",
+            suiteSize)
+
+        println(
+            "    Evaluating uniform-random scenario sampling (with replacement, rare mutants, split).")
+        save(
+            evaluateRandomDrawScenarioWithReplacement(
+                filteredTicks, scenarioKills, suiteSize, rareMutantIds),
+            "random_scenario_replacement_rare_split",
             suiteSize)
 
         println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants, split).")
@@ -496,16 +523,48 @@ object BaselineNextTickPostEvaluation {
           .keys
 
   /**
-   * Draws up to [suiteSize] ticks uniformly at random **without replacement** from [pool],
-   * [REPETITIONS] times. For each drawn tick the full set of mutants killed in its scenario (from
-   * [scenarioKills]) is added to the result. If the pool is smaller than [suiteSize] all items are
-   * drawn and the loop stops early.
+   * Draws up to [suiteSize] unique scenarios without replacement from [pool], [REPETITIONS] times.
+   * For each drawn scenario the full set of mutants killed in it (from [scenarioKills]) is added to
+   * the result. The draw is weighted by tick count: a scenario that appears N times in [pool] is N
+   * times more likely to be the next draw. If the number of unique scenarios in [pool] is smaller
+   * than [suiteSize] all scenarios are drawn and the loop stops early.
    *
    * When [rareMutantIds] is non-null only kills of those mutants are counted.
    *
    * Repetitions run in parallel with deterministic per-rep seeds.
    */
   private fun evaluateRandomDrawScenario(
+      pool: List<NextTickPostEvaluationDatabaseEntry>,
+      scenarioKills: Map<Int, Set<Int>>,
+      suiteSize: Int,
+      rareMutantIds: Set<Int>? = null,
+  ): List<Int> {
+    val scenarioIds = pool.map { it.scenarioConfigId }
+    val uniqueScenarioCount = scenarioIds.distinct().size
+
+    return (0..REPETITIONS)
+        .toList()
+        .parallelStream()
+        .map { rep ->
+          val rng = Random(42L + rep)
+          val killed = mutableSetOf<MutantId>()
+          val seenScenarios = mutableSetOf<StartingScenarioId>()
+          val limit = minOf(suiteSize, uniqueScenarioCount)
+          while (seenScenarios.size < limit) {
+            val scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
+            if (seenScenarios.add(scenarioId)) {
+              scenarioKills[scenarioId]?.let { kills ->
+                killed.addAll(
+                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
+              }
+            }
+          }
+          killed.size
+        }
+        .collect(Collectors.toList())
+  }
+
+  private fun evaluateRandomDrawScenarioWithReplacement(
       pool: List<NextTickPostEvaluationDatabaseEntry>,
       scenarioKills: Map<Int, Set<Int>>,
       suiteSize: Int,
