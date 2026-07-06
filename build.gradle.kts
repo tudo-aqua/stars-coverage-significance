@@ -181,6 +181,20 @@ val runBaselineNextTickWithStartingScenario by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runBaselineNextTickTimeToKill by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "For each accident mutant, measure how many starting scenarios each strategy needs to first kill it (evaluateTimeToKill)."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set(
+          "tools.aqua.stars.coverage.significance.RunBaselineNextTickTimeToKillKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val runBaselineNextTickSplitWithStartingScenario by
     tasks.registering(JavaExec::class) {
       group = "application"

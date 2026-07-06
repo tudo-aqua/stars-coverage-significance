@@ -157,6 +157,9 @@ fun main() {
   //  BaselineNextTickPostEvaluation.evaluate()
   BaselineNextTickPostEvaluation.evaluateSplit()
 
+  /** Measure how many starting scenarios each strategy needs to first kill each accident mutant. */
+  //  BaselineNextTickPostEvaluation.evaluateTimeToKill()
+
   /**
    * Baseline comparing TSC approach with purely random draw and draw from generated starting
    * scenarios.

@@ -495,6 +495,111 @@ object BaselineNextTickPostEvaluation {
   }
 
   /**
+   * For each mutant that causes at least one G0 accident, measures how many starting scenarios
+   * each sampling strategy requires (without replacement) before the mutant is first killed.
+   *
+   * "Killed" means a drawn [StartingScenarioId] belongs to the mutant's set of killing scenarios
+   * according to [MutantScenarioG0ViolationsView]. Each of the [REPETITIONS] repetitions produces
+   * one draw count; -1 is recorded if the entire pool was exhausted without a kill (should not
+   * occur for accident mutants). Results are written to
+   * `baseline_next_tick/time_to_kill/mutant_<id>/ttk_<strategy>.csv`.
+   *
+   * Strategies evaluated:
+   * 1. **Random** — uniform draw from the tick-weighted scenario pool.
+   * 2. **TSC** — round-robin across TSC-instance groups.
+   * 3. **Leaf** — round-robin across decision-tree-leaf groups (requires a full run).
+   * 4. **Leaf (accidents)** — round-robin restricted to leaf groups that contain accident ticks.
+   */
+  fun evaluateTimeToKill() {
+    println("Starting BaselineNextTickPostEvaluation (time to kill).")
+
+    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    if (fullRunId != null) {
+      println("  Using leaf assignments from full run ${fullRunId.value}.")
+    } else {
+      println("  No full run (train_fraction=1.0) found — leaf strategies will be skipped.")
+    }
+
+    println("  Loading tick data into memory (this may take several minutes)...")
+    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
+    println("  Loaded ${allTicks.size} ticks.")
+
+    println("  Loading scenario kill data from view...")
+    val allViolations = MutantScenarioG0ViolationsView.getAll()
+    val killingScenariosByMutant: Map<Int, Set<Int>> =
+        allViolations
+            .filter { it.anyG0Violation }
+            .groupBy { it.mutantId }
+            .mapValues { (_, vs) -> vs.map { it.scenarioConfigId }.toHashSet() }
+    val accidentMutantIds = killingScenariosByMutant.keys.sorted()
+    println("  Found ${accidentMutantIds.size} mutants that cause accidents.")
+
+    val allScenarioIds: List<Int> = allTicks.map { it.scenarioConfigId }
+
+    println("  Grouping ticks by TSC instance...")
+    val tscScenarioIdLists: List<List<Int>> =
+        allTicks.groupBy { it.tscInstanceId }.values.map { g -> g.map { it.scenarioConfigId } }
+    val tscUniquePerGroup = tscScenarioIdLists.map { it.distinct().size }
+
+    val leafScenarioIdLists: List<List<Int>>
+    val leafUniquePerGroup: List<Int>
+    val leafAccScenarioIdLists: List<List<Int>>
+    val leafAccUniquePerGroup: List<Int>
+    if (fullRunId != null) {
+      println("  Grouping ticks by leaf node...")
+      val byLeaf = allTicks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }
+      leafScenarioIdLists = byLeaf.values.map { g -> g.map { it.scenarioConfigId } }
+      leafUniquePerGroup = leafScenarioIdLists.map { it.distinct().size }
+      val accidentLeafGroups =
+          byLeaf.values.filter { g -> g.any { it.nextTickG0Failed == true } }
+      leafAccScenarioIdLists = accidentLeafGroups.map { g -> g.map { it.scenarioConfigId } }
+      leafAccUniquePerGroup = leafAccScenarioIdLists.map { it.distinct().size }
+      println(
+          "  ${leafAccScenarioIdLists.size} of ${leafScenarioIdLists.size} leaf groups contain accidents.")
+    } else {
+      leafScenarioIdLists = emptyList()
+      leafUniquePerGroup = emptyList()
+      leafAccScenarioIdLists = emptyList()
+      leafAccUniquePerGroup = emptyList()
+    }
+
+    for (mutantId in accidentMutantIds) {
+      val killingScenarios = killingScenariosByMutant.getValue(mutantId)
+      println("  Mutant $mutantId (${killingScenarios.size} killing scenarios):")
+
+      println("    Evaluating random time-to-kill.")
+      saveTimeToKill(
+          evaluateTimeToKillRandom(allScenarioIds, killingScenarios), "random", mutantId)
+
+      println("    Evaluating TSC-stratified time-to-kill.")
+      saveTimeToKill(
+          evaluateTimeToKillRoundRobin(tscScenarioIdLists, tscUniquePerGroup, killingScenarios),
+          "tsc",
+          mutantId)
+
+      if (leafScenarioIdLists.isNotEmpty()) {
+        println("    Evaluating leaf-stratified time-to-kill.")
+        saveTimeToKill(
+            evaluateTimeToKillRoundRobin(
+                leafScenarioIdLists, leafUniquePerGroup, killingScenarios),
+            "leaf",
+            mutantId)
+      }
+
+      if (leafAccScenarioIdLists.isNotEmpty()) {
+        println("    Evaluating accident-leaf-stratified time-to-kill.")
+        saveTimeToKill(
+            evaluateTimeToKillRoundRobin(
+                leafAccScenarioIdLists, leafAccUniquePerGroup, killingScenarios),
+            "leaf_accidents",
+            mutantId)
+      }
+    }
+
+    println("Finished BaselineNextTickPostEvaluation (time to kill).")
+  }
+
+  /**
    * Builds a lookup map from scenario config ID to the set of mutant IDs killed in that scenario.
    * Only entries where [MutantScenarioG0Violation.anyG0Violation] is `true` are included.
    *
@@ -665,6 +770,89 @@ object BaselineNextTickPostEvaluation {
   }
 
   /**
+   * Draws unique starting scenarios from the tick-weighted [scenarioIdPool] without replacement
+   * until one of [killingScenarios] is first encountered. Returns one draw count per repetition;
+   * -1 indicates pool exhaustion without a kill.
+   */
+  private fun evaluateTimeToKillRandom(
+      scenarioIdPool: List<Int>,
+      killingScenarios: Set<Int>,
+  ): List<Int> {
+    val uniqueScenarioCount = scenarioIdPool.distinct().size
+    return (0..REPETITIONS)
+        .toList()
+        .parallelStream()
+        .map { rep ->
+          val rng = Random(42L + rep)
+          val seen = mutableSetOf<Int>()
+          var killedAt = -1
+          while (seen.size < uniqueScenarioCount) {
+            val scenarioId = scenarioIdPool[rng.nextInt(scenarioIdPool.size)]
+            if (seen.add(scenarioId)) {
+              if (scenarioId in killingScenarios) {
+                killedAt = seen.size
+                break
+              }
+            }
+          }
+          killedAt
+        }
+        .collect(Collectors.toList())
+  }
+
+  /**
+   * Cycles round-robin through shuffled [scenarioIdListsPerGroup], drawing one unique scenario per
+   * group per slot without replacement, until a scenario in [killingScenarios] is encountered.
+   * Returns one draw count per repetition; -1 indicates all groups were exhausted before any kill.
+   *
+   * @param uniqueScenarioCountPerGroup Pre-computed distinct scenario count per group.
+   */
+  private fun evaluateTimeToKillRoundRobin(
+      scenarioIdListsPerGroup: List<List<Int>>,
+      uniqueScenarioCountPerGroup: List<Int>,
+      killingScenarios: Set<Int>,
+  ): List<Int> =
+      (0..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val alreadyUsedPerGroup = Array(scenarioIdListsPerGroup.size) { mutableSetOf<Int>() }
+            val activeGroups =
+                (0 until scenarioIdListsPerGroup.size).shuffled(rng).toMutableList()
+            var drawn = 0
+            var pos = 0
+            var killedAt = -1
+
+            while (activeGroups.isNotEmpty()) {
+              val groupIdx = activeGroups[pos]
+              val alreadyUsed = alreadyUsedPerGroup[groupIdx]
+
+              if (alreadyUsed.size >= uniqueScenarioCountPerGroup[groupIdx]) {
+                activeGroups.removeAt(pos)
+                if (activeGroups.isEmpty()) break
+                pos %= activeGroups.size
+                continue
+              }
+
+              val scenarioIds = scenarioIdListsPerGroup[groupIdx]
+              var scenarioId: Int
+              do {
+                scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
+              } while (!alreadyUsed.add(scenarioId))
+
+              drawn++
+              if (scenarioId in killingScenarios) {
+                killedAt = drawn
+                break
+              }
+              pos = (pos + 1) % activeGroups.size
+            }
+            killedAt
+          }
+          .collect(Collectors.toList())
+
+  /**
    * Saves [results] as a single-column CSV under `[BASE_PATH]/size_<suiteSize>/`.
    *
    * @param results One killed-mutant count per repetition.
@@ -681,6 +869,17 @@ object BaselineNextTickPostEvaluation {
         ) {
           it.toString()
         })
+    println("    CSV written to: $path")
+  }
+
+  private fun saveTimeToKill(results: List<Int>, strategy: String, mutantId: Int) {
+    val path = BASE_PATH.resolve("time_to_kill/mutant_${mutantId}/ttk_${strategy}.csv")
+    Files.createDirectories(path.parent)
+    path.writeText(
+        results.joinToString(
+            prefix = "draws_to_kill\n",
+            separator = "\n",
+        ) { it.toString() })
     println("    CSV written to: $path")
   }
 }
