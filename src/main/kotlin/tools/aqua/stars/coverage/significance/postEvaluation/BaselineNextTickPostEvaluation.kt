@@ -213,13 +213,14 @@ object BaselineNextTickPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
+            val order = (0 until groups.size).shuffled(rng)
             val usedPerGroup = Array(groups.size) { mutableSetOf<Int>() }
             val killed = mutableSetOf<MutantId>()
             var drawn = 0
             var slot = 0
             var consecutiveExhausted = 0
             while (drawn < suiteSize && consecutiveExhausted < groups.size) {
-              val g = slot % groups.size
+              val g = order[slot % groups.size]
               slot++
               val group = groups[g]
               val used = usedPerGroup[g]
@@ -626,10 +627,10 @@ object BaselineNextTickPostEvaluation {
           //          println("  Start with repetition: $rep")
           val rng = Random(42L + rep)
           val alreadyUsedPerGroup = Array(groups.size) { mutableSetOf<StartingScenarioId>() }
-          val activeGroups = (0 until groups.size).toMutableList()
+          val activeGroups = (0 until groups.size).shuffled(rng).toMutableList()
           val killed = mutableSetOf<MutantId>()
           var drawn = 0
-          var pos = rng.nextInt(activeGroups.size)
+          var pos = 0
 
           while (drawn < suiteSize && activeGroups.isNotEmpty()) {
             val groupIdx = activeGroups[pos]
