@@ -20,6 +20,8 @@ package tools.aqua.stars.coverage.significance.db.tables
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.StartingScenarioId
 
 /**
  * One row from [MutantScenarioG0ViolationsView].
@@ -30,8 +32,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
  *   one tick in this (mutant, scenario_config) pair; `false` otherwise.
  */
 data class MutantScenarioG0Violation(
-    val mutantId: Int,
-    val scenarioConfigId: Int,
+    val mutantId: MutantId,
+    val scenarioConfigId: StartingScenarioId,
     val anyG0Violation: Boolean,
 )
 

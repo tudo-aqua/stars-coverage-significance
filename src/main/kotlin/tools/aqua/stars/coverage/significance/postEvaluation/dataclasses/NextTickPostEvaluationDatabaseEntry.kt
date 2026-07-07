@@ -30,7 +30,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
  * @property scenarioConfigId ID of the scenario starting configuration this tick belongs to.
  */
 data class NextTickPostEvaluationDatabaseEntry(
-    val leafNodeId: Int?,
+    val leafNodeId: DecisionTreeLeafId?,
     val mutantId: Int,
     val nextTickG0Failed: Boolean?,
     val tscInstanceId: Int,
