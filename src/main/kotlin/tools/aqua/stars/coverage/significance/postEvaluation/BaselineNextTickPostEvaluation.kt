@@ -28,6 +28,7 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0Violation
@@ -73,9 +74,9 @@ object BaselineNextTickPostEvaluation {
 
     val dcLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
     val accidentDCLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
-    val startingScenarioIdsPerDCLeafId: List<List<StartingScenarioId>>
+    val startingScenarioIdsPerDCLeafId: List<Set<StartingScenarioId>>
     val countOfUniqueStartingScenariosPerDCLeafId: List<Int>
-    val startingScenarioIdsPerAccidentDCLeafId: List<List<StartingScenarioId>>
+    val startingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>
     val countOfUniqueStartingScenariosPerAccidentDCLeafId: List<Int>
 
     if (hasLeaf) {
@@ -112,8 +113,9 @@ object BaselineNextTickPostEvaluation {
       countOfUniqueStartingScenariosPerAccidentDCLeafId = emptyList()
     }
 
-    val allScenarioIds = ticks.map { it.scenarioConfigId }
-    val tscScenarioIdLists = tscGroups.map { tscGroup -> tscGroup.map { it.scenarioConfigId } }
+    val allScenarioIds = ScenarioStartingConfigurationRepository.getAll().map { it.id!! }.toSet()
+    val tscScenarioIdLists =
+        tscGroups.map { tscGroup -> tscGroup.map { it.scenarioConfigId }.toSet() }
     val tscUniquePerGroup = tscScenarioIdLists.map { it.distinct().size }
 
     return SamplingData(
@@ -911,85 +913,62 @@ object BaselineNextTickPostEvaluation {
         .collect(Collectors.toList())
   }
 
-  /**
-   * Draws unique starting scenarios from the tick-weighted [scenarioIdPool] without replacement
-   * until one of [killingScenarios] is first encountered. Returns one draw count per repetition; -1
-   * indicates pool exhaustion without a kill.
-   */
   private fun evaluateTimeToKillRandom(
-      scenarioIdPool: List<Int>,
-      killingScenarios: Set<Int>,
+      scenarioIdPool: Set<StartingScenarioId>,
+      killingScenarios: Set<StartingScenarioId>,
   ): List<Int> {
-    val uniqueScenarioCount = scenarioIdPool.distinct().size
     return (0..REPETITIONS)
         .toList()
         .parallelStream()
         .map { rep ->
           val rng = Random(42L + rep)
-          val seen = mutableSetOf<Int>()
-          var killedAt = -1
-          while (seen.size < uniqueScenarioCount) {
-            val scenarioId = scenarioIdPool[rng.nextInt(scenarioIdPool.size)]
-            if (seen.add(scenarioId)) {
-              if (scenarioId in killingScenarios) {
-                killedAt = seen.size
-                break
-              }
+          val seen = mutableSetOf<StartingScenarioId>()
+          val pool = scenarioIdPool.shuffled(rng).toMutableList()
+          while (pool.isNotEmpty()) {
+            val scenarioId = pool.removeFirst()
+            seen.add(scenarioId)
+            if (scenarioId in killingScenarios) {
+              return@map seen.size
             }
           }
-          killedAt
+          -1
         }
         .collect(Collectors.toList())
   }
 
-  /**
-   * Cycles round-robin through shuffled [scenarioIdListsPerGroup], drawing one unique scenario per
-   * group per slot without replacement, until a scenario in [killingScenarios] is encountered.
-   * Returns one draw count per repetition; -1 indicates all groups were exhausted before any kill.
-   *
-   * @param uniqueScenarioCountPerGroup Pre-computed distinct scenario count per group.
-   */
   private fun evaluateTimeToKillRoundRobin(
-      scenarioIdListsPerGroup: List<List<Int>>,
-      uniqueScenarioCountPerGroup: List<Int>,
-      killingScenarios: Set<Int>,
+      scenarioIdListsPerGroup: List<Set<StartingScenarioId>>,
+      killingScenarios: Set<StartingScenarioId>,
   ): List<Int> =
       (0..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val alreadyUsedPerGroup = Array(scenarioIdListsPerGroup.size) { mutableSetOf<Int>() }
-            val activeGroups = (0 until scenarioIdListsPerGroup.size).shuffled(rng).toMutableList()
-            var drawn = 0
+            val activeGroups =
+                scenarioIdListsPerGroup
+                    .map { it.shuffled(rng).toMutableList() }
+                    .shuffled(rng)
+                    .toMutableList()
             var pos = 0
-            var killedAt = -1
+            var killedAt = 0
 
             while (activeGroups.isNotEmpty()) {
-              val groupIdx = activeGroups[pos]
-              val alreadyUsed = alreadyUsedPerGroup[groupIdx]
+              killedAt++
+              val currentGroup = activeGroups[pos]
+              val currentScenario = currentGroup.removeFirst()
 
-              if (alreadyUsed.size >= uniqueScenarioCountPerGroup[groupIdx]) {
-                activeGroups.removeAt(pos)
-                if (activeGroups.isEmpty()) break
-                pos %= activeGroups.size
-                continue
+              if (currentScenario in killingScenarios) {
+                return@map killedAt
               }
 
-              val scenarioIds = scenarioIdListsPerGroup[groupIdx]
-              var scenarioId: Int
-              do {
-                scenarioId = scenarioIds[rng.nextInt(scenarioIds.size)]
-              } while (!alreadyUsed.add(scenarioId))
+              activeGroups.forEach { it.remove(currentScenario) }
 
-              drawn++
-              if (scenarioId in killingScenarios) {
-                killedAt = drawn
-                break
-              }
-              pos = (pos + 1) % activeGroups.size
+              activeGroups.removeAll { it.isEmpty() }
+
+              pos++
             }
-            killedAt
+            -1
           }
           .collect(Collectors.toList())
 
