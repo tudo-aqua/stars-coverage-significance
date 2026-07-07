@@ -172,7 +172,7 @@ val runBaselineNextTick by
       group = "application"
       dependsOn(tasks.run.get().taskDependencies)
 
-      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTick")
+      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       jvmArgs = listOf("-Xmx300g")
