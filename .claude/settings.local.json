@@ -24,7 +24,8 @@
       "Bash(xargs grep -l \"Pair<List<Int>, List<Int>>\")",
       "Bash(python *)",
       "Bash(./gradlew spotlessApply -q)",
-      "Bash(./gradlew build *)"
+      "Bash(./gradlew build *)",
+      "PowerShell(cd D:\\\\github\\\\aqua\\\\stars-coverage-significance; ./gradlew compileKotlin 2>&1 | Out-String | Select-String -Pattern \"Unresolved|error\" -AllMatches | ForEach-Object { $_.Matches } | Select-Object -First 20)"
     ]
   }
 }

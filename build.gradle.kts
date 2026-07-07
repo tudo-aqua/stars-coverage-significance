@@ -167,6 +167,17 @@ val runPostEvaluation by
       // args = listOf("--flag", "value")
     }
 
+val runBaselineNextTick by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTick")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val runBaselineNextTickWithStartingScenario by
     tasks.registering(JavaExec::class) {
       group = "application"
@@ -189,20 +200,6 @@ val runBaselineNextTickTimeToKill by
       dependsOn(tasks.run.get().taskDependencies)
 
       mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickTimeToKillKt")
-      classpath = sourceSets.main.get().runtimeClasspath
-
-      jvmArgs = listOf("-Xmx300g")
-    }
-
-val runBaselineNextTickSplitWithStartingScenario by
-    tasks.registering(JavaExec::class) {
-      group = "application"
-      description =
-          "Run the scenario-based next-tick split baseline evaluation (evaluateSplitWithStartingScenario)."
-      dependsOn(tasks.run.get().taskDependencies)
-
-      mainClass.set(
-          "tools.aqua.stars.coverage.significance.RunBaselineNextTickSplitWithStartingScenarioKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       jvmArgs = listOf("-Xmx300g")

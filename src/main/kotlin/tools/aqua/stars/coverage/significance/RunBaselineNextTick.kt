@@ -20,15 +20,9 @@ package tools.aqua.stars.coverage.significance
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
 
-/**
- * Runs [BaselineNextTickPostEvaluation.evaluateSplitWithStartingScenario] in isolation.
- *
- * Connects to the database, creates the schema (including the `mutant_scenario_g0_violations`
- * view), runs the scenario-based next-tick split baseline evaluation, and writes the results to
- * CSV.
- */
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
-  BaselineNextTickPostEvaluation.evaluateSplitWithStartingScenario()
+  BaselineNextTickPostEvaluation.evaluateTimeToKill()
+  BaselineNextTickPostEvaluation.evaluateWithStartingScenario()
   println("Finished!")
 }

@@ -155,7 +155,7 @@ fun main() {
    * from generated starting scenarios.
    */
   //  BaselineNextTickPostEvaluation.evaluate()
-  BaselineNextTickPostEvaluation.evaluateSplit()
+  //  BaselineNextTickPostEvaluation.evaluateSplit()
 
   /** Measure how many starting scenarios each strategy needs to first kill each accident mutant. */
   //  BaselineNextTickPostEvaluation.evaluateTimeToKill()
