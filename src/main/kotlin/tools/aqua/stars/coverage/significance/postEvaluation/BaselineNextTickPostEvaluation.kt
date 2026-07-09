@@ -556,47 +556,47 @@ object BaselineNextTickPostEvaluation {
       scenarioKills: Map<Int, Set<Int>>,
       suiteSize: Int,
       rareMutantIds: Set<Int>? = null,
-  ): List<Int> =
-      (0..REPETITIONS)
-          .toList()
-          .parallelStream()
-          .map { rep ->
-            val rng = Random(42L + rep)
-            val scenarioIdSetsPerGroup =
-                groups
-                    .map { group ->
-                      group.map { it.scenarioConfigId }.toSet().shuffled(rng).toMutableList()
-                    }
-                    .shuffled(rng)
-                    .toMutableList()
-            val killed = mutableSetOf<MutantId>()
-            val drawnScenarios = mutableListOf<StartingScenarioId>()
-            var pos = 0
-            while (scenarioIdSetsPerGroup.isNotEmpty() && drawnScenarios.size < suiteSize) {
-              val currentGroup = scenarioIdSetsPerGroup[pos]
-              val scenarioId = currentGroup.removeFirst()
-              // Track current scenario
-              drawnScenarios.add(scenarioId)
-              // Remove drawn scenario from all groups
-              scenarioIdSetsPerGroup.forEach { it.remove(scenarioId) }
-              // Compute position correction before compacting the list
-              val currentGroupExhausted = currentGroup.isEmpty()
-              val emptyBeforePos = (0 until pos).count { scenarioIdSetsPerGroup[it].isEmpty() }
-              // Remove all empty groups
-              scenarioIdSetsPerGroup.removeAll { it.isEmpty() }
-              scenarioKills[scenarioId]?.let { kills ->
-                killed.addAll(
-                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
-              }
-              if (scenarioIdSetsPerGroup.isEmpty()) break
-              val effectivePos = pos - emptyBeforePos
-              pos =
-                  if (currentGroupExhausted) effectivePos % scenarioIdSetsPerGroup.size
-                  else (effectivePos + 1) % scenarioIdSetsPerGroup.size
+  ): List<Int> {
+    val scenarioIdSetsPerGroup = groups.map { group -> group.map { it.scenarioConfigId }.toSet() }
+
+    return (0..REPETITIONS)
+        .toList()
+        .parallelStream()
+        .map { rep ->
+          val rng = Random(42L + rep)
+          val workingLists =
+              scenarioIdSetsPerGroup
+                  .map { set -> set.shuffled(rng).toMutableList() }
+                  .shuffled(rng)
+                  .toMutableList()
+          val killed = mutableSetOf<MutantId>()
+          var drawn = 0
+          var pos = 0
+          while (workingLists.isNotEmpty() && drawn < suiteSize) {
+            val currentGroup = workingLists[pos]
+            val scenarioId = currentGroup.removeFirst()
+            // Track current scenario
+            drawn++
+            // Remove drawn scenario from all groups
+            workingLists.forEach { it.remove(scenarioId) }
+            val currentGroupExhausted = currentGroup.isEmpty()
+            val emptyBeforePos = (0 until pos).count { workingLists[it].isEmpty() }
+            // Remove all empty groups
+            workingLists.removeAll { it.isEmpty() }
+            scenarioKills[scenarioId]?.let { kills ->
+              killed.addAll(
+                  if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
             }
-            killed.size
+            if (workingLists.isEmpty()) break
+            val effectivePos = pos - emptyBeforePos
+            pos =
+                if (currentGroupExhausted) effectivePos % workingLists.size
+                else (effectivePos + 1) % workingLists.size
           }
-          .collect(Collectors.toList())
+          killed.size
+        }
+        .collect(Collectors.toList())
+  }
 
   private fun evaluateTimeToKillRandom(
       scenarioIdPool: Set<StartingScenarioId>,
