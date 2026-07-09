@@ -223,16 +223,16 @@ object BaselineNextTickPostEvaluation {
           "random_scenario",
           suiteSize)
 
-      println("    Evaluating TSC-instance-stratified scenario sampling.")
-      data.tscGroups.forEachIndexed { index, ticks ->
-        println("      TSC Group '$index': ${ticks.size} entries.")
-      }
-      println("      Scenario Kill Map: ${scenarioKills.size} entries.")
-      println("      Suite Size: $suiteSize.")
-      save(
-          evaluateRoundRobinScenario(data.tscGroups, scenarioKills, suiteSize),
-          "tsc_scenario",
-          suiteSize)
+//      println("    Evaluating TSC-instance-stratified scenario sampling.")
+//      data.tscGroups.forEachIndexed { index, ticks ->
+//        println("      TSC Group '$index': ${ticks.size} entries.")
+//      }
+//      println("      Scenario Kill Map: ${scenarioKills.size} entries.")
+//      println("      Suite Size: $suiteSize.")
+//      save(
+//          evaluateRoundRobinScenario(data.tscGroups, scenarioKills, suiteSize),
+//          "tsc_scenario",
+//          suiteSize)
 
       if (data.dcLeafGroups.isNotEmpty()) {
         println("    Evaluating decision-tree-leaf-stratified scenario sampling.")
@@ -273,17 +273,17 @@ object BaselineNextTickPostEvaluation {
             "random_scenario_rare",
             suiteSize)
 
-        println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants).")
-        data.tscGroups.forEachIndexed { index, ticks ->
-          println("      TSC Group '$index': ${ticks.size} entries.")
-        }
-        println("      Scenario Kill Map: ${scenarioKills.size} entries.")
-        println("      Rare Mutants: ${rareMutantIds.size} entries.")
-        println("      Suite Size: $suiteSize.")
-        save(
-            evaluateRoundRobinScenario(data.tscGroups, scenarioKills, suiteSize, rareMutantIds),
-            "tsc_scenario_rare",
-            suiteSize)
+//        println("    Evaluating TSC-instance-stratified scenario sampling (rare mutants).")
+//        data.tscGroups.forEachIndexed { index, ticks ->
+//          println("      TSC Group '$index': ${ticks.size} entries.")
+//        }
+//        println("      Scenario Kill Map: ${scenarioKills.size} entries.")
+//        println("      Rare Mutants: ${rareMutantIds.size} entries.")
+//        println("      Suite Size: $suiteSize.")
+//        save(
+//            evaluateRoundRobinScenario(data.tscGroups, scenarioKills, suiteSize, rareMutantIds),
+//            "tsc_scenario_rare",
+//            suiteSize)
 
         if (data.dcLeafGroups.isNotEmpty()) {
           println("    Evaluating decision-tree-leaf-stratified scenario sampling (rare mutants).")
@@ -373,13 +373,13 @@ object BaselineNextTickPostEvaluation {
       saveTimeToKill(
           evaluateTimeToKillRandom(data.allScenarioIds, killingScenarios), "random", mutantId)
 
-      println("    Evaluating TSC-stratified time-to-kill.")
-      data.tscScenarioIdLists.forEachIndexed { index, ints ->
-        println("      TSC Group '$index': ${ints.size} entries.")
-      }
-      println("      Killing Scenarios: ${killingScenarios.size} entries.")
-      saveTimeToKill(
-          evaluateTimeToKillRoundRobin(data.tscScenarioIdLists, killingScenarios), "tsc", mutantId)
+//      println("    Evaluating TSC-stratified time-to-kill.")
+//      data.tscScenarioIdLists.forEachIndexed { index, ints ->
+//        println("      TSC Group '$index': ${ints.size} entries.")
+//      }
+//      println("      Killing Scenarios: ${killingScenarios.size} entries.")
+//      saveTimeToKill(
+//          evaluateTimeToKillRoundRobin(data.tscScenarioIdLists, killingScenarios), "tsc", mutantId)
 
       if (data.startingScenarioIdsPerDCLeafId.isNotEmpty()) {
         println("    Evaluating leaf-stratified time-to-kill.")
