@@ -38,15 +38,15 @@ data class MutantScenarioG0Violation(
 )
 
 /**
- * Exposed mapping for the `mutant_scenario_g0_violations` PostgreSQL view.
+ * Exposed mapping for the `mutant_scenario_g0_violations` PostgreSQL materialized view.
  *
  * The view aggregates [MetricFailedMonitorsTable] by (mutant, scenario_config) and exposes a single
  * boolean per pair: whether [MetricFailedMonitorsTable.nextTickMonitorG0Failed] was `true` for at
  * least one tick.
  *
- * The view DDL is:
+ * The materialized view DDL is:
  * ```sql
- * CREATE OR REPLACE VIEW mutant_scenario_g0_violations AS
+ * CREATE MATERIALIZED VIEW IF NOT EXISTS mutant_scenario_g0_violations AS
  * SELECT "mutant_id",
  *        "scenario_config_id",
  *        COALESCE(BOOL_OR("next_tick_monitor_g0_Accidents_failed"), false) AS any_g0_violation
@@ -54,7 +54,7 @@ data class MutantScenarioG0Violation(
  * GROUP BY "mutant_id", "scenario_config_id"
  * ```
  *
- * The view is created (or replaced) at schema bootstrap time by
+ * The materialized view is created at schema bootstrap time by
  * [tools.aqua.stars.coverage.significance.db.DbBootstrap.createSchema].
  */
 object MutantScenarioG0ViolationsView : Table("mutant_scenario_g0_violations") {

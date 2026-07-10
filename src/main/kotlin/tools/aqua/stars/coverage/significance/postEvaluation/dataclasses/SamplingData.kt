@@ -40,10 +40,12 @@ data class SamplingData(
     val dcLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>,
     val accidentDCLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>,
     val allScenarioIds: Set<StartingScenarioId>,
+    val accidentScenarioIds: Set<StartingScenarioId>,
     val tscScenarioIdLists: List<Set<StartingScenarioId>>,
     val tscUniquePerGroup: List<Int>,
     val startingScenarioIdsPerDCLeafId: List<Set<StartingScenarioId>>,
     val countOfUniqueStartingScenariosPerDCLeafId: List<Int>,
     val startingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>,
     val countOfUniqueStartingScenariosPerAccidentDCLeafId: List<Int>,
+    val accidentStartingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>,
 )

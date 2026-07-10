@@ -187,12 +187,41 @@ object DbBootstrap {
 
       exec(
           """
-          CREATE OR REPLACE VIEW mutant_scenario_g0_violations AS
+          CREATE MATERIALIZED VIEW IF NOT EXISTS mutant_scenario_g0_violations AS
           SELECT "mutant_id",
                  "scenario_config_id",
                  COALESCE(BOOL_OR("next_tick_monitor_g0_Accidents_failed"), false) AS any_g0_violation
           FROM metric_failed_monitors
           GROUP BY "mutant_id", "scenario_config_id"
+          """
+              .trimIndent())
+
+      exec(
+          """
+          CREATE MATERIALIZED VIEW IF NOT EXISTS scenario_mutant_kill_count AS
+          SELECT scenario_config_id,
+                 SUM(CASE WHEN any_g0_violation THEN 1 ELSE 0 END) AS mutants_killed
+          FROM mutant_scenario_g0_violations
+          GROUP BY scenario_config_id
+          """
+              .trimIndent())
+
+      exec(
+          """
+          CREATE MATERIALIZED VIEW IF NOT EXISTS dc_startingscenario_mutant_combination AS
+          SELECT metric_failed_monitors.id,
+                 metric_failed_monitors.tick,
+                 metric_failed_monitors.mutant_id,
+                 metric_failed_monitors.scenario_config_id,
+                 decision_tree_leaf_assignments.leaf_node_id,
+                 mutant_scenario_g0_violations.any_g0_violation
+          FROM metric_failed_monitors
+                   JOIN decision_tree_leaf_assignments
+                        ON metric_failed_monitors.id = decision_tree_leaf_assignments.metric_failed_monitor_id
+                   JOIN mutant_scenario_g0_violations
+                        ON metric_failed_monitors.mutant_id = mutant_scenario_g0_violations.mutant_id
+                       AND metric_failed_monitors.scenario_config_id = mutant_scenario_g0_violations.scenario_config_id
+          WHERE decision_tree_leaf_assignments.run_id = 3
           """
               .trimIndent())
     }
