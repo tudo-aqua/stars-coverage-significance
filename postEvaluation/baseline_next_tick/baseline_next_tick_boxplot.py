@@ -21,9 +21,6 @@ AXES_LINEWIDTH = 2.5
 BOX_LINEWIDTH = 2.5
 
 STRATEGIES_FULL = [
-    ("random", "Random"),
-    ("tsc", "TSC"),
-    ("leaf", "Leaf"),
     ("random_scenario", "Random\n(Scenario)"),
     ("random_accident_scenario", "Random\n(Accident\nScenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
@@ -33,6 +30,7 @@ STRATEGIES_FULL = [
 
 STRATEGIES_RARE = [
     ("random_scenario_rare", "Random\n(Scenario,\nRare)"),
+    ("random_accident-scenarios_rare", "Random\n(Accident\nScenarios,\nRare)"),
     ("leaf_scenario_rare", "Leaf\n(Scenario,\nRare)"),
     ("leaf_scenario_accidents_rare", "Leaf\n(Scenario,\nAccidents,\nRare)"),
     ("leaf_accident-scenario_accidents_rare", "Leaf\n(Accident\nScenario,\nAccidents,\nRare)"),
