@@ -21,7 +21,7 @@ RUN apt-get install -y sumo sumo-tools sumo-doc
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblibsumojni.so /usr/lib/liblibsumojni.so
 
-RUN pip3 install --break-system-packages --no-cache-dir \
+RUN pip3 install --break-system-packages --ignore-installed --no-cache-dir \
     matplotlib \
     numpy \
     pandas \
