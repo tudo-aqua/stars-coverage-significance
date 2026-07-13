@@ -2,15 +2,15 @@
 Decision tree classifier for next_tick_monitor_g0_Accidents_failed.
 
 Loads a Parquet file produced by export_parquet.py, automatically tunes tree
-hyperparameters via Optuna + mutant-grouped cross-validation, fits a single
-LightGBM tree, and prints the tree as indented text.
+hyperparameters via Optuna (each trial fits and scores on the full training
+set — no cross-validation split), fits a single LightGBM tree, and prints the
+tree as indented text.
 
 Usage:
     python decision_tree_g0.py <path-to-parquet> [options]
 
 Hyperparameter search (runs automatically):
     --n-trials N    Optuna trials for hyperparameter search (default: 50)
-    --cv-folds K    Cross-validation folds, grouped by mutant ID (default: 5)
 
 Feature groups (all enabled by default, disable with --no-<group>):
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
@@ -406,26 +406,20 @@ def _insert_run(
 def _tune_hyperparams(
     X_train: pd.DataFrame,
     y_train: np.ndarray,
-    group_ids: np.ndarray,
     n_trials: int,
-    cv_folds: int,
     n_jobs: int,
 ) -> dict:
-    """Search for the best tree hyperparameters using Optuna + mutant-grouped K-fold CV.
+    """Search for the best tree hyperparameters using Optuna.
 
-    Groups are mutant IDs so no mutant's rows appear in both the CV train and
-    validation folds, matching the same leakage-prevention policy used for the
-    final train/test split.
+    Each trial fits on the entire training set (no held-out split) and is
+    scored by its in-sample ROC-AUC, so hyperparameter search always learns
+    from all available rows rather than a fraction held back for validation.
 
     Optimises ROC-AUC. Returns the best parameter dict found.
     """
     from sklearn.metrics import roc_auc_score
-    from sklearn.model_selection import GroupKFold
     import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-
-    gkf = GroupKFold(n_splits=cv_folds)
-    splits = list(gkf.split(X_train, y_train, groups=group_ids))
 
     def objective(trial: optuna.Trial) -> float:
         params = dict(
@@ -434,29 +428,21 @@ def _tune_hyperparams(
             min_child_samples=trial.suggest_int("min_child_samples", 20, 5000, log=True),
             min_split_gain=trial.suggest_float("min_split_gain", 0.0, 1.0),
         )
-        scores = []
-        for tr_idx, val_idx in splits:
-            clf = lgb.LGBMClassifier(
-                n_estimators=1,
-                learning_rate=1.0,
-                n_jobs=n_jobs,
-                class_weight="balanced",
-                random_state=0,
-                verbose=-1,
-                **params,
-            )
-            clf.fit(X_train.iloc[tr_idx], y_train[tr_idx])
-            proba = clf.predict_proba(X_train.iloc[val_idx])[:, 1]
-            try:
-                scores.append(roc_auc_score(y_train[val_idx], proba))
-            except ValueError:
-                scores.append(0.5)
-        return float(np.mean(scores))
+        clf = lgb.LGBMClassifier(
+            n_estimators=1,
+            learning_rate=1.0,
+            n_jobs=n_jobs,
+            class_weight="balanced",
+            random_state=0,
+            verbose=-1,
+            **params,
+        )
+        clf.fit(X_train, y_train)
+        proba = clf.predict_proba(X_train)[:, 1]
+        score = roc_auc_score(y_train, proba)
+        return 0.5 if np.isnan(score) else float(score)
 
-    print(
-        f"Tuning hyperparameters: {n_trials} Optuna trials, "
-        f"{cv_folds}-fold mutant-grouped CV ..."
-    )
+    print(f"Tuning hyperparameters: {n_trials} Optuna trials, scored on the full training set ...")
     study = optuna.create_study(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=0),
@@ -464,8 +450,8 @@ def _tune_hyperparams(
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
     best = study.best_params
-    print(f"  Best CV ROC-AUC : {study.best_value:.4f}")
-    print(f"  Best params     : {best}\n")
+    print(f"  Best training ROC-AUC : {study.best_value:.4f}")
+    print(f"  Best params           : {best}\n")
     return best
 
 
@@ -477,8 +463,6 @@ def main() -> None:
     parser.add_argument("parquet", help="Path to the Parquet export of metric_failed_monitors")
     parser.add_argument("--n-trials", type=int, default=50, metavar="N",
                         help="Optuna trials for automatic hyperparameter search (default: 50)")
-    parser.add_argument("--cv-folds", type=int, default=5, metavar="K",
-                        help="Cross-validation folds for hyperparameter search, grouped by mutant ID (default: 5)")
     parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
     parser.add_argument("--train-fraction", type=float, default=1.0, metavar="F",
                         help="Fraction of rows used for training (0 < F <= 1.0, default: 1.0 = all data). "
@@ -583,7 +567,6 @@ def main() -> None:
 
             train_mask = np.isin(mutant_ids, list(train_mutants))
             X_train, y_train = X.iloc[train_mask], y[train_mask]
-            train_mutant_ids_for_cv = mutant_ids[train_mask]
             print(
                 f"Mutants — train: {len(train_mutants):,}  |  test: {len(test_mutants):,}\n"
                 f"Rows    — train: {train_mask.sum():,} ({y_train.mean():.1%} pos)"
@@ -593,16 +576,13 @@ def main() -> None:
             train_mutants = set(unique_mutants.tolist())
             test_mutants  = set()
             X_train, y_train = X, y
-            train_mutant_ids_for_cv = mutant_ids
 
         # Predict on ALL rows so every row gets a leaf label.
         X_eval, y_eval, row_ids_eval = X, y, row_ids
 
         best_params = _tune_hyperparams(
             X_train, y_train,
-            group_ids=train_mutant_ids_for_cv,
             n_trials=args.n_trials,
-            cv_folds=args.cv_folds,
             n_jobs=args.n_jobs,
         )
 

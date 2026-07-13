@@ -27,7 +27,10 @@
       "Bash(./gradlew build *)",
       "PowerShell(cd D:\\\\github\\\\aqua\\\\stars-coverage-significance; ./gradlew compileKotlin 2>&1 | Out-String | Select-String -Pattern \"Unresolved|error\" -AllMatches | ForEach-Object { $_.Matches } | Select-Object -First 20)",
       "Bash(./gradlew spotlessApply)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import sklearn; print\\(sklearn.__version__\\)\")",
+      "Bash(pip show *)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

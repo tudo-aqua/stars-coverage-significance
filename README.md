@@ -271,13 +271,12 @@ python3 scripts/export_parquet.py \
 
 ### `scripts/decision_tree_g0.py` — Decision tree classifier for `next_tick_monitor_g0_Accidents_failed`
 
-Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using ego maneuver, ego kinematics, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna with mutant-grouped cross-validation — no manual values required. Current-tick monitor states are never used as input features — only `next_tick_monitor_g0_Accidents_failed` (the prediction target) is derived from them — to avoid leaking the current-tick value of the monitor being predicted one tick ahead.
+Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using ego maneuver, ego kinematics, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna — no manual values required. Each trial fits and scores on the entire training set (no cross-validation split), so hyperparameter search always learns from all available rows. Current-tick monitor states are never used as input features — only `next_tick_monitor_g0_Accidents_failed` (the prediction target) is derived from them — to avoid leaking the current-tick value of the monitor being predicted one tick ahead.
 
 | Argument | Default | Description |
 |---|---|---|
 | `parquet` | *(required)* | Path to the Parquet export of `metric_failed_monitors` |
 | `--n-trials` | `50` | Number of Optuna trials for automatic hyperparameter tuning |
-| `--cv-folds` | `5` | Number of mutant-grouped cross-validation folds used during tuning |
 | `--n-jobs` | `96` | CPU threads used by LightGBM; set to match available cores |
 | `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
@@ -307,11 +306,15 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 # Basic run — all feature groups, no DB write (50 Optuna trials for tuning)
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot
 
-# More thorough tuning with 200 trials and 10-fold CV
+# More thorough tuning with 200 trials
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
-  --cv-folds 10 \
-  --output tree.dot
+  --no-ego-maneuver \
+  --no-ego-position \
+  --no-ego-accel \
+  --no-distances \
+  --no-neighbor-kinematics \
+  --out-dir /results/runs
 
 # Train/test split: 80 % of mutants for training, rest for evaluation
 # Run is recorded in the DB; run_<id>.dot and run_<id>.log are written automatically
