@@ -22,30 +22,19 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
  * redundant in-memory traversals when multiple functions operate on the same data.
  *
  * @param allTicks The tick list this data was derived from (full or filtered).
- * @param tscGroups Ticks grouped by TSC instance ID.
  * @param dcLeafGroups Ticks grouped by DC leaf node ID; empty when no leaf run exists.
  * @param accidentDCLeafGroups Subset of [dcLeafGroups] where at least one tick has a G0 failure.
  * @param allScenarioIds Flat list of scenario config IDs (tick-weighted) from [allTicks].
- * @param tscScenarioIdLists Scenario config IDs extracted per TSC group.
- * @param tscUniquePerGroup Distinct scenario config ID count per TSC group.
  * @param startingScenarioIdsPerDCLeafId Scenario config IDs extracted per DC leaf group.
- * @param countOfUniqueStartingScenariosPerDCLeafId Distinct scenario count per DC leaf group.
  * @param startingScenarioIdsPerAccidentDCLeafId Scenario config IDs per accident DC leaf group.
- * @param countOfUniqueStartingScenariosPerAccidentDCLeafId Distinct scenario count per accident DC
- *   leaf group.
  */
 data class SamplingData(
     val allTicks: List<NextTickPostEvaluationDatabaseEntry>,
-    val tscGroups: List<List<NextTickPostEvaluationDatabaseEntry>>,
     val dcLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>,
     val accidentDCLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>,
     val allScenarioIds: Set<StartingScenarioId>,
     val accidentScenarioIds: Set<StartingScenarioId>,
-    val tscScenarioIdLists: List<Set<StartingScenarioId>>,
-    val tscUniquePerGroup: List<Int>,
     val startingScenarioIdsPerDCLeafId: List<Set<StartingScenarioId>>,
-    val countOfUniqueStartingScenariosPerDCLeafId: List<Int>,
     val startingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>,
-    val countOfUniqueStartingScenariosPerAccidentDCLeafId: List<Int>,
     val accidentStartingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>,
 )

@@ -69,23 +69,17 @@ object BaselineNextTickPostEvaluation {
       ticks: List<NextTickPostEvaluationDatabaseEntry>,
       hasLeaf: Boolean,
   ): SamplingData {
-    println("  Grouping ticks by TSC instance...")
-    val tscGroups = ticks.groupBy { it.tscInstanceId }.values.toList()
-    println("  ${tscGroups.size} TSC groups.")
-
     val dcLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
     val accidentDCLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
     val startingScenarioIdsPerDCLeafId: List<Set<StartingScenarioId>>
-    val countOfUniqueStartingScenariosPerDCLeafId: List<Int>
     val startingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>
-    val countOfUniqueStartingScenariosPerAccidentDCLeafId: List<Int>
     val accidentStartingScenarioIdsPerAccidentDCLeafId: List<Set<StartingScenarioId>>
     val accidentScenarioIds: Set<StartingScenarioId>
 
     if (hasLeaf) {
       println("  Grouping ticks by DC leaf node...")
       val allTicksGroupedByDCLeafId =
-          ticks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId }
+          ticks.filter { it.leafNodeId != null }.groupBy { it.leafNodeId!! }
 
       // Grouping of all ticks
       dcLeafGroups = allTicksGroupedByDCLeafId.values.toList()
@@ -93,8 +87,8 @@ object BaselineNextTickPostEvaluation {
           dcLeafGroups.map { databaseEntriesForDCLeafId ->
             databaseEntriesForDCLeafId.map { it.scenarioConfigId }.toSet()
           }
-      countOfUniqueStartingScenariosPerDCLeafId =
-          startingScenarioIdsPerDCLeafId.map { it.distinct().size }
+
+      saveBucketSize(startingScenarioIdsPerDCLeafId.map { it.size }, "bucket_size_per_dc_leaf")
 
       // Grouping of all ticks that lead to an accident
       accidentDCLeafGroups =
@@ -105,8 +99,10 @@ object BaselineNextTickPostEvaluation {
           accidentDCLeafGroups.map { databaseEntriesForAccidentDCLeafId ->
             databaseEntriesForAccidentDCLeafId.map { it.scenarioConfigId }.toSet()
           }
-      countOfUniqueStartingScenariosPerAccidentDCLeafId =
-          startingScenarioIdsPerAccidentDCLeafId.map { it.distinct().size }
+
+      saveBucketSize(
+          startingScenarioIdsPerAccidentDCLeafId.map { it.size },
+          "bucket_size_per_accident_dc_leaf")
 
       accidentScenarioIds =
           ScenarioMutantKillCountView.getAll()
@@ -118,36 +114,29 @@ object BaselineNextTickPostEvaluation {
           startingScenarioIdsPerAccidentDCLeafId.map {
             it.filter { it in accidentScenarioIds }.toSet()
           }
+
+      saveBucketSize(
+          accidentStartingScenarioIdsPerAccidentDCLeafId.map { it.size },
+          "bucket_size_per_accident_dc_leaf_accident_scenarios")
     } else {
       dcLeafGroups = emptyList()
       accidentDCLeafGroups = emptyList()
       startingScenarioIdsPerDCLeafId = emptyList()
-      countOfUniqueStartingScenariosPerDCLeafId = emptyList()
       startingScenarioIdsPerAccidentDCLeafId = emptyList()
-      countOfUniqueStartingScenariosPerAccidentDCLeafId = emptyList()
       accidentStartingScenarioIdsPerAccidentDCLeafId = emptyList()
       accidentScenarioIds = emptySet()
     }
 
     val allScenarioIds = ScenarioStartingConfigurationRepository.getAll().map { it.id!! }.toSet()
-    val tscScenarioIdLists =
-        tscGroups.map { tscGroup -> tscGroup.map { it.scenarioConfigId }.toSet() }
-    val tscUniquePerGroup = tscScenarioIdLists.map { it.distinct().size }
 
     return SamplingData(
         allTicks = ticks,
-        tscGroups = tscGroups,
         dcLeafGroups = dcLeafGroups,
         accidentDCLeafGroups = accidentDCLeafGroups,
         allScenarioIds = allScenarioIds,
         accidentScenarioIds = accidentScenarioIds,
-        tscScenarioIdLists = tscScenarioIdLists,
-        tscUniquePerGroup = tscUniquePerGroup,
         startingScenarioIdsPerDCLeafId = startingScenarioIdsPerDCLeafId,
-        countOfUniqueStartingScenariosPerDCLeafId = countOfUniqueStartingScenariosPerDCLeafId,
         startingScenarioIdsPerAccidentDCLeafId = startingScenarioIdsPerAccidentDCLeafId,
-        countOfUniqueStartingScenariosPerAccidentDCLeafId =
-            countOfUniqueStartingScenariosPerAccidentDCLeafId,
         accidentStartingScenarioIdsPerAccidentDCLeafId =
             accidentStartingScenarioIdsPerAccidentDCLeafId)
   }
@@ -364,9 +353,6 @@ object BaselineNextTickPostEvaluation {
 
       if (data.startingScenarioIdsPerDCLeafId.isNotEmpty()) {
         println("    Evaluating leaf-stratified time-to-kill.")
-        data.startingScenarioIdsPerDCLeafId.forEachIndexed { index, scenarioIds ->
-          println("      DC Leaf Group '$index': ${scenarioIds.size} entries.")
-        }
         saveTimeToKill(
             evaluateTimeToKillRoundRobin(
                 data.startingScenarioIdsPerDCLeafId,
@@ -379,9 +365,6 @@ object BaselineNextTickPostEvaluation {
 
       if (data.startingScenarioIdsPerAccidentDCLeafId.isNotEmpty()) {
         println("    Evaluating accident-leaf-stratified time-to-kill.")
-        data.startingScenarioIdsPerAccidentDCLeafId.forEachIndexed { index, scenarioIds ->
-          println("      Accident DC Leaf Group '$index': ${scenarioIds.size} entries.")
-        }
         saveTimeToKill(
             evaluateTimeToKillRoundRobin(
                 data.startingScenarioIdsPerAccidentDCLeafId, killingScenariosByMutant, mutantId),
@@ -391,10 +374,6 @@ object BaselineNextTickPostEvaluation {
 
       if (data.accidentStartingScenarioIdsPerAccidentDCLeafId.isNotEmpty()) {
         println("    Evaluating accident-leaf-accident-scenario-stratified time-to-kill.")
-        data.accidentStartingScenarioIdsPerAccidentDCLeafId.forEachIndexed { index, scenarioIds ->
-          println(
-              "      Accident DC Accident-Scenarios Leaf Group '$index': ${scenarioIds.size} entries.")
-        }
         saveTimeToKill(
             evaluateTimeToKillRoundRobin(
                 data.accidentStartingScenarioIdsPerAccidentDCLeafId,
@@ -562,6 +541,14 @@ object BaselineNextTickPostEvaluation {
             -1
           }
           .collect(Collectors.toList())
+
+  private fun saveBucketSize(bucketToSize: List<Int>, identifier: String) {
+    val path = BASE_PATH.resolve("bucket_size/${identifier}.csv")
+    Files.createDirectories(path.parent)
+    path.writeText(
+        "bucket_id; scenarios\n${bucketToSize.mapIndexed { index, value -> "${index + 1} $value\n" }}")
+    println("    CSV written to: $path")
+  }
 
   /**
    * Saves [results] as a single-column CSV under `[BASE_PATH]/size_<suiteSize>/`.
