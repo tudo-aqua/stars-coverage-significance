@@ -10,7 +10,9 @@ Usage:
     python decision_tree_g0.py <path-to-parquet> [options]
 
 Hyperparameter search (runs automatically):
-    --n-trials N    Optuna trials for hyperparameter search (default: 50)
+    --n-trials N     Optuna trials for hyperparameter search (default: 50)
+    --tuning-jobs K  Concurrent trials during tuning; --n-jobs threads are
+                     split across them (default: 8)
 
 Feature groups (all enabled by default, disable with --no-<group>):
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
@@ -408,6 +410,7 @@ def _tune_hyperparams(
     y_train: np.ndarray,
     n_trials: int,
     n_jobs: int,
+    tuning_jobs: int,
 ) -> dict:
     """Search for the best tree hyperparameters using Optuna.
 
@@ -415,12 +418,22 @@ def _tune_hyperparams(
     scored by its in-sample ROC-AUC, so hyperparameter search always learns
     from all available rows rather than a fraction held back for validation.
 
+    `n_jobs` total CPU threads are split between `tuning_jobs` concurrent
+    trials (run in parallel via Optuna's thread-based executor — LightGBM's
+    fit releases the GIL, so this uses real cores) and the threads LightGBM
+    uses per single tree fit within each trial. Since every trial fits only
+    one tree, a lone fit does not scale near-linearly with more threads, so
+    favouring more concurrent trials over more threads per trial is usually
+    faster overall.
+
     Optimises ROC-AUC. Returns the best parameter dict found.
     """
     from sklearn.metrics import roc_auc_score
     import optuna
     from tqdm import tqdm
     optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    threads_per_trial = max(1, n_jobs // tuning_jobs)
 
     def objective(trial: optuna.Trial) -> float:
         params = dict(
@@ -432,7 +445,7 @@ def _tune_hyperparams(
         clf = lgb.LGBMClassifier(
             n_estimators=1,
             learning_rate=1.0,
-            n_jobs=n_jobs,
+            n_jobs=threads_per_trial,
             class_weight="balanced",
             random_state=0,
             verbose=-1,
@@ -443,14 +456,19 @@ def _tune_hyperparams(
         score = roc_auc_score(y_train, proba)
         return 0.5 if np.isnan(score) else float(score)
 
-    print(f"Tuning hyperparameters: {n_trials} Optuna trials, scored on the full training set ...")
+    print(
+        f"Tuning hyperparameters: {n_trials} Optuna trials, scored on the full training set, "
+        f"{tuning_jobs} concurrent trial(s) x {threads_per_trial} thread(s) each ..."
+    )
     study = optuna.create_study(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=0),
     )
 
     # tqdm drives the bar's ETA/rate; the callback fires after every trial
-    # (success or failure) so the bar never stalls on a failed trial.
+    # (success or failure, from whichever worker thread finishes it) so the
+    # bar never stalls on a failed trial. tqdm.update()/set_postfix() and
+    # Optuna's study.best_value are safe to call concurrently.
     with tqdm(total=n_trials, desc="  Tuning", unit="trial", dynamic_ncols=True, ascii=True) as pbar:
         def _on_trial_end(study: "optuna.Study", trial: "optuna.trial.FrozenTrial") -> None:
             try:
@@ -459,7 +477,13 @@ def _tune_hyperparams(
                 pass  # no trial has completed successfully yet
             pbar.update(1)
 
-        study.optimize(objective, n_trials=n_trials, show_progress_bar=False, callbacks=[_on_trial_end])
+        study.optimize(
+            objective,
+            n_trials=n_trials,
+            n_jobs=tuning_jobs,
+            show_progress_bar=False,
+            callbacks=[_on_trial_end],
+        )
 
     best = study.best_params
     print(f"  Best training ROC-AUC : {study.best_value:.4f}")
@@ -476,6 +500,12 @@ def main() -> None:
     parser.add_argument("--n-trials", type=int, default=50, metavar="N",
                         help="Optuna trials for automatic hyperparameter search (default: 50)")
     parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
+    parser.add_argument("--tuning-jobs", type=int, default=8, metavar="K",
+                        help="Number of Optuna trials run concurrently during hyperparameter tuning "
+                             "(default: 8). --n-jobs threads are split evenly across these K "
+                             "concurrent trials (n-jobs / K threads per trial); since each trial "
+                             "fits only one tree, more concurrent trials with fewer threads each is "
+                             "usually faster than one trial at a time with many threads.")
     parser.add_argument("--train-fraction", type=float, default=1.0, metavar="F",
                         help="Fraction of rows used for training (0 < F <= 1.0, default: 1.0 = all data). "
                              "The held-out test split is what gets annotated and written to the DB.")
@@ -596,6 +626,7 @@ def main() -> None:
             X_train, y_train,
             n_trials=args.n_trials,
             n_jobs=args.n_jobs,
+            tuning_jobs=args.tuning_jobs,
         )
 
         clf = lgb.LGBMClassifier(

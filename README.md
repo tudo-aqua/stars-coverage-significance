@@ -277,7 +277,8 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 |---|---|---|
 | `parquet` | *(required)* | Path to the Parquet export of `metric_failed_monitors` |
 | `--n-trials` | `50` | Number of Optuna trials for automatic hyperparameter tuning |
-| `--n-jobs` | `96` | CPU threads used by LightGBM; set to match available cores |
+| `--n-jobs` | `96` | Total CPU threads available; set to match available cores |
+| `--tuning-jobs` | `8` | Number of Optuna trials run concurrently during tuning; `--n-jobs` threads are split evenly across them (`n-jobs / tuning-jobs` threads per trial). Since each trial fits only one tree, more concurrent trials with fewer threads each is usually faster than one trial at a time with many threads |
 | `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
 | `--output` | *(none)* | Write a Graphviz `.dot` file to an explicit path (overrides the run-named file from `--out-dir`) |
