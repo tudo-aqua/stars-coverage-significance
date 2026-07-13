@@ -419,6 +419,7 @@ def _tune_hyperparams(
     """
     from sklearn.metrics import roc_auc_score
     import optuna
+    from tqdm import tqdm
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     def objective(trial: optuna.Trial) -> float:
@@ -447,7 +448,18 @@ def _tune_hyperparams(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=0),
     )
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+
+    # tqdm drives the bar's ETA/rate; the callback fires after every trial
+    # (success or failure) so the bar never stalls on a failed trial.
+    with tqdm(total=n_trials, desc="  Tuning", unit="trial", dynamic_ncols=True) as pbar:
+        def _on_trial_end(study: "optuna.Study", trial: "optuna.trial.FrozenTrial") -> None:
+            try:
+                pbar.set_postfix(best_auc=f"{study.best_value:.4f}")
+            except ValueError:
+                pass  # no trial has completed successfully yet
+            pbar.update(1)
+
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False, callbacks=[_on_trial_end])
 
     best = study.best_params
     print(f"  Best training ROC-AUC : {study.best_value:.4f}")
