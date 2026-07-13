@@ -38,7 +38,6 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantI
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.SamplingData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.StartingScenarioId
-import tools.aqua.stars.coverage.significance.scenarioIds
 
 /**
  * Post-evaluation that simulates test suites by sampling individual ticks directly from
@@ -153,59 +152,6 @@ object BaselineNextTickPostEvaluation {
             accidentStartingScenarioIdsPerAccidentDCLeafId)
   }
 
-  /**
-   * Runs all sampling strategies on the full tick dataset for every suite size in
-   * [NEXT_TICK_SUITE_SIZES]. Results are written to `baseline_next_tick/size_<n>/`.
-   *
-   * Tick data is loaded once (with leaf assignments from the most recent full run where
-   * `train_fraction = 1.0`). All groupings are derived from that single in-memory list. If no full
-   * run exists, leaf assignments are taken from the most recent run of any fraction, and the leaf
-   * strategy is skipped.
-   */
-  fun evaluate() {
-    println("Starting BaselineNextTickPostEvaluation.")
-
-    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
-    if (fullRunId != null) {
-      println("  Using leaf assignments from full run ${fullRunId.value}.")
-    } else {
-      println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
-    }
-
-    println("  Loading tick data into memory (this may take several minutes)...")
-    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
-    println("  Loaded ${allTicks.size} ticks.")
-
-    val data = buildSamplingData(allTicks, hasLeaf = fullRunId != null)
-
-    for (suiteSize in NEXT_TICK_SUITE_SIZES) {
-      println("  Suite size $suiteSize:")
-
-      println("    Evaluating uniform-random tick sampling.")
-      println("      Tick Pool: ${data.allTicks.size} entries.")
-      println("      Suite Size: $suiteSize.")
-      save(evaluateRandomDraw(data.allTicks, suiteSize), "random", suiteSize)
-
-      println("    Evaluating TSC-instance-stratified tick sampling.")
-      data.tscGroups.forEachIndexed { index, ticks ->
-        println("      TSC Group '$index': ${ticks.size} entries.")
-      }
-      println("      Suite Size: $suiteSize.")
-      save(evaluateRoundRobin(data.tscGroups, suiteSize), "tsc", suiteSize)
-
-      if (data.dcLeafGroups.isNotEmpty()) {
-        println("    Evaluating decision-tree-leaf-stratified tick sampling.")
-        data.dcLeafGroups.forEachIndexed { index, ticks ->
-          println("      DC Leaf Group '$index': ${ticks.size} entries.")
-        }
-        println("      Suite Size: $suiteSize.")
-        save(evaluateRoundRobin(data.dcLeafGroups, suiteSize), "leaf", suiteSize)
-      }
-    }
-
-    println("Finished BaselineNextTickPostEvaluation.")
-  }
-
   fun evaluateWithStartingScenario() {
     println("Starting BaselineNextTickPostEvaluation (scenario mode).")
 
@@ -298,6 +244,15 @@ object BaselineNextTickPostEvaluation {
             "random_scenario_rare",
             suiteSize)
 
+        println(
+            "    Evaluating uniform-random scenario sampling (rare mutants only accident scenarios).")
+        println("      Scenario Pool: ${data.accidentScenarioIds.size} entries.")
+        save(
+            evaluateRandomDrawScenario(
+                data.accidentScenarioIds, scenarioKills, suiteSize, rareMutantIds),
+            "random_accident-scenarios_rare",
+            suiteSize)
+
         if (data.startingScenarioIdsPerDCLeafId.isNotEmpty()) {
           println("    Evaluating decision-tree-leaf-stratified scenario sampling (rare mutants).")
           data.startingScenarioIdsPerDCLeafId.forEachIndexed { index, ticks ->
@@ -382,7 +337,7 @@ object BaselineNextTickPostEvaluation {
 
     println("  Loading scenario kill data from view...")
     val allViolations = MutantScenarioG0ViolationsView.getAll()
-    val killingScenariosByMutant =
+    val killingScenariosByMutant: Map<MutantId, Set<StartingScenarioId>> =
         allViolations
             .filter { it.anyG0Violation }
             .groupBy { it.mutantId }
@@ -393,29 +348,31 @@ object BaselineNextTickPostEvaluation {
     val data = buildSamplingData(allTicks, hasLeaf = fullRunId != null)
 
     for (mutantId in accidentMutantIds) {
-      val killingScenarios = killingScenariosByMutant.getValue(mutantId)
-      println("  Mutant $mutantId (${killingScenarios.size} killing scenarios):")
-
       println("    Evaluating random time-to-kill.")
       println("      Full Scenario ID Pool: ${data.allScenarioIds.size} entries.")
-      println("      Killing Scenarios: ${killingScenarios.size} entries.")
       saveTimeToKill(
-          evaluateTimeToKillRandom(data.allScenarioIds, killingScenarios), "random", mutantId)
+          evaluateTimeToKillRandom(data.allScenarioIds, killingScenariosByMutant, mutantId),
+          "random",
+          mutantId)
 
       println("    Evaluating random accident-scenarios only time-to-kill.")
       println("      Accident Scenario ID Pool: ${data.accidentScenarioIds.size} entries.")
-      println("      Killing Scenarios: ${killingScenarios.size} entries.")
       saveTimeToKill(
-          evaluateTimeToKillRandom(data.accidentScenarioIds, killingScenarios), "random", mutantId)
+          evaluateTimeToKillRandom(data.accidentScenarioIds, killingScenariosByMutant, mutantId),
+          "random_accident-scenarios",
+          mutantId)
 
       if (data.startingScenarioIdsPerDCLeafId.isNotEmpty()) {
         println("    Evaluating leaf-stratified time-to-kill.")
         data.startingScenarioIdsPerDCLeafId.forEachIndexed { index, scenarioIds ->
           println("      DC Leaf Group '$index': ${scenarioIds.size} entries.")
         }
-        println("      Killing Scenarios: ${killingScenarios.size} entries.")
         saveTimeToKill(
-            evaluateTimeToKillRoundRobin(data.startingScenarioIdsPerDCLeafId, killingScenarios),
+            evaluateTimeToKillRoundRobin(
+                data.startingScenarioIdsPerDCLeafId,
+                killingScenariosByMutant,
+                mutantId,
+            ),
             "leaf",
             mutantId)
       }
@@ -425,10 +382,9 @@ object BaselineNextTickPostEvaluation {
         data.startingScenarioIdsPerAccidentDCLeafId.forEachIndexed { index, scenarioIds ->
           println("      Accident DC Leaf Group '$index': ${scenarioIds.size} entries.")
         }
-        println("      Killing Scenarios: ${killingScenarios.size} entries.")
         saveTimeToKill(
             evaluateTimeToKillRoundRobin(
-                data.startingScenarioIdsPerAccidentDCLeafId, killingScenarios),
+                data.startingScenarioIdsPerAccidentDCLeafId, killingScenariosByMutant, mutantId),
             "leaf_accidents",
             mutantId)
       }
@@ -439,10 +395,11 @@ object BaselineNextTickPostEvaluation {
           println(
               "      Accident DC Accident-Scenarios Leaf Group '$index': ${scenarioIds.size} entries.")
         }
-        println("      Killing Scenarios: ${killingScenarios.size} entries.")
         saveTimeToKill(
             evaluateTimeToKillRoundRobin(
-                data.accidentStartingScenarioIdsPerAccidentDCLeafId, killingScenarios),
+                data.accidentStartingScenarioIdsPerAccidentDCLeafId,
+                killingScenariosByMutant,
+                mutantId),
             "leaf_accidents_accident-scenarios",
             mutantId)
       }
@@ -450,92 +407,6 @@ object BaselineNextTickPostEvaluation {
 
     println("Finished BaselineNextTickPostEvaluation (time to kill).")
   }
-
-  /**
-   * Draws up to [suiteSize] ticks uniformly at random **without replacement** from [pool],
-   * [REPETITIONS] times. Each repetition counts the number of distinct mutant IDs for which
-   * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true` in the sample.
-   *
-   * If the pool is smaller than [suiteSize] all items are drawn and the loop stops early. A `Set`
-   * of used indices avoids copying the pool and runs in O(1) expected time per draw when `suiteSize
-   * ≪ pool.size`. Repetitions run in parallel with deterministic per-rep seeds.
-   *
-   * @param pool Tick entries to sample from.
-   * @param suiteSize Maximum number of ticks to draw per repetition.
-   * @return One killed-mutant count per repetition.
-   */
-  private fun evaluateRandomDraw(
-      pool: List<NextTickPostEvaluationDatabaseEntry>,
-      suiteSize: Int,
-  ): List<Int> =
-      (0..REPETITIONS)
-          .toList()
-          .parallelStream()
-          .map { rep ->
-            val rng = Random(42L + rep)
-            val killed = mutableSetOf<MutantId>()
-            val seen = mutableSetOf<Int>()
-            val limit = minOf(suiteSize, pool.size)
-            while (seen.size < limit) {
-              val idx = rng.nextInt(pool.size)
-              if (seen.add(idx)) {
-                val entry = pool[idx]
-                if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
-              }
-            }
-            killed.size
-          }
-          .collect(Collectors.toList())
-
-  /**
-   * Builds a test suite of up to [suiteSize] ticks by cycling round-robin through [groups], drawing
-   * one tick **without replacement** from the current group at each slot. Each group maintains its
-   * own `Set` of used indices so no tick is drawn twice within a repetition.
-   *
-   * When a group is exhausted it is skipped; the loop stops early once every group is exhausted
-   * (detected by [groups].size consecutive exhausted-group visits) or [suiteSize] is reached.
-   * Repetitions run in parallel with deterministic per-rep seeds.
-   *
-   * @param groups Pre-partitioned tick lists (e.g., by TSC instance or leaf node).
-   * @param suiteSize Maximum number of ticks to include in each test suite.
-   * @return One killed-mutant count per repetition.
-   */
-  private fun evaluateRoundRobin(
-      groups: List<List<NextTickPostEvaluationDatabaseEntry>>,
-      suiteSize: Int,
-  ): List<Int> =
-      (0..REPETITIONS)
-          .toList()
-          .parallelStream()
-          .map { rep ->
-            val rng = Random(42L + rep)
-            val order = (0 until groups.size).shuffled(rng)
-            val usedPerGroup = Array(groups.size) { mutableSetOf<Int>() }
-            val killed = mutableSetOf<MutantId>()
-            var drawn = 0
-            var slot = 0
-            var consecutiveExhausted = 0
-            while (drawn < suiteSize && consecutiveExhausted < groups.size) {
-              val g = order[slot % groups.size]
-              slot++
-              val group = groups[g]
-              val used = usedPerGroup[g]
-              if (used.size >= group.size) {
-                consecutiveExhausted++
-                continue
-              }
-              consecutiveExhausted = 0
-              var idx: Int
-              do {
-                idx = rng.nextInt(group.size)
-              } while (!used.add(idx))
-              val entry = group[idx]
-              if (entry.nextTickG0Failed == true) killed.add(entry.mutantId)
-              drawn++
-            }
-            killed.size
-          }
-          .collect(Collectors.toList())
 
   /**
    * Builds a lookup map from scenario config ID to the set of mutant IDs killed in that scenario.
@@ -547,7 +418,7 @@ object BaselineNextTickPostEvaluation {
   private fun buildScenarioKillMap(
       allViolations: List<MutantScenarioG0Violation>,
       mutantFilter: Set<Int>? = null,
-  ): Map<Int, Set<Int>> =
+  ): Map<StartingScenarioId, Set<MutantId>> =
       allViolations
           .filter { it.anyG0Violation && (mutantFilter == null || it.mutantId in mutantFilter) }
           .groupBy { it.scenarioConfigId }
@@ -568,35 +439,33 @@ object BaselineNextTickPostEvaluation {
 
   private fun evaluateRandomDrawScenario(
       pool: Set<StartingScenarioId>,
-      scenarioKills: Map<Int, Set<Int>>,
+      scenarioKills: Map<StartingScenarioId, Set<MutantId>>,
       suiteSize: Int,
-      rareMutantIds: Set<Int>? = null,
+      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (0..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
-            val rng = Random(42L + rep)
-            val scenarioIds = pool.shuffled(rng).toMutableList()
-            val killed = mutableSetOf<MutantId>()
-            val drawnScenarios = mutableSetOf<StartingScenarioId>()
-            while (drawnScenarios.size < suiteSize && scenarioIds.isNotEmpty()) {
-              val scenarioId = scenarioIds.removeFirst()
-              drawnScenarios.add(scenarioId)
-              scenarioKills[scenarioId]?.let { kills ->
-                killed.addAll(
-                    if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
-              }
-            }
-            killed.size
+            pool
+                .shuffled(Random(42L + rep))
+                .subList(0, suiteSize)
+                .flatMap {
+                  scenarioKills[it]?.let { kills ->
+                    if (rareMutantIds != null) kills.filter { kill -> kill in rareMutantIds }
+                    else kills
+                  } ?: emptyList()
+                }
+                .toSet()
+                .size
           }
           .collect(Collectors.toList())
 
   private fun evaluateRoundRobinScenario(
       scenarioIdSetsPerGroup: List<Set<StartingScenarioId>>,
-      scenarioKills: Map<Int, Set<Int>>,
+      scenarioKills: Map<StartingScenarioId, Set<MutantId>>,
       suiteSize: Int,
-      rareMutantIds: Set<Int>? = null,
+      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> {
     return (0..REPETITIONS)
         .toList()
@@ -618,8 +487,7 @@ object BaselineNextTickPostEvaluation {
             drawn++
             // Remove drawn scenario from all groups
             workingLists.forEach { it.remove(scenarioId) }
-            val currentGroupExhausted = currentGroup.isEmpty()
-            val emptyBeforePos = (0 until pos).count { workingLists[it].isEmpty() }
+            val emptyBeforeAndUntilPos = (0..pos).count { workingLists[it].isEmpty() }
             // Remove all empty groups
             workingLists.removeAll { it.isEmpty() }
             scenarioKills[scenarioId]?.let { kills ->
@@ -627,10 +495,7 @@ object BaselineNextTickPostEvaluation {
                   if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
             }
             if (workingLists.isEmpty()) break
-            val effectivePos = pos - emptyBeforePos
-            pos =
-                if (currentGroupExhausted) effectivePos % workingLists.size
-                else (effectivePos + 1) % workingLists.size
+            pos = (pos - emptyBeforeAndUntilPos + 1) % workingLists.size
           }
           killed.size
         }
@@ -639,20 +504,21 @@ object BaselineNextTickPostEvaluation {
 
   private fun evaluateTimeToKillRandom(
       scenarioIdPool: Set<StartingScenarioId>,
-      killingScenarios: Set<StartingScenarioId>,
+      killingScenarios: Map<MutantId, Set<StartingScenarioId>>,
+      mutantIdToKill: MutantId
   ): List<Int> {
     return (0..REPETITIONS)
         .toList()
         .parallelStream()
         .map { rep ->
           val rng = Random(42L + rep)
-          val seen = mutableSetOf<StartingScenarioId>()
+          var seen = 0
           val pool = scenarioIdPool.shuffled(rng).toMutableList()
           while (pool.isNotEmpty()) {
             val scenarioId = pool.removeFirst()
-            seen.add(scenarioId)
-            if (scenarioId in killingScenarios) {
-              return@map seen.size
+            seen++
+            if (killingScenarios[mutantIdToKill]?.contains(scenarioId) == true) {
+              return@map seen
             }
           }
           -1
@@ -662,40 +528,36 @@ object BaselineNextTickPostEvaluation {
 
   private fun evaluateTimeToKillRoundRobin(
       scenarioIdListsPerGroup: List<Set<StartingScenarioId>>,
-      killingScenarios: Set<StartingScenarioId>,
+      killingScenariosByMutant: Map<MutantId, Set<StartingScenarioId>>,
+      mutantId: MutantId
   ): List<Int> =
       (0..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val activeGroups =
+            val workingLists =
                 scenarioIdListsPerGroup
                     .map { it.shuffled(rng).toMutableList() }
                     .shuffled(rng)
                     .toMutableList()
             var pos = 0
-            var killedAt = 0
-
-            while (activeGroups.isNotEmpty()) {
-              killedAt++
-              val currentGroup = activeGroups[pos]
-              val currentScenario = currentGroup.removeFirst()
-
-              if (currentScenario in killingScenarios) {
-                return@map killedAt
+            var drawn = 0
+            while (workingLists.isNotEmpty()) {
+              val currentGroup = workingLists[pos]
+              val scenarioId = currentGroup.removeFirst()
+              // Track current scenario
+              drawn++
+              // Remove drawn scenario from all groups
+              workingLists.forEach { it.remove(scenarioId) }
+              val emptyBeforeAndUntilPos = (0..pos).count { workingLists[it].isEmpty() }
+              // Remove all empty groups
+              workingLists.removeAll { it.isEmpty() }
+              if (killingScenariosByMutant[mutantId]?.contains(scenarioId) == true) {
+                return@map drawn
               }
-
-              activeGroups.forEach { it.remove(currentScenario) }
-              // Compute position correction before compacting the list
-              val currentGroupExhausted = currentGroup.isEmpty()
-              val emptyBeforePos = (0 until pos).count { activeGroups[it].isEmpty() }
-              activeGroups.removeAll { it.isEmpty() }
-              if (activeGroups.isEmpty()) break
-              val effectivePos = pos - emptyBeforePos
-              pos =
-                  if (currentGroupExhausted) effectivePos % activeGroups.size
-                  else (effectivePos + 1) % activeGroups.size
+              if (workingLists.isEmpty()) break
+              pos = (pos - emptyBeforeAndUntilPos + 1) % workingLists.size
             }
             -1
           }
