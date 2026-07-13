@@ -451,7 +451,7 @@ def _tune_hyperparams(
 
     # tqdm drives the bar's ETA/rate; the callback fires after every trial
     # (success or failure) so the bar never stalls on a failed trial.
-    with tqdm(total=n_trials, desc="  Tuning", unit="trial", dynamic_ncols=True) as pbar:
+    with tqdm(total=n_trials, desc="  Tuning", unit="trial", dynamic_ncols=True, ascii=True) as pbar:
         def _on_trial_end(study: "optuna.Study", trial: "optuna.trial.FrozenTrial") -> None:
             try:
                 pbar.set_postfix(best_auc=f"{study.best_value:.4f}")
