@@ -499,7 +499,7 @@ def main() -> None:
     parser.add_argument("parquet", help="Path to the Parquet export of metric_failed_monitors")
     parser.add_argument("--n-trials", type=int, default=50, metavar="N",
                         help="Optuna trials for automatic hyperparameter search (default: 50)")
-    parser.add_argument("--n-jobs", type=int, default=96, help="CPU threads for LightGBM (default: 96)")
+    parser.add_argument("--n-jobs", type=int, default=48, help="CPU threads for LightGBM (default: 48)")
     parser.add_argument("--tuning-jobs", type=int, default=8, metavar="K",
                         help="Number of Optuna trials run concurrently during hyperparameter tuning "
                              "(default: 8). --n-jobs threads are split evenly across these K "
