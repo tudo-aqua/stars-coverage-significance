@@ -240,7 +240,7 @@ docker run --name stars-coverage-significance-post-evaluation stars-evaluation:l
 All Python dependencies are installed in the Docker image. To run the scripts outside Docker, install them first:
 
 ```bash
-pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz psycopg2-binary
+pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz psycopg2-binary scikit-learn optuna
 ```
 
 ---
@@ -271,15 +271,13 @@ python3 scripts/export_parquet.py \
 
 ### `scripts/decision_tree_g0.py` — Decision tree classifier for `next_tick_monitor_g0_Accidents_failed`
 
-Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using current-tick monitor state, ego maneuver, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`.
+Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using current-tick monitor state, ego maneuver, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna with mutant-grouped cross-validation — no manual values required.
 
 | Argument | Default | Description |
 |---|---|---|
 | `parquet` | *(required)* | Path to the Parquet export of `metric_failed_monitors` |
-| `--max-depth` | unlimited | Maximum depth of the tree |
-| `--num-leaves` | `256` | Maximum number of leaves |
-| `--min-split-gain` | `0.0` | Minimum loss reduction required to make a split; `0.0` splits on any improvement |
-| `--min-data-in-leaf` | `20` | Minimum number of samples required in a leaf |
+| `--n-trials` | `50` | Number of Optuna trials for automatic hyperparameter tuning |
+| `--cv-folds` | `5` | Number of mutant-grouped cross-validation folds used during tuning |
 | `--n-jobs` | `96` | CPU threads used by LightGBM; set to match available cores |
 | `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
@@ -307,12 +305,13 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 | `--time-gaps` / `--no-time-gaps` | 16 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |
 
 ```bash
-# Basic run — all feature groups, no DB write
+# Basic run — all feature groups, no DB write (50 Optuna trials for tuning)
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output tree.dot
 
-# Limit depth and render a dot file
+# More thorough tuning with 200 trials and 10-fold CV
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
-  --max-depth 5 \
+  --n-trials 200 \
+  --cv-folds 10 \
   --output tree.dot
 
 # Train/test split: 80 % of mutants for training, rest for evaluation
@@ -334,7 +333,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
-  --num-leaves 75 \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
   --db-workers 48 \
   --out-dir ./results/runs

@@ -32,7 +32,8 @@ RUN pip3 install --break-system-packages --no-cache-dir \
     graphviz \
     psycopg2-binary \
     pyarrow \
-    scikit-learn
+    scikit-learn \
+    optuna
 
 # Clone repository into the image
 ARG REPO_URL=https://github.com/tudo-aqua/stars-coverage-significance
