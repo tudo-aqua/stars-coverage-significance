@@ -25,9 +25,9 @@ BOX_LINEWIDTH = 2.5
 
 STRATEGIES = [
     ("random", "Random"),
-    ("tsc", "TSC"),
     ("leaf", "Leaf"),
     ("leaf_accidents", "Leaf\n(Accidents)"),
+    ("leaf_accidents_accident-scenarios", "Leaf\n(Accidents,\nAccident\nScenarios)"),
 ]
 
 

@@ -25,17 +25,17 @@ STRATEGIES_FULL = [
     ("tsc", "TSC"),
     ("leaf", "Leaf"),
     ("random_scenario", "Random\n(Scenario)"),
-    ("random_scenario_replacement", "Random\n(Scenario,\nRepl.)"),
-    ("tsc_scenario", "TSC\n(Scenario)"),
+    ("random_accident_scenario", "Random\n(Accident\nScenario)"),
     ("leaf_scenario", "Leaf\n(Scenario)"),
     ("leaf_scenario_accidents", "Leaf\n(Scenario,\nAccidents)"),
+    ("leaf_accident-scenario_accidents", "Leaf\n(Accident\nScenario,\nAccidents)"),
 ]
 
 STRATEGIES_RARE = [
     ("random_scenario_rare", "Random\n(Scenario,\nRare)"),
-    ("tsc_scenario_rare", "TSC\n(Scenario,\nRare)"),
     ("leaf_scenario_rare", "Leaf\n(Scenario,\nRare)"),
     ("leaf_scenario_accidents_rare", "Leaf\n(Scenario,\nAccidents,\nRare)"),
+    ("leaf_accident-scenario_accidents_rare", "Leaf\n(Accident\nScenario,\nAccidents,\nRare)"),
 ]
 
 STRATEGIES = STRATEGIES_FULL + STRATEGIES_RARE
