@@ -271,7 +271,7 @@ python3 scripts/export_parquet.py \
 
 ### `scripts/decision_tree_g0.py` — Decision tree classifier for `next_tick_monitor_g0_Accidents_failed`
 
-Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using current-tick monitor state, ego maneuver, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna with mutant-grouped cross-validation — no manual values required.
+Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using ego maneuver, ego kinematics, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna with mutant-grouped cross-validation — no manual values required. Current-tick monitor states are never used as input features — only `next_tick_monitor_g0_Accidents_failed` (the prediction target) is derived from them — to avoid leaking the current-tick value of the monitor being predicted one tick ahead.
 
 | Argument | Default | Description |
 |---|---|---|
@@ -295,7 +295,6 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 
 | Flag | Columns | Description |
 |---|---|---|
-| `--monitors` / `--no-monitors` | 7 | Current-tick monitor states: `monitor_g0_Accidents_failed` ... `monitor_i2_DrivingFasterThenLeftTraffic_failed` |
 | `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
 | `--ego-speed` / `--no-ego-speed` | 1 | Ego speed: `ego_speed_mps` |
 | `--ego-accel` / `--no-ego-accel` | 1 | Ego acceleration: `ego_accel_mps2` |
@@ -327,7 +326,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --train-fraction 0.5 \
   --seed 4 \
-  --no-monitors \
   --no-ego-maneuver \
   --no-ego-position \
   --no-ego-accel \

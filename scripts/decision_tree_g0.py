@@ -13,7 +13,6 @@ Hyperparameter search (runs automatically):
     --cv-folds K    Cross-validation folds, grouped by mutant ID (default: 5)
 
 Feature groups (all enabled by default, disable with --no-<group>):
-    --monitors            Current-tick monitor states (7 cols)
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
     --ego-speed           Ego speed (1 col)
     --ego-accel           Ego acceleration (1 col)
@@ -48,15 +47,6 @@ _NEIGHBORS = [
 ]
 
 FEATURE_GROUPS: dict[str, list[str]] = {
-    "monitors": [
-        "monitor_g0_Accidents_failed",
-        "monitor_g1_SafeDistanceToPrecedingVehicle_failed",
-        "monitor_g2_emergencyBraking_failed",
-        "monitor_g3_MaximumSpeedLimit_failed",
-        "monitor_g4_TrafficFlow_failed",
-        "monitor_i1_Stopping_failed",
-        "monitor_i2_DrivingFasterThenLeftTraffic_failed",
-    ],
     "ego-maneuver": [
         "ego_maneuver_speed",
         "ego_maneuver_lane_change",
@@ -507,12 +497,11 @@ def main() -> None:
                         help="Directory for run-named outputs: run_<id>.dot and run_<id>.log. "
                              "Defaults to the parquet file's directory when --uri is used.")
 
-    # Feature group toggles — all enabled by default
+    # Feature group toggles — all enabled by default.
+    # Monitor states are intentionally not a feature group: they are only ever
+    # the prediction target (TARGET_COL), never an input, to avoid leaking the
+    # current-tick value of the monitor being predicted one tick ahead.
     group_args = parser.add_argument_group("feature groups (all on by default)")
-    group_args.add_argument(
-        "--monitors", default=True, action=argparse.BooleanOptionalAction,
-        help="Current-tick monitor states: g0–g4, i1–i2 (7 cols)",
-    )
     group_args.add_argument(
         "--ego-maneuver", default=True, action=argparse.BooleanOptionalAction,
         help="Ego maneuver: planned speed, lane-change direction (2 cols)",
@@ -545,7 +534,6 @@ def main() -> None:
     args = parser.parse_args()
 
     group_flags = {
-        "monitors":            args.monitors,
         "ego-maneuver":        args.ego_maneuver,
         "ego-speed":           args.ego_speed,
         "ego-accel":           args.ego_accel,
