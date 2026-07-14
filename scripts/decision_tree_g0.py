@@ -358,9 +358,26 @@ def _ensure_tracking_tables(conn) -> None:
                 dot_source       TEXT
             )
         """)
-        # Migrate tables created before log_text / dot_source were added.
+        # Migrate: columns added after initial schema
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS log_text TEXT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS dot_source TEXT")
+        # Feature group flags
+        for col in (
+            "feat_ego_maneuver", "feat_ego_speed", "feat_ego_accel", "feat_ego_position",
+            "feat_distances", "feat_neighbor_kinematics", "feat_time_gaps",
+        ):
+            cur.execute(f"ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS {col} BOOL")
+        # Tuning configuration
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS n_trials INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS max_leaves_bound INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS class_weight TEXT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS scale_pos_weight DOUBLE PRECISION")
+        # Best hyperparameters
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_num_leaves INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_max_depth INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_min_child_samples INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_min_split_gain DOUBLE PRECISION")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS tuning_roc_auc DOUBLE PRECISION")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS decision_tree_mutant_splits (
                 run_id     INT  NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
@@ -386,16 +403,45 @@ def _insert_run(
     seed: int,
     train_mutants: set[int],
     test_mutants: set[int],
+    feature_flags: dict[str, bool],
+    n_trials: int,
+    max_leaves_bound: int,
+    class_weight: str,
+    scale_pos_weight: "float | None",
+    best_params: dict,
+    tuning_roc_auc: float,
 ) -> int:
     """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
     import psycopg2.extras
 
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO decision_tree_runs "
-            "  (train_fraction, seed, n_train_mutants, n_test_mutants) "
-            "VALUES (%s, %s, %s, %s) RETURNING id",
-            (train_fraction, seed, len(train_mutants), len(test_mutants)),
+            "INSERT INTO decision_tree_runs ("
+            "  train_fraction, seed, n_train_mutants, n_test_mutants,"
+            "  feat_ego_maneuver, feat_ego_speed, feat_ego_accel, feat_ego_position,"
+            "  feat_distances, feat_neighbor_kinematics, feat_time_gaps,"
+            "  n_trials, max_leaves_bound, class_weight, scale_pos_weight,"
+            "  hp_num_leaves, hp_max_depth, hp_min_child_samples, hp_min_split_gain,"
+            "  tuning_roc_auc"
+            ") VALUES ("
+            "  %s, %s, %s, %s,"
+            "  %s, %s, %s, %s,"
+            "  %s, %s, %s,"
+            "  %s, %s, %s, %s,"
+            "  %s, %s, %s, %s,"
+            "  %s"
+            ") RETURNING id",
+            (
+                train_fraction, seed, len(train_mutants), len(test_mutants),
+                feature_flags["ego-maneuver"], feature_flags["ego-speed"],
+                feature_flags["ego-accel"], feature_flags["ego-position"],
+                feature_flags["distances"], feature_flags["neighbor-kinematics"],
+                feature_flags["time-gaps"],
+                n_trials, max_leaves_bound, class_weight, scale_pos_weight,
+                best_params["num_leaves"], best_params["max_depth"],
+                best_params["min_child_samples"], best_params["min_split_gain"],
+                tuning_roc_auc,
+            ),
         )
         run_id = cur.fetchone()[0]
         records = (
@@ -421,7 +467,7 @@ def _tune_hyperparams(
     tuning_jobs: int,
     max_leaves: int,
     lgb_weight_kwargs: dict,
-) -> dict:
+) -> "tuple[dict, float]":
     """Search for the best tree hyperparameters using Optuna.
 
     Each trial fits on the entire training set (no held-out split) and is
@@ -436,7 +482,7 @@ def _tune_hyperparams(
     favouring more concurrent trials over more threads per trial is usually
     faster overall.
 
-    Optimises ROC-AUC. Returns the best parameter dict found.
+    Returns (best_params, best_roc_auc).
     """
     from sklearn.metrics import roc_auc_score
     import optuna
@@ -496,9 +542,10 @@ def _tune_hyperparams(
         )
 
     best = study.best_params
-    print(f"  Best training ROC-AUC : {study.best_value:.4f}")
+    best_roc_auc = study.best_value
+    print(f"  Best training ROC-AUC : {best_roc_auc:.4f}")
     print(f"  Best params           : {best}\n")
-    return best
+    return best, best_roc_auc
 
 
 def main() -> None:
@@ -652,7 +699,7 @@ def main() -> None:
             lgb_weight_kwargs = {"scale_pos_weight": spw}
             print(f"Class weighting: scale_pos_weight = {spw:.1f}  (n_neg={n_neg:,} / n_pos={n_pos:,})")
 
-        best_params = _tune_hyperparams(
+        best_params, tuning_roc_auc = _tune_hyperparams(
             X_train, y_train,
             n_trials=args.n_trials,
             n_jobs=args.n_jobs,
@@ -751,8 +798,20 @@ def main() -> None:
             conn = psycopg2.connect(args.uri)
             try:
                 _ensure_tracking_tables(conn)
-                run_id = _insert_run(conn, args.train_fraction, args.seed,
-                                     train_mutants, test_mutants)
+                run_id = _insert_run(
+                    conn,
+                    train_fraction=args.train_fraction,
+                    seed=args.seed,
+                    train_mutants=train_mutants,
+                    test_mutants=test_mutants,
+                    feature_flags=group_flags,
+                    n_trials=args.n_trials,
+                    max_leaves_bound=args.max_leaves,
+                    class_weight=args.class_weight,
+                    scale_pos_weight=lgb_weight_kwargs.get("scale_pos_weight"),
+                    best_params=best_params,
+                    tuning_roc_auc=tuning_roc_auc,
+                )
             finally:
                 conn.close()
             print(f"Run {run_id} recorded: {len(train_mutants):,} train mutants, "
