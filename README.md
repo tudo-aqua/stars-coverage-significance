@@ -274,11 +274,13 @@ python3 scripts/export_parquet.py \
 Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) monitor will fail in the next tick, using ego maneuver, ego kinematics, and surrounding vehicle distances as features. Reads the Parquet file produced by `export_parquet.py`. Hyperparameters (number of leaves, max depth, min split gain, min samples per leaf) are tuned automatically via Optuna — no manual values required. Each trial fits and scores on the entire training set (no cross-validation split), so hyperparameter search always learns from all available rows. Current-tick monitor states are never used as input features — only `next_tick_monitor_g0_Accidents_failed` (the prediction target) is derived from them — to avoid leaking the current-tick value of the monitor being predicted one tick ahead.
 
 | Argument | Default | Description |
-|---|---|---|
+|---|------|---|
 | `parquet` | *(required)* | Path to the Parquet export of `metric_failed_monitors` |
 | `--n-trials` | `50` | Number of Optuna trials for automatic hyperparameter tuning |
-| `--n-jobs` | `96` | Total CPU threads available; set to match available cores |
-| `--tuning-jobs` | `8` | Number of Optuna trials run concurrently during tuning; `--n-jobs` threads are split evenly across them (`n-jobs / tuning-jobs` threads per trial). Since each trial fits only one tree, more concurrent trials with fewer threads each is usually faster than one trial at a time with many threads |
+| `--max-leaves` | `512` | Upper bound for `num_leaves` in the Optuna search; lower values (e.g. `64`) prevent tiny leaves that appear when `--class-weight=balanced` upweights each positive sample |
+| `--class-weight` | `balanced` | Class imbalance strategy: `balanced` (per-sample upweighting, `min_child_samples` applies to weighted counts) or `scale-pos-weight` (scalar loss correction, `min_child_samples` applies to raw counts — prevents tiny leaves) |
+| `--n-jobs` | `48` | Total CPU threads available; set to match available cores |
+| `--tuning-jobs` | `8`  | Number of Optuna trials run concurrently during tuning; `--n-jobs` threads are split evenly across them (`n-jobs / tuning-jobs` threads per trial). Since each trial fits only one tree, more concurrent trials with fewer threads each is usually faster than one trial at a time with many threads |
 | `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
 | `--output` | *(none)* | Write a Graphviz `.dot` file to an explicit path (overrides the run-named file from `--out-dir`) |
@@ -315,7 +317,9 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
-  --out-dir /results/runs
+  --out-dir /results/runs \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 48 \
 
 # Train/test split: 80 % of mutants for training, rest for evaluation
 # Run is recorded in the DB; run_<id>.dot and run_<id>.log are written automatically

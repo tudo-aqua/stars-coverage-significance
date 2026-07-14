@@ -10,9 +10,17 @@ Usage:
     python decision_tree_g0.py <path-to-parquet> [options]
 
 Hyperparameter search (runs automatically):
-    --n-trials N     Optuna trials for hyperparameter search (default: 50)
-    --tuning-jobs K  Concurrent trials during tuning; --n-jobs threads are
-                     split across them (default: 8)
+    --n-trials N      Optuna trials for hyperparameter search (default: 50)
+    --tuning-jobs K   Concurrent trials during tuning; --n-jobs threads are
+                      split across them (default: 8)
+    --max-leaves N    Upper bound for num_leaves in the Optuna search (default: 512).
+                      Lower values (e.g. 64) prevent tiny weighted-sample leaves when
+                      class_weight='balanced' makes a single positive row look like 20+.
+    --class-weight W  'balanced' (default) or 'scale-pos-weight'. With 'balanced' each
+                      positive row is upweighted ~n_neg/n_pos, so min_child_samples
+                      applies to weighted counts and tiny leaves can appear. With
+                      'scale-pos-weight' LightGBM applies a scalar loss correction
+                      instead, so min_child_samples applies to raw sample counts.
 
 Feature groups (all enabled by default, disable with --no-<group>):
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
@@ -411,6 +419,8 @@ def _tune_hyperparams(
     n_trials: int,
     n_jobs: int,
     tuning_jobs: int,
+    max_leaves: int,
+    lgb_weight_kwargs: dict,
 ) -> dict:
     """Search for the best tree hyperparameters using Optuna.
 
@@ -437,7 +447,7 @@ def _tune_hyperparams(
 
     def objective(trial: optuna.Trial) -> float:
         params = dict(
-            num_leaves=trial.suggest_int("num_leaves", 4, 512, log=True),
+            num_leaves=trial.suggest_int("num_leaves", 4, max_leaves, log=True),
             max_depth=trial.suggest_int("max_depth", 2, 20),
             min_child_samples=trial.suggest_int("min_child_samples", 20, 5000, log=True),
             min_split_gain=trial.suggest_float("min_split_gain", 0.0, 1.0),
@@ -446,9 +456,9 @@ def _tune_hyperparams(
             n_estimators=1,
             learning_rate=1.0,
             n_jobs=threads_per_trial,
-            class_weight="balanced",
             random_state=0,
             verbose=-1,
+            **lgb_weight_kwargs,
             **params,
         )
         clf.fit(X_train, y_train)
@@ -499,6 +509,16 @@ def main() -> None:
     parser.add_argument("parquet", help="Path to the Parquet export of metric_failed_monitors")
     parser.add_argument("--n-trials", type=int, default=50, metavar="N",
                         help="Optuna trials for automatic hyperparameter search (default: 50)")
+    parser.add_argument("--max-leaves", type=int, default=512, metavar="N",
+                        help="Upper bound for num_leaves in the Optuna search (default: 512). "
+                             "Lower values (e.g. 64) reduce tiny leaves that appear when "
+                             "--class-weight=balanced upweights each positive sample ~n_neg/n_pos.")
+    parser.add_argument("--class-weight", default="balanced",
+                        choices=["balanced", "scale-pos-weight"],
+                        help="Class imbalance strategy (default: balanced). "
+                             "'balanced' upweights each positive row so min_child_samples applies "
+                             "to weighted counts; 'scale-pos-weight' applies a scalar loss correction "
+                             "so min_child_samples applies to raw sample counts, preventing tiny leaves.")
     parser.add_argument("--n-jobs", type=int, default=48, help="CPU threads for LightGBM (default: 48)")
     parser.add_argument("--tuning-jobs", type=int, default=8, metavar="K",
                         help="Number of Optuna trials run concurrently during hyperparameter tuning "
@@ -622,20 +642,32 @@ def main() -> None:
         # Predict on ALL rows so every row gets a leaf label.
         X_eval, y_eval, row_ids_eval = X, y, row_ids
 
+        if args.class_weight == "balanced":
+            lgb_weight_kwargs: dict = {"class_weight": "balanced"}
+            print("Class weighting: balanced")
+        else:
+            n_pos = int(y_train.sum())
+            n_neg = len(y_train) - n_pos
+            spw = n_neg / n_pos
+            lgb_weight_kwargs = {"scale_pos_weight": spw}
+            print(f"Class weighting: scale_pos_weight = {spw:.1f}  (n_neg={n_neg:,} / n_pos={n_pos:,})")
+
         best_params = _tune_hyperparams(
             X_train, y_train,
             n_trials=args.n_trials,
             n_jobs=args.n_jobs,
             tuning_jobs=args.tuning_jobs,
+            max_leaves=args.max_leaves,
+            lgb_weight_kwargs=lgb_weight_kwargs,
         )
 
         clf = lgb.LGBMClassifier(
             n_estimators=1,
             learning_rate=1.0,
             n_jobs=args.n_jobs,
-            class_weight="balanced",
             random_state=0,
             verbose=-1,
+            **lgb_weight_kwargs,
             **best_params,
         )
         clf.fit(X_train, y_train)
