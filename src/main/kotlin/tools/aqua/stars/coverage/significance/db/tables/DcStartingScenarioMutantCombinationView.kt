@@ -26,7 +26,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Startin
 /**
  * One row from [DcStartingScenarioMutantCombinationView].
  *
- * @property id Primary key of the underlying [MetricFailedMonitorsTable] row.
+ * @property metricFailedMonitorId Primary key of the underlying [MetricFailedMonitorsTable] row.
  * @property tick Simulation tick index of the metric row.
  * @property mutantId ID of the mutant.
  * @property scenarioConfigId ID of the scenario starting configuration.
@@ -35,7 +35,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Startin
  *   scenario) pair across all ticks.
  */
 data class DcStartingScenarioMutantCombination(
-    val id: Int,
+    val decisionTreeRunId: Int,
+    val metricFailedMonitorId: Int,
     val tick: Long,
     val mutantId: MutantId,
     val scenarioConfigId: StartingScenarioId,
@@ -73,8 +74,11 @@ data class DcStartingScenarioMutantCombination(
  */
 object DcStartingScenarioMutantCombinationView : Table("dc_startingscenario_mutant_combination") {
 
+  /** Foreign key to [DecisionTreeRunsTable]. */
+  val decisionTreeRunId = integer("decision_tree_run_id")
+
   /** Primary key of the underlying [MetricFailedMonitorsTable] row. */
-  val id = integer("id")
+  val metricFailedMonitorsId = integer("metric_failed_monitors_id")
 
   /** Simulation tick index. */
   val tick = long("tick")
@@ -95,24 +99,17 @@ object DcStartingScenarioMutantCombinationView : Table("dc_startingscenario_muta
   val anyG0Violation = bool("any_g0_violation")
 
   /** Returns all rows from the view. */
-  fun getAll(): List<DcStartingScenarioMutantCombination> {
-    val idCol = id
-    val tickCol = tick
-    val mutantIdCol = mutantId
-    val scenarioConfigIdCol = scenarioConfigId
-    val leafNodeIdCol = leafNodeId
-    val anyG0ViolationCol = anyG0Violation
-    return transaction {
-      selectAll().map { row ->
-        DcStartingScenarioMutantCombination(
-            id = row[idCol],
-            tick = row[tickCol],
-            mutantId = row[mutantIdCol],
-            scenarioConfigId = row[scenarioConfigIdCol],
-            leafNodeId = row[leafNodeIdCol],
-            anyG0Violation = row[anyG0ViolationCol],
-        )
-      }
+  fun getAll(): List<DcStartingScenarioMutantCombination> = transaction {
+    selectAll().map { row ->
+      DcStartingScenarioMutantCombination(
+          decisionTreeRunId = row[decisionTreeRunId],
+          metricFailedMonitorId = row[metricFailedMonitorsId],
+          tick = row[tick],
+          mutantId = row[mutantId],
+          scenarioConfigId = row[scenarioConfigId],
+          leafNodeId = row[leafNodeId],
+          anyG0Violation = row[anyG0Violation],
+      )
     }
   }
 }
