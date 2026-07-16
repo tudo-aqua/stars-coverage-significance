@@ -53,8 +53,8 @@ data class DcStartingScenarioMutantCombination(
  *
  * The materialized view DDL is:
  * ```sql
- * CREATE MATERIALIZED VIEW IF NOT EXISTS dc_startingscenario_mutant_combination AS
- * SELECT metric_failed_monitors.id,
+ * SELECT decision_tree_leaf_assignments.run_id AS decision_tree_run_id,
+ *        metric_failed_monitors.id             AS metric_failed_monitors_id,
  *        metric_failed_monitors.tick,
  *        metric_failed_monitors.mutant_id,
  *        metric_failed_monitors.scenario_config_id,
@@ -64,9 +64,8 @@ data class DcStartingScenarioMutantCombination(
  *          JOIN decision_tree_leaf_assignments
  *               ON metric_failed_monitors.id = decision_tree_leaf_assignments.metric_failed_monitor_id
  *          JOIN mutant_scenario_g0_violations
- *               ON metric_failed_monitors.mutant_id = mutant_scenario_g0_violations.mutant_id
- *              AND metric_failed_monitors.scenario_config_id = mutant_scenario_g0_violations.scenario_config_id
- * WHERE decision_tree_leaf_assignments.run_id = 3
+ *               ON metric_failed_monitors.mutant_id = mutant_scenario_g0_violations.mutant_id AND
+ *                  metric_failed_monitors.scenario_config_id = mutant_scenario_g0_violations.scenario_config_id
  * ```
  *
  * The view is created (or replaced) at schema bootstrap time by
