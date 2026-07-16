@@ -108,7 +108,7 @@ object DtMonitorFailuresCombinationView : Table("dt_monitor_failures_combination
 
   fun getForRunId(runId: Int): List<DtMonitorFailuresCombinationViewRow> = transaction {
     selectAll()
-        .where { DecisionTreeLeafAssignmentsTable.runId eq runId }
+        .where { decisionTreeRunId eq runId }
         .map { row ->
           DtMonitorFailuresCombinationViewRow(
               decisionTreeRunId = row[decisionTreeRunId],
