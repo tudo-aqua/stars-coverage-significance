@@ -61,11 +61,12 @@ object DecisionTreeComparisonPostEvaluation {
     val decisionTreeRunsById = decisionTreeRuns.associateBy { it.id }
 
     val consoleProgress = ConsoleProgress(decisionTreeRunIds.size, "Evaluating Decision Tree Runs")
+    consoleProgress.render()
     val runsById =
         decisionTreeRunIds.associateWith { runId ->
-          consoleProgress.step()
           val decisionTreeMonitorFailures = DtMonitorFailuresCombinationView.getForRunId(runId)
           val bucketInformation = getBucketSizesForEachLeafNode(decisionTreeMonitorFailures)
+          consoleProgress.step()
           DecisionTreeRunExport(
               runInfo = decisionTreeRunsById.getValue(runId).toMetadata(),
               buckets = bucketInformation)
