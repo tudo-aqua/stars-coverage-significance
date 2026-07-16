@@ -36,6 +36,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property dotSource Graphviz DOT source of the decision tree, stored for later visualization.
  *
  * Feature group flags (all default true in the script):
+ *
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
@@ -45,6 +46,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property featTimeGaps Whether the time-gaps feature group was enabled.
  *
  * Tuning configuration:
+ *
  * @property nTrials Number of Optuna trials used during hyperparameter search.
  * @property maxLeavesBound Upper bound for num_leaves in the Optuna search.
  * @property classWeight Class imbalance strategy: `'balanced'` or `'scale-pos-weight'`.
@@ -52,6 +54,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  *   `'scale-pos-weight'`; null when [classWeight] is `'balanced'`.
  *
  * Best hyperparameters selected by Optuna:
+ *
  * @property hpNumLeaves Best num_leaves found.
  * @property hpMaxDepth Best max_depth found.
  * @property hpMinChildSamples Best min_child_samples found.
