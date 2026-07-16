@@ -41,18 +41,22 @@ object DecisionTreeComparisonPostEvaluation {
   fun evaluate() {
     println("Starting DecisionTreeComparisonPostEvaluation.")
 
+    println("Fetching decision tree runs...")
     val decisionTreeRuns = DecisionTreeRunsRepository.getAll()
     val decisionTreeRunIds = decisionTreeRuns.mapNotNull { it.id }
-    println("Found ${decisionTreeRunIds.size} decision tree runs.")
+    println("\tFound ${decisionTreeRunIds.size} decision tree runs.")
 
+    println("Fetching mutant IDs...")
     val mutantIds = MutantsRepository.getAllIds()
-    println("Found ${mutantIds.size} mutants.")
+    println("\tFound ${mutantIds.size} mutants.")
 
+    println("Counting total ticks...")
     val totalTicks = MetricFailedMonitorsRepository.count()
-    println("Found $totalTicks total ticks.")
+    println("\tFound $totalTicks total ticks.")
 
+    println("Counting failed ticks...")
     val failedTicks = MetricFailedMonitorsRepository.countFailures()
-    println("Found $failedTicks failed ticks.")
+    println("\tFound $failedTicks failed ticks.")
 
     val decisionTreeRunsById = decisionTreeRuns.associateBy { it.id }
 
@@ -67,6 +71,7 @@ object DecisionTreeComparisonPostEvaluation {
               buckets = bucketInformation)
         }
 
+    println("Writing JSON export...")
     writeJson(
         DecisionTreeComparisonExport(
             decisionTreeRunIds = decisionTreeRunIds,
@@ -89,7 +94,7 @@ object DecisionTreeComparisonPostEvaluation {
     val jsonPath = BASE_PATH.resolve("decision_tree_comparison.json")
     Files.createDirectories(jsonPath.parent)
     jsonPath.writeText(jsonContent)
-    println("  JSON written to: $jsonPath")
+    println("\tJSON written to: $jsonPath")
   }
 
   private fun getBucketSizesForEachLeafNode(
