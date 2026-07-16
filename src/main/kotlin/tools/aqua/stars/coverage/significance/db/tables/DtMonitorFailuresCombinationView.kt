@@ -18,10 +18,44 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.sum
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.StartingScenarioId
+import tools.aqua.stars.coverage.significance.utils.boolToInt
+
+/**
+ * Per-leaf tick totals for a decision tree run, aggregated in SQL.
+ *
+ * @property leafNodeId Leaf node index.
+ * @property totalTicks Total number of ticks assigned to this leaf.
+ * @property failingTicks Number of ticks in this leaf where
+ *   [DtMonitorFailuresCombinationView.nextTickMonitorG0AccidentFailed] is `true`.
+ * @property passingTicks Number of ticks in this leaf where the flag is `false`.
+ */
+data class DtLeafBucketTotals(
+    val leafNodeId: Int,
+    val totalTicks: Long,
+    val failingTicks: Long,
+    val passingTicks: Long,
+)
+
+/**
+ * Per-(leaf, mutant) count of failing ticks for a decision tree run, aggregated in SQL. Only
+ * mutants that killed at least one tick in the leaf are represented.
+ *
+ * @property leafNodeId Leaf node index.
+ * @property mutantId ID of the mutant that killed the tick(s).
+ * @property failingTicks Number of failing ticks caused by [mutantId] within [leafNodeId].
+ */
+data class DtLeafMutantFailureCount(
+    val leafNodeId: Int,
+    val mutantId: MutantId,
+    val failingTicks: Long,
+)
 
 /**
  * One row from [DtMonitorFailuresCombinationViewRow].
@@ -119,6 +153,53 @@ object DtMonitorFailuresCombinationView : Table("dt_monitor_failures_combination
               leafNodeId = row[leafNodeId],
               nextTickMonitorG0AccidentFailed = row[nextTickMonitorG0AccidentFailed],
           )
+        }
+  }
+
+  /**
+   * Aggregates tick totals per leaf node for [runId], computed entirely in SQL so no per-tick rows
+   * are loaded into the JVM.
+   *
+   * @param runId ID of the decision tree run.
+   * @return Per-leaf tick totals.
+   */
+  fun getLeafBucketTotalsForRunId(runId: Int): List<DtLeafBucketTotals> = transaction {
+    val totalTicksExpr = metricFailedMonitorsId.count()
+    val failingTicksExpr = boolToInt(nextTickMonitorG0AccidentFailed).sum()
+
+    select(leafNodeId, totalTicksExpr, failingTicksExpr)
+        .where { decisionTreeRunId eq runId }
+        .groupBy(leafNodeId)
+        .map { row ->
+          val total = row[totalTicksExpr]
+          val failing = (row[failingTicksExpr] ?: 0).toLong()
+          DtLeafBucketTotals(
+              leafNodeId = row[leafNodeId],
+              totalTicks = total,
+              failingTicks = failing,
+              passingTicks = total - failing)
+        }
+  }
+
+  /**
+   * Aggregates failing-tick counts per (leaf, mutant) pair for [runId], computed entirely in SQL so
+   * no per-tick rows are loaded into the JVM. Only mutants that killed at least one tick in a leaf
+   * are returned.
+   *
+   * @param runId ID of the decision tree run.
+   * @return Per-(leaf, mutant) failing tick counts.
+   */
+  fun getLeafMutantFailureCountsForRunId(runId: Int): List<DtLeafMutantFailureCount> = transaction {
+    val failingTicksExpr = metricFailedMonitorsId.count()
+
+    select(leafNodeId, mutantId, failingTicksExpr)
+        .where { (decisionTreeRunId eq runId) and (nextTickMonitorG0AccidentFailed eq true) }
+        .groupBy(leafNodeId, mutantId)
+        .map { row ->
+          DtLeafMutantFailureCount(
+              leafNodeId = row[leafNodeId],
+              mutantId = row[mutantId],
+              failingTicks = row[failingTicksExpr])
         }
   }
 }

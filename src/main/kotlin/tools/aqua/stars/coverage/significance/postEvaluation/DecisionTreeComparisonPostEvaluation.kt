@@ -28,7 +28,6 @@ import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRe
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.tables.DtMonitorFailuresCombinationView
-import tools.aqua.stars.coverage.significance.db.tables.DtMonitorFailuresCombinationViewRow
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DecisionTreeLeafId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
@@ -64,8 +63,7 @@ object DecisionTreeComparisonPostEvaluation {
     consoleProgress.render()
     val runsById =
         decisionTreeRunIds.associateWith { runId ->
-          val decisionTreeMonitorFailures = DtMonitorFailuresCombinationView.getForRunId(runId)
-          val bucketInformation = getBucketSizesForEachLeafNode(decisionTreeMonitorFailures)
+          val bucketInformation = getBucketSizesForEachLeafNode(runId)
           consoleProgress.step()
           DecisionTreeRunExport(
               runInfo = decisionTreeRunsById.getValue(runId).toMetadata(),
@@ -98,23 +96,27 @@ object DecisionTreeComparisonPostEvaluation {
     println("\tJSON written to: $jsonPath")
   }
 
-  private fun getBucketSizesForEachLeafNode(
-      decisionTreeMonitorFailures: List<DtMonitorFailuresCombinationViewRow>
-  ): List<DecisionTreeBucketInformation> {
-    val monitorFailuresMappedByLeafNodeId = decisionTreeMonitorFailures.groupBy { it.leafNodeId }
-    return monitorFailuresMappedByLeafNodeId.map { (leafId, rows) ->
-      val totalTicks = rows.size
-      val failingTicks = rows.filter { it.nextTickMonitorG0AccidentFailed }
-      val passingTicks = rows.count { !it.nextTickMonitorG0AccidentFailed }
-      val mutantKillingAmount =
-          failingTicks.groupBy { it.mutantId }.mapValues { (_, rows) -> rows.size.toLong() }
+  /**
+   * Builds per-leaf bucket information for [runId] from two SQL aggregate queries instead of
+   * loading the (potentially huge) per-tick rows into the JVM: leaf-level totals are computed by
+   * [DtMonitorFailuresCombinationView.getLeafBucketTotalsForRunId], and per-mutant failing-tick
+   * counts by [DtMonitorFailuresCombinationView.getLeafMutantFailureCountsForRunId]. Both results
+   * are bounded by the number of leaves (and killing mutants per leaf), not by tick count.
+   */
+  private fun getBucketSizesForEachLeafNode(runId: Int): List<DecisionTreeBucketInformation> {
+    val leafTotals = DtMonitorFailuresCombinationView.getLeafBucketTotalsForRunId(runId)
+    val mutantKillingAmountByLeafId =
+        DtMonitorFailuresCombinationView.getLeafMutantFailureCountsForRunId(runId)
+            .groupBy { it.leafNodeId }
+            .mapValues { (_, counts) -> counts.associate { it.mutantId to it.failingTicks } }
 
+    return leafTotals.map { totals ->
       DecisionTreeBucketInformation(
-          leafId = leafId,
-          totalTicks = totalTicks.toLong(),
-          failingTicks = failingTicks.size.toLong(),
-          passingTicks = passingTicks.toLong(),
-          mutantKillingAmount = mutantKillingAmount)
+          leafId = totals.leafNodeId,
+          totalTicks = totals.totalTicks,
+          failingTicks = totals.failingTicks,
+          passingTicks = totals.passingTicks,
+          mutantKillingAmount = mutantKillingAmountByLeafId[totals.leafNodeId].orEmpty())
     }
   }
 
