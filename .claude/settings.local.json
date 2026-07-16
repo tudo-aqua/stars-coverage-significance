@@ -31,7 +31,8 @@
       "Bash(python3 -c \"import sklearn; print\\(sklearn.__version__\\)\")",
       "Bash(pip show *)",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(./gradlew compileKotlin -q)"
     ]
   }
 }
