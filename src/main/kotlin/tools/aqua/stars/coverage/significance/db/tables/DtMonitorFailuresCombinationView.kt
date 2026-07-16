@@ -68,7 +68,7 @@ data class DtMonitorFailuresCombinationViewRow(
  * The view is created (or replaced) at schema bootstrap time by
  * [tools.aqua.stars.coverage.significance.db.DbBootstrap.createSchema].
  */
-object DtMonitorFailuresCombinationView : Table("dt_monitor-failures_combination") {
+object DtMonitorFailuresCombinationView : Table("dt_monitor_failures_combination") {
 
   /** Foreign key to [DecisionTreeRunsTable]. */
   val decisionTreeRunId = integer("decision_tree_run_id")

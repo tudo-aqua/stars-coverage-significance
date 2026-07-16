@@ -227,7 +227,7 @@ object DbBootstrap {
 
       exec(
           """
-        CREATE MATERIALIZED VIEW IF NOT EXISTS dt_monitor-failures_combination AS          
+        CREATE MATERIALIZED VIEW IF NOT EXISTS dt_monitor_failures_combination AS          
         SELECT decision_tree_leaf_assignments.run_id AS decision_tree_run_id,
            metric_failed_monitors.id             AS metric_failed_monitors_id,
            metric_failed_monitors.tick,
