@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
 import java.time.Instant
+import kotlinx.serialization.Serializable
 
 /**
  * Data class representing a row in the `decision_tree_runs` table.
@@ -73,4 +74,92 @@ data class DecisionTreeRunEntry(
     val hpMinChildSamples: Int? = null,
     val hpMinSplitGain: Double? = null,
     val tuningRocAuc: Double? = null,
+) {
+  /**
+   * Converts a [DecisionTreeRunEntry] to its serializable [DecisionTreeRunMetadata].
+   *
+   * @return The corresponding [DecisionTreeRunMetadata].
+   * @receiver The [DecisionTreeRunEntry] to convert.
+   */
+  fun toMetadata(): DecisionTreeRunMetadata =
+      DecisionTreeRunMetadata(
+          createdAt = createdAt.toString(),
+          trainFraction = trainFraction,
+          seed = seed,
+          nTrainMutants = nTrainMutants,
+          nTestMutants = nTestMutants,
+          logText = logText,
+          dotSource = dotSource,
+          featEgoManeuver = featEgoManeuver,
+          featEgoSpeed = featEgoSpeed,
+          featEgoAccel = featEgoAccel,
+          featEgoPosition = featEgoPosition,
+          featDistances = featDistances,
+          featNeighborKinematics = featNeighborKinematics,
+          featTimeGaps = featTimeGaps,
+          nTrials = nTrials,
+          maxLeavesBound = maxLeavesBound,
+          classWeight = classWeight,
+          scalePosWeight = scalePosWeight,
+          hpNumLeaves = hpNumLeaves,
+          hpMaxDepth = hpMaxDepth,
+          hpMinChildSamples = hpMinChildSamples,
+          hpMinSplitGain = hpMinSplitGain,
+          tuningRocAuc = tuningRocAuc,
+      )
+}
+
+/**
+ * Serializable mirror of [DecisionTreeRunEntry]'s columns from the `decision_tree_runs` table.
+ *
+ * @property createdAt ISO-8601 timestamp of when the run was recorded.
+ * @property trainFraction Fraction of unique mutant IDs used for training (0.0–1.0).
+ * @property seed Random seed used to shuffle the mutant split.
+ * @property nTrainMutants Number of mutants assigned to the training set.
+ * @property nTestMutants Number of mutants assigned to the test set.
+ * @property logText Full stdout log captured during the training run, null if not persisted.
+ * @property dotSource Graphviz DOT source of the decision tree, null if not persisted.
+ * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
+ * @property featEgoSpeed Whether the ego-speed feature group was enabled.
+ * @property featEgoAccel Whether the ego-accel feature group was enabled.
+ * @property featEgoPosition Whether the ego-position feature group was enabled.
+ * @property featDistances Whether the distances feature group was enabled.
+ * @property featNeighborKinematics Whether the neighbor-kinematics feature group was enabled.
+ * @property featTimeGaps Whether the time-gaps feature group was enabled.
+ * @property nTrials Number of Optuna trials used during hyperparameter search.
+ * @property maxLeavesBound Upper bound for num_leaves in the Optuna search.
+ * @property classWeight Class imbalance strategy: `'balanced'` or `'scale-pos-weight'`.
+ * @property scalePosWeight Computed n_neg/n_pos ratio used when [classWeight] is
+ *   `'scale-pos-weight'`; null when [classWeight] is `'balanced'`.
+ * @property hpNumLeaves Best num_leaves found by Optuna.
+ * @property hpMaxDepth Best max_depth found by Optuna.
+ * @property hpMinChildSamples Best min_child_samples found by Optuna.
+ * @property hpMinSplitGain Best min_split_gain found by Optuna.
+ * @property tuningRocAuc Training-set ROC-AUC of the best trial.
+ */
+@Serializable
+data class DecisionTreeRunMetadata(
+    val createdAt: String,
+    val trainFraction: Double,
+    val seed: Int,
+    val nTrainMutants: Int,
+    val nTestMutants: Int,
+    val logText: String?,
+    val dotSource: String?,
+    val featEgoManeuver: Boolean?,
+    val featEgoSpeed: Boolean?,
+    val featEgoAccel: Boolean?,
+    val featEgoPosition: Boolean?,
+    val featDistances: Boolean?,
+    val featNeighborKinematics: Boolean?,
+    val featTimeGaps: Boolean?,
+    val nTrials: Int?,
+    val maxLeavesBound: Int?,
+    val classWeight: String?,
+    val scalePosWeight: Double?,
+    val hpNumLeaves: Int?,
+    val hpMaxDepth: Int?,
+    val hpMinChildSamples: Int?,
+    val hpMinSplitGain: Double?,
+    val tuningRocAuc: Double?,
 )

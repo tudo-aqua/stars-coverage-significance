@@ -64,6 +64,16 @@ object MetricFailedMonitorsRepository {
    */
   fun getAll(): Query = db { MetricFailedMonitorsTable.selectAll() }
 
+  /** Retrieves the count of [MetricFailedMonitorsEntry]s. */
+  fun count(): Long = db { MetricFailedMonitorsTable.selectAll().count() }
+
+  /** Retrieves the count of failed monitor entries. */
+  fun countFailures(): Long = db {
+    MetricFailedMonitorsTable.selectAll()
+        .where { MetricFailedMonitorsTable.monitorG0Failed eq true }
+        .count()
+  }
+
   /**
    * Retrieves a [MetricFailedMonitorsEntry] by its unique key: (run, tsc, scenario_config, mutant).
    *

@@ -32,7 +32,11 @@
       "Bash(pip show *)",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\('scripts/decision_tree_g0.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
-      "Bash(./gradlew compileKotlin -q)"
+      "Bash(./gradlew compileKotlin -q)",
+      "Bash(./gradlew spotlessApply compileKotlin -q)",
+      "Bash(grep -n \"kotlinx.serialization\\\\|com.google.gson\\\\|com.fasterxml.jackson\\\\|json\" build.gradle.kts)",
+      "Bash(grep -rln \"kotlinx.serialization\\\\|Gson\\\\|ObjectMapper\\\\|Json\\\\.\" src/main/kotlin)",
+      "Bash(./gradlew tasks *)"
     ]
   }
 }

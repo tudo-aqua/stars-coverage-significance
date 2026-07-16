@@ -205,6 +205,19 @@ val runBaselineNextTickTimeToKill by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runDecisionTreeComparison by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Compare decision tree runs by exporting per-run metadata and leaf bucket information to JSON."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunDecisionTreeComparisonKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

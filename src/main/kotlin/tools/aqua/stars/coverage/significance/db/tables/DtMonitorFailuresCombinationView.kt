@@ -105,4 +105,20 @@ object DtMonitorFailuresCombinationView : Table("dt_monitor-failures_combination
       )
     }
   }
+
+  fun getForRunId(runId: Int): List<DtMonitorFailuresCombinationViewRow> = transaction {
+    selectAll()
+        .where { DecisionTreeLeafAssignmentsTable.runId eq runId }
+        .map { row ->
+          DtMonitorFailuresCombinationViewRow(
+              decisionTreeRunId = row[decisionTreeRunId],
+              metricFailedMonitorId = row[metricFailedMonitorsId],
+              tick = row[tick],
+              mutantId = row[mutantId],
+              scenarioConfigId = row[scenarioConfigId],
+              leafNodeId = row[leafNodeId],
+              nextTickMonitorG0AccidentFailed = row[nextTickMonitorG0AccidentFailed],
+          )
+        }
+  }
 }
