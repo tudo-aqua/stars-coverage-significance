@@ -224,6 +224,21 @@ object DbBootstrap {
           WHERE decision_tree_leaf_assignments.run_id = 3
           """
               .trimIndent())
+
+      exec(
+          """
+        SELECT decision_tree_leaf_assignments.run_id AS decision_tree_run_id,
+           metric_failed_monitors.id             AS metric_failed_monitors_id,
+           metric_failed_monitors.tick,
+           metric_failed_monitors.mutant_id,
+           metric_failed_monitors.scenario_config_id,
+           metric_failed_monitors."next_tick_monitor_g0_Accidents_failed",
+           decision_tree_leaf_assignments.leaf_node_id
+        FROM metric_failed_monitors
+         JOIN decision_tree_leaf_assignments
+              ON metric_failed_monitors.id = decision_tree_leaf_assignments.metric_failed_monitor_id
+      """
+              .trimIndent())
     }
   }
 
