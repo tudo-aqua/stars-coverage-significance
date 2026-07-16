@@ -1,0 +1,1571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decision Tree Run Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@viz-js/viz@3/lib/viz-standalone.js"></script>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+
+    --status-good:     #0ca30c;
+    --status-critical: #d03b3b;
+
+    --series-1: #2a78d6;  /* blue    */
+    --series-2: #1baf7a;  /* aqua    */
+    --series-3: #eda100;  /* yellow  */
+    --series-4: #008300;  /* green   */
+    --series-5: #4a3aa7;  /* violet  */
+    --series-6: #e34948;  /* red     */
+    --series-7: #e87ba4;  /* magenta */
+    --series-8: #eb6834;  /* orange  */
+    /* Slots 9-12 extend past the validated 8-hue categorical palette so every
+       mutant can be shown individually (no "Other" bucket). Identity is still
+       carried by the legend/tooltip text, not hue alone, so this is safe even
+       though these steps were not run through the palette validator. */
+    --series-9:  #0d9488; /* teal    */
+    --series-10: #92400e; /* brown   */
+    --series-11: #db2777; /* pink    */
+    --series-12: #475569; /* slate   */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+
+      --series-1: #3987e5;
+      --series-2: #199e70;
+      --series-3: #c98500;
+      --series-4: #008300;
+      --series-5: #9085e9;
+      --series-6: #e66767;
+      --series-7: #d55181;
+      --series-8: #d95926;
+      --series-9:  #14b8a6;
+      --series-10: #b45309;
+      --series-11: #ec4899;
+      --series-12: #64748b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 20px clamp(16px, 4vw, 40px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  header p.subtitle { margin: 0; color: var(--text-secondary); }
+  .summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 14px;
+  }
+  .summary-tile { min-width: 120px; }
+  .summary-tile .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
+  .summary-tile .value { font-size: 1.15rem; font-weight: 600; }
+
+  main {
+    padding: 20px clamp(16px, 4vw, 40px) 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+  }
+  .card h3 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+  }
+
+  label { font-size: 0.85rem; color: var(--text-secondary); }
+  select, button {
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--text-secondary); }
+  button.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .controls-row .spacer { flex: 1; }
+
+  #runBar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  #errorBanner {
+    display: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin: 0 clamp(16px, 4vw, 40px);
+  }
+  #errorBanner h2 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+  }
+  #errorBanner .upload-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  #errorBanner .note {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  #errorBanner input[type="file"] {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+  #errorBanner input[type="file"]::file-selector-button {
+    font: inherit;
+    cursor: pointer;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin-right: 8px;
+  }
+  #errorBanner input[type="file"]::file-selector-button:hover {
+    border-color: var(--text-secondary);
+  }
+  code {
+    background: var(--gridline);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.85rem;
+  }
+  table th, table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  table th { color: var(--text-muted); font-weight: 600; }
+  table td.num, table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px 20px;
+  }
+  .meta-grid .field .label { font-size: 0.75rem; color: var(--text-muted); }
+  .meta-grid .field .value { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+
+  details.subsection { margin-top: 14px; }
+  details.subsection summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  pre.log {
+    max-height: 320px;
+    overflow: auto;
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+  }
+
+  #graphvizScroll {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    max-height: 640px;
+    cursor: grab;
+    touch-action: none;
+  }
+  #graphvizScroll.dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+  #graphvizContainer svg { display: block; pointer-events: none; }
+  #graphvizContainer { padding: 8px; }
+
+  .chart-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-1);
+  }
+  .chart-inner { height: 320px; padding: 10px 14px 4px; }
+  .chart-inner canvas { width: 100%; height: 100%; }
+
+  .table-wrap { margin-top: 12px; overflow-x: auto; display: none; }
+  .table-wrap.visible { display: block; }
+
+  .legend-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
+  .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Decision Tree Run Explorer</h1>
+  <p class="subtitle">Reads <code>decision_tree_comparison.json</code> (produced by <code>DecisionTreeComparisonPostEvaluation</code>).</p>
+  <div class="summary-row" id="summaryRow"></div>
+</header>
+
+<div id="errorBanner"></div>
+
+<main id="mainContent" style="display:none">
+
+  <section class="card" id="runBar">
+    <label for="runSelect">Decision tree run</label>
+    <select id="runSelect"></select>
+  </section>
+
+  <section class="card" id="metadataCard">
+    <h2>Run metadata</h2>
+    <div class="meta-grid" id="metaGrid"></div>
+    <details class="subsection">
+      <summary>Training log</summary>
+      <pre class="log" id="logText"></pre>
+    </details>
+  </section>
+
+  <section class="card" id="graphvizCard">
+    <h2>Decision tree</h2>
+    <div class="controls-row">
+      <button id="toggleDotSourceBtn" type="button">Show raw DOT source</button>
+    </div>
+    <div id="graphvizScroll"><div id="graphvizContainer"></div></div>
+    <div class="table-wrap" id="dotSourceWrap">
+      <pre class="log" id="dotSourceText"></pre>
+    </div>
+  </section>
+
+  <section class="card" id="ticksCard">
+    <h2>Ticks per leaf</h2>
+    <div class="controls-row">
+      <label for="ticksSortField">Order by</label>
+      <select id="ticksSortField">
+        <option value="leaf">Leaf ID</option>
+        <option value="total">Total ticks</option>
+        <option value="failed">Failed ticks</option>
+        <option value="remaining">Remaining ticks</option>
+        <option value="ratio">Failure ratio</option>
+      </select>
+      <button id="ticksSortDirBtn" type="button" title="Toggle ascending/descending">Desc &#9660;</button>
+      <span class="spacer"></span>
+      <button id="ticksTableBtn" type="button">Show table</button>
+    </div>
+    <h3>Total / failed / remaining ticks</h3>
+    <div class="chart-scroll"><div class="chart-inner" id="ticksChartInner"><canvas id="ticksChart"></canvas></div></div>
+    <h3 style="margin-top:16px">Failure ratio (failed &divide; total)</h3>
+    <div class="chart-scroll"><div class="chart-inner" id="ratioChartInner"><canvas id="ratioChart"></canvas></div></div>
+    <div class="table-wrap" id="ticksTableWrap">
+      <table id="ticksTable">
+        <thead><tr>
+          <th>Leaf</th><th class="num">Total</th><th class="num">Failed</th><th class="num">Remaining</th><th class="num">Failure ratio</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="mutantsCard">
+    <h2>Mutants killed per leaf</h2>
+    <div class="controls-row">
+      <label for="mutantsSortField">Order by</label>
+      <select id="mutantsSortField">
+        <option value="leaf">Leaf ID</option>
+        <option value="totalKilled">Total mutants killed (ticks)</option>
+        <option value="distinctKilled">Distinct mutants killed</option>
+      </select>
+      <button id="mutantsSortDirBtn" type="button" title="Toggle ascending/descending">Desc &#9660;</button>
+      <span class="spacer"></span>
+      <label for="mutantsOnlyKillingCheckbox" style="display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" id="mutantsOnlyKillingCheckbox" checked />
+        Only leaves that kill at least one mutant
+      </label>
+      <button id="mutantsTableBtn" type="button">Show table</button>
+    </div>
+    <div class="controls-row" style="margin-bottom:8px;">
+      <h3 style="margin:0; flex:1;">Ticks killed per mutant</h3>
+      <button id="mutantsChartAbsoluteBtn" type="button">Absolute</button>
+      <button class="active" id="mutantsChartProportionBtn" type="button">Proportion</button>
+    </div>
+    <div class="chart-scroll"><div class="chart-inner" id="mutantsChartInner"><canvas id="mutantsChart"></canvas></div></div>
+    <p class="legend-note">Only mutants that killed at least one tick are shown, each as its own series &mdash; none are grouped into an &ldquo;Other&rdquo; bucket. Colors are assigned once per mutant ID (ascending order) and stay fixed across runs and sort orders. <strong>Absolute</strong> uses a logarithmic y-axis, since leaves vary from a handful of killed ticks to tens of thousands. <strong>Proportion</strong> shows each mutant's share of that leaf's killed ticks (e.g. a 50/50 split reads as two equal halves), on a linear 0&ndash;100% axis.</p>
+    <h3 style="margin-top:16px">Distinct mutants killed (count, not ticks)</h3>
+    <div class="chart-scroll"><div class="chart-inner" id="distinctMutantsChartInner"><canvas id="distinctMutantsChart"></canvas></div></div>
+    <div class="table-wrap" id="mutantsTableWrap">
+      <table id="mutantsTable"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="card" id="mutantsByLeafCard">
+    <h2>Leaves killing each mutant</h2>
+    <div class="controls-row">
+      <label for="mutantsByLeafSortField">Order by</label>
+      <select id="mutantsByLeafSortField">
+        <option value="mutant">Mutant ID</option>
+        <option value="total">Total ticks killed</option>
+        <option value="distinctLeaves">Distinct leaves</option>
+      </select>
+      <button id="mutantsByLeafSortDirBtn" type="button" title="Toggle ascending/descending">Desc &#9660;</button>
+      <span class="spacer"></span>
+      <button id="mutantsByLeafTableBtn" type="button">Show table</button>
+    </div>
+    <div class="controls-row" style="margin-bottom:8px;">
+      <span style="flex:1;"></span>
+      <button id="mutantsByLeafAbsoluteBtn" type="button">Absolute</button>
+      <button class="active" id="mutantsByLeafProportionBtn" type="button">Proportion</button>
+    </div>
+    <div class="chart-scroll"><div class="chart-inner" id="mutantsByLeafChartInner"><canvas id="mutantsByLeafChart"></canvas></div></div>
+    <p class="legend-note">Shows, for each mutant, which leaves killed its ticks &mdash; every killing leaf is its own segment, none are grouped into an &ldquo;Other&rdquo; bucket. Colors are assigned once per leaf (fixed for the run, unaffected by the sort order above) and cycle once there are more killing leaves than palette colors, so a repeated color can mean a different leaf in different runs &mdash; use the tooltip or the table below to see exact identity. Once a run has more than 20 killing leaves the legend is hidden to avoid overwhelming the chart; the table always has the full per-leaf breakdown. <strong>Absolute</strong> uses a logarithmic y-axis; <strong>Proportion</strong> shows each leaf's share of that mutant's killed ticks on a linear 0&ndash;100% axis.</p>
+    <h3 style="margin-top:16px">Distinct leaves killed (count, not ticks)</h3>
+    <div class="chart-scroll"><div class="chart-inner" id="distinctLeavesChartInner"><canvas id="distinctLeavesChart"></canvas></div></div>
+    <div class="table-wrap" id="mutantsByLeafTableWrap">
+      <table id="mutantsByLeafTable"><thead><tr></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  const DATA_URL = "./decision_tree_comparison.json";
+
+  const SERIES_COLORS = [
+    "--series-1", "--series-2", "--series-3", "--series-4",
+    "--series-5", "--series-6", "--series-7", "--series-8",
+    "--series-9", "--series-10", "--series-11", "--series-12",
+  ];
+  // Above this many series, a Chart.js legend would overflow the chart card - hide it
+  // and rely on the tooltip + table view instead (see renderMutantsByLeafChart).
+  const LEGEND_MAX_SERIES = 20;
+
+  let DATA = null;
+  let mutantColorMap = null; // Map<mutantId, slot index> - every mutant gets its own slot, none grouped
+  let leafColorMap = null; // Map<leafId, slot index> - every killing leaf in the run gets its own slot, none grouped
+  let currentRunId = null;
+  let controlsWired = false;
+
+  let ticksSortField = "leaf";
+  let ticksSortDir = "asc";
+  let mutantsSortField = "leaf";
+  let mutantsSortDir = "asc";
+  let mutantsOnlyKilling = true;
+  let mutantsChartMode = "proportion"; // "absolute" | "proportion"
+  let mutantsByLeafSortField = "mutant";
+  let mutantsByLeafSortDir = "asc";
+  let mutantsByLeafChartMode = "proportion"; // "absolute" | "proportion"
+
+  let ticksChart = null;
+  let ratioChart = null;
+  let mutantsChart = null;
+  let distinctMutantsChart = null;
+  let mutantsByLeafChart = null;
+  let distinctLeavesChart = null;
+
+  let vizPromise = null;
+
+  // ---------------------------------------------------------------- utils
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function fmtNum(v) {
+    if (v === null || v === undefined) return "—";
+    return v.toLocaleString();
+  }
+
+  function fmtFloat(v, digits) {
+    if (v === null || v === undefined) return "—";
+    return Number(v).toFixed(digits === undefined ? 3 : digits);
+  }
+
+  function fmtBool(v) {
+    if (v === null || v === undefined) return "not recorded";
+    return v ? "Enabled" : "Disabled";
+  }
+
+  function fmtPercent(v, digits) {
+    return v.toFixed(digits === undefined ? 2 : digits) + "%";
+  }
+
+  function ratioOf(bucket) {
+    return bucket.totalTicks > 0 ? (bucket.failingTicks / bucket.totalTicks) * 100 : 0;
+  }
+
+  function totalKilled(bucket) {
+    let sum = 0;
+    for (const k in bucket.mutantKillingAmount) sum += bucket.mutantKillingAmount[k];
+    return sum;
+  }
+
+  function distinctMutantsKilled(bucket) {
+    return Object.keys(bucket.mutantKillingAmount).length;
+  }
+
+  function setText(el, text) {
+    el.textContent = text;
+  }
+
+  // ------------------------------------------------------------ data load
+
+  function loadData() {
+    return fetch(DATA_URL).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status + " while fetching " + DATA_URL);
+      return r.json();
+    });
+  }
+
+  /**
+   * Shows a calm "load the data yourself" panel: a file picker plus a muted tip about
+   * serving the folder over HTTP instead. Used whenever fetch() can't reach the JSON
+   * automatically (typically because the page was opened via file://) - this is a
+   * normal, expected fallback path, not an alarming error, so it's styled like the
+   * rest of the page rather than as a warning.
+   *
+   * @param detail Optional short technical reason to show under the heading (e.g. why
+   *   the automatic load or a manual file selection failed).
+   */
+  function showError(detail) {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Load decision_tree_comparison.json";
+    banner.appendChild(heading);
+
+    if (detail) {
+      const msg = document.createElement("p");
+      msg.style.margin = "0 0 4px";
+      msg.appendChild(document.createTextNode(detail));
+      banner.appendChild(msg);
+    }
+
+    const uploadRow = document.createElement("div");
+    uploadRow.className = "upload-row";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "jsonFileInput");
+    label.appendChild(document.createTextNode("Choose the file:"));
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.id = "jsonFileInput";
+    input.accept = ".json,application/json";
+    input.addEventListener("change", handleFileUpload);
+
+    uploadRow.appendChild(label);
+    uploadRow.appendChild(input);
+    banner.appendChild(uploadRow);
+
+    const note = document.createElement("p");
+    note.className = "note";
+    note.appendChild(
+      document.createTextNode("Tip: serving this folder over HTTP loads the file automatically instead — e.g. run "));
+    const codeCmd = document.createElement("code");
+    codeCmd.textContent = "python -m http.server 8000";
+    note.appendChild(codeCmd);
+    note.appendChild(document.createTextNode(" here, then open "));
+    const codeUrl = document.createElement("code");
+    codeUrl.textContent = "http://localhost:8000/";
+    note.appendChild(codeUrl);
+    note.appendChild(document.createTextNode("."));
+    banner.appendChild(note);
+
+    banner.style.display = "block";
+    document.getElementById("mainContent").style.display = "none";
+  }
+
+  function hideError() {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+    banner.style.display = "none";
+  }
+
+  /** Reads the user-selected JSON file (fetch fallback) and initializes the page with it. */
+  function handleFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (err) {
+        showError(
+          '"' + file.name + '" doesn\'t look like valid JSON (' + err.message + "). " +
+          "Please select the decision_tree_comparison.json file produced by " +
+          "DecisionTreeComparisonPostEvaluation.");
+        return;
+      }
+      hideError();
+      initWithData(data);
+    };
+    reader.onerror = () => {
+      showError('Could not read "' + file.name + '" (' + reader.error + ").");
+    };
+    reader.readAsText(file);
+  }
+
+  // -------------------------------------------------------- color mapping
+
+  function computeMutantColorMap(data) {
+    const allIds = new Set();
+    Object.keys(data.runsById).forEach((runId) => {
+      data.runsById[runId].buckets.forEach((b) => {
+        Object.keys(b.mutantKillingAmount).forEach((mid) => allIds.add(Number(mid)));
+      });
+    });
+    // Fixed, identity-based order (ascending mutant ID) so a mutant's color never
+    // depends on its rank/magnitude in the currently selected run or sort order.
+    // Every mutant gets its own slot (cycling through the palette in the rare case
+    // there are more distinct mutants than colors) - none are grouped away.
+    const sortedIds = Array.from(allIds).sort((a, b) => a - b);
+    const map = new Map();
+    sortedIds.forEach((id, i) => map.set(id, i % SERIES_COLORS.length));
+    return map;
+  }
+
+  /**
+   * Assigns every killing leaf in the run its own fixed color slot (ascending leaf ID,
+   * cycling through the palette - same approach as computeMutantColorMap) so none are
+   * grouped away. A run's leaves are a per-run concept (unlike mutant IDs, which are
+   * stable across the whole dataset), so this is recomputed whenever the selected run
+   * changes and then held fixed regardless of how the mutants-by-leaf chart is sorted
+   * afterwards - a leaf's color never changes once assigned for this run.
+   *
+   * A run can have hundreds of killing leaves, far more than the palette's colors, so
+   * hues repeat past that point; the legend is hidden at that scale (see
+   * renderMutantsByLeafChart) and the table view remains the source of exact identity.
+   */
+  function computeLeafColorMap(run) {
+    const sortedIds = run.buckets
+      .filter((b) => totalKilled(b) > 0)
+      .map((b) => b.leafId)
+      .sort((a, b) => a - b);
+    const map = new Map();
+    sortedIds.forEach((leafId, i) => map.set(leafId, i % SERIES_COLORS.length));
+    return map;
+  }
+
+  // --------------------------------------------------------------- header
+
+  function renderSummary(data) {
+    const row = document.getElementById("summaryRow");
+    row.innerHTML = "";
+    const tiles = [
+      ["Decision tree runs", data.decisionTreeRunIds.length],
+      ["Mutants tracked", data.mutantIds.length],
+      ["Total ticks", data.totalTicks],
+      ["Failed ticks", data.failedTicks],
+    ];
+    tiles.forEach(([label, value]) => {
+      const tile = document.createElement("div");
+      tile.className = "summary-tile";
+      const l = document.createElement("div");
+      l.className = "label";
+      l.textContent = label;
+      const v = document.createElement("div");
+      v.className = "value";
+      v.textContent = fmtNum(value);
+      tile.appendChild(l);
+      tile.appendChild(v);
+      row.appendChild(tile);
+    });
+  }
+
+  function populateRunSelector(data) {
+    const sel = document.getElementById("runSelect");
+    sel.innerHTML = "";
+    data.decisionTreeRunIds.forEach((id) => {
+      const opt = document.createElement("option");
+      opt.value = String(id);
+      opt.textContent = "Run " + id;
+      sel.appendChild(opt);
+    });
+  }
+
+  // -------------------------------------------------------------- metadata
+
+  function renderMetadata(runInfo) {
+    const grid = document.getElementById("metaGrid");
+    grid.innerHTML = "";
+
+    const fields = [
+      ["Created at", runInfo.createdAt],
+      ["Train fraction", fmtFloat(runInfo.trainFraction, 2)],
+      ["Seed", fmtNum(runInfo.seed)],
+      ["Train mutants", fmtNum(runInfo.nTrainMutants)],
+      ["Test mutants", fmtNum(runInfo.nTestMutants)],
+      ["Feature: ego maneuver", fmtBool(runInfo.featEgoManeuver)],
+      ["Feature: ego speed", fmtBool(runInfo.featEgoSpeed)],
+      ["Feature: ego accel", fmtBool(runInfo.featEgoAccel)],
+      ["Feature: ego position", fmtBool(runInfo.featEgoPosition)],
+      ["Feature: distances", fmtBool(runInfo.featDistances)],
+      ["Feature: neighbor kinematics", fmtBool(runInfo.featNeighborKinematics)],
+      ["Feature: time gaps", fmtBool(runInfo.featTimeGaps)],
+      ["Optuna trials", fmtNum(runInfo.nTrials)],
+      ["Max leaves bound", fmtNum(runInfo.maxLeavesBound)],
+      ["Class weight", runInfo.classWeight === null || runInfo.classWeight === undefined ? "—" : runInfo.classWeight],
+      ["Scale pos weight", fmtFloat(runInfo.scalePosWeight, 4)],
+      ["Best num_leaves", fmtNum(runInfo.hpNumLeaves)],
+      ["Best max_depth", fmtNum(runInfo.hpMaxDepth)],
+      ["Best min_child_samples", fmtNum(runInfo.hpMinChildSamples)],
+      ["Best min_split_gain", fmtFloat(runInfo.hpMinSplitGain, 4)],
+      ["Tuning ROC-AUC", fmtFloat(runInfo.tuningRocAuc, 4)],
+    ];
+
+    fields.forEach(([label, value]) => {
+      const field = document.createElement("div");
+      field.className = "field";
+      const l = document.createElement("div");
+      l.className = "label";
+      l.textContent = label;
+      const v = document.createElement("div");
+      v.className = "value";
+      v.textContent = value;
+      field.appendChild(l);
+      field.appendChild(v);
+      grid.appendChild(field);
+    });
+
+    setText(document.getElementById("logText"), runInfo.logText || "(no log recorded for this run)");
+    setText(document.getElementById("dotSourceText"), runInfo.dotSource || "(no DOT source recorded for this run)");
+  }
+
+  // -------------------------------------------------------------- graphviz
+
+  function getViz() {
+    if (!vizPromise) vizPromise = Viz.instance();
+    return vizPromise;
+  }
+
+  function renderDot(dotSource) {
+    const container = document.getElementById("graphvizContainer");
+    container.innerHTML = "";
+    if (!dotSource) {
+      container.textContent = "(no DOT source recorded for this run)";
+      return;
+    }
+    getViz()
+      .then((viz) => {
+        container.innerHTML = "";
+        const svg = viz.renderSVGElement(dotSource);
+        container.appendChild(svg);
+      })
+      .catch((e) => {
+        container.textContent = "Failed to render DOT source: " + e.message;
+      });
+  }
+
+  /**
+   * Lets the user pan a scrollable container by click-and-drag (or touch-and-drag)
+   * instead of hunting for scrollbars - grabs the pointer, then maps pointer movement
+   * directly to scrollLeft/scrollTop.
+   */
+  function makeDraggable(scrollEl) {
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
+
+    scrollEl.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      scrollEl.classList.add("dragging");
+      scrollEl.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      startScrollLeft = scrollEl.scrollLeft;
+      startScrollTop = scrollEl.scrollTop;
+    });
+    scrollEl.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      scrollEl.scrollLeft = startScrollLeft - (e.clientX - startX);
+      scrollEl.scrollTop = startScrollTop - (e.clientY - startY);
+    });
+    const stopDragging = () => {
+      dragging = false;
+      scrollEl.classList.remove("dragging");
+    };
+    scrollEl.addEventListener("pointerup", stopDragging);
+    scrollEl.addEventListener("pointercancel", stopDragging);
+    scrollEl.addEventListener("pointerleave", stopDragging);
+  }
+
+  // ------------------------------------------------------------- charting
+
+  function sizeChartInner(inner, barCount, perBar, minWidth) {
+    const width = Math.max(minWidth, barCount * perBar);
+    inner.style.width = width + "px";
+  }
+
+  function baseScaleColors() {
+    return {
+      grid: cssVar("--gridline"),
+      border: cssVar("--baseline"),
+      tick: cssVar("--text-muted"),
+      title: cssVar("--text-secondary"),
+      legend: cssVar("--text-primary"),
+    };
+  }
+
+  /** Converts a raw per-category series into each value's percentage of that category's total. */
+  function toPercentOf(rawSeries, totalsPerIndex) {
+    return rawSeries.map((v, i) => (totalsPerIndex[i] > 0 ? (v / totalsPerIndex[i]) * 100 : 0));
+  }
+
+  /**
+   * Y-scale for a stacked absolute/proportion toggle: absolute values span orders of
+   * magnitude (log scale), while proportions are always a bounded, linear 0-100%.
+   */
+  function stackedYScaleOptions(mode, c, absoluteTitle, proportionTitle) {
+    if (mode === "proportion") {
+      return {
+        stacked: true,
+        min: 0,
+        max: 100,
+        ticks: { color: c.tick, callback: (v) => v + "%" },
+        grid: { color: c.grid },
+        border: { color: c.border },
+        title: { display: true, text: proportionTitle, color: c.title },
+      };
+    }
+    return {
+      stacked: true,
+      type: "logarithmic",
+      ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString() },
+      grid: { color: c.grid },
+      border: { color: c.border },
+      title: { display: true, text: absoluteTitle, color: c.title },
+    };
+  }
+
+  /**
+   * Tooltip options for a stacked absolute/proportion chart. Each dataset carries its
+   * raw (pre-percentage) values under `_rawData`, so the tooltip can:
+   *  - hide series that contribute 0 ticks at this bar (in "index" mode Chart.js
+   *    otherwise lists every dataset, including the ones this bar has none of - with
+   *    hundreds of series that buries the handful that matter and can grow the
+   *    tooltip past the edge of the screen),
+   *  - sort what remains by ticks descending (independent of the displayed mode, so
+   *    proportion view still ranks by the underlying tick count, not the percentage),
+   *  - and show both the percentage and the underlying tick count regardless of mode.
+   */
+  function stackedTooltipOptions(proportion) {
+    const rawOf = (item) => item.dataset._rawData[item.dataIndex];
+    return {
+      filter: (item) => rawOf(item) > 0,
+      itemSort: (a, b) => rawOf(b) - rawOf(a),
+      callbacks: {
+        label: (item) => {
+          const raw = rawOf(item);
+          return proportion
+            ? item.dataset.label + ": " + fmtPercent(item.raw, 1) + " (" + raw.toLocaleString() + " ticks)"
+            : item.dataset.label + ": " + item.raw.toLocaleString() + " ticks";
+        },
+      },
+    };
+  }
+
+  function sortTicksBuckets(buckets) {
+    const copy = buckets.slice();
+    const dir = ticksSortDir === "asc" ? 1 : -1;
+    copy.sort((a, b) => {
+      let av, bv;
+      switch (ticksSortField) {
+        case "total": av = a.totalTicks; bv = b.totalTicks; break;
+        case "failed": av = a.failingTicks; bv = b.failingTicks; break;
+        case "remaining": av = a.passingTicks; bv = b.passingTicks; break;
+        case "ratio": av = ratioOf(a); bv = ratioOf(b); break;
+        default: av = a.leafId; bv = b.leafId;
+      }
+      return (av - bv) * dir;
+    });
+    return copy;
+  }
+
+  function filterMutantsBuckets(buckets) {
+    return mutantsOnlyKilling ? buckets.filter((b) => totalKilled(b) > 0) : buckets.slice();
+  }
+
+  function sortMutantsBuckets(buckets) {
+    const copy = buckets.slice();
+    const dir = mutantsSortDir === "asc" ? 1 : -1;
+    copy.sort((a, b) => {
+      let av, bv;
+      switch (mutantsSortField) {
+        case "totalKilled": av = totalKilled(a); bv = totalKilled(b); break;
+        case "distinctKilled": av = distinctMutantsKilled(a); bv = distinctMutantsKilled(b); break;
+        default: av = a.leafId; bv = b.leafId;
+      }
+      return (av - bv) * dir;
+    });
+    return copy;
+  }
+
+  /**
+   * Transposes the per-leaf bucket data into one summary per mutant: which leaves
+   * killed it, and how many ticks each leaf contributed.
+   */
+  function buildMutantSummaries(run) {
+    const byMutant = new Map(); // mutantId -> Map<leafId, count>
+    run.buckets.forEach((b) => {
+      Object.keys(b.mutantKillingAmount).forEach((midStr) => {
+        const mid = Number(midStr);
+        if (!byMutant.has(mid)) byMutant.set(mid, new Map());
+        byMutant.get(mid).set(b.leafId, b.mutantKillingAmount[midStr]);
+      });
+    });
+    return Array.from(byMutant.entries()).map(([mutantId, byLeaf]) => ({
+      mutantId,
+      byLeaf,
+      total: Array.from(byLeaf.values()).reduce((sum, v) => sum + v, 0),
+      distinctLeaves: byLeaf.size,
+    }));
+  }
+
+  function sortMutantSummaries(summaries) {
+    const copy = summaries.slice();
+    const dir = mutantsByLeafSortDir === "asc" ? 1 : -1;
+    copy.sort((a, b) => {
+      let av, bv;
+      switch (mutantsByLeafSortField) {
+        case "total": av = a.total; bv = b.total; break;
+        case "distinctLeaves": av = a.distinctLeaves; bv = b.distinctLeaves; break;
+        default: av = a.mutantId; bv = b.mutantId;
+      }
+      return (av - bv) * dir;
+    });
+    return copy;
+  }
+
+  function renderTicksCharts(buckets) {
+    const c = baseScaleColors();
+    const labels = buckets.map((b) => "Leaf " + b.leafId);
+    const totals = buckets.map((b) => b.totalTicks);
+    const failed = buckets.map((b) => b.failingTicks);
+    const remaining = buckets.map((b) => b.passingTicks);
+    const ratios = buckets.map((b) => ratioOf(b));
+
+    sizeChartInner(document.getElementById("ticksChartInner"), buckets.length, 46, 700);
+    sizeChartInner(document.getElementById("ratioChartInner"), buckets.length, 28, 700);
+
+    // Total/failed/remaining routinely span many orders of magnitude within a single
+    // run (e.g. hundreds of millions of "remaining" ticks against a few thousand
+    // "failed" ones) - on a linear scale the smaller bars are invisible. A log y-axis
+    // keeps every series readable; grouped (not stacked) bars are used because stacked
+    // segments don't have a meaningful reading on a log axis.
+    if (ticksChart) ticksChart.destroy();
+    ticksChart = new Chart(document.getElementById("ticksChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Total",
+            data: totals,
+            backgroundColor: cssVar("--series-1"),
+            maxBarThickness: 24,
+            categoryPercentage: 0.8,
+            barPercentage: 0.9,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+          {
+            label: "Failed",
+            data: failed,
+            backgroundColor: cssVar("--status-critical"),
+            maxBarThickness: 24,
+            categoryPercentage: 0.8,
+            barPercentage: 0.9,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+          {
+            label: "Remaining",
+            data: remaining,
+            backgroundColor: cssVar("--status-good"),
+            maxBarThickness: 24,
+            categoryPercentage: 0.8,
+            barPercentage: 0.9,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: {
+            type: "logarithmic",
+            ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString() },
+            grid: { color: c.grid },
+            border: { color: c.border },
+            title: { display: true, text: "Ticks (log scale)", color: c.title },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: c.legend } },
+          tooltip: {
+            callbacks: {
+              afterBody: (items) => {
+                const idx = items[0].dataIndex;
+                return ["Failure ratio: " + fmtPercent(ratios[idx])];
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (ratioChart) ratioChart.destroy();
+    ratioChart = new Chart(document.getElementById("ratioChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Failure ratio (%)",
+            data: ratios,
+            backgroundColor: cssVar("--series-1"),
+            maxBarThickness: 24,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { color: c.tick, callback: (v) => v + "%" },
+            grid: { color: c.grid },
+            border: { color: c.border },
+            title: { display: true, text: "Failure ratio", color: c.title },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (item) => fmtPercent(item.raw) } },
+        },
+      },
+    });
+  }
+
+  function renderMutantsChart(buckets) {
+    const c = baseScaleColors();
+    const labels = buckets.map((b) => "Leaf " + b.leafId);
+    const surface = cssVar("--surface-1");
+    const totalsPerLeaf = buckets.map((b) => totalKilled(b));
+
+    // Keyed by mutant ID, not color slot: colors may repeat once there are more
+    // distinct mutants than palette slots, but each mutant must stay its own series.
+    const seriesByMutant = new Map(); // mutantId -> per-leaf counts array
+    const usedMutantIds = new Set();
+
+    buckets.forEach((b, i) => {
+      Object.keys(b.mutantKillingAmount).forEach((midStr) => {
+        const mid = Number(midStr);
+        const count = b.mutantKillingAmount[midStr];
+        if (!mutantColorMap.has(mid)) return;
+        if (!seriesByMutant.has(mid)) seriesByMutant.set(mid, buckets.map(() => 0));
+        seriesByMutant.get(mid)[i] += count;
+        usedMutantIds.add(mid);
+      });
+    });
+
+    const proportion = mutantsChartMode === "proportion";
+    const datasets = Array.from(usedMutantIds)
+      .sort((a, b) => a - b)
+      .map((mid) => {
+        const raw = seriesByMutant.get(mid);
+        return {
+          label: "Mutant " + mid,
+          data: proportion ? toPercentOf(raw, totalsPerLeaf) : raw,
+          _rawData: raw,
+          backgroundColor: cssVar(SERIES_COLORS[mutantColorMap.get(mid)]),
+          stack: "mutants",
+          maxBarThickness: 24,
+          borderRadius: 4,
+          borderSkipped: false,
+          borderWidth: 2,
+          borderColor: surface,
+        };
+      });
+
+    sizeChartInner(document.getElementById("mutantsChartInner"), buckets.length, 28, 700);
+
+    if (mutantsChart) mutantsChart.destroy();
+    mutantsChart = new Chart(document.getElementById("mutantsChart"), {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: stackedYScaleOptions(mutantsChartMode, c, "Ticks killed (log scale)", "Share of leaf's killed ticks"),
+        },
+        plugins: {
+          legend: { labels: { color: c.legend } },
+          tooltip: stackedTooltipOptions(proportion),
+        },
+      },
+    });
+  }
+
+  function renderDistinctMutantsChart(buckets) {
+    const c = baseScaleColors();
+    const labels = buckets.map((b) => "Leaf " + b.leafId);
+    const counts = buckets.map((b) => distinctMutantsKilled(b));
+
+    sizeChartInner(document.getElementById("distinctMutantsChartInner"), buckets.length, 28, 700);
+
+    if (distinctMutantsChart) distinctMutantsChart.destroy();
+    distinctMutantsChart = new Chart(document.getElementById("distinctMutantsChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Distinct mutants killed",
+            data: counts,
+            backgroundColor: cssVar("--series-1"),
+            maxBarThickness: 24,
+            categoryPercentage: 0.8,
+            barPercentage: 0.9,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: {
+            ticks: { color: c.tick, precision: 0 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+            title: { display: true, text: "Distinct mutants killed", color: c.title },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+        },
+      },
+    });
+  }
+
+  function renderMutantsByLeafChart(summaries) {
+    const c = baseScaleColors();
+    const labels = summaries.map((s) => "Mutant " + s.mutantId);
+    const surface = cssVar("--surface-1");
+    const totalsPerMutant = summaries.map((s) => s.total);
+
+    // Keyed by leaf ID, not color slot: with hundreds of killing leaves and only
+    // SERIES_COLORS.length distinct hues, colors repeat - but each leaf must still be
+    // its own series (a shared color must not merge two different leaves' data).
+    const seriesByLeaf = new Map(); // leafId -> per-mutant counts array
+    const usedLeafIds = new Set();
+
+    summaries.forEach((s, i) => {
+      s.byLeaf.forEach((count, leafId) => {
+        if (!seriesByLeaf.has(leafId)) seriesByLeaf.set(leafId, summaries.map(() => 0));
+        seriesByLeaf.get(leafId)[i] += count;
+        usedLeafIds.add(leafId);
+      });
+    });
+
+    const proportion = mutantsByLeafChartMode === "proportion";
+    const sortedLeafIds = Array.from(usedLeafIds).sort((a, b) => a - b);
+    const datasets = sortedLeafIds.map((leafId) => {
+      const raw = seriesByLeaf.get(leafId);
+      return {
+        label: "Leaf " + leafId,
+        data: proportion ? toPercentOf(raw, totalsPerMutant) : raw,
+        _rawData: raw,
+        backgroundColor: cssVar(SERIES_COLORS[leafColorMap.get(leafId)]),
+        stack: "leaves",
+        maxBarThickness: 24,
+        borderRadius: 4,
+        borderSkipped: false,
+        borderWidth: 2,
+        borderColor: surface,
+      };
+    });
+
+    sizeChartInner(document.getElementById("mutantsByLeafChartInner"), summaries.length, 46, 700);
+
+    // A run can have hundreds of killing leaves; a legend with that many entries would
+    // overflow the chart card and crowd out the plot itself. Past a reasonable count,
+    // hide it and lean on the per-segment tooltip + table view for exact identity.
+    const showLegend = sortedLeafIds.length <= LEGEND_MAX_SERIES;
+
+    if (mutantsByLeafChart) mutantsByLeafChart.destroy();
+    mutantsByLeafChart = new Chart(document.getElementById("mutantsByLeafChart"), {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: stackedYScaleOptions(
+            mutantsByLeafChartMode, c, "Ticks killed (log scale)", "Share of mutant's killed ticks"),
+        },
+        plugins: {
+          legend: { display: showLegend, labels: { color: c.legend } },
+          tooltip: stackedTooltipOptions(proportion),
+        },
+      },
+    });
+  }
+
+  function renderDistinctLeavesChart(summaries) {
+    const c = baseScaleColors();
+    const labels = summaries.map((s) => "Mutant " + s.mutantId);
+    const counts = summaries.map((s) => s.distinctLeaves);
+
+    sizeChartInner(document.getElementById("distinctLeavesChartInner"), summaries.length, 46, 700);
+
+    if (distinctLeavesChart) distinctLeavesChart.destroy();
+    distinctLeavesChart = new Chart(document.getElementById("distinctLeavesChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Distinct leaves killed",
+            data: counts,
+            backgroundColor: cssVar("--series-1"),
+            maxBarThickness: 24,
+            categoryPercentage: 0.8,
+            barPercentage: 0.9,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            ticks: { color: c.tick, autoSkip: false, maxRotation: 90, minRotation: 45 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+          },
+          y: {
+            ticks: { color: c.tick, precision: 0 },
+            grid: { color: c.grid },
+            border: { color: c.border },
+            title: { display: true, text: "Distinct leaves killed", color: c.title },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+        },
+      },
+    });
+  }
+
+  // ---------------------------------------------------------------- tables
+
+  function renderTicksTable(buckets) {
+    const tbody = document.querySelector("#ticksTable tbody");
+    tbody.innerHTML = "";
+    buckets.forEach((b) => {
+      const tr = document.createElement("tr");
+      const cells = [
+        b.leafId,
+        fmtNum(b.totalTicks),
+        fmtNum(b.failingTicks),
+        fmtNum(b.passingTicks),
+        fmtPercent(ratioOf(b)),
+      ];
+      cells.forEach((val, i) => {
+        const td = document.createElement("td");
+        if (i > 0) td.className = "num";
+        td.textContent = String(val);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderMutantsTable(buckets) {
+    const table = document.getElementById("mutantsTable");
+    const theadRow = table.querySelector("thead tr");
+    const tbody = table.querySelector("tbody");
+    theadRow.innerHTML = "";
+    tbody.innerHTML = "";
+
+    const presentMutantIds = [];
+    buckets.forEach((b) => {
+      Object.keys(b.mutantKillingAmount).forEach((midStr) => {
+        const mid = Number(midStr);
+        if (presentMutantIds.indexOf(mid) === -1) presentMutantIds.push(mid);
+      });
+    });
+    presentMutantIds.sort((a, b) => a - b);
+
+    const headers = ["Leaf", "Total killed", "Distinct mutants"].concat(
+      presentMutantIds.map((mid) => "Mutant " + mid));
+    headers.forEach((h) => {
+      const th = document.createElement("th");
+      if (h !== "Leaf") th.className = "num";
+      th.textContent = h;
+      theadRow.appendChild(th);
+    });
+
+    buckets.forEach((b) => {
+      const tr = document.createElement("tr");
+      const leafTd = document.createElement("td");
+      leafTd.textContent = String(b.leafId);
+      tr.appendChild(leafTd);
+
+      const totalTd = document.createElement("td");
+      totalTd.className = "num";
+      totalTd.textContent = fmtNum(totalKilled(b));
+      tr.appendChild(totalTd);
+
+      const distinctTd = document.createElement("td");
+      distinctTd.className = "num";
+      distinctTd.textContent = fmtNum(distinctMutantsKilled(b));
+      tr.appendChild(distinctTd);
+
+      presentMutantIds.forEach((mid) => {
+        const td = document.createElement("td");
+        td.className = "num";
+        td.textContent = fmtNum(b.mutantKillingAmount[String(mid)] || 0);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderMutantsByLeafTable(summaries) {
+    const table = document.getElementById("mutantsByLeafTable");
+    const theadRow = table.querySelector("thead tr");
+    const tbody = table.querySelector("tbody");
+    theadRow.innerHTML = "";
+    tbody.innerHTML = "";
+
+    const presentLeafIds = [];
+    summaries.forEach((s) => {
+      s.byLeaf.forEach((_, leafId) => {
+        if (presentLeafIds.indexOf(leafId) === -1) presentLeafIds.push(leafId);
+      });
+    });
+    presentLeafIds.sort((a, b) => a - b);
+
+    const headers = ["Mutant", "Total killed", "Distinct leaves"].concat(
+      presentLeafIds.map((leafId) => "Leaf " + leafId));
+    headers.forEach((h) => {
+      const th = document.createElement("th");
+      if (h !== "Mutant") th.className = "num";
+      th.textContent = h;
+      theadRow.appendChild(th);
+    });
+
+    summaries.forEach((s) => {
+      const tr = document.createElement("tr");
+      const mutantTd = document.createElement("td");
+      mutantTd.textContent = String(s.mutantId);
+      tr.appendChild(mutantTd);
+
+      const totalTd = document.createElement("td");
+      totalTd.className = "num";
+      totalTd.textContent = fmtNum(s.total);
+      tr.appendChild(totalTd);
+
+      const distinctTd = document.createElement("td");
+      distinctTd.className = "num";
+      distinctTd.textContent = fmtNum(s.distinctLeaves);
+      tr.appendChild(distinctTd);
+
+      presentLeafIds.forEach((leafId) => {
+        const td = document.createElement("td");
+        td.className = "num";
+        td.textContent = fmtNum(s.byLeaf.get(leafId) || 0);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ------------------------------------------------------------- controls
+
+  function refreshTicks(run) {
+    const sorted = sortTicksBuckets(run.buckets);
+    renderTicksCharts(sorted);
+    renderTicksTable(sorted);
+  }
+
+  function refreshMutants(run) {
+    const sorted = sortMutantsBuckets(filterMutantsBuckets(run.buckets));
+    renderMutantsChart(sorted);
+    renderDistinctMutantsChart(sorted);
+    renderMutantsTable(sorted);
+  }
+
+  function refreshMutantsByLeaf(run) {
+    const sorted = sortMutantSummaries(buildMutantSummaries(run));
+    renderMutantsByLeafChart(sorted);
+    renderDistinctLeavesChart(sorted);
+    renderMutantsByLeafTable(sorted);
+  }
+
+  function onRunChange() {
+    currentRunId = document.getElementById("runSelect").value;
+    const run = DATA.runsById[currentRunId];
+    leafColorMap = computeLeafColorMap(run);
+    renderMetadata(run.runInfo);
+    renderDot(run.runInfo.dotSource);
+    refreshTicks(run);
+    refreshMutants(run);
+    refreshMutantsByLeaf(run);
+  }
+
+  /**
+   * Wires a two-button "Absolute" / "Proportion" toggle: clicking a button marks it
+   * active, marks the other inactive, and re-renders via `onChange` if the mode
+   * actually changed.
+   */
+  function wireModeToggle(absoluteBtnId, proportionBtnId, setMode, onChange) {
+    const absoluteBtn = document.getElementById(absoluteBtnId);
+    const proportionBtn = document.getElementById(proportionBtnId);
+    absoluteBtn.addEventListener("click", () => {
+      if (absoluteBtn.classList.contains("active")) return;
+      absoluteBtn.classList.add("active");
+      proportionBtn.classList.remove("active");
+      setMode("absolute");
+      onChange();
+    });
+    proportionBtn.addEventListener("click", () => {
+      if (proportionBtn.classList.contains("active")) return;
+      proportionBtn.classList.add("active");
+      absoluteBtn.classList.remove("active");
+      setMode("proportion");
+      onChange();
+    });
+  }
+
+  function wireControls() {
+    // Guard against double-wiring: initWithData() can run more than once in a session
+    // (e.g. the user uploads a JSON file, then uploads a different one afterwards).
+    if (controlsWired) return;
+    controlsWired = true;
+
+    document.getElementById("runSelect").addEventListener("change", onRunChange);
+    makeDraggable(document.getElementById("graphvizScroll"));
+
+    wireModeToggle(
+      "mutantsChartAbsoluteBtn", "mutantsChartProportionBtn",
+      (mode) => { mutantsChartMode = mode; },
+      () => refreshMutants(DATA.runsById[currentRunId]));
+    wireModeToggle(
+      "mutantsByLeafAbsoluteBtn", "mutantsByLeafProportionBtn",
+      (mode) => { mutantsByLeafChartMode = mode; },
+      () => refreshMutantsByLeaf(DATA.runsById[currentRunId]));
+
+    document.getElementById("ticksSortField").addEventListener("change", (e) => {
+      ticksSortField = e.target.value;
+      refreshTicks(DATA.runsById[currentRunId]);
+    });
+    document.getElementById("ticksSortDirBtn").addEventListener("click", (e) => {
+      ticksSortDir = ticksSortDir === "asc" ? "desc" : "asc";
+      e.target.innerHTML = ticksSortDir === "asc" ? "Asc &#9650;" : "Desc &#9660;";
+      refreshTicks(DATA.runsById[currentRunId]);
+    });
+
+    document.getElementById("mutantsOnlyKillingCheckbox").addEventListener("change", (e) => {
+      mutantsOnlyKilling = e.target.checked;
+      refreshMutants(DATA.runsById[currentRunId]);
+    });
+    document.getElementById("mutantsSortField").addEventListener("change", (e) => {
+      mutantsSortField = e.target.value;
+      refreshMutants(DATA.runsById[currentRunId]);
+    });
+    document.getElementById("mutantsSortDirBtn").addEventListener("click", (e) => {
+      mutantsSortDir = mutantsSortDir === "asc" ? "desc" : "asc";
+      e.target.innerHTML = mutantsSortDir === "asc" ? "Asc &#9650;" : "Desc &#9660;";
+      refreshMutants(DATA.runsById[currentRunId]);
+    });
+
+    document.getElementById("ticksTableBtn").addEventListener("click", (e) => {
+      const wrap = document.getElementById("ticksTableWrap");
+      wrap.classList.toggle("visible");
+      e.target.textContent = wrap.classList.contains("visible") ? "Hide table" : "Show table";
+    });
+    document.getElementById("mutantsTableBtn").addEventListener("click", (e) => {
+      const wrap = document.getElementById("mutantsTableWrap");
+      wrap.classList.toggle("visible");
+      e.target.textContent = wrap.classList.contains("visible") ? "Hide table" : "Show table";
+    });
+    document.getElementById("toggleDotSourceBtn").addEventListener("click", (e) => {
+      const wrap = document.getElementById("dotSourceWrap");
+      wrap.classList.toggle("visible");
+      e.target.textContent = wrap.classList.contains("visible") ? "Hide raw DOT source" : "Show raw DOT source";
+    });
+
+    document.getElementById("mutantsByLeafSortField").addEventListener("change", (e) => {
+      mutantsByLeafSortField = e.target.value;
+      refreshMutantsByLeaf(DATA.runsById[currentRunId]);
+    });
+    document.getElementById("mutantsByLeafSortDirBtn").addEventListener("click", (e) => {
+      mutantsByLeafSortDir = mutantsByLeafSortDir === "asc" ? "desc" : "asc";
+      e.target.innerHTML = mutantsByLeafSortDir === "asc" ? "Asc &#9650;" : "Desc &#9660;";
+      refreshMutantsByLeaf(DATA.runsById[currentRunId]);
+    });
+    document.getElementById("mutantsByLeafTableBtn").addEventListener("click", (e) => {
+      const wrap = document.getElementById("mutantsByLeafTableWrap");
+      wrap.classList.toggle("visible");
+      e.target.textContent = wrap.classList.contains("visible") ? "Hide table" : "Show table";
+    });
+
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+        if (currentRunId !== null) {
+          refreshTicks(DATA.runsById[currentRunId]);
+          refreshMutants(DATA.runsById[currentRunId]);
+          refreshMutantsByLeaf(DATA.runsById[currentRunId]);
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------ init
+
+  /** Shared entry point for both the fetch() success path and the file-upload fallback. */
+  function initWithData(data) {
+    DATA = data;
+    mutantColorMap = computeMutantColorMap(data);
+
+    renderSummary(data);
+    populateRunSelector(data);
+    wireControls();
+
+    document.getElementById("mainContent").style.display = "flex";
+    onRunChange();
+  }
+
+  loadData()
+    .then((data) => initWithData(data))
+    .catch((e) => {
+      showError("Couldn't load it automatically (" + e.message + ").");
+    });
+})();
+</script>
+
+</body>
+</html>

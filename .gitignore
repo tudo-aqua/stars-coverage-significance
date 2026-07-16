@@ -24,3 +24,7 @@
 !/sumoData/fcdReplay/fcdReplay.rou.xml
 !/sumoData/fcdReplay/fcdReplay.sumocfg
 !/sumoData/gridHighway.net.xml
+
+!/postEvaluation/decision_tree_comparison/
+/postEvaluation/decision_tree_comparison/*
+!/postEvaluation/decision_tree_comparison/index.html
