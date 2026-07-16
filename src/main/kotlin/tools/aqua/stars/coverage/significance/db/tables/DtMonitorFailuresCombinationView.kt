@@ -89,7 +89,7 @@ object DtMonitorFailuresCombinationView : Table("dt_monitor_failures_combination
   val leafNodeId = integer("leaf_node_id")
 
   /** `true` if the G0 accident monitor fires in the next tick. */
-  val nextTickMonitorG0AccidentFailed = bool("next_tick_monitor_g0_accidents_failed")
+  val nextTickMonitorG0AccidentFailed = bool("next_tick_monitor_g0_Accidents_failed")
 
   /** Returns all rows from the view. */
   fun getAll(): List<DtMonitorFailuresCombinationViewRow> = transaction {
