@@ -265,6 +265,50 @@
     margin-right: 4px;
     vertical-align: middle;
   }
+
+  .tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .tab-panel.hidden { display: none; }
+
+  .table-scroll {
+    overflow: auto;
+    max-height: 480px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .table-scroll table { width: 100%; }
+  .table-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-1);
+    z-index: 2;
+  }
+  .matrix-scroll .rowhead {
+    position: sticky;
+    left: 0;
+    background: var(--surface-1);
+    z-index: 1;
+  }
+  .matrix-scroll thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+  th[data-sort-key] {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th[data-sort-key]:hover { color: var(--text-primary); }
+  .sort-indicator {
+    display: inline-block;
+    width: 1em;
+    font-size: 0.75em;
+    color: var(--text-muted);
+  }
 </style>
 </head>
 <body>
@@ -283,6 +327,13 @@
     <label for="runSelect">Decision tree run</label>
     <select id="runSelect"></select>
   </section>
+
+  <div class="controls-row" id="tabBar">
+    <button class="active" id="tabOverviewBtn" type="button">Overview</button>
+    <button id="tabStatisticsBtn" type="button">Statistics</button>
+  </div>
+
+  <div class="tab-panel" id="tabPanelOverview">
 
   <section class="card" id="metadataCard">
     <h2>Run metadata</h2>
@@ -391,6 +442,70 @@
     </div>
   </section>
 
+  </div>
+
+  <div class="tab-panel hidden" id="tabPanelStatistics">
+
+  <div class="controls-row" id="statsFilterBar">
+    <label for="statsOnlyKillingCheckbox" style="display:flex; align-items:center; gap:6px;">
+      <input type="checkbox" id="statsOnlyKillingCheckbox" checked />
+      Only leaves that kill at least one tick
+    </label>
+  </div>
+  <p class="legend-note" style="margin:-12px 0 0">Applies to every table and CSV export on this tab.</p>
+
+  <section class="card" id="leafOverviewCard">
+    <h2>Leaf sizes &amp; failure probability</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">Per-leaf total tick count, failing tick count, and p<sub>l</sub> &mdash; the probability that a tick drawn from that leaf kills at least one mutant (failing ticks &divide; total ticks). Click a column header to sort.</p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="leafOverviewCsvBtn" type="button">Download CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table id="leafOverviewTable">
+        <thead><tr>
+          <th data-sort-key="leaf">Leaf<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="total">Total ticks<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="failing">Failing ticks<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="p">p<sub>l</sub><span class="sort-indicator"></span></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="leafMutantTicksCard">
+    <h2>Ticks killing each mutant, by leaf</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is the number of ticks in leaf l that kill mutant m. The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="leafMutantTicksCsvBtn" type="button">Download CSV</button>
+    </div>
+    <div class="table-scroll matrix-scroll">
+      <table class="matrix-table" id="leafMutantTicksTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="leafMutantProbabilityCard">
+    <h2>Probability of killing each mutant, by leaf (p<sub>lm</sub>)</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is p<sub>lm</sub> &mdash; the probability that a tick drawn from leaf l kills mutant m (killing ticks for m in l &divide; total ticks in l). The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="leafMutantProbabilityCsvBtn" type="button">Download CSV</button>
+    </div>
+    <div class="table-scroll matrix-scroll">
+      <table class="matrix-table" id="leafMutantProbabilityTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
 </main>
 
 <script>
@@ -423,6 +538,14 @@
   let mutantsByLeafSortField = "mutant";
   let mutantsByLeafSortDir = "asc";
   let mutantsByLeafChartMode = "proportion"; // "absolute" | "proportion"
+
+  let leafOverviewSortField = "leaf"; // "leaf" | "total" | "failing" | "p"
+  let leafOverviewSortDir = "asc";
+  let statsOnlyKillingLeaves = true; // shared by every Statistics-tab table and CSV export
+  let leafMutantTicksSortKey = "id"; // "id" | a leafId (number)
+  let leafMutantTicksSortDir = "asc";
+  let leafMutantProbSortKey = "id"; // "id" | a leafId (number)
+  let leafMutantProbSortDir = "asc";
 
   let ticksChart = null;
   let ratioChart = null;
@@ -458,6 +581,19 @@
     return v.toFixed(digits === undefined ? 2 : digits) + "%";
   }
 
+  /**
+   * Formats a probability in [0, 1]. Tick counts here range from single digits to
+   * hundreds of millions, so a fixed decimal count would either waste space or lose
+   * every digit for the smallest probabilities (e.g. 4 / 318,000,000) - switch to
+   * exponential notation below 1e-6, where a fixed format would just print zeros.
+   */
+  function fmtProb(v) {
+    if (v === null || v === undefined) return "—";
+    if (v === 0) return "0";
+    if (Math.abs(v) < 1e-6) return v.toExponential(3);
+    return v.toFixed(6);
+  }
+
   function ratioOf(bucket) {
     return bucket.totalTicks > 0 ? (bucket.failingTicks / bucket.totalTicks) * 100 : 0;
   }
@@ -474,6 +610,26 @@
 
   function setText(el, text) {
     el.textContent = text;
+  }
+
+  // ----------------------------------------------------------- CSV export
+
+  function csvEscape(value) {
+    const s = value === null || value === undefined ? "" : String(value);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadCsv(filename, rows) {
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   // ------------------------------------------------------------ data load
@@ -893,6 +1049,75 @@
       total: Array.from(byLeaf.values()).reduce((sum, v) => sum + v, 0),
       distinctLeaves: byLeaf.size,
     }));
+  }
+
+  /** All of a run's leaf buckets, in ascending leaf-id order - the fixed row/column order for the Statistics tab's tables, independent of the Overview tab's sort controls. */
+  function sortedLeafBuckets(run) {
+    return run.buckets.slice().sort((a, b) => a.leafId - b.leafId);
+  }
+
+  /** Every mutant id that kills at least one tick somewhere in the run, ascending. */
+  function getPresentMutantIds(run) {
+    const ids = new Set();
+    run.buckets.forEach((b) => Object.keys(b.mutantKillingAmount).forEach((k) => ids.add(Number(k))));
+    return Array.from(ids).sort((a, b) => a - b);
+  }
+
+  function tickKillValue(bucket, mutantId) {
+    return bucket.mutantKillingAmount[String(mutantId)] || 0;
+  }
+
+  function probKillValue(bucket, mutantId) {
+    return bucket.totalTicks > 0 ? tickKillValue(bucket, mutantId) / bucket.totalTicks : 0;
+  }
+
+  function anyKillProbability(bucket) {
+    return bucket.totalTicks > 0 ? bucket.failingTicks / bucket.totalTicks : 0;
+  }
+
+  function leafOverviewSortValue(b) {
+    if (leafOverviewSortField === "total") return b.totalTicks;
+    if (leafOverviewSortField === "failing") return b.failingTicks;
+    if (leafOverviewSortField === "p") return anyKillProbability(b);
+    return b.leafId;
+  }
+
+  function sortLeafOverviewBuckets(buckets) {
+    const copy = buckets.slice();
+    const dir = leafOverviewSortDir === "asc" ? 1 : -1;
+    copy.sort((a, b) => (leafOverviewSortValue(a) - leafOverviewSortValue(b)) * dir);
+    return copy;
+  }
+
+  /** Shared by every table (and CSV export) on the Statistics tab, so they always agree on which leaves are shown. */
+  function filterStatsLeafBuckets(buckets) {
+    return statsOnlyKillingLeaves ? buckets.filter((b) => b.failingTicks > 0) : buckets.slice();
+  }
+
+  /**
+   * Orders a matrix table's mutant rows either by mutant id (`sortKey === "id"`) or by
+   * their value in one specific leaf column (`sortKey` is that leaf's id) - the same
+   * value function (`valueFn`) used to render/export the cells, so the sort always
+   * matches what's on screen.
+   */
+  function sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn) {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const bucket = sortKey === "id" ? null : buckets.find((b) => b.leafId === sortKey);
+    const copy = mutantIds.slice();
+    copy.sort((a, b) => {
+      const av = sortKey === "id" ? a : bucket ? valueFn(bucket, a) : 0;
+      const bv = sortKey === "id" ? b : bucket ? valueFn(bucket, b) : 0;
+      return (av - bv) * dir;
+    });
+    return copy;
+  }
+
+  /** Updates the `.sort-indicator` arrow on whichever static `<th data-sort-key>` matches the active field. */
+  function updateSortIndicators(tableId, activeKey, dir) {
+    document.querySelectorAll("#" + tableId + " thead th[data-sort-key]").forEach((th) => {
+      const span = th.querySelector(".sort-indicator");
+      if (span) span.textContent = th.dataset.sortKey === activeKey ? (dir === "asc" ? "▲" : "▼") : "";
+    });
   }
 
   function sortMutantSummaries(summaries) {
@@ -1403,6 +1628,156 @@
     });
   }
 
+  // ---------------------------------------------------- statistics tables
+
+  /** `buckets` is assumed already filtered by the shared "only killing leaves" toggle (see refreshStatistics). */
+  function renderLeafOverviewTable(buckets) {
+    updateSortIndicators("leafOverviewTable", leafOverviewSortField, leafOverviewSortDir);
+    const sorted = sortLeafOverviewBuckets(buckets);
+    const tbody = document.querySelector("#leafOverviewTable tbody");
+    tbody.innerHTML = "";
+    sorted.forEach((b) => {
+      const tr = document.createElement("tr");
+      const leafTd = document.createElement("td");
+      leafTd.textContent = "Leaf " + b.leafId;
+      tr.appendChild(leafTd);
+      const totalTd = document.createElement("td");
+      totalTd.className = "num";
+      totalTd.textContent = fmtNum(b.totalTicks);
+      tr.appendChild(totalTd);
+      const failingTd = document.createElement("td");
+      failingTd.className = "num";
+      failingTd.textContent = fmtNum(b.failingTicks);
+      tr.appendChild(failingTd);
+      const pTd = document.createElement("td");
+      pTd.className = "num";
+      pTd.textContent = fmtProb(anyKillProbability(b));
+      tr.appendChild(pTd);
+      tbody.appendChild(tr);
+    });
+  }
+
+  /**
+   * Pins each thead row of a matrix table to the top of its scroll container, stacked
+   * in DOM order (row 2 starts where row 1 ends, etc.) so all header rows - the leaf
+   * labels plus the per-leaf totals below them - stay visible while the mutant rows
+   * scroll underneath. Row heights aren't fixed in CSS (they depend on font metrics),
+   * so the offsets are measured from the actual rendered rows; this only works once
+   * the table is visible (offsetHeight is 0 while its tab is hidden), so callers must
+   * also re-run it after unhiding the Statistics tab.
+   */
+  function positionStickyHeaderRows(tableId) {
+    const thead = document.querySelector("#" + tableId + " thead");
+    let offset = 0;
+    Array.from(thead.children).forEach((tr) => {
+      Array.from(tr.children).forEach((cell) => {
+        cell.style.top = offset + "px";
+      });
+      offset += tr.getBoundingClientRect().height;
+    });
+  }
+
+  /**
+   * Renders a mutant (row) x leaf (column) matrix into the given table. `valueFn`
+   * computes each cell's raw number from (bucket, mutantId); `formatFn` turns that raw
+   * number into display text. The header carries, below the leaf labels, each leaf's
+   * total tick count and total killing-tick count (summed across mutants) - both are
+   * per-leaf reference totals, not part of the sortable/exportable mutant matrix
+   * itself, so they live in the header rather than the body. Leaf columns stay in a
+   * fixed ascending order; mutant rows are ordered by `sortKey`/`sortDir` - either by
+   * mutant id ("id") or by their value in one specific leaf column (that leaf's id) -
+   * set by clicking the corner or a leaf column header (see wireSortableTableHeader).
+   */
+  function renderLeafMutantMatrix(tableId, buckets, mutantIds, valueFn, formatFn, sortKey, sortDir) {
+    const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
+    const table = document.getElementById(tableId);
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    const indicatorFor = (key) => (sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "");
+
+    function headerCell(text, sortKeyValue) {
+      const th = document.createElement("th");
+      th.className = "num";
+      th.dataset.sortKey = String(sortKeyValue);
+      th.appendChild(document.createTextNode(text));
+      const indicator = document.createElement("span");
+      indicator.className = "sort-indicator";
+      indicator.textContent = indicatorFor(sortKeyValue);
+      th.appendChild(indicator);
+      return th;
+    }
+
+    const leafRow = document.createElement("tr");
+    const corner = headerCell("Mutant \\ Leaf", "id");
+    corner.className = "";
+    leafRow.appendChild(corner);
+    buckets.forEach((b) => leafRow.appendChild(headerCell("Leaf " + b.leafId, b.leafId)));
+    thead.appendChild(leafRow);
+
+    const totalTicksRow = document.createElement("tr");
+    const totalTicksLabel = document.createElement("th");
+    totalTicksLabel.textContent = "Total ticks";
+    totalTicksRow.appendChild(totalTicksLabel);
+    buckets.forEach((b) => {
+      const th = document.createElement("th");
+      th.className = "num";
+      th.textContent = fmtNum(b.totalTicks);
+      totalTicksRow.appendChild(th);
+    });
+    thead.appendChild(totalTicksRow);
+
+    const totalKilledRow = document.createElement("tr");
+    const totalKilledLabel = document.createElement("th");
+    totalKilledLabel.textContent = "Total killed";
+    totalKilledRow.appendChild(totalKilledLabel);
+    buckets.forEach((b) => {
+      const th = document.createElement("th");
+      th.className = "num";
+      th.textContent = fmtNum(totalKilled(b));
+      totalKilledRow.appendChild(th);
+    });
+    thead.appendChild(totalKilledRow);
+
+    sortedMutantIds.forEach((mid) => {
+      const tr = document.createElement("tr");
+      const labelTd = document.createElement("td");
+      labelTd.className = "rowhead";
+      labelTd.textContent = "Mutant " + mid;
+      tr.appendChild(labelTd);
+      buckets.forEach((b) => {
+        const td = document.createElement("td");
+        td.className = "num";
+        td.textContent = formatFn(valueFn(b, mid));
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    positionStickyHeaderRows(tableId);
+  }
+
+  // ----------------------------------------------------- CSV row builders
+
+  /** `buckets` is assumed already filtered by the shared "only killing leaves" toggle. */
+  function buildLeafOverviewCsvRows(buckets) {
+    const rows = [["Leaf", "Total ticks", "Failing ticks", "p_l"]];
+    sortLeafOverviewBuckets(buckets).forEach((b) =>
+      rows.push([b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b)]));
+    return rows;
+  }
+
+  function buildLeafMutantMatrixCsvRows(buckets, mutantIds, valueFn, sortKey, sortDir) {
+    const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
+    const rows = [["Mutant \\ Leaf"].concat(buckets.map((b) => "Leaf " + b.leafId))];
+    rows.push(["Total ticks"].concat(buckets.map((b) => b.totalTicks)));
+    rows.push(["Total killed"].concat(buckets.map((b) => totalKilled(b))));
+    sortedMutantIds.forEach((mid) => rows.push(["Mutant " + mid].concat(buckets.map((b) => valueFn(b, mid)))));
+    return rows;
+  }
+
   // ------------------------------------------------------------- controls
 
   function refreshTicks(run) {
@@ -1425,6 +1800,18 @@
     renderMutantsByLeafTable(sorted);
   }
 
+  function refreshStatistics(run) {
+    const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+    const mutantIds = getPresentMutantIds(run);
+    renderLeafOverviewTable(buckets);
+    renderLeafMutantMatrix(
+      "leafMutantTicksTable", buckets, mutantIds, tickKillValue, fmtNum,
+      leafMutantTicksSortKey, leafMutantTicksSortDir);
+    renderLeafMutantMatrix(
+      "leafMutantProbabilityTable", buckets, mutantIds, probKillValue, fmtProb,
+      leafMutantProbSortKey, leafMutantProbSortDir);
+  }
+
   function onRunChange() {
     currentRunId = document.getElementById("runSelect").value;
     const run = DATA.runsById[currentRunId];
@@ -1434,6 +1821,7 @@
     refreshTicks(run);
     refreshMutants(run);
     refreshMutantsByLeaf(run);
+    refreshStatistics(run);
   }
 
   /**
@@ -1460,6 +1848,31 @@
     });
   }
 
+  /**
+   * Wires click-to-sort on a table's `<th data-sort-key>` cells (delegated on the
+   * `<thead>`, so it keeps working across matrix tables that rebuild their header row
+   * on every render). Clicking the already-active header flips direction; clicking a
+   * different one adopts it with `opts.defaultDir(key)` as the starting direction
+   * (e.g. ascending for an identity column, descending for a magnitude column, so the
+   * first click shows the largest values first).
+   */
+  function wireSortableTableHeader(tableId, opts) {
+    const thead = document.querySelector("#" + tableId + " thead");
+    thead.addEventListener("click", (e) => {
+      const th = e.target.closest("th[data-sort-key]");
+      if (!th) return;
+      const raw = th.dataset.sortKey;
+      const key = opts.parseKey ? opts.parseKey(raw) : raw;
+      if (opts.getKey() === key) {
+        opts.setDir(opts.getDir() === "asc" ? "desc" : "asc");
+      } else {
+        opts.setKey(key);
+        opts.setDir(opts.defaultDir(key));
+      }
+      opts.onChange();
+    });
+  }
+
   function wireControls() {
     // Guard against double-wiring: initWithData() can run more than once in a session
     // (e.g. the user uploads a JSON file, then uploads a different one afterwards).
@@ -1469,6 +1882,24 @@
     document.getElementById("runSelect").addEventListener("change", onRunChange);
     makeDraggable(document.getElementById("graphvizScroll"));
 
+    document.getElementById("tabOverviewBtn").addEventListener("click", (e) => {
+      e.target.classList.add("active");
+      document.getElementById("tabStatisticsBtn").classList.remove("active");
+      document.getElementById("tabPanelOverview").classList.remove("hidden");
+      document.getElementById("tabPanelStatistics").classList.add("hidden");
+    });
+    document.getElementById("tabStatisticsBtn").addEventListener("click", (e) => {
+      e.target.classList.add("active");
+      document.getElementById("tabOverviewBtn").classList.remove("active");
+      document.getElementById("tabPanelStatistics").classList.remove("hidden");
+      document.getElementById("tabPanelOverview").classList.add("hidden");
+      // The matrix tables' sticky header offsets are measured from rendered row
+      // heights, which are 0 while this panel is display:none - recompute now that
+      // it's visible (refreshStatistics() already ran once, while still hidden).
+      positionStickyHeaderRows("leafMutantTicksTable");
+      positionStickyHeaderRows("leafMutantProbabilityTable");
+    });
+
     wireModeToggle(
       "mutantsChartAbsoluteBtn", "mutantsChartProportionBtn",
       (mode) => { mutantsChartMode = mode; },
@@ -1477,6 +1908,53 @@
       "mutantsByLeafAbsoluteBtn", "mutantsByLeafProportionBtn",
       (mode) => { mutantsByLeafChartMode = mode; },
       () => refreshMutantsByLeaf(DATA.runsById[currentRunId]));
+
+    wireSortableTableHeader("leafOverviewTable", {
+      getKey: () => leafOverviewSortField, setKey: (k) => { leafOverviewSortField = k; },
+      getDir: () => leafOverviewSortDir, setDir: (d) => { leafOverviewSortDir = d; },
+      defaultDir: (k) => (k === "leaf" ? "asc" : "desc"),
+      onChange: () => refreshStatistics(DATA.runsById[currentRunId]),
+    });
+    document.getElementById("statsOnlyKillingCheckbox").addEventListener("change", (e) => {
+      statsOnlyKillingLeaves = e.target.checked;
+      refreshStatistics(DATA.runsById[currentRunId]);
+    });
+    wireSortableTableHeader("leafMutantTicksTable", {
+      getKey: () => leafMutantTicksSortKey, setKey: (k) => { leafMutantTicksSortKey = k; },
+      getDir: () => leafMutantTicksSortDir, setDir: (d) => { leafMutantTicksSortDir = d; },
+      parseKey: (raw) => (raw === "id" ? "id" : Number(raw)),
+      defaultDir: (k) => (k === "id" ? "asc" : "desc"),
+      onChange: () => refreshStatistics(DATA.runsById[currentRunId]),
+    });
+    wireSortableTableHeader("leafMutantProbabilityTable", {
+      getKey: () => leafMutantProbSortKey, setKey: (k) => { leafMutantProbSortKey = k; },
+      getDir: () => leafMutantProbSortDir, setDir: (d) => { leafMutantProbSortDir = d; },
+      parseKey: (raw) => (raw === "id" ? "id" : Number(raw)),
+      defaultDir: (k) => (k === "id" ? "asc" : "desc"),
+      onChange: () => refreshStatistics(DATA.runsById[currentRunId]),
+    });
+
+    document.getElementById("leafOverviewCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      downloadCsv("leaf_overview_run" + currentRunId + ".csv", buildLeafOverviewCsvRows(buckets));
+    });
+    document.getElementById("leafMutantTicksCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv(
+        "leaf_mutant_ticks_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRows(buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir));
+    });
+    document.getElementById("leafMutantProbabilityCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv(
+        "leaf_mutant_probability_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRows(buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir));
+    });
 
     document.getElementById("ticksSortField").addEventListener("change", (e) => {
       ticksSortField = e.target.value;
