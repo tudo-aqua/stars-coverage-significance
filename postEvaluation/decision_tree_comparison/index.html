@@ -479,7 +479,8 @@
     <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is the number of ticks in leaf l that kill mutant m. The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
     <div class="controls-row">
       <span class="spacer"></span>
-      <button id="leafMutantTicksCsvBtn" type="button">Download CSV</button>
+      <button id="leafMutantTicksCsvBtn" type="button">Download CSV (mutant &times; leaf)</button>
+      <button id="leafMutantTicksCsvTransposedBtn" type="button">Download CSV (leaf &times; mutant)</button>
     </div>
     <div class="table-scroll matrix-scroll">
       <table class="matrix-table" id="leafMutantTicksTable">
@@ -494,13 +495,23 @@
     <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is p<sub>lm</sub> &mdash; the probability that a tick drawn from leaf l kills mutant m (killing ticks for m in l &divide; total ticks in l). The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
     <div class="controls-row">
       <span class="spacer"></span>
-      <button id="leafMutantProbabilityCsvBtn" type="button">Download CSV</button>
+      <button id="leafMutantProbabilityCsvBtn" type="button">Download CSV (mutant &times; leaf)</button>
+      <button id="leafMutantProbabilityCsvTransposedBtn" type="button">Download CSV (leaf &times; mutant)</button>
     </div>
     <div class="table-scroll matrix-scroll">
       <table class="matrix-table" id="leafMutantProbabilityTable">
         <thead></thead>
         <tbody></tbody>
       </table>
+    </div>
+  </section>
+
+  <section class="card" id="leafCombinedCard">
+    <h2>Combined leaf export</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">One row per leaf with every statistic from the tables above: total ticks, failing ticks, p<sub>l</sub>, and each mutant's killing ticks and p<sub>lm</sub>. CSV only &mdash; with one mutant per pair of columns this is too wide to usefully show on screen.</p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="leafCombinedCsvBtn" type="button">Download CSV</button>
     </div>
   </section>
 
@@ -614,13 +625,19 @@
 
   // ----------------------------------------------------------- CSV export
 
+  /**
+   * German-locale CSV formatting: fields are `;`-separated (not `,`, since that's the
+   * decimal separator here) and numbers use `,` for the decimal point (e.g. 0,1234,
+   * matching how Excel expects numbers in this locale to parse them back correctly).
+   */
   function csvEscape(value) {
+    if (typeof value === "number") return String(value).replace(".", ",");
     const s = value === null || value === undefined ? "" : String(value);
-    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    return /["\r\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
   function downloadCsv(filename, rows) {
-    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+    const csv = rows.map((row) => row.map(csvEscape).join(";")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1778,6 +1795,43 @@
     return rows;
   }
 
+  /** Same data as buildLeafMutantMatrixCsvRows, transposed to one row per leaf and one column per mutant. */
+  function buildLeafMutantMatrixCsvRowsTransposed(buckets, mutantIds, valueFn, sortKey, sortDir) {
+    const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
+    const header = ["Leaf", "Total ticks", "Total killed"].concat(sortedMutantIds.map((mid) => "Mutant " + mid));
+    const rows = [header];
+    buckets.forEach((b) => {
+      rows.push(
+        [b.leafId, b.totalTicks, totalKilled(b)].concat(sortedMutantIds.map((mid) => valueFn(b, mid))));
+    });
+    return rows;
+  }
+
+  /**
+   * One row per leaf combining every Statistics-tab table: the leaf-overview stats
+   * (total/failing ticks, p_l) plus, for every present mutant, its killing-tick count
+   * and p_lm - so a single file has everything needed for a leaf without cross-
+   * referencing the separate per-table exports. Mutants are always in ascending id
+   * order here (this view has no on-screen table or sort control of its own).
+   */
+  function buildCombinedLeafCsvRows(buckets, mutantIds) {
+    const header = ["Leaf", "Total ticks", "Failing ticks", "p_l"];
+    mutantIds.forEach((mid) => {
+      header.push("Mutant " + mid + " ticks");
+      header.push("Mutant " + mid + " p_lm");
+    });
+    const rows = [header];
+    sortLeafOverviewBuckets(buckets).forEach((b) => {
+      const row = [b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b)];
+      mutantIds.forEach((mid) => {
+        row.push(tickKillValue(b, mid));
+        row.push(probKillValue(b, mid));
+      });
+      rows.push(row);
+    });
+    return rows;
+  }
+
   // ------------------------------------------------------------- controls
 
   function refreshTicks(run) {
@@ -1947,6 +2001,15 @@
         "leaf_mutant_ticks_run" + currentRunId + ".csv",
         buildLeafMutantMatrixCsvRows(buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir));
     });
+    document.getElementById("leafMutantTicksCsvTransposedBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv(
+        "leaf_mutant_ticks_by_leaf_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRowsTransposed(
+          buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir));
+    });
     document.getElementById("leafMutantProbabilityCsvBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
       const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
@@ -1954,6 +2017,21 @@
       downloadCsv(
         "leaf_mutant_probability_run" + currentRunId + ".csv",
         buildLeafMutantMatrixCsvRows(buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir));
+    });
+    document.getElementById("leafMutantProbabilityCsvTransposedBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv(
+        "leaf_mutant_probability_by_leaf_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRowsTransposed(
+          buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir));
+    });
+    document.getElementById("leafCombinedCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv("leaf_combined_run" + currentRunId + ".csv", buildCombinedLeafCsvRows(buckets, mutantIds));
     });
 
     document.getElementById("ticksSortField").addEventListener("change", (e) => {
