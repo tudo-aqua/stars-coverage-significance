@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.stream.Collectors
 import kotlin.io.path.writeText
 import kotlin.random.Random
+import org.jetbrains.exposed.dao.id.EntityID
 import tools.aqua.stars.coverage.significance.MAX_RARE_MUTANT_FAILURES
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
@@ -141,11 +142,13 @@ object BaselineNextTickPostEvaluation {
             accidentStartingScenarioIdsPerAccidentDCLeafId)
   }
 
-  fun evaluateWithStartingScenario() {
+  fun evaluateWithStartingScenario(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting BaselineNextTickPostEvaluation (scenario mode).")
 
-    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
-    if (fullRunId != null) {
+    val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    if (decisionTreeRunId != null) {
+      println("  Using given decision tree run ${decisionTreeRunId.value}.")
+    } else if (fullRunId != null) {
       println("  Using leaf assignments from full run ${fullRunId.value}.")
     } else {
       println("  No full run (train_fraction=1.0) found — leaf strategy will be skipped.")
@@ -310,11 +313,13 @@ object BaselineNextTickPostEvaluation {
    * 3. **Leaf** — round-robin across DC leaf groups (requires a full run).
    * 4. **Leaf (accidents)** — round-robin restricted to DC leaf groups containing accident ticks.
    */
-  fun evaluateTimeToKill() {
+  fun evaluateTimeToKill(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting BaselineNextTickPostEvaluation (time to kill).")
 
-    val fullRunId = db { DecisionTreeRunsRepository.getLatestFullRunId() }
-    if (fullRunId != null) {
+    val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    if (decisionTreeRunId != null) {
+      println("  Using given decision tree run ${decisionTreeRunId.value}.")
+    } else if (fullRunId != null) {
       println("  Using leaf assignments from full run ${fullRunId.value}.")
     } else {
       println("  No full run (train_fraction=1.0) found — leaf strategies will be skipped.")

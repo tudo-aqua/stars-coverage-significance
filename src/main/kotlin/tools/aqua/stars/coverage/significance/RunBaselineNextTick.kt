@@ -17,12 +17,21 @@
 
 package tools.aqua.stars.coverage.significance
 
+import org.jetbrains.exposed.dao.id.EntityID
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
 
-fun main() {
+/**
+ * @param args Optionally the decision tree run ID to use for leaf assignments
+ *   (`decision_tree_runs.id`). If omitted, the latest full run (train_fraction=1.0) is used
+ *   instead.
+ */
+fun main(args: Array<String>) {
+  val decisionTreeRunId = args.firstOrNull()?.toInt()?.let { EntityID(it, DecisionTreeRunsTable) }
+
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
-  BaselineNextTickPostEvaluation.evaluateTimeToKill()
-  BaselineNextTickPostEvaluation.evaluateWithStartingScenario()
+  BaselineNextTickPostEvaluation.evaluateTimeToKill(decisionTreeRunId)
+  BaselineNextTickPostEvaluation.evaluateWithStartingScenario(decisionTreeRunId)
   println("Finished!")
 }
