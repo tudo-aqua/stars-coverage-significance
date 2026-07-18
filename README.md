@@ -233,6 +233,14 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runHighwayAnalysis --ar
 docker run --name stars-coverage-significance-post-evaluation stars-evaluation:latest ./gradlew --no-daemon runPostEvaluation
 ```
 
+### Run the baseline next-tick evaluation
+
+`RunBaselineNextTick.kt` optionally parses a `decisionTreeRunId` (the `decision_tree_runs.id` to use for leaf assignments) as the first `main(args)` entry. When omitted, it falls back to the latest full run (`train_fraction=1.0`). Pass it via the Gradle `--args` flag:
+
+```bash
+docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --args="8"
+```
+
 ---
 
 ## Python Scripts
