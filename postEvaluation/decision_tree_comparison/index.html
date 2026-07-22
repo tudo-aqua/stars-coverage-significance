@@ -479,7 +479,7 @@
   <section class="card" id="significanceCard">
     <h2>Expected ticks to next failure</h2>
     <p class="legend-note" style="margin-top:0 0 8px">
-      Three estimators for how many ticks you'd need to sample before hitting a failure (or a specific mutant kill), built from every leaf of this run &mdash; independent of the &ldquo;only leaves that kill&rdquo; checkbox above, since a weighting scheme has to account for the whole tree, not just the leaves currently listed. Every column feeding the three estimators is included below, so each row can be recomputed independently. <strong>E(k/N)</strong> = N &divide; k: uniform random sampling over the entire database (N = total ticks ever recorded); for &ldquo;Any monitor failure&rdquo; k is the database-wide failing-tick count, per mutant it's this run's own count of ticks that killed that mutant (same number as the &ldquo;Ticks (this run)&rdquo; column). <strong>E(equal)</strong> = L &divide; &Sigma;p: this run's L leaves sampled with equal probability, where L is the tree's tuned leaf count (&ldquo;Best num_leaves&rdquo; on the Overview tab) &mdash; not just the leaves listed in the tables above, since a leaf that never received a single evaluation tick still counts toward L but has no row of its own. <strong>E(weight)</strong> = 1 &divide; &Sigma;(p&middot;w): leaves sampled in proportion to their overall significance w<sub>l</sub> (defined in the leaf table above, from the &ldquo;Any monitor failure&rdquo; probabilities), asking how that <em>one</em> proposed sampling policy would perform at finding each individual mutant &mdash; &Sigma;(p&middot;w) is exactly the row total (&Sigma;) column of the &ldquo;Weighted probability&rdquo; table below, and this estimator is unaffected by L. Lower is better in every E(&hellip;) column &mdash; it means fewer ticks needed on average.
+      Three estimators for how many ticks you'd need to sample before hitting a failure (or a specific mutant kill), built from every leaf of this run &mdash; independent of the &ldquo;only leaves that kill&rdquo; checkbox above, since a weighting scheme has to account for the whole tree, not just the leaves currently listed. Every column feeding the three estimators is included below, so each row can be recomputed independently. <strong>E(k/N)</strong> = N &divide; k: uniform random sampling over the entire database (N = total ticks ever recorded); for &ldquo;Any monitor failure&rdquo; k is the database-wide failing-tick count, per mutant it's this run's own count of ticks that killed that mutant (same number as the &ldquo;Ticks (this run)&rdquo; column). <strong>E(equal)</strong> = L &divide; &Sigma;p: this run's L leaves sampled with equal probability, where L is the tree's actual learned leaf count (&ldquo;Learned num_leaves (actual)&rdquo; on the Overview tab, not the Optuna-tuned target, since the fitted tree can end up with fewer leaves than that bound) &mdash; not just the leaves listed in the tables above, since a leaf that never received a single evaluation tick still counts toward L but has no row of its own. <strong>E(weight)</strong> = 1 &divide; &Sigma;(p&middot;w): leaves sampled in proportion to their overall significance w<sub>l</sub> (defined in the leaf table above, from the &ldquo;Any monitor failure&rdquo; probabilities), asking how that <em>one</em> proposed sampling policy would perform at finding each individual mutant &mdash; &Sigma;(p&middot;w) is exactly the row total (&Sigma;) column of the &ldquo;Weighted probability&rdquo; table below, and this estimator is unaffected by L. Lower is better in every E(&hellip;) column &mdash; it means fewer ticks needed on average.
     </p>
     <div class="controls-row">
       <span class="spacer"></span>
@@ -896,7 +896,7 @@
       "Run " + id +
       " (ego-maneuver: " + fmtBoolYesNo(runInfo.featEgoManeuver) +
       ", class-weight: " + classWeight +
-      ", leaves: " + fmtNum(runInfo.hpNumLeaves) + ")"
+      ", leaves: " + fmtNum(runInfo.learnedNumLeaves) + ")"
     );
   }
 
@@ -934,11 +934,15 @@
       ["Max leaves bound", fmtNum(runInfo.maxLeavesBound)],
       ["Class weight", runInfo.classWeight === null || runInfo.classWeight === undefined ? "—" : runInfo.classWeight],
       ["Scale pos weight", fmtFloat(runInfo.scalePosWeight, 4)],
-      ["Best num_leaves", fmtNum(runInfo.hpNumLeaves)],
-      ["Best max_depth", fmtNum(runInfo.hpMaxDepth)],
-      ["Best min_child_samples", fmtNum(runInfo.hpMinChildSamples)],
-      ["Best min_split_gain", fmtFloat(runInfo.hpMinSplitGain, 4)],
+      ["Tuned num_leaves (Optuna target)", fmtNum(runInfo.hpNumLeaves)],
+      ["Tuned max_depth (Optuna target)", fmtNum(runInfo.hpMaxDepth)],
+      ["Tuned min_child_samples", fmtNum(runInfo.hpMinChildSamples)],
+      ["Tuned min_split_gain", fmtFloat(runInfo.hpMinSplitGain, 4)],
       ["Tuning ROC-AUC", fmtFloat(runInfo.tuningRocAuc, 4)],
+      ["Learned num_leaves (actual)", fmtNum(runInfo.learnedNumLeaves)],
+      ["Learned max_depth (actual)", fmtNum(runInfo.learnedMaxDepth)],
+      ["Train accuracy", fmtFloat(runInfo.trainAccuracy, 4)],
+      ["Test accuracy", fmtFloat(runInfo.testAccuracy, 4)],
     ];
 
     fields.forEach(([label, value]) => {
@@ -1950,7 +1954,9 @@
    * computed from `allBuckets` (every leaf of the run), ignoring the "only killing
    * leaves" checkbox, which only controls what the tables above list.
    *
-   * L is the tree's true total leaf count (runInfo.hpNumLeaves), not
+   * L is the tree's true total leaf count (runInfo.learnedNumLeaves - the actual
+   * number of leaves LightGBM produced, not the Optuna-tuned num_leaves target,
+   * since leaf-wise growth can stop early and undershoot that bound), not
    * allBuckets.length: a leaf that never received a single evaluation tick has no
    * row in `buckets` at all (its totals come from a SQL GROUP BY, which omits groups
    * with zero rows), so counting buckets would silently undercount whenever a run's
@@ -1959,7 +1965,7 @@
   function buildSignificanceRows(run, allBuckets, mutantIds) {
     const N = DATA.totalTicks;
     const globalK = DATA.failedTicks;
-    const L = run.runInfo.hpNumLeaves;
+    const L = run.runInfo.learnedNumLeaves;
     const leafWeights = computeLeafWeights(allBuckets);
 
     const rows = [];
