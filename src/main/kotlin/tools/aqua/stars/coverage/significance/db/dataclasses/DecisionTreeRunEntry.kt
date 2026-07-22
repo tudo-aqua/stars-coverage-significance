@@ -48,6 +48,13 @@ import kotlinx.serialization.Serializable
  * @property hpMinChildSamples Best min_child_samples found by Optuna.
  * @property hpMinSplitGain Best min_split_gain found by Optuna.
  * @property tuningRocAuc Training-set ROC-AUC of the best trial.
+ * @property learnedNumLeaves Actual number of leaves in the fitted tree; may differ from
+ *   [hpNumLeaves] since `num_leaves` is an upper bound for leaf-wise growth, not a guarantee.
+ * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0); may differ from
+ *   [hpMaxDepth] for the same reason.
+ * @property trainAccuracy Accuracy of the fitted tree on the training set.
+ * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
+ *   [trainFraction] is `1.0` (no test split).
  */
 data class DecisionTreeRunEntry(
     val id: Int? = null,
@@ -74,6 +81,10 @@ data class DecisionTreeRunEntry(
     val hpMinChildSamples: Int? = null,
     val hpMinSplitGain: Double? = null,
     val tuningRocAuc: Double? = null,
+    val learnedNumLeaves: Int? = null,
+    val learnedMaxDepth: Int? = null,
+    val trainAccuracy: Double? = null,
+    val testAccuracy: Double? = null,
 ) {
   /**
    * Converts a [DecisionTreeRunEntry] to its serializable [DecisionTreeRunMetadata].
@@ -106,6 +117,10 @@ data class DecisionTreeRunEntry(
           hpMinChildSamples = hpMinChildSamples,
           hpMinSplitGain = hpMinSplitGain,
           tuningRocAuc = tuningRocAuc,
+          learnedNumLeaves = learnedNumLeaves,
+          learnedMaxDepth = learnedMaxDepth,
+          trainAccuracy = trainAccuracy,
+          testAccuracy = testAccuracy,
       )
 }
 
@@ -136,6 +151,13 @@ data class DecisionTreeRunEntry(
  * @property hpMinChildSamples Best min_child_samples found by Optuna.
  * @property hpMinSplitGain Best min_split_gain found by Optuna.
  * @property tuningRocAuc Training-set ROC-AUC of the best trial.
+ * @property learnedNumLeaves Actual number of leaves in the fitted tree; may differ from
+ *   [hpNumLeaves] since `num_leaves` is an upper bound for leaf-wise growth, not a guarantee.
+ * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0); may differ from
+ *   [hpMaxDepth] for the same reason.
+ * @property trainAccuracy Accuracy of the fitted tree on the training set.
+ * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
+ *   [trainFraction] is `1.0` (no test split).
  */
 @Serializable
 data class DecisionTreeRunMetadata(
@@ -162,4 +184,8 @@ data class DecisionTreeRunMetadata(
     val hpMinChildSamples: Int?,
     val hpMinSplitGain: Double?,
     val tuningRocAuc: Double?,
+    val learnedNumLeaves: Int?,
+    val learnedMaxDepth: Int?,
+    val trainAccuracy: Double?,
+    val testAccuracy: Double?,
 )

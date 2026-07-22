@@ -222,6 +222,22 @@ def print_tree(booster: lgb.Booster, feature_names: list[str]) -> None:
     _print_node(model["tree_info"][0]["tree_structure"], feature_names)
 
 
+def _actual_tree_depth(node: dict) -> int:
+    """Computes the tree's actual max depth (root = 0) by walking the structure.
+
+    LightGBM's `num_leaves`/`max_depth` hyperparameters are upper bounds for the
+    tuner, not guarantees — leaf-wise growth can stop early (e.g. due to
+    `min_child_samples`/`min_split_gain`), so the fitted tree's real leaf count
+    and depth must be read back from the model rather than assumed to match the
+    tuned values.
+    """
+    if "split_feature" not in node:
+        return 0
+    return 1 + max(
+        _actual_tree_depth(node["left_child"]), _actual_tree_depth(node["right_child"])
+    )
+
+
 def _write_leaf_ids_to_db(
     uri: str,
     run_id: int,
@@ -378,6 +394,12 @@ def _ensure_tracking_tables(conn) -> None:
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_min_child_samples INT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS hp_min_split_gain DOUBLE PRECISION")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS tuning_roc_auc DOUBLE PRECISION")
+        # Actually learned values of the fitted tree (may differ from the tuned
+        # hyperparameters above, since num_leaves/max_depth are upper bounds only)
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS learned_num_leaves INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS learned_max_depth INT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS train_accuracy DOUBLE PRECISION")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS test_accuracy DOUBLE PRECISION")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS decision_tree_mutant_splits (
                 run_id     INT  NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
@@ -410,6 +432,10 @@ def _insert_run(
     scale_pos_weight: "float | None",
     best_params: dict,
     tuning_roc_auc: float,
+    learned_num_leaves: int,
+    learned_max_depth: int,
+    train_accuracy: float,
+    test_accuracy: "float | None",
 ) -> int:
     """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
     import psycopg2.extras
@@ -422,14 +448,16 @@ def _insert_run(
             "  feat_distances, feat_neighbor_kinematics, feat_time_gaps,"
             "  n_trials, max_leaves_bound, class_weight, scale_pos_weight,"
             "  hp_num_leaves, hp_max_depth, hp_min_child_samples, hp_min_split_gain,"
-            "  tuning_roc_auc"
+            "  tuning_roc_auc,"
+            "  learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy"
             ") VALUES ("
             "  %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
             "  %s, %s, %s,"
             "  %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
-            "  %s"
+            "  %s,"
+            "  %s, %s, %s, %s"
             ") RETURNING id",
             (
                 train_fraction, seed, len(train_mutants), len(test_mutants),
@@ -441,6 +469,7 @@ def _insert_run(
                 best_params["num_leaves"], best_params["max_depth"],
                 best_params["min_child_samples"], best_params["min_split_gain"],
                 tuning_roc_auc,
+                learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,
             ),
         )
         run_id = cur.fetchone()[0]
@@ -722,13 +751,20 @@ def main() -> None:
         booster = clf.booster_
         model_info = booster.dump_model()
         num_leaves = model_info["tree_info"][0]["num_leaves"]
+        actual_max_depth = _actual_tree_depth(model_info["tree_info"][0]["tree_structure"])
 
         raw_preds = booster.predict(X_train)
-        train_acc = np.mean((raw_preds > 0.5).astype(int) == y_train)
-        print(f"Leaves: {num_leaves}  |  Training accuracy: {train_acc:.4f}", end="")
+        train_acc = float(np.mean((raw_preds > 0.5).astype(int) == y_train))
+        eval_acc: "float | None" = None
+        print(
+            f"Leaves: {num_leaves} (tuned target: {best_params['num_leaves']})  |  "
+            f"Depth: {actual_max_depth} (tuned bound: {best_params['max_depth']})  |  "
+            f"Training accuracy: {train_acc:.4f}",
+            end="",
+        )
         if args.train_fraction < 1.0:
             eval_preds = booster.predict(X_eval)
-            eval_acc = np.mean((eval_preds > 0.5).astype(int) == y_eval)
+            eval_acc = float(np.mean((eval_preds > 0.5).astype(int) == y_eval))
             print(f"  |  Test accuracy: {eval_acc:.4f}", end="")
         print("\n")
 
@@ -811,6 +847,10 @@ def main() -> None:
                     scale_pos_weight=lgb_weight_kwargs.get("scale_pos_weight"),
                     best_params=best_params,
                     tuning_roc_auc=tuning_roc_auc,
+                    learned_num_leaves=num_leaves,
+                    learned_max_depth=actual_max_depth,
+                    train_accuracy=train_acc,
+                    test_accuracy=eval_acc,
                 )
             finally:
                 conn.close()

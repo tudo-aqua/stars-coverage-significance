@@ -138,5 +138,9 @@ object DecisionTreeRunsRepository {
           hpMinChildSamples = this[DecisionTreeRunsTable.hpMinChildSamples],
           hpMinSplitGain = this[DecisionTreeRunsTable.hpMinSplitGain],
           tuningRocAuc = this[DecisionTreeRunsTable.tuningRocAuc],
+          learnedNumLeaves = this[DecisionTreeRunsTable.learnedNumLeaves],
+          learnedMaxDepth = this[DecisionTreeRunsTable.learnedMaxDepth],
+          trainAccuracy = this[DecisionTreeRunsTable.trainAccuracy],
+          testAccuracy = this[DecisionTreeRunsTable.testAccuracy],
       )
 }

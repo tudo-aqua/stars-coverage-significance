@@ -60,6 +60,15 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property hpMinChildSamples Best min_child_samples found.
  * @property hpMinSplitGain Best min_split_gain found.
  * @property tuningRocAuc Training-set ROC-AUC of the best trial.
+ *
+ * Actually learned values of the fitted tree (may differ from the tuned hyperparameters above,
+ * since `num_leaves`/`max_depth` are upper bounds only — leaf-wise growth can stop early):
+ *
+ * @property learnedNumLeaves Actual number of leaves in the fitted tree.
+ * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0).
+ * @property trainAccuracy Accuracy of the fitted tree on the training set.
+ * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
+ *   `train_fraction = 1.0` (no test split).
  */
 object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
@@ -91,4 +100,10 @@ object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val hpMinChildSamples = integer("hp_min_child_samples").nullable()
   val hpMinSplitGain = double("hp_min_split_gain").nullable()
   val tuningRocAuc = double("tuning_roc_auc").nullable()
+
+  // Actually learned values of the fitted tree
+  val learnedNumLeaves = integer("learned_num_leaves").nullable()
+  val learnedMaxDepth = integer("learned_max_depth").nullable()
+  val trainAccuracy = double("train_accuracy").nullable()
+  val testAccuracy = double("test_accuracy").nullable()
 }
