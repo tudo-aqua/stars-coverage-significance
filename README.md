@@ -320,11 +320,13 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output t
 # More thorough tuning with 200 trials
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
-  --no-ego-maneuver \
+  --ego-maneuver \
   --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
+  --class-weight scale-pos-weight \
+  --max-leaves 512 \
   --out-dir /results/runs \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
   --db-workers 48 \

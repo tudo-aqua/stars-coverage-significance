@@ -456,7 +456,7 @@
 
   <section class="card" id="leafOverviewCard">
     <h2>Leaf sizes &amp; failure probability</h2>
-    <p class="legend-note" style="margin-top:0 0 8px">Per-leaf total tick count, failing tick count, and p<sub>l</sub> &mdash; the probability that a tick drawn from that leaf kills at least one mutant (failing ticks &divide; total ticks). Click a column header to sort.</p>
+    <p class="legend-note" style="margin-top:0 0 8px">Per-leaf total tick count, failing tick count, and p<sub>l</sub> &mdash; the probability that a tick drawn from that leaf kills at least one mutant (failing ticks &divide; total ticks). w<sub>l</sub> and p<sub>l</sub>&middot;w<sub>l</sub> are the significance weight used by the &ldquo;Expected ticks to next failure&rdquo; card below: w<sub>l</sub> = p<sub>l</sub> &divide; &Sigma;p<sub>l</sub> (this leaf's share of the summed failure probability across <em>every</em> leaf of the run, regardless of the checkbox above). Both move in lockstep with p<sub>l</sub>, so sorting by p<sub>l</sub> also orders them. Click a column header to sort.</p>
     <div class="controls-row">
       <span class="spacer"></span>
       <button id="leafOverviewCsvBtn" type="button">Download CSV</button>
@@ -468,6 +468,35 @@
           <th class="num" data-sort-key="total">Total ticks<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="failing">Failing ticks<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="p">p<sub>l</sub><span class="sort-indicator"></span></th>
+          <th class="num">w<sub>l</sub></th>
+          <th class="num">p<sub>l</sub>&middot;w<sub>l</sub></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="significanceCard">
+    <h2>Expected ticks to next failure</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">
+      Three estimators for how many ticks you'd need to sample before hitting a failure (or a specific mutant kill), built from every leaf of this run &mdash; independent of the &ldquo;only leaves that kill&rdquo; checkbox above, since a weighting scheme has to account for the whole tree, not just the leaves currently listed. Every column feeding the three estimators is included below, so each row can be recomputed independently. <strong>E(k/N)</strong> = N &divide; k: uniform random sampling over the entire database (N = total ticks ever recorded); for &ldquo;Any monitor failure&rdquo; k is the database-wide failing-tick count, per mutant it's this run's own count of ticks that killed that mutant (same number as the &ldquo;Ticks (this run)&rdquo; column). <strong>E(equal)</strong> = L &divide; &Sigma;p: this run's L leaves sampled with equal probability, where L is the tree's tuned leaf count (&ldquo;Best num_leaves&rdquo; on the Overview tab) &mdash; not just the leaves listed in the tables above, since a leaf that never received a single evaluation tick still counts toward L but has no row of its own. <strong>E(weight)</strong> = 1 &divide; &Sigma;(p&middot;w): leaves sampled in proportion to their overall significance w<sub>l</sub> (defined in the leaf table above, from the &ldquo;Any monitor failure&rdquo; probabilities), asking how that <em>one</em> proposed sampling policy would perform at finding each individual mutant &mdash; &Sigma;(p&middot;w) is exactly the row total (&Sigma;) column of the &ldquo;Weighted probability&rdquo; table below, and this estimator is unaffected by L. Lower is better in every E(&hellip;) column &mdash; it means fewer ticks needed on average.
+    </p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="significanceCsvBtn" type="button">Download CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table id="significanceTable">
+        <thead><tr>
+          <th>Category</th>
+          <th class="num">Ticks (this run)</th>
+          <th class="num">N</th>
+          <th class="num">L</th>
+          <th class="num">&Sigma;p</th>
+          <th class="num">&Sigma;(p&middot;w)</th>
+          <th class="num">E(k/N)</th>
+          <th class="num">E(equal)</th>
+          <th class="num">E(weight)</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -476,7 +505,7 @@
 
   <section class="card" id="leafMutantTicksCard">
     <h2>Ticks killing each mutant, by leaf</h2>
-    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is the number of ticks in leaf l that kill mutant m. The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
+    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is the number of ticks in leaf l that kill mutant m. The header also carries each leaf's total tick count, total killing-tick count (summed across mutants), and its w<sub>l</sub> significance weight (same value as in the leaf table above), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
     <div class="controls-row">
       <span class="spacer"></span>
       <button id="leafMutantTicksCsvBtn" type="button">Download CSV (mutant &times; leaf)</button>
@@ -492,7 +521,7 @@
 
   <section class="card" id="leafMutantProbabilityCard">
     <h2>Probability of killing each mutant, by leaf (p<sub>lm</sub>)</h2>
-    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is p<sub>lm</sub> &mdash; the probability that a tick drawn from leaf l kills mutant m (killing ticks for m in l &divide; total ticks in l). The header also carries each leaf's total tick count and total killing-tick count (summed across mutants), for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
+    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is p<sub>lm</sub> &mdash; the probability that a tick drawn from leaf l kills mutant m (killing ticks for m in l &divide; total ticks in l). The header also carries each leaf's total tick count, total killing-tick count (summed across mutants), and its w<sub>l</sub> significance weight, for reference. Multiplying a row's p<sub>lm</sub> cells by the w<sub>l</sub> header row and summing gives &Sigma;(p<sub>lm</sub>&middot;w<sub>l</sub>) for that mutant &mdash; the value the &ldquo;Expected ticks to next failure&rdquo; card's E(weight) column inverts, useful for cross-checking it by hand. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
     <div class="controls-row">
       <span class="spacer"></span>
       <button id="leafMutantProbabilityCsvBtn" type="button">Download CSV (mutant &times; leaf)</button>
@@ -506,9 +535,25 @@
     </div>
   </section>
 
+  <section class="card" id="leafMutantWeightedCard">
+    <h2>Weighted probability of killing each mutant, by leaf (p<sub>lm</sub>&middot;w<sub>l</sub>)</h2>
+    <p class="legend-note" style="margin-top:0 0 8px">Rows are mutants, columns are leaves. Cell (m, l) is p<sub>lm</sub>&middot;w<sub>l</sub> &mdash; leaf l's p<sub>lm</sub> for mutant m multiplied by leaf l's own significance weight w<sub>l</sub> (defined in the leaf table above, from the &ldquo;Any monitor failure&rdquo; probabilities &mdash; the same w<sub>l</sub> for every mutant, not recomputed per mutant). This is the exact per-leaf term the &ldquo;Expected ticks to next failure&rdquo; card's E(weight) sums: the row total (&Sigma;) column is &Sigma;(p<sub>lm</sub>&middot;w<sub>l</sub>), and that mutant's E(weight) is 1 &divide; &Sigma;. Use this table to cross-check E(weight) cell by cell against an external reference. The header also carries each leaf's total tick count, total killing-tick count, and w<sub>l</sub>, for reference. Click a leaf column (or the corner) to sort the mutant rows by it.</p>
+    <div class="controls-row">
+      <span class="spacer"></span>
+      <button id="leafMutantWeightedCsvBtn" type="button">Download CSV (mutant &times; leaf)</button>
+      <button id="leafMutantWeightedCsvTransposedBtn" type="button">Download CSV (leaf &times; mutant)</button>
+    </div>
+    <div class="table-scroll matrix-scroll">
+      <table class="matrix-table" id="leafMutantWeightedTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="card" id="leafCombinedCard">
     <h2>Combined leaf export</h2>
-    <p class="legend-note" style="margin-top:0 0 8px">One row per leaf with every statistic from the tables above: total ticks, failing ticks, p<sub>l</sub>, and each mutant's killing ticks and p<sub>lm</sub>. CSV only &mdash; with one mutant per pair of columns this is too wide to usefully show on screen.</p>
+    <p class="legend-note" style="margin-top:0 0 8px">One row per leaf with every statistic from the tables above: total ticks, failing ticks, p<sub>l</sub>, w<sub>l</sub>, p<sub>l</sub>&middot;w<sub>l</sub>, and each mutant's killing ticks and p<sub>lm</sub>. CSV only &mdash; with one mutant per pair of columns this is too wide to usefully show on screen.</p>
     <div class="controls-row">
       <span class="spacer"></span>
       <button id="leafCombinedCsvBtn" type="button">Download CSV</button>
@@ -557,6 +602,8 @@
   let leafMutantTicksSortDir = "asc";
   let leafMutantProbSortKey = "id"; // "id" | a leafId (number)
   let leafMutantProbSortDir = "asc";
+  let leafMutantWeightedSortKey = "id"; // "id" | a leafId (number)
+  let leafMutantWeightedSortDir = "asc";
 
   let ticksChart = null;
   let ratioChart = null;
@@ -583,9 +630,16 @@
     return Number(v).toFixed(digits === undefined ? 3 : digits);
   }
 
-  function fmtBool(v) {
-    if (v === null || v === undefined) return "not recorded";
-    return v ? "Enabled" : "Disabled";
+  /** Feature-flag cell in the run metadata grid: a checkmark/cross reads faster at a glance than "Enabled"/"Disabled" across seven rows. */
+  function fmtBoolSymbol(v) {
+    if (v === null || v === undefined) return "—";
+    return v ? "✓" : "✗";
+  }
+
+  /** Same boolean, but for the run dropdown's plain-text option label, where a symbol can be easy to miss/misread at small size - "yes"/"no" stays unambiguous there. */
+  function fmtBoolYesNo(v) {
+    if (v === null || v === undefined) return "—";
+    return v ? "yes" : "no";
   }
 
   function fmtPercent(v, digits) {
@@ -593,16 +647,33 @@
   }
 
   /**
-   * Formats a probability in [0, 1]. Tick counts here range from single digits to
-   * hundreds of millions, so a fixed decimal count would either waste space or lose
-   * every digit for the smallest probabilities (e.g. 4 / 318,000,000) - switch to
-   * exponential notation below 1e-6, where a fixed format would just print zeros.
+   * Formats a probability (usually in [0, 1], though the significance card's Σp can
+   * exceed 1). Tick counts here range from single digits to hundreds of millions, so a
+   * fixed decimal count would either waste space or lose every digit for the smallest
+   * probabilities - toFixed(6) only has room for one significant digit once a value
+   * drops below ~1e-5 (e.g. 27 / 18,405,787 ~= 1.467e-6 would print as the misleading
+   * "0.000001"), so switch to exponential notation well before that: below 1e-4, where
+   * toFixed(6) would still have at least 3 significant digits to spare.
    */
   function fmtProb(v) {
     if (v === null || v === undefined) return "—";
     if (v === 0) return "0";
-    if (Math.abs(v) < 1e-6) return v.toExponential(3);
+    if (Math.abs(v) < 1e-4) return v.toExponential(3);
     return v.toFixed(6);
+  }
+
+  /**
+   * Formats an "expected number of ticks" estimator (see the significance card).
+   * These range from a handful (a well-signposted mutant under weighted sampling) to
+   * hundreds of millions (a mutant this run barely killed, under naive k/N sampling) -
+   * fixed-decimal would either lose all precision or print absurd trailing zeros, so
+   * small values keep two decimals and large ones round to the nearest integer.
+   * Non-finite values happen when the denominator is 0 (nothing in this run signals
+   * that category at all) and are shown as "—" rather than "Infinity".
+   */
+  function fmtExpected(v) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    return Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2);
   }
 
   function ratioOf(bucket) {
@@ -817,13 +888,25 @@
     });
   }
 
+  /** Compact one-line summary of a run's key training settings, used both in the run dropdown's option text and its label. */
+  function runSummaryLabel(id, runInfo) {
+    const classWeight =
+      runInfo.classWeight === null || runInfo.classWeight === undefined ? "—" : runInfo.classWeight;
+    return (
+      "Run " + id +
+      " (ego-maneuver: " + fmtBoolYesNo(runInfo.featEgoManeuver) +
+      ", class-weight: " + classWeight +
+      ", leaves: " + fmtNum(runInfo.hpNumLeaves) + ")"
+    );
+  }
+
   function populateRunSelector(data) {
     const sel = document.getElementById("runSelect");
     sel.innerHTML = "";
     data.decisionTreeRunIds.forEach((id) => {
       const opt = document.createElement("option");
       opt.value = String(id);
-      opt.textContent = "Run " + id;
+      opt.textContent = runSummaryLabel(id, data.runsById[id].runInfo);
       sel.appendChild(opt);
     });
   }
@@ -840,13 +923,13 @@
       ["Seed", fmtNum(runInfo.seed)],
       ["Train mutants", fmtNum(runInfo.nTrainMutants)],
       ["Test mutants", fmtNum(runInfo.nTestMutants)],
-      ["Feature: ego maneuver", fmtBool(runInfo.featEgoManeuver)],
-      ["Feature: ego speed", fmtBool(runInfo.featEgoSpeed)],
-      ["Feature: ego accel", fmtBool(runInfo.featEgoAccel)],
-      ["Feature: ego position", fmtBool(runInfo.featEgoPosition)],
-      ["Feature: distances", fmtBool(runInfo.featDistances)],
-      ["Feature: neighbor kinematics", fmtBool(runInfo.featNeighborKinematics)],
-      ["Feature: time gaps", fmtBool(runInfo.featTimeGaps)],
+      ["Feature: ego maneuver", fmtBoolSymbol(runInfo.featEgoManeuver)],
+      ["Feature: ego speed", fmtBoolSymbol(runInfo.featEgoSpeed)],
+      ["Feature: ego accel", fmtBoolSymbol(runInfo.featEgoAccel)],
+      ["Feature: ego position", fmtBoolSymbol(runInfo.featEgoPosition)],
+      ["Feature: distances", fmtBoolSymbol(runInfo.featDistances)],
+      ["Feature: neighbor kinematics", fmtBoolSymbol(runInfo.featNeighborKinematics)],
+      ["Feature: time gaps", fmtBoolSymbol(runInfo.featTimeGaps)],
       ["Optuna trials", fmtNum(runInfo.nTrials)],
       ["Max leaves bound", fmtNum(runInfo.maxLeavesBound)],
       ["Class weight", runInfo.classWeight === null || runInfo.classWeight === undefined ? "—" : runInfo.classWeight],
@@ -1090,6 +1173,34 @@
 
   function anyKillProbability(bucket) {
     return bucket.totalTicks > 0 ? bucket.failingTicks / bucket.totalTicks : 0;
+  }
+
+  /**
+   * The significance weight w_l for every leaf of a run: each leaf's share of the
+   * summed "any monitor failure" probability across all of the run's leaves (not just
+   * the ones currently displayed by the "only killing leaves" checkbox - a weighting
+   * scheme has to account for the whole tree). Defined once from the any-mutant
+   * probabilities and reused as-is when scoring how well this one policy would surface
+   * each individual mutant (see weightedSum / buildSignificanceRows) - there is no
+   * separate per-mutant weight.
+   */
+  function computeLeafWeights(buckets) {
+    const sumP = buckets.reduce((s, b) => s + anyKillProbability(b), 0);
+    const weights = new Map(); // leafId -> { p, w }
+    buckets.forEach((b) => {
+      const p = anyKillProbability(b);
+      weights.set(b.leafId, { p, w: sumP > 0 ? p / sumP : 0 });
+    });
+    return weights;
+  }
+
+  function sumOf(buckets, fn) {
+    return buckets.reduce((s, b) => s + fn(b), 0);
+  }
+
+  /** Sum, over every leaf, of probFn(leaf) weighted by that leaf's significance weight w_l. */
+  function weightedSum(buckets, leafWeights, probFn) {
+    return buckets.reduce((s, b) => s + probFn(b) * leafWeights.get(b.leafId).w, 0);
   }
 
   function leafOverviewSortValue(b) {
@@ -1647,8 +1758,13 @@
 
   // ---------------------------------------------------- statistics tables
 
-  /** `buckets` is assumed already filtered by the shared "only killing leaves" toggle (see refreshStatistics). */
-  function renderLeafOverviewTable(buckets) {
+  /**
+   * `buckets` is assumed already filtered by the shared "only killing leaves" toggle
+   * (see refreshStatistics); `leafWeights` must come from computeLeafWeights(allBuckets)
+   * - the FULL, unfiltered leaf set - so w_l/p_l*w_l stay correct regardless of which
+   * leaves are currently shown.
+   */
+  function renderLeafOverviewTable(buckets, leafWeights) {
     updateSortIndicators("leafOverviewTable", leafOverviewSortField, leafOverviewSortDir);
     const sorted = sortLeafOverviewBuckets(buckets);
     const tbody = document.querySelector("#leafOverviewTable tbody");
@@ -1670,6 +1786,15 @@
       pTd.className = "num";
       pTd.textContent = fmtProb(anyKillProbability(b));
       tr.appendChild(pTd);
+      const weight = leafWeights.get(b.leafId);
+      const wTd = document.createElement("td");
+      wTd.className = "num";
+      wTd.textContent = fmtProb(weight.w);
+      tr.appendChild(wTd);
+      const pwTd = document.createElement("td");
+      pwTd.className = "num";
+      pwTd.textContent = fmtProb(weight.p * weight.w);
+      tr.appendChild(pwTd);
       tbody.appendChild(tr);
     });
   }
@@ -1698,14 +1823,20 @@
    * Renders a mutant (row) x leaf (column) matrix into the given table. `valueFn`
    * computes each cell's raw number from (bucket, mutantId); `formatFn` turns that raw
    * number into display text. The header carries, below the leaf labels, each leaf's
-   * total tick count and total killing-tick count (summed across mutants) - both are
+   * total tick count, total killing-tick count (summed across mutants), and its w_l
+   * significance weight (from `leafWeights`, see computeLeafWeights) - all three are
    * per-leaf reference totals, not part of the sortable/exportable mutant matrix
-   * itself, so they live in the header rather than the body. Leaf columns stay in a
-   * fixed ascending order; mutant rows are ordered by `sortKey`/`sortDir` - either by
-   * mutant id ("id") or by their value in one specific leaf column (that leaf's id) -
-   * set by clicking the corner or a leaf column header (see wireSortableTableHeader).
+   * itself, so they live in the header rather than the body. w_l is there so a p_lm
+   * row and the w_l header row can be multiplied together column by column to
+   * hand-verify Σ(p_lm*w_l), the sum behind the significance card's E(weight). Leaf
+   * columns stay in a fixed ascending order; mutant rows are ordered by
+   * `sortKey`/`sortDir` - either by mutant id ("id") or by their value in one specific
+   * leaf column (that leaf's id) - set by clicking the corner or a leaf column header
+   * (see wireSortableTableHeader). If `rowTotalLabel` is given, an extra trailing
+   * column shows each mutant row's sum across every leaf (e.g. Σ(p_lm*w_l), whose
+   * reciprocal is the significance card's E(weight) - handy to cross-check directly).
    */
-  function renderLeafMutantMatrix(tableId, buckets, mutantIds, valueFn, formatFn, sortKey, sortDir) {
+  function renderLeafMutantMatrix(tableId, buckets, mutantIds, valueFn, formatFn, sortKey, sortDir, leafWeights, rowTotalLabel) {
     const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
     const table = document.getElementById(tableId);
     const thead = table.querySelector("thead");
@@ -1727,11 +1858,25 @@
       return th;
     }
 
+    /** Appends a blank `<th>` to `row` when a row-total column is in play, keeping every header row the same width as the body rows. */
+    function padHeaderForRowTotal(row) {
+      if (!rowTotalLabel) return;
+      const th = document.createElement("th");
+      th.className = "num";
+      row.appendChild(th);
+    }
+
     const leafRow = document.createElement("tr");
     const corner = headerCell("Mutant \\ Leaf", "id");
     corner.className = "";
     leafRow.appendChild(corner);
     buckets.forEach((b) => leafRow.appendChild(headerCell("Leaf " + b.leafId, b.leafId)));
+    if (rowTotalLabel) {
+      const totalTh = document.createElement("th");
+      totalTh.className = "num";
+      totalTh.innerHTML = rowTotalLabel;
+      leafRow.appendChild(totalTh);
+    }
     thead.appendChild(leafRow);
 
     const totalTicksRow = document.createElement("tr");
@@ -1744,6 +1889,7 @@
       th.textContent = fmtNum(b.totalTicks);
       totalTicksRow.appendChild(th);
     });
+    padHeaderForRowTotal(totalTicksRow);
     thead.appendChild(totalTicksRow);
 
     const totalKilledRow = document.createElement("tr");
@@ -1756,7 +1902,21 @@
       th.textContent = fmtNum(totalKilled(b));
       totalKilledRow.appendChild(th);
     });
+    padHeaderForRowTotal(totalKilledRow);
     thead.appendChild(totalKilledRow);
+
+    const weightRow = document.createElement("tr");
+    const weightLabel = document.createElement("th");
+    weightLabel.innerHTML = "w<sub>l</sub>";
+    weightRow.appendChild(weightLabel);
+    buckets.forEach((b) => {
+      const th = document.createElement("th");
+      th.className = "num";
+      th.textContent = fmtProb(leafWeights.get(b.leafId).w);
+      weightRow.appendChild(th);
+    });
+    padHeaderForRowTotal(weightRow);
+    thead.appendChild(weightRow);
 
     sortedMutantIds.forEach((mid) => {
       const tr = document.createElement("tr");
@@ -1770,39 +1930,141 @@
         td.textContent = formatFn(valueFn(b, mid));
         tr.appendChild(td);
       });
+      if (rowTotalLabel) {
+        const totalTd = document.createElement("td");
+        totalTd.className = "num";
+        totalTd.textContent = formatFn(sumOf(buckets, (b) => valueFn(b, mid)));
+        tr.appendChild(totalTd);
+      }
       tbody.appendChild(tr);
     });
 
     positionStickyHeaderRows(tableId);
   }
 
-  // ----------------------------------------------------- CSV row builders
+  /**
+   * One row per category - "Any monitor failure" plus every mutant this run killed at
+   * least once - with every datapoint the three expected-ticks-to-next-failure
+   * estimators are built from (N, L, Σp, Σ(p*w)), not just the estimators' final
+   * values, so each row can be recomputed independently of the tables above. Always
+   * computed from `allBuckets` (every leaf of the run), ignoring the "only killing
+   * leaves" checkbox, which only controls what the tables above list.
+   *
+   * L is the tree's true total leaf count (runInfo.hpNumLeaves), not
+   * allBuckets.length: a leaf that never received a single evaluation tick has no
+   * row in `buckets` at all (its totals come from a SQL GROUP BY, which omits groups
+   * with zero rows), so counting buckets would silently undercount whenever a run's
+   * tree has leaves nothing landed in.
+   */
+  function buildSignificanceRows(run, allBuckets, mutantIds) {
+    const N = DATA.totalTicks;
+    const globalK = DATA.failedTicks;
+    const L = run.runInfo.hpNumLeaves;
+    const leafWeights = computeLeafWeights(allBuckets);
 
-  /** `buckets` is assumed already filtered by the shared "only killing leaves" toggle. */
-  function buildLeafOverviewCsvRows(buckets) {
-    const rows = [["Leaf", "Total ticks", "Failing ticks", "p_l"]];
-    sortLeafOverviewBuckets(buckets).forEach((b) =>
-      rows.push([b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b)]));
+    const rows = [];
+
+    const sumPAny = sumOf(allBuckets, anyKillProbability);
+    const sumPWAny = weightedSum(allBuckets, leafWeights, anyKillProbability);
+    rows.push({
+      label: "Any monitor failure",
+      ticks: sumOf(allBuckets, (b) => b.failingTicks),
+      N,
+      L,
+      sumP: sumPAny,
+      sumPW: sumPWAny,
+      ek: N / globalK,
+      eEqual: L / sumPAny,
+      eWeight: 1 / sumPWAny,
+    });
+
+    mutantIds.forEach((mid) => {
+      const probFn = (b) => probKillValue(b, mid);
+      const sumPm = sumOf(allBuckets, probFn);
+      const sumPWm = weightedSum(allBuckets, leafWeights, probFn);
+      const ticks = sumOf(allBuckets, (b) => tickKillValue(b, mid));
+      rows.push({
+        label: "Mutant " + mid,
+        ticks,
+        N,
+        L,
+        sumP: sumPm,
+        sumPW: sumPWm,
+        ek: N / ticks,
+        eEqual: L / sumPm,
+        eWeight: 1 / sumPWm,
+      });
+    });
+
     return rows;
   }
 
-  function buildLeafMutantMatrixCsvRows(buckets, mutantIds, valueFn, sortKey, sortDir) {
+  function renderSignificanceTable(run, allBuckets, mutantIds) {
+    const tbody = document.querySelector("#significanceTable tbody");
+    tbody.innerHTML = "";
+    buildSignificanceRows(run, allBuckets, mutantIds).forEach((r) => {
+      const tr = document.createElement("tr");
+      const cells = [
+        r.label, fmtNum(r.ticks), fmtNum(r.N), fmtNum(r.L), fmtProb(r.sumP), fmtProb(r.sumPW),
+        fmtExpected(r.ek), fmtExpected(r.eEqual), fmtExpected(r.eWeight),
+      ];
+      cells.forEach((val, i) => {
+        const td = document.createElement("td");
+        if (i > 0) td.className = "num";
+        td.textContent = String(val);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ----------------------------------------------------- CSV row builders
+
+  /**
+   * `buckets` is assumed already filtered by the shared "only killing leaves" toggle;
+   * `leafWeights` must come from computeLeafWeights(allBuckets) - see renderLeafOverviewTable.
+   */
+  function buildLeafOverviewCsvRows(buckets, leafWeights) {
+    const rows = [["Leaf", "Total ticks", "Failing ticks", "p_l", "w_l", "p_l*w_l"]];
+    sortLeafOverviewBuckets(buckets).forEach((b) => {
+      const weight = leafWeights.get(b.leafId);
+      rows.push([b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b), weight.w, weight.p * weight.w]);
+    });
+    return rows;
+  }
+
+  function buildSignificanceCsvRows(run, allBuckets, mutantIds) {
+    const rows = [["Category", "Ticks (this run)", "N", "L", "Sum p", "Sum (p*w)", "E(k/N)", "E(equal)", "E(weight)"]];
+    buildSignificanceRows(run, allBuckets, mutantIds).forEach((r) =>
+      rows.push([r.label, r.ticks, r.N, r.L, r.sumP, r.sumPW, r.ek, r.eEqual, r.eWeight]));
+    return rows;
+  }
+
+  /** `rowTotalLabel`, if given, appends a trailing column with each mutant row's sum across every leaf (see renderLeafMutantMatrix). */
+  function buildLeafMutantMatrixCsvRows(buckets, mutantIds, valueFn, sortKey, sortDir, leafWeights, rowTotalLabel) {
     const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
-    const rows = [["Mutant \\ Leaf"].concat(buckets.map((b) => "Leaf " + b.leafId))];
+    const totalHeader = rowTotalLabel ? [rowTotalLabel] : [];
+    const rows = [["Mutant \\ Leaf"].concat(buckets.map((b) => "Leaf " + b.leafId), totalHeader)];
     rows.push(["Total ticks"].concat(buckets.map((b) => b.totalTicks)));
     rows.push(["Total killed"].concat(buckets.map((b) => totalKilled(b))));
-    sortedMutantIds.forEach((mid) => rows.push(["Mutant " + mid].concat(buckets.map((b) => valueFn(b, mid)))));
+    rows.push(["w_l"].concat(buckets.map((b) => leafWeights.get(b.leafId).w)));
+    sortedMutantIds.forEach((mid) => {
+      const row = ["Mutant " + mid].concat(buckets.map((b) => valueFn(b, mid)));
+      if (rowTotalLabel) row.push(sumOf(buckets, (b) => valueFn(b, mid)));
+      rows.push(row);
+    });
     return rows;
   }
 
   /** Same data as buildLeafMutantMatrixCsvRows, transposed to one row per leaf and one column per mutant. */
-  function buildLeafMutantMatrixCsvRowsTransposed(buckets, mutantIds, valueFn, sortKey, sortDir) {
+  function buildLeafMutantMatrixCsvRowsTransposed(buckets, mutantIds, valueFn, sortKey, sortDir, leafWeights) {
     const sortedMutantIds = sortMatrixMutantIds(mutantIds, buckets, sortKey, sortDir, valueFn);
-    const header = ["Leaf", "Total ticks", "Total killed"].concat(sortedMutantIds.map((mid) => "Mutant " + mid));
+    const header = ["Leaf", "Total ticks", "Total killed", "w_l"].concat(sortedMutantIds.map((mid) => "Mutant " + mid));
     const rows = [header];
     buckets.forEach((b) => {
       rows.push(
-        [b.leafId, b.totalTicks, totalKilled(b)].concat(sortedMutantIds.map((mid) => valueFn(b, mid))));
+        [b.leafId, b.totalTicks, totalKilled(b), leafWeights.get(b.leafId).w]
+          .concat(sortedMutantIds.map((mid) => valueFn(b, mid))));
     });
     return rows;
   }
@@ -1814,15 +2076,16 @@
    * referencing the separate per-table exports. Mutants are always in ascending id
    * order here (this view has no on-screen table or sort control of its own).
    */
-  function buildCombinedLeafCsvRows(buckets, mutantIds) {
-    const header = ["Leaf", "Total ticks", "Failing ticks", "p_l"];
+  function buildCombinedLeafCsvRows(buckets, mutantIds, leafWeights) {
+    const header = ["Leaf", "Total ticks", "Failing ticks", "p_l", "w_l", "p_l*w_l"];
     mutantIds.forEach((mid) => {
       header.push("Mutant " + mid + " ticks");
       header.push("Mutant " + mid + " p_lm");
     });
     const rows = [header];
     sortLeafOverviewBuckets(buckets).forEach((b) => {
-      const row = [b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b)];
+      const weight = leafWeights.get(b.leafId);
+      const row = [b.leafId, b.totalTicks, b.failingTicks, anyKillProbability(b), weight.w, weight.p * weight.w];
       mutantIds.forEach((mid) => {
         row.push(tickKillValue(b, mid));
         row.push(probKillValue(b, mid));
@@ -1854,16 +2117,28 @@
     renderMutantsByLeafTable(sorted);
   }
 
+  /** Each leaf's p_lm for `mid`, weighted by that leaf's own w_l (from the "Any monitor failure" scheme - see computeLeafWeights). The per-leaf term E(weight) sums. */
+  function weightedProbKillValue(leafWeights, bucket, mutantId) {
+    return probKillValue(bucket, mutantId) * leafWeights.get(bucket.leafId).w;
+  }
+
   function refreshStatistics(run) {
-    const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+    const allBuckets = sortedLeafBuckets(run);
+    const buckets = filterStatsLeafBuckets(allBuckets);
     const mutantIds = getPresentMutantIds(run);
-    renderLeafOverviewTable(buckets);
+    const leafWeights = computeLeafWeights(allBuckets);
+    renderLeafOverviewTable(buckets, leafWeights);
     renderLeafMutantMatrix(
       "leafMutantTicksTable", buckets, mutantIds, tickKillValue, fmtNum,
-      leafMutantTicksSortKey, leafMutantTicksSortDir);
+      leafMutantTicksSortKey, leafMutantTicksSortDir, leafWeights);
     renderLeafMutantMatrix(
       "leafMutantProbabilityTable", buckets, mutantIds, probKillValue, fmtProb,
-      leafMutantProbSortKey, leafMutantProbSortDir);
+      leafMutantProbSortKey, leafMutantProbSortDir, leafWeights);
+    renderLeafMutantMatrix(
+      "leafMutantWeightedTable", buckets, mutantIds,
+      (b, mid) => weightedProbKillValue(leafWeights, b, mid), fmtProb,
+      leafMutantWeightedSortKey, leafMutantWeightedSortDir, leafWeights, "&Sigma;");
+    renderSignificanceTable(run, allBuckets, mutantIds);
   }
 
   function onRunChange() {
@@ -1952,6 +2227,7 @@
       // it's visible (refreshStatistics() already ran once, while still hidden).
       positionStickyHeaderRows("leafMutantTicksTable");
       positionStickyHeaderRows("leafMutantProbabilityTable");
+      positionStickyHeaderRows("leafMutantWeightedTable");
     });
 
     wireModeToggle(
@@ -1987,51 +2263,104 @@
       defaultDir: (k) => (k === "id" ? "asc" : "desc"),
       onChange: () => refreshStatistics(DATA.runsById[currentRunId]),
     });
+    wireSortableTableHeader("leafMutantWeightedTable", {
+      getKey: () => leafMutantWeightedSortKey, setKey: (k) => { leafMutantWeightedSortKey = k; },
+      getDir: () => leafMutantWeightedSortDir, setDir: (d) => { leafMutantWeightedSortDir = d; },
+      parseKey: (raw) => (raw === "id" ? "id" : Number(raw)),
+      defaultDir: (k) => (k === "id" ? "asc" : "desc"),
+      onChange: () => refreshStatistics(DATA.runsById[currentRunId]),
+    });
 
     document.getElementById("leafOverviewCsvBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
-      downloadCsv("leaf_overview_run" + currentRunId + ".csv", buildLeafOverviewCsvRows(buckets));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
+      downloadCsv(
+        "leaf_overview_run" + currentRunId + ".csv",
+        buildLeafOverviewCsvRows(buckets, computeLeafWeights(allBuckets)));
+    });
+    document.getElementById("significanceCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const allBuckets = sortedLeafBuckets(run);
+      const mutantIds = getPresentMutantIds(run);
+      downloadCsv("significance_run" + currentRunId + ".csv", buildSignificanceCsvRows(run, allBuckets, mutantIds));
     });
     document.getElementById("leafMutantTicksCsvBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
       const mutantIds = getPresentMutantIds(run);
       downloadCsv(
         "leaf_mutant_ticks_run" + currentRunId + ".csv",
-        buildLeafMutantMatrixCsvRows(buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir));
+        buildLeafMutantMatrixCsvRows(
+          buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir,
+          computeLeafWeights(allBuckets)));
     });
     document.getElementById("leafMutantTicksCsvTransposedBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
       const mutantIds = getPresentMutantIds(run);
       downloadCsv(
         "leaf_mutant_ticks_by_leaf_run" + currentRunId + ".csv",
         buildLeafMutantMatrixCsvRowsTransposed(
-          buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir));
+          buckets, mutantIds, tickKillValue, leafMutantTicksSortKey, leafMutantTicksSortDir,
+          computeLeafWeights(allBuckets)));
     });
     document.getElementById("leafMutantProbabilityCsvBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
       const mutantIds = getPresentMutantIds(run);
       downloadCsv(
         "leaf_mutant_probability_run" + currentRunId + ".csv",
-        buildLeafMutantMatrixCsvRows(buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir));
+        buildLeafMutantMatrixCsvRows(
+          buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir,
+          computeLeafWeights(allBuckets)));
     });
     document.getElementById("leafMutantProbabilityCsvTransposedBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
       const mutantIds = getPresentMutantIds(run);
       downloadCsv(
         "leaf_mutant_probability_by_leaf_run" + currentRunId + ".csv",
         buildLeafMutantMatrixCsvRowsTransposed(
-          buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir));
+          buckets, mutantIds, probKillValue, leafMutantProbSortKey, leafMutantProbSortDir,
+          computeLeafWeights(allBuckets)));
+    });
+    document.getElementById("leafMutantWeightedCsvBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
+      const mutantIds = getPresentMutantIds(run);
+      const leafWeights = computeLeafWeights(allBuckets);
+      downloadCsv(
+        "leaf_mutant_weighted_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRows(
+          buckets, mutantIds, (b, mid) => weightedProbKillValue(leafWeights, b, mid),
+          leafMutantWeightedSortKey, leafMutantWeightedSortDir, leafWeights, "Sum"));
+    });
+    document.getElementById("leafMutantWeightedCsvTransposedBtn").addEventListener("click", () => {
+      const run = DATA.runsById[currentRunId];
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
+      const mutantIds = getPresentMutantIds(run);
+      const leafWeights = computeLeafWeights(allBuckets);
+      downloadCsv(
+        "leaf_mutant_weighted_by_leaf_run" + currentRunId + ".csv",
+        buildLeafMutantMatrixCsvRowsTransposed(
+          buckets, mutantIds, (b, mid) => weightedProbKillValue(leafWeights, b, mid),
+          leafMutantWeightedSortKey, leafMutantWeightedSortDir, leafWeights));
     });
     document.getElementById("leafCombinedCsvBtn").addEventListener("click", () => {
       const run = DATA.runsById[currentRunId];
-      const buckets = filterStatsLeafBuckets(sortedLeafBuckets(run));
+      const allBuckets = sortedLeafBuckets(run);
+      const buckets = filterStatsLeafBuckets(allBuckets);
       const mutantIds = getPresentMutantIds(run);
-      downloadCsv("leaf_combined_run" + currentRunId + ".csv", buildCombinedLeafCsvRows(buckets, mutantIds));
+      downloadCsv(
+        "leaf_combined_run" + currentRunId + ".csv",
+        buildCombinedLeafCsvRows(buckets, mutantIds, computeLeafWeights(allBuckets)));
     });
 
     document.getElementById("ticksSortField").addEventListener("change", (e) => {
