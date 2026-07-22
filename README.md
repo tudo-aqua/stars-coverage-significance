@@ -359,6 +359,26 @@ dot -Tpng run_42.dot -o run_42.png
 
 ---
 
+### `scripts/analyze_duplicate_ticks.py` — Analyze duplicate ticks in `metric_failed_monitors`
+
+Checks how many ticks in `metric_failed_monitors` are duplicates of each other, where two ticks count as "the same" when the ego vehicle's spatial relation to its neighbours (relative bumper-to-bumper distances), the ego and neighbour speeds, and the ego and neighbour accelerations all match. Absolute lane positions and monitor/target columns are excluded. Since these values are stored as floats, exact equality rarely holds for semantically identical scenes, so the script rounds the compared columns to a decreasing number of decimal places (starting exact, then 6 decimals down to 0) and reports duplicate counts at each level. Reads either a Parquet export or connects to PostgreSQL directly for just the needed columns.
+
+| Argument | Default | Description |
+|---|---|---|
+| `--parquet` | *(one of `--parquet`/`--uri` required)* | Path to a Parquet export of `metric_failed_monitors` |
+| `--uri` | *(one of `--parquet`/`--uri` required)* | PostgreSQL connection URI: `postgresql://user:pass@host:port/db` |
+| `--json-output` | `duplicate_tick_groups.json` | Path to write every group (row IDs + rounded values) per precision level as JSON |
+
+```bash
+python3 scripts/analyze_duplicate_ticks.py --parquet metric_failed_monitors.parquet
+
+python3 scripts/analyze_duplicate_ticks.py \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
+  --json-output duplicate_tick_groups.json
+```
+
+---
+
 ### `postEvaluation/` — Plot scripts
 
 Each script reads CSV files from its own directory and writes PNG and PDF plots alongside them.
