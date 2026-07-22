@@ -18,12 +18,17 @@ Usage:
     python analyze_duplicate_ticks.py --parquet metric_failed_monitors.parquet
     python analyze_duplicate_ticks.py --uri postgresql://user:pass@host:5432/db
 
+Writes a JSON file (--json-output, default: duplicate_tick_groups.json) containing,
+for every precision level, every group of ticks that share the same rounded values
+(including groups of size 1), with the member row IDs and the rounded column values.
+
 Dependencies:
     pip install polars
     pip install connectorx   # only needed for --uri
 """
 
 import argparse
+import json
 import sys
 
 import polars as pl
@@ -50,13 +55,17 @@ COMPARE_COLS = DIST_COLS + SPEED_COLS + ACCEL_COLS
 PRECISION_LEVELS: list = [None, 6, 5, 4, 3, 2, 1, 0]
 
 
-def load(args: argparse.Namespace) -> pl.DataFrame:
-    if args.parquet:
-        return pl.read_parquet(args.parquet, columns=COMPARE_COLS)
+ID_COL = "id"
 
-    cols_sql = ", ".join(f'"{c}"' for c in COMPARE_COLS)
+
+def load(args: argparse.Namespace) -> pl.DataFrame:
+    cols = [ID_COL] + COMPARE_COLS
+    if args.parquet:
+        return pl.read_parquet(args.parquet, columns=cols)
+
+    cols_sql = ", ".join(f'"{c}"' for c in cols)
     query = f"SELECT {cols_sql} FROM metric_failed_monitors"
-    print(f"Reading {len(COMPARE_COLS)} columns from metric_failed_monitors ...")
+    print(f"Reading {len(cols)} columns from metric_failed_monitors ...")
     try:
         return pl.read_database_uri(
             query=query,
@@ -67,9 +76,10 @@ def load(args: argparse.Namespace) -> pl.DataFrame:
         sys.exit(f"Database read failed: {exc}")
 
 
-def analyze(df: pl.DataFrame) -> pl.DataFrame:
+def analyze(df: pl.DataFrame) -> "tuple[pl.DataFrame, dict[str, list[dict]]]":
     n_rows = len(df)
-    rows = []
+    summary_rows = []
+    groups_by_precision: dict[str, list[dict]] = {}
 
     for decimals in PRECISION_LEVELS:
         if decimals is None:
@@ -81,14 +91,19 @@ def analyze(df: pl.DataFrame) -> pl.DataFrame:
             )
             label = f"{decimals} decimals"
 
-        group_sizes = rounded.group_by(COMPARE_COLS).len()
-        n_groups = len(group_sizes)
-        duplicate_groups = group_sizes.filter(pl.col("len") > 1)
-        n_duplicate_rows = n_rows - n_groups
-        n_rows_in_duplicate_groups = duplicate_groups["len"].sum() if len(duplicate_groups) else 0
-        max_group_size = group_sizes["len"].max() if n_groups else 0
+        grouped = (
+            rounded.group_by(COMPARE_COLS)
+            .agg(pl.col(ID_COL).alias("row_ids"), pl.len().alias("count"))
+            .sort("count", descending=True)
+        )
 
-        rows.append({
+        n_groups = len(grouped)
+        duplicate_groups = grouped.filter(pl.col("count") > 1)
+        n_duplicate_rows = n_rows - n_groups
+        n_rows_in_duplicate_groups = duplicate_groups["count"].sum() if len(duplicate_groups) else 0
+        max_group_size = grouped["count"].max() if n_groups else 0
+
+        summary_rows.append({
             "precision": label,
             "distinct_ticks": n_groups,
             "duplicate_rows": n_duplicate_rows,
@@ -98,7 +113,9 @@ def analyze(df: pl.DataFrame) -> pl.DataFrame:
             "max_group_size": max_group_size,
         })
 
-    return pl.DataFrame(rows)
+        groups_by_precision[label] = grouped.to_dicts()
+
+    return pl.DataFrame(summary_rows), groups_by_precision
 
 
 def main() -> None:
@@ -111,6 +128,9 @@ def main() -> None:
                         help="Path to a Parquet export of metric_failed_monitors")
     source.add_argument("--uri", metavar="POSTGRES_URI",
                         help="PostgreSQL connection URI: postgresql://user:pass@host:port/db")
+    parser.add_argument("--json-output", default="duplicate_tick_groups.json", metavar="PATH",
+                        help="Path to write the full group listing per precision level as JSON "
+                             "(default: duplicate_tick_groups.json)")
     args = parser.parse_args()
 
     df = load(args)
@@ -121,8 +141,12 @@ def main() -> None:
     print(f"  speeds    ({len(SPEED_COLS)}): {SPEED_COLS}")
     print(f"  accel     ({len(ACCEL_COLS)}): {ACCEL_COLS}\n")
 
-    result = analyze(df)
+    result, groups_by_precision = analyze(df)
     print(result.to_pandas().to_string(index=False))
+
+    with open(args.json_output, "w") as f:
+        json.dump(groups_by_precision, f, indent=2)
+    print(f"\nAll groups written to: {args.json_output}")
 
 
 if __name__ == "__main__":
