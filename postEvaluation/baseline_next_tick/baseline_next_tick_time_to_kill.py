@@ -68,7 +68,7 @@ def _boxplot_ax(
 ) -> None:
     ax.boxplot(
         data,
-        tick_labels=labels,
+        labels=labels,
         patch_artist=True,
         widths=0.5,
         medianprops=dict(color="black", linewidth=linewidth),
