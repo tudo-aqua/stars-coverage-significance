@@ -22,7 +22,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.bufferedWriter
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DuplicateTickColumns
 
@@ -72,7 +71,10 @@ object DuplicateTicksAnalysis {
     println("Starting DuplicateTicksAnalysis.")
 
     println("Loading comparison columns from metric_failed_monitors ...")
-    val data = db { MetricFailedMonitorsTable.buildDuplicateTickCompareColumns() }
+    // Not wrapped in db {}/transaction {}: buildDuplicateTickCompareColumns manages its own
+    // short-lived transactions internally so it never holds a connection open across its
+    // parallel chunk load (see its KDoc).
+    val data = MetricFailedMonitorsTable.buildDuplicateTickCompareColumns()
     val n = data.ids.size
     println("Loaded $n ticks, comparing on ${data.columnNames.size} columns.")
 

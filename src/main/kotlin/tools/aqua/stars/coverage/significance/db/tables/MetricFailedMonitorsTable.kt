@@ -440,8 +440,9 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
    *
    * @param chunkSizeRows Number of ids covered by each partitioned query.
    * @param parallelism Number of chunk queries to run concurrently. Must not exceed the configured
-   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`), or chunks will block waiting for a
-   *   free connection instead of running in parallel.
+   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`) — this function does not hold any
+   *   connection of its own open across the parallel load, so `maxPoolSize >= parallelism` is
+   *   sufficient (no extra headroom needed for an ambient caller transaction).
    * @return [DuplicateTickColumns] holding row IDs and the compared columns.
    */
   fun buildDuplicateTickCompareColumns(
@@ -450,16 +451,22 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   ): DuplicateTickColumns {
     data class IdBounds(val rowCount: Int, val minId: Int, val maxId: Int)
 
+    // Own short-lived transaction (rather than relying on an ambient one from the caller): if a
+    // caller wrapped this whole call in `db { }`/`transaction { }`, that outer transaction would
+    // otherwise hold a connection for the entire parallel load below, competing with the
+    // [parallelism] worker connections against the same pool — see the [parallelism] KDoc.
     val bounds =
-        TransactionManager.current().exec(
-            "SELECT COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM metric_failed_monitors",
-            explicitStatementType = StatementType.SELECT) { rs ->
-              rs.next()
-              IdBounds(
-                  rowCount = rs.getInt("row_count"),
-                  minId = rs.getInt("min_id"),
-                  maxId = rs.getInt("max_id"))
-            } ?: error("Failed to read id bounds from metric_failed_monitors")
+        transaction {
+          TransactionManager.current().exec(
+              "SELECT COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM metric_failed_monitors",
+              explicitStatementType = StatementType.SELECT) { rs ->
+                rs.next()
+                IdBounds(
+                    rowCount = rs.getInt("row_count"),
+                    minId = rs.getInt("min_id"),
+                    maxId = rs.getInt("max_id"))
+              }
+        } ?: error("Failed to read id bounds from metric_failed_monitors")
 
     val ids = IntArray(bounds.rowCount)
     val columns = Array(duplicateTickCompareColumns.size) { FloatArray(bounds.rowCount) }
