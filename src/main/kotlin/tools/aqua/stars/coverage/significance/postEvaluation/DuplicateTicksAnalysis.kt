@@ -37,14 +37,29 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Duplica
  *
  * Since these values are stored as floats, exact equality rarely holds for semantically identical
  * scenes, so the compared columns are rounded to a decreasing number of decimal places (starting
- * exact, then 6 decimals down to 0) and duplicate counts are reported at each level.
+ * exact, then 6 decimals down to 0) and duplicate counts are reported at each level. Only actual
+ * duplicate groups (2+ rows sharing the same rounded values) are written to the JSON output —
+ * singleton groups carry no information beyond what the per-level summary already reports
+ * (`distinctTicks` etc.), and at hundreds of millions of rows, writing one JSON entry per row would
+ * itself produce an unusably large file.
  *
- * This replaces an earlier Python script that kept getting killed (no error, just terminated) on
- * the server — almost certainly the OS OOM killer, since that script converted every group at every
- * precision level into a Python dict before serializing, multiplying per-row memory overhead by the
- * number of precision levels. This version processes one precision level at a time: it builds the
- * grouping map for that level, streams its groups straight to the output file, and discards the map
- * before moving to the next level, so peak memory never grows with the number of precision levels.
+ * ## Memory design
+ * At ~470M rows this previously ran out of heap (even with the `-Xmx300g` this task is configured
+ * with) grouping via a `HashMap<key, idList>`: at that scale, most rows are distinct (especially at
+ * finer precision), so the map ends up with close to one entry per row — and each entry (a boxed
+ * key array, a `HashMap.Node`, and an `ArrayList`) costs on the order of 150-250 bytes of JVM
+ * object overhead, multiple times the ~80 bytes/row the raw column data itself needs.
+ *
+ * This version instead **sorts** row indices by their rounded column tuple (reading directly from
+ * the shared [DuplicateTickColumns.columns] arrays during comparisons, so no per-row key object is
+ * ever materialized) and finds duplicate runs via one linear scan of the sorted order. Peak extra
+ * memory per precision level is one boxed `Array<Int>` of row indices (~24 bytes/row) plus the
+ * sort's internal merge buffer — an order of magnitude less than the hash-map approach — and a
+ * group's member-id list is only allocated once a run of 2+ equal rows is actually found.
+ *
+ * The trade-off is CPU: sorting 470M rows 8 times (once per precision level) does on the order of
+ * tens of billions of comparisons in total, so a full run over the whole table is expected to take
+ * a while. That is a much better failure mode than an `OutOfMemoryError`.
  */
 object DuplicateTicksAnalysis {
 
@@ -98,12 +113,13 @@ object DuplicateTicksAnalysis {
   }
 
   /**
-   * Groups all rows in [data] by their compared columns rounded to [decimals] places, writes the
-   * `"<label>": [ ... ]` entry (each group with its member row IDs and rounded values) directly to
-   * [writer], and returns the summary statistics for this precision level.
+   * Sorts row indices `0 until n` by their compared columns rounded to [decimals] places, then
+   * scans the sorted order once to find runs of 2+ rows sharing the same rounded tuple, writing
+   * each such run as a group directly to [writer] (see [DuplicateTicksAnalysis] for why singleton
+   * runs are not written, and why sorting is used instead of a hash map).
    *
-   * The grouping map is local to this call and goes out of scope as soon as it returns, so memory
-   * never accumulates across precision levels.
+   * The sorted index array and all rounded-value comparisons are local to this call and go out of
+   * scope as soon as it returns, so memory never accumulates across precision levels.
    */
   private fun writeGroupsForPrecision(
       writer: BufferedWriter,
@@ -113,44 +129,45 @@ object DuplicateTicksAnalysis {
       label: String,
       isLastLevel: Boolean,
   ): PrecisionSummary {
-    val groups = LinkedHashMap<RoundedKey, MutableList<Int>>()
-    val probe = FloatArray(data.columns.size)
-
-    for (row in 0 until n) {
-      for (c in data.columns.indices) {
-        val v = data.columns[c][row]
-        probe[c] = if (decimals == null || v.isNaN()) v else roundTo(v, decimals)
-      }
-      val existing = groups[RoundedKey(probe)]
-      if (existing != null) {
-        existing.add(data.ids[row])
-      } else {
-        groups[RoundedKey(probe.copyOf())] = mutableListOf(data.ids[row])
-      }
-    }
+    val indices = Array(n) { it }
+    indices.sortWith(Comparator { a, b -> compareRounded(data, a, b, decimals) })
 
     writer.write("    \"${label.jsonEscape()}\": [\n")
-    val total = groups.size
-    var idx = 0
+
+    var distinctTicks = 0
     var duplicateGroups = 0
     var rowsInDuplicateGroups = 0
     var maxGroupSize = 0
-    for ((key, rowIds) in groups) {
-      writer.write("      ${groupToJson(data.columnNames, key.values, rowIds)}")
-      idx++
-      writer.write(if (idx < total) ",\n" else "\n")
+    var wroteFirstGroup = false
 
-      val size = rowIds.size
-      if (size > maxGroupSize) maxGroupSize = size
-      if (size > 1) {
-        duplicateGroups++
-        rowsInDuplicateGroups += size
+    var runStart = 0
+    var i = 1
+    while (i <= n) {
+      val sameAsPrev = i < n && compareRounded(data, indices[i - 1], indices[i], decimals) == 0
+      if (!sameAsPrev) {
+        val runLength = i - runStart
+        distinctTicks++
+        if (runLength > maxGroupSize) maxGroupSize = runLength
+
+        if (runLength > 1) {
+          duplicateGroups++
+          rowsInDuplicateGroups += runLength
+
+          if (wroteFirstGroup) writer.write(",\n")
+          val rowIds = (runStart until i).map { data.ids[indices[it]] }
+          writer.write(
+              "      ${groupToJson(data.columnNames, data.columns, indices[runStart], decimals, rowIds)}")
+          wroteFirstGroup = true
+        }
+
+        runStart = i
       }
+      i++
     }
+    if (wroteFirstGroup) writer.write("\n")
     writer.write("    ]")
     writer.write(if (isLastLevel) "\n" else ",\n")
 
-    val distinctTicks = groups.size
     val duplicateRows = n - distinctTicks
     val duplicatePctRaw = if (n > 0) 100.0 * duplicateRows / n else 0.0
 
@@ -164,6 +181,32 @@ object DuplicateTicksAnalysis {
         maxGroupSize = maxGroupSize)
   }
 
+  /**
+   * Total-order comparison of rows [rowA] and [rowB] over every compared column, each rounded to
+   * [decimals] places (`null` = unrounded). Used both to sort row indices and, via `== 0`, to
+   * detect duplicate runs in the sorted order.
+   */
+  private fun compareRounded(
+      data: DuplicateTickColumns,
+      rowA: Int,
+      rowB: Int,
+      decimals: Int?
+  ): Int {
+    for (c in data.columns.indices) {
+      val ra = roundedValue(data.columns[c][rowA], decimals)
+      val rb = roundedValue(data.columns[c][rowB], decimals)
+      // Float.compareTo (unlike the < / > operators) gives a total order where NaN compares
+      // equal to itself and greater than every other value — exactly what's needed to group NaN
+      // ("no vehicle in this cell") together as equal.
+      val cmp = ra.compareTo(rb)
+      if (cmp != 0) return cmp
+    }
+    return 0
+  }
+
+  private fun roundedValue(value: Float, decimals: Int?): Float =
+      if (decimals == null || value.isNaN()) value else roundTo(value, decimals)
+
   private fun roundTo(value: Float, decimals: Int): Float {
     val factor = Math.pow(10.0, decimals.toDouble())
     return (Math.round(value.toDouble() * factor) / factor).toFloat()
@@ -171,12 +214,14 @@ object DuplicateTicksAnalysis {
 
   private fun groupToJson(
       columnNames: List<String>,
-      values: FloatArray,
+      columns: Array<FloatArray>,
+      representativeRow: Int,
+      decimals: Int?,
       rowIds: List<Int>
   ): String {
     val valuesJson =
         columnNames.indices.joinToString(",") { i ->
-          val v = values[i]
+          val v = roundedValue(columns[i][representativeRow], decimals)
           "\"${columnNames[i]}\":${if (v.isNaN()) "null" else v.toString()}"
         }
     val idsJson = rowIds.joinToString(",")
@@ -187,14 +232,6 @@ object DuplicateTicksAnalysis {
       "[${joinToString(",") { "\"${it.jsonEscape()}\"" }}]"
 
   private fun String.jsonEscape(): String = replace("\\", "\\\\").replace("\"", "\\\"")
-
-  /** Content-based equality/hash key over a (rounded) row's compared values. */
-  private class RoundedKey(val values: FloatArray) {
-    override fun equals(other: Any?): Boolean =
-        other is RoundedKey && values.contentEquals(other.values)
-
-    override fun hashCode(): Int = values.contentHashCode()
-  }
 
   private data class PrecisionSummary(
       val precision: String,
