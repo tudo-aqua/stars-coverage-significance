@@ -17,15 +17,19 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DuplicateTickColumns
@@ -416,24 +420,97 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
    * Loads [duplicateTickCompareColumns] (plus [id]) for every row as a compact column-major
    * snapshot for duplicate-tick analysis.
    *
-   * Two DB round trips: a `COUNT(*)` to size the backing arrays up front, then a single `SELECT`
-   * filled in by index. This avoids boxing values or materializing one object per row for what can
-   * be a full-table scan of tens of millions of rows.
+   * Splits the read into [parallelism] concurrent queries, each bounded to an [chunkSizeRows]-wide
+   * `id` range, instead of one `SELECT` over the whole table. This is necessary because the DB
+   * connection is configured for Postgres's simple query protocol (see
+   * [tools.aqua.stars.coverage.significance.db.DbBootstrap]), which has no server-side cursor:
+   * without chunking, the JDBC driver must buffer the *entire* result client-side — one text-format
+   * `byte[]` per column per row, each with its own JVM object overhead — before returning any of
+   * it. For hundreds of millions of rows that inflates far past the raw data size (a single
+   * unchunked 470M-row, 21-column read was observed to peak around 300GB of driver-side buffering
+   * for ~40GB of actual data) and reliably triggers an `OutOfMemoryError`. Bounding each query to
+   * [chunkSizeRows] rows keeps that transient buffering small regardless of total table size, and
+   * running [parallelism] chunks concurrently keeps wall-clock time down and reports progress as
+   * chunks complete (an unchunked read gives no feedback until the whole thing finishes).
    *
+   * Rows are written into their destination array index via a shared, atomically-incremented
+   * counter as each chunk's results stream in, so the (arbitrary) order chunks complete in doesn't
+   * matter — every chunk writes to disjoint indices, and `Future.get()` on every chunk before
+   * returning guarantees the writes are visible to the caller.
+   *
+   * @param chunkSizeRows Number of ids covered by each partitioned query.
+   * @param parallelism Number of chunk queries to run concurrently. Must not exceed the configured
+   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`), or chunks will block waiting for a
+   *   free connection instead of running in parallel.
    * @return [DuplicateTickColumns] holding row IDs and the compared columns.
    */
-  fun buildDuplicateTickCompareColumns(): DuplicateTickColumns {
-    val n = selectAll().count().toInt()
-    val ids = IntArray(n)
-    val columns = Array(duplicateTickCompareColumns.size) { FloatArray(n) }
+  fun buildDuplicateTickCompareColumns(
+      chunkSizeRows: Int = 10_000_000,
+      parallelism: Int = 8,
+  ): DuplicateTickColumns {
+    data class IdBounds(val rowCount: Int, val minId: Int, val maxId: Int)
 
-    var i = 0
-    select(id, *duplicateTickCompareColumns.toTypedArray()).forEach { row ->
-      ids[i] = row[id].value
-      for (c in duplicateTickCompareColumns.indices) {
-        columns[c][i] = row[duplicateTickCompareColumns[c]] ?: Float.NaN
-      }
-      i++
+    val bounds =
+        TransactionManager.current().exec(
+            "SELECT COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM metric_failed_monitors",
+            explicitStatementType = StatementType.SELECT) { rs ->
+              rs.next()
+              IdBounds(
+                  rowCount = rs.getInt("row_count"),
+                  minId = rs.getInt("min_id"),
+                  maxId = rs.getInt("max_id"))
+            } ?: error("Failed to read id bounds from metric_failed_monitors")
+
+    val ids = IntArray(bounds.rowCount)
+    val columns = Array(duplicateTickCompareColumns.size) { FloatArray(bounds.rowCount) }
+
+    if (bounds.rowCount == 0) {
+      return DuplicateTickColumns(
+          ids = ids, columnNames = duplicateTickCompareColumnNames, columns = columns)
+    }
+
+    val chunkStarts = (bounds.minId..bounds.maxId step chunkSizeRows).toList()
+    val totalChunks = chunkStarts.size
+    val completedChunks = AtomicInteger(0)
+    val nextIndex = AtomicInteger(0)
+
+    println("  Loading ${bounds.rowCount} rows in $totalChunks chunks ($parallelism at a time) ...")
+
+    val pool = Executors.newFixedThreadPool(parallelism)
+    try {
+      val futures =
+          chunkStarts.map { chunkStart ->
+            val chunkEnd = minOf(chunkStart + chunkSizeRows - 1, bounds.maxId)
+            pool.submit {
+              transaction {
+                // Fully qualified: bare `id` inside a transaction {} block would otherwise
+                // resolve to Transaction.id (a String transaction identifier), not this table's
+                // id column.
+                select(MetricFailedMonitorsTable.id, *duplicateTickCompareColumns.toTypedArray())
+                    .where {
+                      (MetricFailedMonitorsTable.id greaterEq chunkStart) and
+                          (MetricFailedMonitorsTable.id lessEq chunkEnd)
+                    }
+                    .forEach { row ->
+                      val i = nextIndex.getAndIncrement()
+                      ids[i] = row[MetricFailedMonitorsTable.id].value
+                      for (c in duplicateTickCompareColumns.indices) {
+                        columns[c][i] = row[duplicateTickCompareColumns[c]] ?: Float.NaN
+                      }
+                    }
+              }
+              val done = completedChunks.incrementAndGet()
+              println("  Loaded chunk $done/$totalChunks (ids $chunkStart..$chunkEnd)")
+            }
+          }
+      futures.forEach { it.get() }
+    } finally {
+      pool.shutdown()
+    }
+
+    check(nextIndex.get() == bounds.rowCount) {
+      "Expected ${bounds.rowCount} rows but loaded ${nextIndex.get()} — was the table modified " +
+          "concurrently while loading?"
     }
 
     return DuplicateTickColumns(

@@ -21,7 +21,10 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.postEvaluation.DuplicateTicksAnalysis
 
 fun main() {
-  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
+  // maxPoolSize must be >= the parallelism used by
+  // MetricFailedMonitorsTable.buildDuplicateTickCompareColumns() (default 8), otherwise chunk
+  // queries block waiting for a free connection instead of running concurrently.
+  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432, maxPoolSize = 8))
   DuplicateTicksAnalysis.evaluate()
   println("Finished!")
 }
