@@ -43,6 +43,20 @@ enum class GridVehicleType(val sumoId: String, val departSpeedKmh: Int) {
   val departSpeedMs: Double
     get() = departSpeedKmh / 3.6
 
+  /**
+   * Short, human-readable type label used to build SUMO vehicle ids (see
+   * [tools.aqua.stars.coverage.significance.utils.getVehicleId]) — e.g. `"veh_slow_[0][2]_in_..."`
+   * instead of the raw enum name (`"veh_CALM_..."`).
+   */
+  val idLabel: String
+    get() =
+        when (this) {
+          EGO -> "ego"
+          CALM -> "slow"
+          NORMAL -> "normal"
+          SPEEDY -> "fast"
+        }
+
   /** Static utility methods. */
   companion object {
 

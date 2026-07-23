@@ -45,6 +45,8 @@ import tools.aqua.stars.data.sumo.xml.importer.VehicleTypesFile
 import tools.aqua.stars.sumo.MutantManeuver
 import tools.aqua.stars.sumo.mutants.AutopilotMutants
 
+@Suppress("LongParameterList")
+
 /**
  * Collector of dynamic data from a SUMO simulation using libsumo.
  *
@@ -121,7 +123,7 @@ class LibsumoDynamicDataCollector(
     val placementSpecs =
         sortedPlacements.map { sp ->
           val vehId =
-              getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+              getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
           var typeId = sp.type.sumoId
 
           if (sp.type == GridVehicleType.EGO) {
@@ -135,7 +137,7 @@ class LibsumoDynamicDataCollector(
               typeId = typeId,
               laneIndex = sp.lane,
               positionMeters = sp.positionMeters.toDouble(),
-              departSpeedMps = (sp.type.departSpeedKmh - 10) / 3.6,
+              speedMps = (sp.type.departSpeedKmh - 10) / 3.6,
           )
         }
 
@@ -190,8 +192,9 @@ class LibsumoDynamicDataCollector(
   }
 
   /**
-   * Reconstructs [tick]'s local traffic scene (ego + present neighbours, placed via
-   * [computeReplayPlacements] from relative distances/speeds only) in a fresh simulation, lets
+   * Reconstructs [tick]'s full traffic scene (every vehicle recorded in
+   * [MetricFailedMonitorsEntry.allVehiclesJson], placed via [computeReplayPlacements] at each
+   * vehicle's own recorded position/speed/ acceleration/type) in a fresh simulation, lets
    * [mutantId] take control of the ego for exactly one step, and returns the resulting next-tick
    * [TimeStep] — i.e. what that mutant would actually do faced with this exact recorded scene, and
    * what happens immediately afterwards (including collisions).
@@ -226,13 +229,10 @@ class LibsumoDynamicDataCollector(
         replayPlacements.map { rp ->
           PlacementSpec(
               vehId = rp.vehId,
-              typeId = if (rp.isEgo) "mutant" else GridVehicleType.NORMAL.sumoId,
+              typeId = if (rp.isEgo) "mutant" else rp.vehicleType,
               laneIndex = rp.laneIndex,
               positionMeters = rp.positionMeters,
-              departSpeedMps = rp.speedMps,
-              // Pin to the exact recorded speed instead of the nominal type-based departure
-              // speed `runGeneratedScenario` uses — we know the real value here.
-              exactSpeedMps = rp.speedMps,
+              speedMps = rp.speedMps,
           )
         }
 
@@ -242,7 +242,6 @@ class LibsumoDynamicDataCollector(
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
 
-    Simulation.step()
     if (!checkEgoExistence(egoId)) {
       Simulation.close()
       return null
@@ -299,16 +298,16 @@ class LibsumoDynamicDataCollector(
   /**
    * One vehicle to be added ([addVehicles]) and force-placed ([forcePlaceVehicles]).
    *
-   * @property exactSpeedMps If non-null, the vehicle's speed is pinned to this exact value after
-   *   placement instead of keeping whatever [departSpeedMps] left it at on insertion.
+   * @property speedMps Speed to insert the vehicle at (`vehicle.add`'s `departSpeed`) and to
+   *   re-apply after force-placement (see [forcePlaceVehicles]) — the single speed value actually
+   *   used for this vehicle.
    */
   private data class PlacementSpec(
       val vehId: String,
       val typeId: String,
       val laneIndex: Int,
       val positionMeters: Double,
-      val departSpeedMps: Double,
-      val exactSpeedMps: Double? = null,
+      val speedMps: Double,
   )
 
   /**
@@ -325,20 +324,20 @@ class LibsumoDynamicDataCollector(
           "0",
           p.laneIndex.toString(),
           p.positionMeters.toString(),
-          p.departSpeedMps.toString())
+          p.speedMps.toString())
     }
   }
 
   /**
    * Phase 2 of vehicle placement: force-places every vehicle onto its exact lane/position, then
-   * pins its speed to [PlacementSpec.exactSpeedMps] when given.
+   * re-applies [PlacementSpec.speedMps]. `vehicle.moveTo` resets whatever speed `vehicle.add`'s
+   * `departSpeed` established at insertion, so without this explicit `vehicle.setSpeed` call every
+   * vehicle silently ends up at SUMO's own default speed instead of the requested one.
    */
   private fun forcePlaceVehicles(placements: List<PlacementSpec>) {
     for (p in placements) {
       SumoVehicle.moveTo(p.vehId, "highway_${p.laneIndex}", p.positionMeters)
-      if (p.exactSpeedMps != null) {
-        SumoVehicle.setSpeed(p.vehId, p.exactSpeedMps)
-      }
+      SumoVehicle.setSpeed(p.vehId, p.speedMps)
     }
   }
 

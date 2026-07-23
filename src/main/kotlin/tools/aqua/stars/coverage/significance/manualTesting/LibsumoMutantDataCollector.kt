@@ -158,8 +158,7 @@ class LibsumoMutantDataCollector(
     var egoVehicleId: String? = null
 
     for (sp in sortedPlacements) {
-      val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
@@ -182,7 +181,7 @@ class LibsumoMutantDataCollector(
     sortedPlacements.forEach { placement ->
       val vehId =
           getVehicleId(
-              placement.type.toString(),
+              placement.type.idLabel,
               placement.row,
               placement.lane,
               scenario.humanReadableScenarioId)

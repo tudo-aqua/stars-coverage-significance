@@ -64,7 +64,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     get() {
       val egoSpawn = spawnAt(MIDDLE_ROW, egoLane)
       checkNotNull(egoSpawn) { "Scenario has no EGO spawn in middle row" }
-      return getVehicleId(egoSpawn.type.toString(), egoSpawn.row, egoSpawn.lane, id)
+      return getVehicleId(egoSpawn.type.idLabel, egoSpawn.row, egoSpawn.lane, id)
     }
 
   /** Lane index (0..2) where the ego vehicle is located. */
@@ -254,7 +254,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       appendLine("""  <route id="${esc(id)}" edges="$edgesAttr"/>""")
 
       for (sp in sorted) {
-        val vehId = getVehicleId(sp.type.toString(), sp.row, sp.lane, id)
+        val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, id)
         var typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
         if (changeEgoTypeTo != null && typeId == "ego") {
           typeId = changeEgoTypeTo

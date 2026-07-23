@@ -49,10 +49,10 @@ fun main() {
   DbBootstrap.connect()
   val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
 
-  val runId = 0
+  val runId = 1
   val mutantIds =
       setOf(
-          1, // replace with actual mutant ID from DB
+          7, // replace with actual mutant ID from DB
           //          2,
           //          3,
       )
@@ -68,7 +68,7 @@ fun main() {
   //  }
   //  scenarioIds += 1 // replace with actual scenario ID from DB
 
-  val scenarioIds = setOf(1) // replace with actual scenario ID from DB
+  val scenarioIds = setOf(1601) // replace with actual scenario ID from DB
 
   val tickSequences = mutableListOf<TickSequence<TimeStep>>()
 

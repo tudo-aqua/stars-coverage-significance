@@ -133,8 +133,7 @@ class LibsumoDynamicDataCollectorTest(
     var egoVehicleId: String? = null
 
     for (sp in sortedPlacements) {
-      val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
@@ -199,8 +198,7 @@ class LibsumoDynamicDataCollectorTest(
     // Force placement of vehicle into simulation, so that all vehicleType parameters are set
     // correctly
     for (sp in sortedPlacements) {
-      val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters
 

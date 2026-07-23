@@ -17,16 +17,24 @@
 
 package tools.aqua.stars.data.sumo.libSumo
 
+import kotlinx.serialization.decodeFromString
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
-import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot
+import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 
 /**
  * One vehicle to be placed when reconstructing a recorded tick.
  *
- * @property vehId SUMO vehicle id to use.
+ * @property vehId SUMO vehicle id to use — reused directly from the original recording
+ *   ([TickVehicleSnapshot.id]).
  * @property laneIndex SUMO lane index (0=right .. 2=left).
  * @property positionMeters Lane position (front bumper) to force-place the vehicle at.
- * @property speedMps Exact recorded speed to pin the vehicle to after placement.
+ * @property speedMps Exact recorded speed to place the vehicle at (SUMO `departSpeed`). No
+ *   acceleration field: SUMO has no reliable way to seed a vehicle's instantaneous acceleration —
+ *   `vehicle.setAcceleration` only takes effect over subsequent simulated steps, and gets silently
+ *   neutralized by any `vehicle.setSpeed` call on the same vehicle.
+ * @property vehicleType Live SUMO vehicle-type id to spawn this vehicle as (e.g. `"mutant"` for
+ *   ego, `"car_calm"`/`"car_normal"`/`"car_speedy"` for background vehicles).
  * @property isEgo Whether this placement is the ego vehicle.
  */
 data class ReplayPlacement(
@@ -34,149 +42,37 @@ data class ReplayPlacement(
     val laneIndex: Int,
     val positionMeters: Double,
     val speedMps: Double,
+    val vehicleType: String,
     val isEgo: Boolean,
 )
 
 /**
- * Anchor lane-position (m) used to place the ego vehicle when reconstructing a tick. Reuses
- * [GridTrafficScenarioGenerator]'s default middle-row interval center — an already-proven-safe
- * position on the network — instead of inventing a new magic number.
- */
-val REPLAY_EGO_ANCHOR_METERS: Double =
-    GridTrafficScenarioGenerator().let { (it.i1Start + it.i1End) / 2.0 }.toDouble()
-
-/**
- * Inverts [sampleEgoSurroundingDistances]'s gap arithmetic to reconstruct absolute SUMO placements
- * for the ego vehicle and each present neighbour of [tick], anchoring the ego at [egoAnchorMeters].
+ * Builds placements for every vehicle recorded in [tick]'s `all_vehicles_json` column — i.e. every
+ * vehicle actually present in the simulation at that tick, not just the nearest one in each of the
+ * 6 `surrounding*` grid cells.
  *
- * Only *relative* values from [tick] are used for positioning: bumper-to-bumper distances
- * (`surroundingDist*`) and, for a neighbour's length, the *difference* of its two absolute
- * bumper-position columns (a length, not a location). The absolute lane-position columns themselves
- * (`egoFrontBumperPosMeters`, `surrounding*FrontBumperPosMeters`, etc.) are never used as placement
- * coordinates — only their pairwise differences.
- *
- * A cell is skipped (no placement produced) when its `surroundingDist*` value is `null` (no vehicle
- * recorded in that cell).
+ * An earlier version derived placements from the `surrounding*` columns (either as ego-relative
+ * offsets, or later directly from their absolute front-bumper positions), which only ever captured
+ * up to 6 neighbours — a vehicle "blocked" from being nearest (e.g. two cars ahead in the same
+ * lane) was silently missing. `all_vehicles_json` (populated by [FailedMonitorsMetric] since it was
+ * added) records every vehicle present at the tick, so this reconstructs the full scene instead of
+ * a 6-neighbour approximation of it.
  *
  * @param tick The recorded tick to reconstruct.
- * @param egoAnchorMeters Lane position to place the ego vehicle at.
- * @return Placements for the ego vehicle plus every present neighbour.
+ * @return Placements for every vehicle recorded at that tick.
  */
-fun computeReplayPlacements(
-    tick: MetricFailedMonitorsEntry,
-    egoAnchorMeters: Double = REPLAY_EGO_ANCHOR_METERS,
-): List<ReplayPlacement> {
-  val egoLaneIndex = checkNotNull(tick.egoLane) { "Tick ${tick.id} has no egoLane" }.ordinal
-  val egoSpeedMps =
-      checkNotNull(tick.egoSpeedMps) { "Tick ${tick.id} has no egoSpeedMps" }.toDouble()
-  val egoLengthMeters =
-      requireNotNull(tick.egoFrontBumperPosMeters) {
-        "Tick ${tick.id} has no egoFrontBumperPosMeters"
-      } -
-          requireNotNull(tick.egoBackBumperPosMeters) {
-            "Tick ${tick.id} has no egoBackBumperPosMeters"
-          }
+fun computeReplayPlacements(tick: MetricFailedMonitorsEntry): List<ReplayPlacement> {
+  val vehicles = jsonConfiguration.decodeFromString<List<TickVehicleSnapshot>>(tick.allVehiclesJson)
+  check(vehicles.any { it.ego }) { "Tick ${tick.id}'s allVehiclesJson has no ego entry" }
 
-  val placements = mutableListOf<ReplayPlacement>()
-  placements +=
-      ReplayPlacement(
-          vehId = "veh_replay_ego_${tick.id}",
-          laneIndex = egoLaneIndex,
-          positionMeters = egoAnchorMeters,
-          speedMps = egoSpeedMps,
-          isEgo = true)
-
-  fun neighbourLength(cellName: String, front: Float?, back: Float?): Double =
-      (requireNotNull(front) { "Tick ${tick.id} $cellName missing front bumper" } -
-              requireNotNull(back) { "Tick ${tick.id} $cellName missing back bumper" })
-          .toDouble()
-
-  fun addAhead(
-      cellName: String,
-      dist: Float?,
-      speed: Float?,
-      front: Float?,
-      back: Float?,
-      laneIndex: Int
-  ) {
-    if (dist == null) return
-    check(laneIndex in 0..2) { "Tick ${tick.id} $cellName resolves to invalid lane $laneIndex" }
-    val length = neighbourLength(cellName, front, back)
-    placements +=
-        ReplayPlacement(
-            vehId = "veh_replay_${cellName}_${tick.id}",
-            laneIndex = laneIndex,
-            positionMeters = egoAnchorMeters + dist + length,
-            speedMps =
-                requireNotNull(speed) { "Tick ${tick.id} $cellName missing speed" }.toDouble(),
-            isEgo = false)
+  return vehicles.map { v ->
+    ReplayPlacement(
+        vehId = v.id,
+        laneIndex = v.lane,
+        positionMeters = v.front.toDouble(),
+        speedMps = v.speed.toDouble(),
+        vehicleType = v.type,
+        isEgo = v.ego,
+    )
   }
-
-  fun addBehind(
-      cellName: String,
-      dist: Float?,
-      speed: Float?,
-      front: Float?,
-      back: Float?,
-      laneIndex: Int
-  ) {
-    if (dist == null) return
-    check(laneIndex in 0..2) { "Tick ${tick.id} $cellName resolves to invalid lane $laneIndex" }
-    // Length is not needed for rear-side placement: SUMO lane position is the front bumper, and
-    // `egoAnchorMeters - egoLengthMeters - dist` already lands exactly on the neighbour's front
-    // bumper (egoRear - dist = vehFront, per SurroundingDistanceSampler's gapBehind definition).
-    placements +=
-        ReplayPlacement(
-            vehId = "veh_replay_${cellName}_${tick.id}",
-            laneIndex = laneIndex,
-            positionMeters = egoAnchorMeters - egoLengthMeters - dist,
-            speedMps =
-                requireNotNull(speed) { "Tick ${tick.id} $cellName missing speed" }.toDouble(),
-            isEgo = false)
-  }
-
-  addAhead(
-      "front",
-      tick.surroundingDistFront,
-      tick.surroundingFrontSpeedMps,
-      tick.surroundingFrontFrontBumperPosMeters,
-      tick.surroundingFrontBackBumperPosMeters,
-      egoLaneIndex)
-  addBehind(
-      "rear",
-      tick.surroundingDistRear,
-      tick.surroundingRearSpeedMps,
-      tick.surroundingRearFrontBumperPosMeters,
-      tick.surroundingRearBackBumperPosMeters,
-      egoLaneIndex)
-  addAhead(
-      "front_left",
-      tick.surroundingDistFrontLeft,
-      tick.surroundingFrontLeftSpeedMps,
-      tick.surroundingFrontLeftFrontBumperPosMeters,
-      tick.surroundingFrontLeftBackBumperPosMeters,
-      egoLaneIndex + 1)
-  addAhead(
-      "front_right",
-      tick.surroundingDistFrontRight,
-      tick.surroundingFrontRightSpeedMps,
-      tick.surroundingFrontRightFrontBumperPosMeters,
-      tick.surroundingFrontRightBackBumperPosMeters,
-      egoLaneIndex - 1)
-  addBehind(
-      "rear_left",
-      tick.surroundingDistRearLeft,
-      tick.surroundingRearLeftSpeedMps,
-      tick.surroundingRearLeftFrontBumperPosMeters,
-      tick.surroundingRearLeftBackBumperPosMeters,
-      egoLaneIndex + 1)
-  addBehind(
-      "rear_right",
-      tick.surroundingDistRearRight,
-      tick.surroundingRearRightSpeedMps,
-      tick.surroundingRearRightFrontBumperPosMeters,
-      tick.surroundingRearRightBackBumperPosMeters,
-      egoLaneIndex - 1)
-
-  return placements
 }

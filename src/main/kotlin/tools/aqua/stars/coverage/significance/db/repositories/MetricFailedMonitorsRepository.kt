@@ -258,6 +258,8 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters] =
           e.collisionVictimBackBumperPosMeters
 
+      this[MetricFailedMonitorsTable.allVehiclesJson] = e.allVehiclesJson
+
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
   }
@@ -392,6 +394,8 @@ object MetricFailedMonitorsRepository {
               row[collisionVictimAccelMps2] = entry.collisionVictimAccelMps2
               row[collisionVictimFrontBumperPosMeters] = entry.collisionVictimFrontBumperPosMeters
               row[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
+
+              row[allVehiclesJson] = entry.allVehiclesJson
 
               row[createdAt] = entry.createdAt
             }
@@ -545,6 +549,8 @@ object MetricFailedMonitorsRepository {
                   st[collisionVictimFrontBumperPosMeters] =
                       entry.collisionVictimFrontBumperPosMeters
                   st[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
+
+                  st[allVehiclesJson] = entry.allVehiclesJson
 
                   st[createdAt] = entry.createdAt
                 }
@@ -726,6 +732,7 @@ object MetricFailedMonitorsRepository {
               this[MetricFailedMonitorsTable.collisionVictimFrontBumperPosMeters],
           collisionVictimBackBumperPosMeters =
               this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters],
+          allVehiclesJson = this[MetricFailedMonitorsTable.allVehiclesJson],
           createdAt = this[MetricFailedMonitorsTable.createdAt],
       )
 }

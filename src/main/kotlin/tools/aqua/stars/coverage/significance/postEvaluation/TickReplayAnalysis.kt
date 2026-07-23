@@ -33,9 +33,10 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /**
- * For one or more recorded ticks (`metric_failed_monitors` rows), reconstructs the local traffic
- * scene from the tick's *relative* neighbour data (see
- * `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements`), then lets every known mutant
+ * For one or more recorded ticks (`metric_failed_monitors` rows), reconstructs the full traffic
+ * scene from `allVehiclesJson` — every vehicle recorded present at that tick, placed at its own
+ * recorded position/speed/acceleration/type (see
+ * `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements`) — then lets every known mutant
  * separately take control of the ego for exactly one simulated step, to compare what each mutant
  * actually does when faced with that exact scene.
  *

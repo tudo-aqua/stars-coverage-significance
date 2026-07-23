@@ -186,6 +186,8 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  *   collision time (m).
  * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
  *   collision time (m).
+ * @property allVehiclesJson JSON array of every vehicle present at this tick (see
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot]).
  * @property createdAt Timestamp of creation.
  */
 object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
@@ -348,6 +350,14 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       float("collision_victim_front_bumper_pos_meters").nullable()
   val collisionVictimBackBumperPosMeters =
       float("collision_victim_back_bumper_pos_meters").nullable()
+
+  /**
+   * JSON array of
+   * [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot] — every
+   * vehicle present at this tick, not just the nearest one in each `surrounding*` cell.
+   */
+  val allVehiclesJson = text("all_vehicles_json")
+
   val createdAt = timestamp("created_at")
 
   init {

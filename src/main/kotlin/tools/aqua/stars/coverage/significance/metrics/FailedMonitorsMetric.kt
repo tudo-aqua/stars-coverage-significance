@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.metrics
 
+import kotlinx.serialization.encodeToString
 import tools.aqua.stars.core.metrics.providers.PostEvaluationMetricProvider
 import tools.aqua.stars.core.metrics.providers.TSCAndTSCInstanceAndTickMetricProvider
 import tools.aqua.stars.core.tsc.TSC
@@ -28,6 +29,7 @@ import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot
 import tools.aqua.stars.coverage.significance.tsc.g0Accidents
 import tools.aqua.stars.coverage.significance.tsc.g1SafeDistanceToPrecedingVehicle
 import tools.aqua.stars.coverage.significance.tsc.g2EmergencyBraking
@@ -44,6 +46,7 @@ import tools.aqua.stars.coverage.significance.utils.MonitorViolation.G4TrafficFl
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I1Stopping
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.I2FasterThanLeftTraffic
 import tools.aqua.stars.coverage.significance.utils.getJsonString
+import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
@@ -305,6 +308,20 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
                   egoCollision?.victimVehicle?.frontBumperPositionOnLaneMeters,
               collisionVictimBackBumperPosMeters =
                   egoCollision?.victimVehicle?.backBumperPositionOnLaneMeters,
+              allVehiclesJson =
+                  jsonConfiguration.encodeToString(
+                      tick.vehiclesInTick.map { v ->
+                        TickVehicleSnapshot(
+                            id = v.vehicleId,
+                            ego = v.vehicleId == tick.ego.vehicleId,
+                            type = v.vehicleType.typeId,
+                            lane = v.currentLane.laneIndex,
+                            front = v.frontBumperPositionOnLaneMeters,
+                            back = v.backBumperPositionOnLaneMeters,
+                            speed = v.speedMetersPerSecond,
+                            accel = v.accelerationMetersPerSecondSquared,
+                        )
+                      }),
           )
         }
     val violatedMonitors = tscInstance.rootNode.validateMonitors(tick.identifier)
