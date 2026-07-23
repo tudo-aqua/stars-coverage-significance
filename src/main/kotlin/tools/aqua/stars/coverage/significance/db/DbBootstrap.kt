@@ -128,7 +128,17 @@ object DbBootstrap {
             // Reasonable timeouts; fail fast rather than piling up threads
             connectionTimeout = 10_000
             validationTimeout = 5_000
-            idleTimeout = 60_000
+            // Must stay well below PgBouncer's SERVER_IDLE_TIMEOUT (60s, see docker-compose.yml)
+            // so Hikari always proactively retires an idle connection first. A worker holds its
+            // one pooled connection only briefly (a point query, then a batch insert) with long
+            // CPU-only SUMO-simulation gaps in between — comfortably longer than 60s per chunk —
+            // so those gaps routinely crossed the old idleTimeout=60_000, racing PgBouncer's own
+            // 60s timeout: whichever side closed the connection first left the other side holding
+            // a handle to an already-dead connection, surfacing as "Failed to validate connection
+            // ... already closed" and, when many workers hit this around the same time (their
+            // simulation phases tend to finish in sync, since they all started together), bursts
+            // of simultaneous reconnect attempts that looked like the pool had no capacity at all.
+            idleTimeout = 20_000
             maxLifetime = 10 * 60_000
 
             // Optional but often helpful
