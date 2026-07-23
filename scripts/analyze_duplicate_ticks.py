@@ -1,6 +1,13 @@
 """
 Analyze metric_failed_monitors for duplicate ticks under decreasing rounding precision.
 
+NOTE: on the full server-scale table, prefer the Kotlin reimplementation
+(`RunAnalyzeDuplicateTicks.kt` / `./gradlew runAnalyzeDuplicateTicks`). This script was
+observed getting silently killed on the server (no error, just terminated) — almost
+certainly the OS OOM killer, since it materializes every group at every precision level
+as a Python dict before writing JSON, multiplying per-row memory overhead by the number
+of precision levels. It's still fine for smaller/local Parquet files.
+
 Two ticks are considered "the same" when the ego vehicle's spatial relation to
 its neighbours (relative bumper-to-bumper distances), the ego and neighbour
 speeds, and the ego and neighbour accelerations are all equal. Absolute lane

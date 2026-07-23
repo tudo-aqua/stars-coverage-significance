@@ -241,6 +241,16 @@ docker run --name stars-coverage-significance-post-evaluation stars-evaluation:l
 docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --args="8"
 ```
 
+### Run the duplicate-tick analysis
+
+`RunAnalyzeDuplicateTicks.kt` checks how many ticks in `metric_failed_monitors` are duplicates of each other, where two ticks count as "the same" when the ego vehicle's spatial relation to its neighbours (relative bumper-to-bumper distances), the ego and neighbour speeds, and the ego and neighbour accelerations all match — see `MetricFailedMonitorsTable.buildDuplicateTickCompareColumns`. Since these values are floats, the compared columns are rounded to a decreasing number of decimal places (exact, then 6 decimals down to 0) and duplicate counts are reported at each level. Writes `postEvaluation/duplicate_ticks/duplicate_tick_groups.json` containing every group (member row IDs + rounded values) per precision level plus a summary.
+
+This is a Kotlin reimplementation of `scripts/analyze_duplicate_ticks.py`, which kept getting silently killed on the server (almost certainly the OS OOM killer): it materialized every group at every precision level as a Python dict before serializing, multiplying per-row memory overhead by the number of precision levels. The Kotlin version processes one precision level at a time, streaming each level's groups straight to the output file and discarding them before moving to the next, so peak memory doesn't grow with the number of precision levels — use this for full-scale/server runs.
+
+```bash
+docker run stars-evaluation:latest ./gradlew --no-daemon runAnalyzeDuplicateTicks
+```
+
 ---
 
 ## Python Scripts
@@ -361,6 +371,8 @@ dot -Tpng run_42.dot -o run_42.png
 
 ### `scripts/analyze_duplicate_ticks.py` — Analyze duplicate ticks in `metric_failed_monitors`
 
+> **On the full server-scale table, prefer `runAnalyzeDuplicateTicks`** (see [Run the duplicate-tick analysis](#run-the-duplicate-tick-analysis)) — this script was observed getting silently killed on the server (no error, just terminated), almost certainly by the OS OOM killer, because it materializes every group at every precision level as a Python dict before writing JSON. It's still fine for smaller/local Parquet files.
+
 Checks how many ticks in `metric_failed_monitors` are duplicates of each other, where two ticks count as "the same" when the ego vehicle's spatial relation to its neighbours (relative bumper-to-bumper distances), the ego and neighbour speeds, and the ego and neighbour accelerations all match. Absolute lane positions and monitor/target columns are excluded. Since these values are stored as floats, exact equality rarely holds for semantically identical scenes, so the script rounds the compared columns to a decreasing number of decimal places (starting exact, then 6 decimals down to 0) and reports duplicate counts at each level. Reads either a Parquet export or connects to PostgreSQL directly for just the needed columns.
 
 | Argument | Default | Description |
@@ -370,7 +382,8 @@ Checks how many ticks in `metric_failed_monitors` are duplicates of each other, 
 | `--json-output` | `duplicate_tick_groups.json` | Path to write every group (row IDs + rounded values) per precision level as JSON |
 
 ```bash
-python3 scripts/analyze_duplicate_ticks.py --parquet metric_failed_monitors.parquet
+python3 scripts/analyze_duplicate_ticks.py --parquet metric_failed_monitors.parquet \
+  --json-output duplicate_tick_groups.json
 
 python3 scripts/analyze_duplicate_ticks.py \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \

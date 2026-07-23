@@ -218,6 +218,19 @@ val runDecisionTreeComparison by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runAnalyzeDuplicateTicks by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Check metric_failed_monitors for duplicate ticks under decreasing rounding precision."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunAnalyzeDuplicateTicksKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

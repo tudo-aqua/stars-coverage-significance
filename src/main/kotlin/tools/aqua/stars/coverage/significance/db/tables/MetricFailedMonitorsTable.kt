@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.javatime.timestamp
@@ -27,6 +28,7 @@ import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DuplicateTickColumns
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailures
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
@@ -354,6 +356,88 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
     index(false, tick)
     index(false, monitorG0Failed)
     index(false, nextTickMonitorG0Failed)
+  }
+
+  /**
+   * Columns compared by [buildDuplicateTickCompareColumns] when checking for duplicate ticks:
+   * relative bumper-to-bumper distances to each neighbour, ego/neighbour speeds, and ego/neighbour
+   * accelerations. Absolute lane positions and monitor/target columns are deliberately excluded —
+   * only the relative/relational kinematic state is compared.
+   */
+  private val duplicateTickCompareColumns: List<Column<Float?>> =
+      listOf(
+          surroundingDistFront,
+          surroundingDistRear,
+          surroundingDistFrontLeft,
+          surroundingDistFrontRight,
+          surroundingDistRearLeft,
+          surroundingDistRearRight,
+          egoSpeedMps,
+          surroundingFrontSpeedMps,
+          surroundingRearSpeedMps,
+          surroundingFrontLeftSpeedMps,
+          surroundingFrontRightSpeedMps,
+          surroundingRearLeftSpeedMps,
+          surroundingRearRightSpeedMps,
+          egoAccelMps2,
+          surroundingFrontAccelMps2,
+          surroundingRearAccelMps2,
+          surroundingFrontLeftAccelMps2,
+          surroundingFrontRightAccelMps2,
+          surroundingRearLeftAccelMps2,
+          surroundingRearRightAccelMps2,
+      )
+
+  private val duplicateTickCompareColumnNames: List<String> =
+      listOf(
+          "surrounding_dist_front",
+          "surrounding_dist_rear",
+          "surrounding_dist_front_left",
+          "surrounding_dist_front_right",
+          "surrounding_dist_rear_left",
+          "surrounding_dist_rear_right",
+          "ego_speed_mps",
+          "surrounding_front_speed_mps",
+          "surrounding_rear_speed_mps",
+          "surrounding_front_left_speed_mps",
+          "surrounding_front_right_speed_mps",
+          "surrounding_rear_left_speed_mps",
+          "surrounding_rear_right_speed_mps",
+          "ego_accel_mps2",
+          "surrounding_front_accel_mps2",
+          "surrounding_rear_accel_mps2",
+          "surrounding_front_left_accel_mps2",
+          "surrounding_front_right_accel_mps2",
+          "surrounding_rear_left_accel_mps2",
+          "surrounding_rear_right_accel_mps2",
+      )
+
+  /**
+   * Loads [duplicateTickCompareColumns] (plus [id]) for every row as a compact column-major
+   * snapshot for duplicate-tick analysis.
+   *
+   * Two DB round trips: a `COUNT(*)` to size the backing arrays up front, then a single `SELECT`
+   * filled in by index. This avoids boxing values or materializing one object per row for what can
+   * be a full-table scan of tens of millions of rows.
+   *
+   * @return [DuplicateTickColumns] holding row IDs and the compared columns.
+   */
+  fun buildDuplicateTickCompareColumns(): DuplicateTickColumns {
+    val n = selectAll().count().toInt()
+    val ids = IntArray(n)
+    val columns = Array(duplicateTickCompareColumns.size) { FloatArray(n) }
+
+    var i = 0
+    select(id, *duplicateTickCompareColumns.toTypedArray()).forEach { row ->
+      ids[i] = row[id].value
+      for (c in duplicateTickCompareColumns.indices) {
+        columns[c][i] = row[duplicateTickCompareColumns[c]] ?: Float.NaN
+      }
+      i++
+    }
+
+    return DuplicateTickColumns(
+        ids = ids, columnNames = duplicateTickCompareColumnNames, columns = columns)
   }
 
   /**
