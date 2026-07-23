@@ -251,6 +251,20 @@ This is a Kotlin reimplementation of `scripts/analyze_duplicate_ticks.py`, which
 docker run stars-evaluation:latest ./gradlew --no-daemon runAnalyzeDuplicateTicks
 ```
 
+### Run the tick replay analysis
+
+`RunTickReplay.kt` takes a comma-separated list of `metric_failed_monitors.id` values, reconstructs each tick's local traffic scene in a fresh SUMO/libsumo simulation, and lets every known mutant separately take control of the ego vehicle for exactly one simulated step, to compare what each mutant actually does when faced with that exact scene.
+
+Only *relative* values are used to reconstruct the scene — the bumper-to-bumper distances, ego/neighbour speeds, and ego/neighbour accelerations — never the absolute lane-position columns (`egoFrontBumperPosMeters`, `surrounding*FrontBumperPosMeters`, etc.), except to derive a neighbour's *length* from the difference of its own two bumper columns. See `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements` for the placement math (it inverts `SurroundingDistanceSampler`'s gap arithmetic) and `LibsumoDynamicDataCollector.replayTickForMutant` for the one-step replay itself.
+
+Scope: this reports the mutant's maneuver command, the resulting next-tick kinematics, and whether a collision occurs. It does **not** re-evaluate TSC monitors (G0–G4/I1/I2) — that requires the full `TSCEvaluation` framework running across a longer window of ticks.
+
+Writes `postEvaluation/tick_replay/tick_replay_<tick-ids>.json`, one entry per (tick, mutant) pair.
+
+```bash
+docker run stars-evaluation:latest ./gradlew --no-daemon runTickReplay --args="123,456"
+```
+
 ---
 
 ## Python Scripts

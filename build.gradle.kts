@@ -231,6 +231,19 @@ val runAnalyzeDuplicateTicks by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runTickReplay by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Replay recorded ticks in SUMO and let every mutant control the ego for one step, to compare next-tick behavior."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunTickReplayKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

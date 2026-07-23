@@ -28,6 +28,7 @@ import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
+import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
@@ -105,32 +106,8 @@ class LibsumoDynamicDataCollector(
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
   ): List<TimeStep> {
-    Simulation.preloadLibraries()
-
-    // Reload simulation
-    val baseArgs =
-        mutableListOf(
-            "--net-file",
-            netFilePath.toAbsolutePath().toString(),
-            "--additional-files",
-            vTypesFile.toAbsolutePath().toString(),
-            "--insertion-checks",
-            "none",
-            "--route-steps",
-            "0.0",
-            "--step-length",
-            "0.1",
-            "--seed",
-            "1",
-            "--no-warnings",
-            "--collision.action",
-            "warn")
-
-    Simulation.load(StringVector(baseArgs.toTypedArray()))
-
-    // Add a single route for this run
     val routeId = "r_${scenario.id}"
-    Route.add(routeId, StringVector(routeEdges.toTypedArray())) // route add semantics
+    reloadSimulationWithRoute(routeId)
 
     // Spawn vehicles from placements
     val sortedPlacements =
@@ -141,41 +118,33 @@ class LibsumoDynamicDataCollector(
 
     var egoVehicleId: String? = null
 
-    for (sp in sortedPlacements) {
-      val vehId =
-          getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
-      var typeId = sp.type.sumoId
-      val departLane = sp.lane.toString()
-      val departPos = sp.positionMeters.toString()
-      val departSpeed = ((sp.type.departSpeedKmh - 10) / 3.6).toString()
+    val placementSpecs =
+        sortedPlacements.map { sp ->
+          val vehId =
+              getVehicleId(sp.type.toString(), sp.row, sp.lane, scenario.humanReadableScenarioId)
+          var typeId = sp.type.sumoId
 
-      if (sp.type == GridVehicleType.EGO) {
-        egoVehicleId = vehId
-        typeId = "mutant"
-        SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
-      }
+          if (sp.type == GridVehicleType.EGO) {
+            egoVehicleId = vehId
+            typeId = "mutant"
+            SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
+          }
 
-      // Add vehicle
-      SumoVehicle.add(vehId, routeId, typeId, "0", departLane, departPos, departSpeed)
-    }
+          PlacementSpec(
+              vehId = vehId,
+              typeId = typeId,
+              laneIndex = sp.lane,
+              positionMeters = sp.positionMeters.toDouble(),
+              departSpeedMps = (sp.type.departSpeedKmh - 10) / 3.6,
+          )
+        }
 
     val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
 
-    // Force placement of vehicle into simulation, so that all vehicleType parameters are set
-    // correctly
-    sortedPlacements.forEach { placement ->
-      val vehId =
-          getVehicleId(
-              placement.type.toString(),
-              placement.row,
-              placement.lane,
-              scenario.humanReadableScenarioId)
-      val departLane = placement.lane.toString()
-      val departPos = placement.positionMeters
-
-      // Force place vehicle
-      SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
-    }
+    // Add all vehicles first, then force-place all of them, so that all vehicleType parameters
+    // are set correctly (see PlacementSpec/addVehicles/forcePlaceVehicles KDoc).
+    addVehicles(placementSpecs, routeId)
+    forcePlaceVehicles(placementSpecs)
 
     val ticks = mutableListOf<TimeStep>()
 
@@ -218,6 +187,159 @@ class LibsumoDynamicDataCollector(
     }
 
     return resultList
+  }
+
+  /**
+   * Reconstructs [tick]'s local traffic scene (ego + present neighbours, placed via
+   * [computeReplayPlacements] from relative distances/speeds only) in a fresh simulation, lets
+   * [mutantId] take control of the ego for exactly one step, and returns the resulting next-tick
+   * [TimeStep] — i.e. what that mutant would actually do faced with this exact recorded scene, and
+   * what happens immediately afterwards (including collisions).
+   *
+   * Mirrors [runGeneratedScenario]'s loop body: one [Simulation.step] materializes the placed scene
+   * as "tick T" (matching the live loop's first iteration), then the mutant's `controlTick` decides
+   * a maneuver from that state, then a second [Simulation.step] applies it and produces "tick T+1",
+   * which is captured via the shared [getCurrentTimeStep].
+   *
+   * @param runId Run identifier to tag the resulting [TimeStep] with (the run [tick] originated
+   *   from).
+   * @param tick The recorded tick to reconstruct.
+   * @param scenario The scenario starting configuration [tick] belongs to (used only for [TimeStep]
+   *   identifier/source labelling, exactly as in [runGeneratedScenario]).
+   * @param mutantId Id of the mutant which should control the ego for this one step.
+   * @return The resulting next-tick [TimeStep], or `null` if the ego left the simulation.
+   */
+  fun replayTickForMutant(
+      runId: Int,
+      tick: MetricFailedMonitorsEntry,
+      scenario: ScenarioStartingConfigurationEntry,
+      mutantId: Int,
+  ): TimeStep? {
+    val routeId = "r_replay_${tick.id}"
+    reloadSimulationWithRoute(routeId)
+
+    val replayPlacements = computeReplayPlacements(tick)
+    val egoId = replayPlacements.first { it.isEgo }.vehId
+    SumoVehicleType.copy("DEFAULT_VEHTYPE", "mutant")
+
+    val placementSpecs =
+        replayPlacements.map { rp ->
+          PlacementSpec(
+              vehId = rp.vehId,
+              typeId = if (rp.isEgo) "mutant" else GridVehicleType.NORMAL.sumoId,
+              laneIndex = rp.laneIndex,
+              positionMeters = rp.positionMeters,
+              departSpeedMps = rp.speedMps,
+              // Pin to the exact recorded speed instead of the nominal type-based departure
+              // speed `runGeneratedScenario` uses — we know the real value here.
+              exactSpeedMps = rp.speedMps,
+          )
+        }
+
+    addVehicles(placementSpecs, routeId)
+    forcePlaceVehicles(placementSpecs)
+
+    SumoVehicle.setSpeedMode(egoId, 0)
+    SumoVehicle.setLaneChangeMode(egoId, 0)
+
+    Simulation.step()
+    if (!checkEgoExistence(egoId)) {
+      Simulation.close()
+      return null
+    }
+
+    val mutantEntry = MutantsRepository.getById(mutantId)
+    checkNotNull(mutantEntry) { "No mutant found for id=$mutantId" }
+    val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
+    val maneuver = mutant.controlTick(egoId)
+
+    Simulation.step()
+
+    val nextTick =
+        getCurrentTimeStep(
+            runId = runId,
+            scenarioConfigId = tick.scenarioConfigId,
+            egoId = egoId,
+            mutantId = mutantId,
+            scenario = scenario,
+            ticks = emptyList(),
+            egoManeuver = maneuver)
+
+    Simulation.close()
+    return nextTick
+  }
+
+  /** Reloads a fresh simulation from the network/vType files and adds a single [routeId]. */
+  private fun reloadSimulationWithRoute(routeId: String) {
+    Simulation.preloadLibraries()
+
+    val baseArgs =
+        mutableListOf(
+            "--net-file",
+            netFilePath.toAbsolutePath().toString(),
+            "--additional-files",
+            vTypesFile.toAbsolutePath().toString(),
+            "--insertion-checks",
+            "none",
+            "--route-steps",
+            "0.0",
+            "--step-length",
+            "0.1",
+            "--seed",
+            "1",
+            "--no-warnings",
+            "--collision.action",
+            "warn")
+
+    Simulation.load(StringVector(baseArgs.toTypedArray()))
+
+    Route.add(routeId, StringVector(routeEdges.toTypedArray())) // route add semantics
+  }
+
+  /**
+   * One vehicle to be added ([addVehicles]) and force-placed ([forcePlaceVehicles]).
+   *
+   * @property exactSpeedMps If non-null, the vehicle's speed is pinned to this exact value after
+   *   placement instead of keeping whatever [departSpeedMps] left it at on insertion.
+   */
+  private data class PlacementSpec(
+      val vehId: String,
+      val typeId: String,
+      val laneIndex: Int,
+      val positionMeters: Double,
+      val departSpeedMps: Double,
+      val exactSpeedMps: Double? = null,
+  )
+
+  /**
+   * Phase 1 of vehicle placement: `vehicle.add` for every [placements] entry. Must fully complete
+   * before any [forcePlaceVehicles] call — interleaving add/moveTo per vehicle instead of doing all
+   * adds first was observed to leave vehicleType parameters incorrectly applied.
+   */
+  private fun addVehicles(placements: List<PlacementSpec>, routeId: String) {
+    for (p in placements) {
+      SumoVehicle.add(
+          p.vehId,
+          routeId,
+          p.typeId,
+          "0",
+          p.laneIndex.toString(),
+          p.positionMeters.toString(),
+          p.departSpeedMps.toString())
+    }
+  }
+
+  /**
+   * Phase 2 of vehicle placement: force-places every vehicle onto its exact lane/position, then
+   * pins its speed to [PlacementSpec.exactSpeedMps] when given.
+   */
+  private fun forcePlaceVehicles(placements: List<PlacementSpec>) {
+    for (p in placements) {
+      SumoVehicle.moveTo(p.vehId, "highway_${p.laneIndex}", p.positionMeters)
+      if (p.exactSpeedMps != null) {
+        SumoVehicle.setSpeed(p.vehId, p.exactSpeedMps)
+      }
+    }
   }
 
   private fun checkEgoExistence(egoId: String): Boolean {
