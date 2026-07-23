@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.workers
 
 import java.sql.SQLException
 import kotlin.collections.map
+import kotlin.random.Random
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
@@ -119,29 +120,56 @@ fun main(args: Array<String>) {
       eval.runEvaluation(tickSequences.asSequence())
 
       val totalTickDifferences = totalTickDifferenceMetric.getState()
-      db {
-        totalTickDifferences.map { (identifier, tickDifference) ->
-          val dbEntry =
-              MetricTotalTickDifferenceEntry(
-                  mutantId = job.mutantId,
-                  runId = runId,
-                  scenarioConfigId = identifier.toInt(),
-                  totalTickDifferenceMillis = tickDifference?.differenceMillis ?: 0L)
-          MetricTotalTickDifferenceRepository.insertIfMissingAndReturnId(dbEntry)
-        }
-      }
+      val tickDifferenceEntries =
+          totalTickDifferences.map { (identifier, tickDifference) ->
+            MetricTotalTickDifferenceEntry(
+                mutantId = job.mutantId,
+                runId = runId,
+                scenarioConfigId = identifier.toInt(),
+                totalTickDifferenceMillis = tickDifference?.differenceMillis ?: 0L)
+          }
+      // ignore = true: safe to re-insert scenarios a requeued/re-run job already wrote before an
+      // earlier attempt failed partway through (same idempotency as the old row-at-a-time
+      // insertIfMissingAndReturnId, but as one round trip instead of up to ~2 per scenario).
+      MetricTotalTickDifferenceRepository.batchInsert(tickDifferenceEntries, ignore = true)
 
       MutantScenarioChunkJobsRepository.markDone(job.jobId)
     } catch (e: ExposedSQLException) {
-      MutantScenarioChunkJobsRepository.markFailedOrRequeue(
-          job.jobId, e.stackTraceToString(), maxAttempts = 3)
       System.err.println("[$workerId] job failed: ${e.message}")
+      requeueAfterFailure(job.jobId, e.stackTraceToString(), workerId)
     } catch (exception: SQLException) {
-      MutantScenarioChunkJobsRepository.markFailedOrRequeue(
-          job.jobId, exception.stackTraceToString(), maxAttempts = 3)
       System.err.println("[$workerId] job failed: ${exception.message}")
+      requeueAfterFailure(job.jobId, exception.stackTraceToString(), workerId)
     }
   }
+}
+
+/**
+ * Records the failed job's failure (by [jobId]) and requeues it (up to 3 attempts) for another
+ * worker to pick up, then backs off with jitter before this worker's loop reclaims its next job.
+ *
+ * Both steps are defensive against the DB still being unavailable: if a transient connection issue
+ * (e.g. a saturated PgBouncer under many parallel worker processes) caused the original failure,
+ * [MutantScenarioChunkJobsRepository.markFailedOrRequeue] itself needs a DB connection and could
+ * throw too — left uncaught, that would crash this whole worker process instead of letting it back
+ * off and try again. The backoff (with random jitter, not a fixed delay) also matters on its own:
+ * without it, a failed job goes straight back to `PENDING` with no delay, so the very next loop
+ * iteration can reclaim and re-fail it immediately, turning a brief DB blip into a tight retry
+ * storm that hammers the DB harder right when it's already struggling — jitter spreads many
+ * workers' retries out instead of them all hammering PgBouncer in lockstep.
+ *
+ * @param jobId The failed job's id.
+ * @param error Stack trace text to record against the job.
+ * @param workerId This worker's id, for the log message if requeuing itself fails.
+ */
+private fun requeueAfterFailure(jobId: Long, error: String, workerId: String) {
+  try {
+    MutantScenarioChunkJobsRepository.markFailedOrRequeue(jobId, error, maxAttempts = 3)
+  } catch (e: SQLException) {
+    System.err.println(
+        "[$workerId] failed to record job failure (DB still unavailable?): ${e.message}")
+  }
+  Thread.sleep(2_000L + Random.nextLong(3_000L))
 }
 
 /**
