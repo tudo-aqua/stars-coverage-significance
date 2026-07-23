@@ -33,6 +33,7 @@ import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
+import tools.aqua.stars.coverage.significance.utils.indexedByKey
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
@@ -132,8 +133,8 @@ class LibsumoDynamicDataCollectorTest(
 
     var egoVehicleId: String? = null
 
-    for (sp in sortedPlacements) {
-      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
+    for ((sp, indexWithinType) in sortedPlacements.indexedByKey { it.type.idLabel }) {
+      val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
@@ -197,8 +198,8 @@ class LibsumoDynamicDataCollectorTest(
 
     // Force placement of vehicle into simulation, so that all vehicleType parameters are set
     // correctly
-    for (sp in sortedPlacements) {
-      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
+    for ((sp, indexWithinType) in sortedPlacements.indexedByKey { it.type.idLabel }) {
+      val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters
 

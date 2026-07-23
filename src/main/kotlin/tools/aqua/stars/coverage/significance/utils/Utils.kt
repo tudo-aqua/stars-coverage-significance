@@ -182,19 +182,40 @@ fun File.baseKey(): String {
 }
 
 /**
- * Generates a unique vehicle ID based on the provided parameters.
+ * Generates a SUMO vehicle id: `"ego"` for the ego vehicle (there is only ever one), or
+ * `"<vehicleType>_<indexWithinType>"` for every other vehicle (e.g. `"calm_1"`, `"speedy_2"`).
  *
- * @param vehicleType Type of the vehicle.
- * @param row Row number.
- * @param lane Lane number.
- * @param scenarioId Identifier for the scenario.
- * @param vehiclePrefix Prefix for the vehicle ID (default is "veh").
- * @return Generated unique vehicle ID.
+ * [indexWithinType] must be assigned by the caller as a 1-based, per-scenario count of vehicles
+ * seen so far with the same [vehicleType] (e.g. via a `mutableMapOf<String, Int>()` counter
+ * incremented while iterating a scenario's placements in a fixed order) — this function does not
+ * track state itself, so callers processing the same placement list in the same order will
+ * naturally compute matching ids across separate calls (e.g. a route-export pass and a live
+ * simulation pass over the same scenario).
+ *
+ * @param vehicleType Type label of the vehicle (see
+ *   [tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.idLabel]).
+ * @param indexWithinType 1-based count of vehicles of [vehicleType] seen so far in this scenario;
+ *   ignored when [vehicleType] is `"ego"`.
+ * @return Generated vehicle id.
  */
-fun getVehicleId(
-    vehicleType: String,
-    row: Int,
-    lane: Int,
-    scenarioId: String,
-    vehiclePrefix: String = "veh",
-): String = "${vehiclePrefix}_${vehicleType}_[${row}][${lane}]_in_${scenarioId}"
+fun getVehicleId(vehicleType: String, indexWithinType: Int): String =
+    if (vehicleType == "ego") vehicleType else "${vehicleType}_$indexWithinType"
+
+/**
+ * Pairs each element with a 1-based index counting occurrences sharing the same [keyOf] value, in
+ * list order — the exact per-type bookkeeping [getVehicleId]'s `indexWithinType` needs, factored
+ * out so every call site doesn't hand-roll its own counter map.
+ *
+ * @param T Element type.
+ * @param keyOf Grouping key for an element (e.g. a vehicle's type label).
+ * @return This list's elements paired with their 1-based index within their [keyOf] group.
+ */
+fun <T> List<T>.indexedByKey(keyOf: (T) -> String): List<Pair<T, Int>> {
+  val counters = mutableMapOf<String, Int>()
+  return map { item ->
+    val key = keyOf(item)
+    val index = (counters[key] ?: 0) + 1
+    counters[key] = index
+    item to index
+  }
+}

@@ -24,6 +24,7 @@ import java.util.Locale
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationEntry
 import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
+import tools.aqua.stars.coverage.significance.utils.indexedByKey
 
 @SuppressWarnings("StringLiteralDuplication")
 /** Index for the top row. */
@@ -64,7 +65,7 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
     get() {
       val egoSpawn = spawnAt(MIDDLE_ROW, egoLane)
       checkNotNull(egoSpawn) { "Scenario has no EGO spawn in middle row" }
-      return getVehicleId(egoSpawn.type.idLabel, egoSpawn.row, egoSpawn.lane, id)
+      return getVehicleId(egoSpawn.type.idLabel, indexWithinType = 0)
     }
 
   /** Lane index (0..2) where the ego vehicle is located. */
@@ -253,8 +254,8 @@ data class GeneratedScenario(val grid: Array<Array<Spawn?>>) {
       appendLine("<routes>")
       appendLine("""  <route id="${esc(id)}" edges="$edgesAttr"/>""")
 
-      for (sp in sorted) {
-        val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, id)
+      for ((sp, indexWithinType) in sorted.indexedByKey { it.type.idLabel }) {
+        val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
         var typeId = sp.type.sumoId // e.g., "ego", "car_calm", "car_normal", "car_speedy"
         if (changeEgoTypeTo != null && typeId == "ego") {
           typeId = changeEgoTypeTo

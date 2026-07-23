@@ -34,6 +34,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
+import tools.aqua.stars.coverage.significance.utils.indexedByKey
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
@@ -121,25 +122,26 @@ class LibsumoDynamicDataCollector(
     var egoVehicleId: String? = null
 
     val placementSpecs =
-        sortedPlacements.map { sp ->
-          val vehId =
-              getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
-          var typeId = sp.type.sumoId
+        sortedPlacements
+            .indexedByKey { it.type.idLabel }
+            .map { (sp, indexWithinType) ->
+              val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
+              var typeId = sp.type.sumoId
 
-          if (sp.type == GridVehicleType.EGO) {
-            egoVehicleId = vehId
-            typeId = "mutant"
-            SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
-          }
+              if (sp.type == GridVehicleType.EGO) {
+                egoVehicleId = vehId
+                typeId = "mutant"
+                SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
+              }
 
-          PlacementSpec(
-              vehId = vehId,
-              typeId = typeId,
-              laneIndex = sp.lane,
-              positionMeters = sp.positionMeters.toDouble(),
-              speedMps = (sp.type.departSpeedKmh - 10) / 3.6,
-          )
-        }
+              PlacementSpec(
+                  vehId = vehId,
+                  typeId = typeId,
+                  laneIndex = sp.lane,
+                  positionMeters = sp.positionMeters.toDouble(),
+                  speedMps = (sp.type.departSpeedKmh - 10) / 3.6,
+              )
+            }
 
     val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
 

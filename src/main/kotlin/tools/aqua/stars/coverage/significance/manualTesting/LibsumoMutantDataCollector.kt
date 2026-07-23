@@ -33,6 +33,7 @@ import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingCon
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GeneratedScenario
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 import tools.aqua.stars.coverage.significance.utils.getVehicleId
+import tools.aqua.stars.coverage.significance.utils.indexedByKey
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.CollisionEvent
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
@@ -157,8 +158,8 @@ class LibsumoMutantDataCollector(
 
     var egoVehicleId: String? = null
 
-    for (sp in sortedPlacements) {
-      val vehId = getVehicleId(sp.type.idLabel, sp.row, sp.lane, scenario.humanReadableScenarioId)
+    for ((sp, indexWithinType) in sortedPlacements.indexedByKey { it.type.idLabel }) {
+      val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
       var typeId = sp.type.sumoId
       val departLane = sp.lane.toString()
       val departPos = sp.positionMeters.toString()
@@ -178,19 +179,16 @@ class LibsumoMutantDataCollector(
 
     // Force placement of vehicle into simulation, so that all vehicleType parameters are set
     // correctly
-    sortedPlacements.forEach { placement ->
-      val vehId =
-          getVehicleId(
-              placement.type.idLabel,
-              placement.row,
-              placement.lane,
-              scenario.humanReadableScenarioId)
-      val departLane = placement.lane.toString()
-      val departPos = placement.positionMeters
+    sortedPlacements
+        .indexedByKey { it.type.idLabel }
+        .forEach { (placement, indexWithinType) ->
+          val vehId = getVehicleId(placement.type.idLabel, indexWithinType)
+          val departLane = placement.lane.toString()
+          val departPos = placement.positionMeters
 
-      // Force place vehicle
-      SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
-    }
+          // Force place vehicle
+          SumoVehicle.moveTo(vehId, "highway_$departLane", departPos.toDouble())
+        }
 
     val ticks = mutableListOf<TimeStep>()
 
