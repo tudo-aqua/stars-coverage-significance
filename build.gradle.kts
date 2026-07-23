@@ -228,7 +228,7 @@ val runAnalyzeDuplicateTicks by
       mainClass.set("tools.aqua.stars.coverage.significance.RunAnalyzeDuplicateTicksKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
-      jvmArgs = listOf("-Xmx300g")
+      jvmArgs = listOf("-Xmx400g")
     }
 
 val runTickReplay by
