@@ -184,7 +184,11 @@ object DbBootstrap {
           DecisionTreeRunsTable,
           DecisionTreeMutantSplitsTable,
           DecisionTreeLeafAssignmentsTable)
+    }
+  }
 
+  private fun buildMaterializedViews() {
+    transaction {
       exec(
           """
           CREATE MATERIALIZED VIEW IF NOT EXISTS mutant_scenario_g0_violations AS
