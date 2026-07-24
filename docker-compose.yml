@@ -13,6 +13,12 @@ services:
       - "5432:5432"
     volumes:
       - stars_pgdata:/var/lib/postgresql/data
+    # Docker defaults /dev/shm to 64MB, which Postgres uses (POSIX shared memory) for parallel
+    # query worker state. metric_failed_monitors is large enough that a bare "SELECT *" picks a
+    # parallel scan plan, and many concurrent client connections (e.g. export_parquet.py's
+    # partitioned reads) can spawn well over 100 parallel workers competing for that same 64MB,
+    # exhausting it with "could not resize shared memory segment ... No space left on device".
+    shm_size: "2gb"
     command:
       - "postgres"
       - "-c"

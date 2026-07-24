@@ -5,12 +5,19 @@ Uses connectorx to read the table in parallel partitions across all available
 cores, then writes a snappy-compressed Parquet file that polars and the
 decision-tree script can load in seconds.
 
+Excludes `all_vehicles_json` by default: a per-row JSON array of every vehicle present at that
+tick, added for the tick-replay feature. It's the single heaviest column in the table (everything
+else is compact floats/ints/bools/short text) and isn't read by any current consumer of this
+export (decision_tree_g0.py and analyze_duplicate_ticks.py both select specific named feature
+columns). Pass --include-all-vehicles-json to include it anyway.
+
 Usage:
     python export_parquet.py --uri postgresql://user:pass@host:5432/db
     python export_parquet.py --uri postgresql://user:pass@host:5432/db --output out.parquet --partitions 96
+    python export_parquet.py --uri postgresql://user:pass@host:5432/db --include-all-vehicles-json
 
 Dependencies:
-    pip install polars connectorx
+    pip install polars connectorx psycopg2
 """
 
 import argparse
@@ -20,11 +27,43 @@ from pathlib import Path
 import polars as pl
 
 
-QUERY = "SELECT * FROM metric_failed_monitors"
+EXCLUDED_COLUMNS_BY_DEFAULT = ["all_vehicles_json"]
+
+
+def _build_query(uri: str, exclude: list[str]) -> str:
+    """Builds a SELECT of every metric_failed_monitors column except those in `exclude`.
+
+    Column names are discovered at runtime via information_schema rather than hardcoded, so this
+    doesn't need updating whenever the table schema changes.
+    """
+    import psycopg2
+
+    conn = psycopg2.connect(uri)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'metric_failed_monitors' ORDER BY ordinal_position"
+            )
+            columns = [row[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+    if not columns:
+        sys.exit("Could not read column list for metric_failed_monitors — check --uri.")
+
+    selected = [c for c in columns if c not in exclude]
+    # Always double-quote: several columns (e.g. monitor_g0_Accidents_failed) have embedded
+    # uppercase letters that Postgres would otherwise fold to lowercase.
+    columns_sql = ", ".join(f'"{c}"' for c in selected)
+    return f"SELECT {columns_sql} FROM metric_failed_monitors"
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--uri",
         required=True,
@@ -41,14 +80,24 @@ def main() -> None:
         default=96,
         help="Number of parallel read partitions matching available cores (default: 96)",
     )
+    parser.add_argument(
+        "--include-all-vehicles-json",
+        action="store_true",
+        help="Include the all_vehicles_json column (excluded by default; see module docstring)",
+    )
     args = parser.parse_args()
 
+    exclude = [] if args.include_all_vehicles_json else EXCLUDED_COLUMNS_BY_DEFAULT
+    query = _build_query(args.uri, exclude)
+
     print(f"Reading metric_failed_monitors with {args.partitions} parallel partitions ...")
+    if exclude:
+        print(f"  Excluding columns: {', '.join(exclude)}")
     try:
         # connectorx issues N parallel SELECT queries with non-overlapping WHERE
         # clauses on `tick`, then assembles the result as a zero-copy Arrow table.
         df = pl.read_database_uri(
-            query=QUERY,
+            query=query,
             uri=args.uri,
             partition_on="tick",
             partition_num=args.partitions,

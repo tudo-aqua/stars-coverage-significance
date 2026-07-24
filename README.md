@@ -281,15 +281,18 @@ pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz ps
 
 Exports the `metric_failed_monitors` table from PostgreSQL to a Parquet file using parallel reads via [connectorx](https://github.com/sfu-db/connector-x). On a server with many cores this is significantly faster than a single-threaded CSV export.
 
+Excludes the `all_vehicles_json` column by default — it's the single heaviest column (a per-row JSON array of every vehicle present at that tick, added for the tick-replay feature) and isn't read by any current consumer of this export (`decision_tree_g0.py`, `analyze_duplicate_ticks.py`). Column names are discovered at runtime via `information_schema`, so excluding it doesn't require hardcoding/maintaining the rest of the column list.
+
 | Argument | Default | Description |
 |---|---|---|
 | `--uri` | *(required)* | PostgreSQL connection URI: `postgresql://user:pass@host:port/db` |
 | `--output` | `metric_failed_monitors.parquet` | Output Parquet file path |
 | `--partitions` | `96` | Number of parallel read partitions; set to match available CPU cores |
+| `--include-all-vehicles-json` | off | Include the `all_vehicles_json` column anyway |
 
 ```bash
 python3 scripts/export_parquet.py \
-  --uri postgresql://stars:stars@host:5432/db \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
   --output metric_failed_monitors.parquet
 
 # Fewer partitions on a smaller machine
@@ -344,16 +347,16 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output t
 # More thorough tuning with 200 trials
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
-  --ego-maneuver \
+  --no-ego-maneuver \
   --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
-  --class-weight scale-pos-weight \
+  --class-weight balanced \
   --max-leaves 512 \
   --out-dir /results/runs \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
-  --db-workers 48 \
+  --db-workers 48
 
 # Train/test split: 80 % of mutants for training, rest for evaluation
 # Run is recorded in the DB; run_<id>.dot and run_<id>.log are written automatically
