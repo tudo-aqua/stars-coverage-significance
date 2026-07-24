@@ -358,7 +358,10 @@ class FailedMonitorsMetric(override val dependsOn: Any? = null, val writeToDb: B
           val tscEntry = TSCsRepository.getByJson(tsc.getJsonString())
           checkNotNull(tscEntry) { "TSC not found in DB." }
           val failedMonitorsEntries = map.values.toList()
-          MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries)
+          // ignore = true: safe to re-insert rows a requeued/re-run job already wrote before a
+          // later step (e.g. the tick-difference insert or marking the job done) failed and
+          // caused the whole job to be retried from scratch — see batchInsert's KDoc.
+          MetricFailedMonitorsRepository.batchInsert(failedMonitorsEntries, ignore = true)
         }
       }
     }

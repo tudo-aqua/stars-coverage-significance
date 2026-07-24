@@ -105,11 +105,18 @@ object MetricFailedMonitorsRepository {
    * Inserts multiple [MetricFailedMonitorsEntry] entries in a batch operation.
    *
    * @param entries List of [MetricFailedMonitorsEntry] to insert. Each entry's `id` must be null.
+   * @param ignore If `true`, rows conflicting with an existing (tsc, run, scenarioConfig, mutant,
+   *   tick) entry are silently skipped instead of throwing. A chunk job writes this table in one
+   *   batch insert (via `FailedMonitorsMetric.postEvaluate`) followed by further DB work (tick
+   *   differences, marking the job done); if that later work fails, the whole job gets requeued and
+   *   re-run from scratch — deterministically recomputing and re-inserting the exact same rows this
+   *   batch insert already committed. Without `ignore = true`, that retry fails on the unique
+   *   constraint instead of silently no-op'ing over already-written rows.
    */
-  fun batchInsert(entries: List<MetricFailedMonitorsEntry>) = db {
+  fun batchInsert(entries: List<MetricFailedMonitorsEntry>, ignore: Boolean = false) = db {
     if (entries.isEmpty()) return@db
 
-    MetricFailedMonitorsTable.batchInsert(entries) { e ->
+    MetricFailedMonitorsTable.batchInsert(entries, ignore = ignore) { e ->
       this[MetricFailedMonitorsTable.run] = e.runId
       this[MetricFailedMonitorsTable.tsc] = e.tscId
       this[MetricFailedMonitorsTable.mutant] = e.mutantId
