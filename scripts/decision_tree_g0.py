@@ -416,6 +416,14 @@ def _ensure_tracking_tables(conn) -> None:
                 PRIMARY KEY (run_id, metric_failed_monitor_id)
             )
         """)
+        # metric_failed_monitor_id is only the trailing column of the primary key above, which
+        # can't serve an efficient "find rows referencing this id" lookup. Without a leading index,
+        # every row deleted from metric_failed_monitors forces a full scan of this table to check
+        # its ON DELETE CASCADE, turning bulk deletes into an O(N*M) operation.
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_decision_tree_leaf_assignments_metric_failed_monitor_id
+                ON decision_tree_leaf_assignments (metric_failed_monitor_id)
+        """)
     conn.commit()
 
 

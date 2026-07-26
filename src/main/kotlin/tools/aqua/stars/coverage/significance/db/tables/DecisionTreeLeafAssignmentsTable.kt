@@ -43,4 +43,14 @@ object DecisionTreeLeafAssignmentsTable : Table("decision_tree_leaf_assignments"
   val leafNodeId = integer("leaf_node_id")
 
   override val primaryKey = PrimaryKey(runId, metricFailedMonitorId)
+
+  init {
+    // metricFailedMonitorId is only the *trailing* column of the composite primary key above, so
+    // it's unusable for an efficient "find rows referencing this metric_failed_monitor_id" lookup
+    // — exactly what every row of a `DELETE FROM metric_failed_monitors` triggers via this
+    // column's ON DELETE CASCADE. Without a leading index on it, each parent-row delete forces a
+    // full scan of this (potentially equally huge) table, turning a bulk delete into an O(N×M)
+    // operation that can take hours. This index makes that cascade check an O(log N) lookup.
+    index(false, metricFailedMonitorId)
+  }
 }
