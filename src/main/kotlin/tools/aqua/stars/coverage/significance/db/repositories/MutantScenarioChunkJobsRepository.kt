@@ -167,15 +167,14 @@ object MutantScenarioChunkJobsRepository {
     val currentAttempt = row?.get(attempts) ?: 0
     val previousErrorText = row?.get(MutantScenarioChunkJobsTable.errorText)
 
-    val appendedErrorText =
-        buildString {
-          if (previousErrorText != null) {
-            append(previousErrorText)
-            append("\n\n")
-          }
-          append("--- Attempt $currentAttempt ---\n")
-          append(truncated)
-        }
+    val appendedErrorText = buildString {
+      if (previousErrorText != null) {
+        append(previousErrorText)
+        append("\n\n")
+      }
+      append("--- Attempt $currentAttempt ---\n")
+      append(truncated)
+    }
 
     // Retry path: only if attempts < maxAttempts
     val retried =
