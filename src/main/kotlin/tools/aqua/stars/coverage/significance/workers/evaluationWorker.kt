@@ -25,14 +25,11 @@ import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.evaluation.TickSequence.Companion.asTickSequence
 import tools.aqua.stars.core.hooks.defaulthooks.MinTicksPerTickSequenceHook
-import tools.aqua.stars.core.metrics.evaluation.TotalTickDifferenceMetric
 import tools.aqua.stars.coverage.significance.BUFFER_SIZE
 import tools.aqua.stars.coverage.significance.MAX_LENGTH_OF_SCENARIO_IN_SECONDS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.db.dataclasses.MetricTotalTickDifferenceEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
-import tools.aqua.stars.coverage.significance.db.repositories.MetricTotalTickDifferenceRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantScenarioChunkJobsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.hooks.MaxSecondsEvaluationHook
@@ -41,10 +38,7 @@ import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installPare
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.tscListToUseInProject
 import tools.aqua.stars.coverage.significance.utils.CliArgs
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMilliseconds
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
-import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /**
@@ -86,11 +80,7 @@ fun main(args: Array<String>) {
           MinTicksPerTickSequenceHook(1),
           MaxSecondsEvaluationHook(maxSeconds = MAX_LENGTH_OF_SCENARIO_IN_SECONDS.toInt()))
 
-      val totalTickDifferenceMetric =
-          TotalTickDifferenceMetric<
-              Vehicle, TimeStep, TickUnitMilliseconds, TickDifferenceMilliseconds>()
-
-      eval.registerMetricProviders(FailedMonitorsMetric(), totalTickDifferenceMetric)
+      eval.registerMetricProviders(FailedMonitorsMetric())
 
       val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
       val tickSequences = mutableListOf<TickSequence<TimeStep>>()
@@ -118,20 +108,6 @@ fun main(args: Array<String>) {
                 iterationMode = TickSequence.IterationMode.END_FILLED))
       }
       eval.runEvaluation(tickSequences.asSequence())
-
-      val totalTickDifferences = totalTickDifferenceMetric.getState()
-      val tickDifferenceEntries =
-          totalTickDifferences.map { (identifier, tickDifference) ->
-            MetricTotalTickDifferenceEntry(
-                mutantId = job.mutantId,
-                runId = runId,
-                scenarioConfigId = identifier.toInt(),
-                totalTickDifferenceMillis = tickDifference?.differenceMillis ?: 0L)
-          }
-      // ignore = true: safe to re-insert scenarios a requeued/re-run job already wrote before an
-      // earlier attempt failed partway through (same idempotency as the old row-at-a-time
-      // insertIfMissingAndReturnId, but as one round trip instead of up to ~2 per scenario).
-      MetricTotalTickDifferenceRepository.batchInsert(tickDifferenceEntries, ignore = true)
 
       MutantScenarioChunkJobsRepository.markDone(job.jobId)
     } catch (e: ExposedSQLException) {

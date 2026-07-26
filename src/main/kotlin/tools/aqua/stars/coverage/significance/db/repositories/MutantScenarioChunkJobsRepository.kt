@@ -117,7 +117,9 @@ object MutantScenarioChunkJobsRepository {
       it[lockedBy] = workerId
       it[lockedAt] = now
       it[startedAt] = now
-      it[errorText] = null
+      // errorText is intentionally left untouched here: markFailedOrRequeue appends to it, so
+      // clearing it on claim would erase every earlier attempt's error right before the next one
+      // could be appended.
     }
 
     MutantScenarioChunkJob(
@@ -146,6 +148,10 @@ object MutantScenarioChunkJobsRepository {
   /**
    * Marks the specified chunk job as failed or requeues it based on the number of attempts.
    *
+   * The error is appended to any existing `errorText` (prefixed with the attempt number) rather
+   * than replacing it, so the failure history of every attempt survives across retries instead of
+   * only the most recent one being visible.
+   *
    * @param jobId The ID of the job to mark as failed or requeue.
    * @param error The error message associated with the failure.
    * @param maxAttempts The maximum number of attempts before marking as failed.
@@ -153,13 +159,31 @@ object MutantScenarioChunkJobsRepository {
   fun markFailedOrRequeue(jobId: Long, error: String, maxAttempts: Int) = transaction {
     val truncated = error.take(10_000)
 
+    val row =
+        MutantScenarioChunkJobsTable.select(attempts, MutantScenarioChunkJobsTable.errorText)
+            .where { MutantScenarioChunkJobsTable.id eq jobId }
+            .forUpdate()
+            .singleOrNull()
+    val currentAttempt = row?.get(attempts) ?: 0
+    val previousErrorText = row?.get(MutantScenarioChunkJobsTable.errorText)
+
+    val appendedErrorText =
+        buildString {
+          if (previousErrorText != null) {
+            append(previousErrorText)
+            append("\n\n")
+          }
+          append("--- Attempt $currentAttempt ---\n")
+          append(truncated)
+        }
+
     // Retry path: only if attempts < maxAttempts
     val retried =
         MutantScenarioChunkJobsTable.update({
           (MutantScenarioChunkJobsTable.id eq jobId) and (attempts less maxAttempts)
         }) {
           it[status] = JobStatus.PENDING
-          it[errorText] = truncated
+          it[errorText] = appendedErrorText
           it[lockedBy] = null
           it[lockedAt] = null
           // Do not set finishedAt on retry
@@ -169,7 +193,7 @@ object MutantScenarioChunkJobsRepository {
       // Final fail path
       MutantScenarioChunkJobsTable.update({ MutantScenarioChunkJobsTable.id eq jobId }) {
         it[status] = JobStatus.FAILED
-        it[errorText] = truncated
+        it[errorText] = appendedErrorText
         it[lockedBy] = null
         it[lockedAt] = null
         it[finishedAt] = Instant.now()
