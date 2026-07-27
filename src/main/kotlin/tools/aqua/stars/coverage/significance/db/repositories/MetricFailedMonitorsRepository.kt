@@ -102,6 +102,26 @@ object MetricFailedMonitorsRepository {
   }
 
   /**
+   * Retrieves all [MetricFailedMonitorsEntry]s where the G0 (Accidents) monitor failed at the next
+   * tick, optionally restricted to a single evaluation run.
+   *
+   * @param runId Evaluation run id to filter by, or `null` to include every run.
+   * @return All matching [MetricFailedMonitorsEntry]s.
+   */
+  fun getAllWithNextTickG0Failed(runId: Int? = null): List<MetricFailedMonitorsEntry> = db {
+    MetricFailedMonitorsTable.selectAll()
+        .where {
+          if (runId != null) {
+            (MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true) and
+                (MetricFailedMonitorsTable.run eq runId)
+          } else {
+            MetricFailedMonitorsTable.nextTickMonitorG0Failed eq true
+          }
+        }
+        .map { it.toEntry() }
+  }
+
+  /**
    * Inserts multiple [MetricFailedMonitorsEntry] entries in a batch operation.
    *
    * @param entries List of [MetricFailedMonitorsEntry] to insert. Each entry's `id` must be null.

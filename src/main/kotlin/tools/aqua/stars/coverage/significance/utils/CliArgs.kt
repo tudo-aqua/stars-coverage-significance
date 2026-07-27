@@ -55,6 +55,18 @@ object CliArgs {
   fun requireLong(args: Array<String>, name: String): Long = requireString(args, name).toLong()
 
   /**
+   * Parses an optional Int argument from the command-line arguments.
+   *
+   * @param args Array of command-line arguments.
+   * @param name Name of the argument to parse.
+   * @return The parsed Int value, or `null` if the argument is not found or is not a valid Int.
+   */
+  fun optionalInt(args: Array<String>, name: String): Int? {
+    val prefix = "--$name="
+    return args.firstOrNull { it.startsWith(prefix) }?.substringAfter(prefix)?.toIntOrNull()
+  }
+
+  /**
    * Parses an optional boolean argument from the command-line arguments.
    *
    * @param args Array of command-line arguments.

@@ -244,6 +244,20 @@ val runTickReplay by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runG0MutantCoverageReplay by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "For every tick whose next tick was recorded as a G0 (Accidents) failure, replay it with every known mutant to check whether the original mutant still fails and whether other mutants additionally fail."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunG0MutantCoverageReplayKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+      // args = listOf("--runId=8")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

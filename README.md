@@ -265,6 +265,22 @@ Writes `postEvaluation/tick_replay/tick_replay_<tick-ids>.json`, one entry per (
 docker run stars-evaluation:latest ./gradlew --no-daemon runTickReplay --args="123,456"
 ```
 
+### Run the G0 mutant coverage replay analysis
+
+`RunG0MutantCoverageReplay.kt` finds every `metric_failed_monitors` row whose *next* tick was recorded as a G0 (Accidents) failure (`next_tick_monitor_g0_Accidents_failed = true`), then replays each one (same scene reconstruction as the tick replay analysis above) once per known mutant to answer two questions per tick: does the mutant that originally produced it still reproduce the failure when replayed, and do any *other* mutants, substituted into that exact same recorded scene, additionally trigger a G0 failure?
+
+Unlike the tick replay analysis, this does re-evaluate the G0 monitor on the replayed result — G0's predicate (`tools.aqua.stars.coverage.significance.tsc.g0Accidents`) is a pure single-tick collision check (no `previous`/`once` history dependence, only the top-level `globally`, which degenerates to a single-tick check on an unlinked tick), so `g0Accidents.holds(nextTick)` can be called directly on the one-step replay result without the full `TSCEvaluation` framework. This does not generalize to G1–G4/I1/I2, which need real tick history.
+
+Writes `postEvaluation/g0_mutant_coverage_replay/g0_mutant_coverage_replay_<runId-or-"all">.json`: one entry per flagged tick, each holding `originalMutantFailed`, `newMutantsFailedCount`, and a full per-mutant `mutantResults` breakdown (`g0Failed` is `null` if the replay was inconclusive because the ego left the simulation).
+
+```bash
+# All runs
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay
+
+# Restrict to one evaluation run
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--runId=8"
+```
+
 ---
 
 ## Python Scripts
