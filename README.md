@@ -548,3 +548,9 @@ python sumoData/fcdReplay/fcdReplay.py \
   --geo \
   --length 4.5 --width 1.8
 ```
+
+
+### Check the size of the database inside the docker container
+```bash
+docker exec stars_db du -sh /var/lib/postgresql/data
+```
