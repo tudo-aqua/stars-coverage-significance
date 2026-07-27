@@ -22,7 +22,7 @@ services:
     command:
       - "postgres"
       - "-c"
-      - "max_connections=300"
+      - "max_connections=350"
 
   pgbouncer:
     image: edoburu/pgbouncer:1.22.1-p0
@@ -49,11 +49,22 @@ services:
       AUTH_TYPE: plain
 
       # Pooling settings
+      # DEFAULT_POOL_SIZE + RESERVE_POOL_SIZE must comfortably exceed the worst-case concurrent
+      # client count: RunEvaluation.kt spawns one JVM worker process per CPU core, each holding its
+      # own single-connection HikariPool, so N servers x cores-per-server workers can all reach for
+      # a connection around the same time (their simulation phases tend to sync up since they start
+      # together). At 4 servers x 48 cores = 192 possible concurrent workers, the previous
+      # 150+30=180 ceiling was already short of that, and workers queuing past Hikari's 10s
+      # connectionTimeout surfaced as "Connection is not available, request timed out" with
+      # total=0/active=0 (the pool never got a connection at all, rather than all being busy).
       POOL_MODE: transaction
       MAX_CLIENT_CONN: "2000"
-      DEFAULT_POOL_SIZE: "150"
-      RESERVE_POOL_SIZE: "30"
-      RESERVE_POOL_TIMEOUT: "5"
+      DEFAULT_POOL_SIZE: "220"
+      RESERVE_POOL_SIZE: "40"
+      # Was 5s: combined with Hikari's 10s connectionTimeout, a request that needed the reserve
+      # pool had almost no margin left after paying this activation delay. Lowering it means the
+      # reserve kicks in faster, leaving more of Hikari's budget for the actual wait.
+      RESERVE_POOL_TIMEOUT: "2"
       SERVER_IDLE_TIMEOUT: "60"
 
       # Optional
