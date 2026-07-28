@@ -271,14 +271,21 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runTickReplay --args="1
 
 Unlike the tick replay analysis, this does re-evaluate the G0 monitor on the replayed result — G0's predicate (`tools.aqua.stars.coverage.significance.tsc.g0Accidents`) is a pure single-tick collision check (no `previous`/`once` history dependence, only the top-level `globally`, which degenerates to a single-tick check on an unlinked tick), so `g0Accidents.holds(nextTick)` can be called directly on the one-step replay result without the full `TSCEvaluation` framework. This does not generalize to G1–G4/I1/I2, which need real tick history.
 
-Writes `postEvaluation/g0_mutant_coverage_replay/g0_mutant_coverage_replay_<runId-or-"all">.json`: one entry per flagged tick, each holding `originalMutantFailed`, `newMutantsFailedCount`, and a full per-mutant `mutantResults` breakdown (`g0Failed` is `null` if the replay was inconclusive because the ego left the simulation).
+**Parallelism**: each replay reloads and steps a full libsumo simulation, and libsumo wraps a single global native simulation per process — the same reason `RunEvaluation.kt` spawns one JVM *process* per core instead of using threads. `RunG0MutantCoverageReplay.kt` is a coordinator that spawns one worker process per available core (`G0MutantCoverageReplayWorker`, started the same way `evaluationWorker.kt` is), each deterministically claiming every Nth flagged tick (sorted by id, no coordination needed between workers), then aggregates all workers' results once they finish.
+
+**Output**: each worker streams one JSON object per line (NDJSON) to its own detail file as each tick finishes, flushing immediately — `postEvaluation/g0_mutant_coverage_replay/details/g0_mutant_coverage_replay_<runId-or-"all">_worker<N>.jsonl`, holding the full per-mutant `mutantResults` breakdown per tick (`g0Failed` is `null` if the replay was inconclusive because the ego left the simulation). This replaces the previous single-file, write-at-the-very-end design, which lost all progress if the process was killed before finishing a multi-hour run.
+
+After every worker completes, the coordinator reads all detail files back and writes one aggregate summary, `postEvaluation/g0_mutant_coverage_replay/g0_mutant_coverage_replay_summary_<runId-or-"all">.json`, answering:
+- Were original mutants "killed again" on replay? (`originalMutantReproducedCount` / `originalMutantNotReproducedCount` / `originalMutantInconclusiveCount`, plus a per-mutant breakdown in `mutantStats`)
+- Which ticks are essentially unavoidable — every other mutant, substituted into the same recorded scene, also fails? (`unavoidableTickCount`, `unavoidableTickIds`)
+- How many mutants gained "new" kills — ticks not originally attributed to them where they also fail on replay? (`mutantsWithNewKillsCount`, plus each mutant's `newKillTickIds` in `mutantStats`)
 
 ```bash
-# All runs
+# All runs, one worker per available core
 docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay
 
-# Restrict to one evaluation run
-docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--runId=8"
+# Restrict to one evaluation run, reserving 2 cores for buffering
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--runId=8 --bufferProcessors=2"
 ```
 
 ---
