@@ -37,13 +37,20 @@ DEFAULT_WIDTH = 2.0    # lateral (perpendicular to heading)
 
 
 def make_box_shape(x, y, angle_deg, length, width):
-    """Return the four corners of an oriented rectangle centred at (x, y).
+    """Return the four corners of an oriented rectangle whose front bumper is at (x, y).
+
+    SUMO's fcd-output reports each vehicle's front bumper position, not its center
+    (same convention libsumo's getLanePosition/getPosition use elsewhere in this
+    project) - so the box must extend backward from (x, y) by the full vehicle
+    length rather than being centered on it. Centering it here previously placed
+    the box half a length ahead of and half a length behind where the vehicle
+    actually was.
 
     Parameters
     ----------
-    x, y      : centre position in SUMO network coordinates
+    x, y      : front bumper position in SUMO network coordinates
     angle_deg : heading in degrees (SUMO convention: 0 = North, clockwise)
-    length    : longitudinal extent in metres
+    length    : vehicle length in metres
     width     : lateral extent in metres
 
     Returns
@@ -58,18 +65,17 @@ def make_box_shape(x, y, angle_deg, length, width):
     fwd = (math.cos(theta), math.sin(theta))
     lat = (-math.sin(theta), math.cos(theta))
 
-    half_l = length / 2.0
     half_w = width / 2.0
 
     corners = [
-        (x + fwd[0] * half_l - lat[0] * half_w,
-         y + fwd[1] * half_l - lat[1] * half_w),
-        (x + fwd[0] * half_l + lat[0] * half_w,
-         y + fwd[1] * half_l + lat[1] * half_w),
-        (x - fwd[0] * half_l + lat[0] * half_w,
-         y - fwd[1] * half_l + lat[1] * half_w),
-        (x - fwd[0] * half_l - lat[0] * half_w,
-         y - fwd[1] * half_l - lat[1] * half_w),
+        (x - lat[0] * half_w,
+         y - lat[1] * half_w),
+        (x + lat[0] * half_w,
+         y + lat[1] * half_w),
+        (x - fwd[0] * length + lat[0] * half_w,
+         y - fwd[1] * length + lat[1] * half_w),
+        (x - fwd[0] * length - lat[0] * half_w,
+         y - fwd[1] * length - lat[1] * half_w),
     ]
     # Close the polygon
     corners.append(corners[0])
