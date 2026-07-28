@@ -30,38 +30,49 @@ import tools.aqua.stars.coverage.significance.workers.startG0MutantCoverageRepla
  * [G0MutantCoverageReplayAnalysis]), awaits them, then aggregates their streamed detail files into
  * one summary JSON.
  *
- * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run) and
+ * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as
- *   `RunEvaluation.kt`).
+ *   `RunEvaluation.kt`), and `--aggregateOnly=true` to skip replaying entirely and just re-run
+ *   aggregation against whatever detail files already exist under `details/` — e.g. to regenerate a
+ *   summary that failed to copy/parse correctly, or to pick up a change to the aggregation logic
+ *   itself, without repeating the (potentially multi-hour) replay.
  */
 fun main(args: Array<String>) {
   val runId = CliArgs.optionalInt(args, "runId")
-  val bufferProcessors = (CliArgs.optionalInt(args, "bufferProcessors") ?: 0).coerceAtLeast(0)
-  val parallelism = (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
-  println(
-      "Starting G0 mutant coverage replay with parallelism=$parallelism " +
-          "(bufferProcessors=$bufferProcessors, runId=${runId ?: "all"}).")
+  val aggregateOnly = CliArgs.optionalBoolean(args, "aggregateOnly", false)
 
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
-  val processes: List<NamedProcess> =
-      (0 until parallelism).map { workerId ->
-        NamedProcess(
-            name = "g0-replay-worker-$workerId",
-            process =
-                startG0MutantCoverageReplayWorkerProcess(
-                    workerId = workerId, numWorkers = parallelism, runId = runId))
-      }
-  try {
-    ProcessGroupRunner.awaitAll(
-        groupLabel = "G0 mutant coverage replay worker", processes = processes)
-  } catch (e: InterruptedException) {
-    Thread.currentThread().interrupt()
-    processes.forEach { it.killProcessTree() }
-    throw e
+  if (aggregateOnly) {
+    println(
+        "--aggregateOnly: skipping replay, re-aggregating existing detail files for runId=${runId ?: "all"}.")
+  } else {
+    val bufferProcessors = (CliArgs.optionalInt(args, "bufferProcessors") ?: 0).coerceAtLeast(0)
+    val parallelism =
+        (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
+    println(
+        "Starting G0 mutant coverage replay with parallelism=$parallelism " +
+            "(bufferProcessors=$bufferProcessors, runId=${runId ?: "all"}).")
+
+    val processes: List<NamedProcess> =
+        (0 until parallelism).map { workerId ->
+          NamedProcess(
+              name = "g0-replay-worker-$workerId",
+              process =
+                  startG0MutantCoverageReplayWorkerProcess(
+                      workerId = workerId, numWorkers = parallelism, runId = runId))
+        }
+    try {
+      ProcessGroupRunner.awaitAll(
+          groupLabel = "G0 mutant coverage replay worker", processes = processes)
+    } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
+      processes.forEach { it.killProcessTree() }
+      throw e
+    }
   }
 
-  val summary = G0MutantCoverageReplayAnalysis.aggregate(runId, parallelism)
+  val summary = G0MutantCoverageReplayAnalysis.aggregate(runId)
   println(
       "Finished! ${summary.totalTicksAnalyzed} ticks analyzed, " +
           "${summary.originalMutantReproducedCount} original-mutant kills reproduced, " +

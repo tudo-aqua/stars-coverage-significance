@@ -44,6 +44,24 @@ data class MutantG0ReplayStats(
 )
 
 /**
+ * One "almost unavoidable" tier: ticks where all but [otherMutantsAvoidedCount] of the *other*
+ * (non-original) mutants also failed when substituted into the recorded scene — one step short of
+ * [G0MutantCoverageReplaySummary.unavoidableTickIds], where every other mutant fails
+ * ([otherMutantsAvoidedCount] would be 0 there).
+ *
+ * @property otherMutantsAvoidedCount How many of the other mutants avoided the failure (1, 2, or 3
+ *   — larger counts aren't tracked as a separate tier).
+ * @property tickCount Number of ticks in this exact tier (not cumulative with neighboring tiers).
+ * @property tickIds Ids of the [tickCount] ticks.
+ */
+@Serializable
+data class NearUnavoidableTierStats(
+    val otherMutantsAvoidedCount: Int,
+    val tickCount: Int,
+    val tickIds: List<Int>,
+)
+
+/**
  * Aggregate summary across an entire `G0MutantCoverageReplayAnalysis` run, built by reading back
  * every worker's streamed [TickG0ReplaySummary] detail file.
  *
@@ -63,6 +81,8 @@ data class MutantG0ReplayStats(
  * @property unavoidableTickCount Ticks where *every other* mutant, substituted into the exact same
  *   recorded scene, also triggered a G0 failure — i.e. no known mutant strategy avoids it.
  * @property unavoidableTickIds Ids of the [unavoidableTickCount] ticks.
+ * @property almostUnavoidableTicks Three exact tiers (1, 2, and 3 other mutants avoiding the
+ *   failure) one step short of fully unavoidable — see [NearUnavoidableTierStats].
  * @property mutantsWithNewKillsCount Number of distinct mutants with at least one entry in their
  *   [MutantG0ReplayStats.newKillTickIds].
  * @property mutantStats Per-mutant breakdown, one entry per known mutant.
@@ -77,6 +97,7 @@ data class G0MutantCoverageReplaySummary(
     val originalMutantInconclusiveCount: Int,
     val unavoidableTickCount: Int,
     val unavoidableTickIds: List<Int>,
+    val almostUnavoidableTicks: List<NearUnavoidableTierStats>,
     val mutantsWithNewKillsCount: Int,
     val mutantStats: List<MutantG0ReplayStats>,
 )

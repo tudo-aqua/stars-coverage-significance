@@ -277,8 +277,10 @@ Unlike the tick replay analysis, this does re-evaluate the G0 monitor on the rep
 
 After every worker completes, the coordinator reads all detail files back and writes one aggregate summary, `postEvaluation/g0_mutant_coverage_replay/g0_mutant_coverage_replay_summary_<runId-or-"all">.json`, answering:
 - Were original mutants "killed again" on replay? (`originalMutantReproducedCount` / `originalMutantNotReproducedCount` / `originalMutantInconclusiveCount`, plus a per-mutant breakdown in `mutantStats`)
-- Which ticks are essentially unavoidable — every other mutant, substituted into the same recorded scene, also fails? (`unavoidableTickCount`, `unavoidableTickIds`)
+- Which ticks are essentially unavoidable — every other mutant, substituted into the same recorded scene, also fails? (`unavoidableTickCount`, `unavoidableTickIds`), plus three "almost unavoidable" tiers one step short of that — exactly 1, 2, or 3 other mutants avoided it (`almostUnavoidableTicks`, non-cumulative)
 - How many mutants gained "new" kills — ticks not originally attributed to them where they also fail on replay? (`mutantsWithNewKillsCount`, plus each mutant's `newKillTickIds` in `mutantStats`)
+
+`postEvaluation/g0_mutant_coverage_replay/index.html` is a self-contained static viewer for that summary JSON (no server or build step needed — open it directly, or serve the folder over HTTP for it to auto-load `g0_mutant_coverage_replay_summary_all.json`).
 
 ```bash
 # All runs, one worker per available core
@@ -286,6 +288,11 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageRepl
 
 # Restrict to one evaluation run, reserving 2 cores for buffering
 docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--runId=8 --bufferProcessors=2"
+
+# Re-run only the aggregation step against an existing details/ folder (no replay) — e.g. to
+# regenerate a summary that failed to copy/parse correctly, or after a change to the aggregation
+# logic itself
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--aggregateOnly=true"
 ```
 
 ---

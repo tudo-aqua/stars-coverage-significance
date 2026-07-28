@@ -23,6 +23,7 @@ import kotlin.io.path.bufferedWriter
 import kotlin.io.path.exists
 import kotlin.io.path.forEachLine
 import kotlin.io.path.writeText
+import kotlin.streams.toList
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
@@ -31,6 +32,7 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0MutantCoverageReplaySummary
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantG0ReplayStats
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NearUnavoidableTierStats
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickG0ReplaySummary
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickMutantG0ReplayResult
 import tools.aqua.stars.coverage.significance.tsc.g0Accidents
@@ -160,18 +162,41 @@ object G0MutantCoverageReplayAnalysis {
   }
 
   /**
-   * Coordinator-side aggregation: reads every worker's detail file (written by [runWorkerSlice])
-   * back in, line by line, and writes one [G0MutantCoverageReplaySummary] JSON.
+   * Finds every worker detail file for [runId] currently on disk, by directory listing rather than
+   * an assumed `0 until numWorkers` range — so aggregation doesn't need to know (or guess) how many
+   * workers the original run used, and works the same whether it's called right after that run's
+   * own workers finished or standalone, later, against detail files from a run with a different
+   * core count.
+   */
+  private fun discoverDetailFiles(runId: Int?): List<Path> {
+    val prefix = "g0_mutant_coverage_replay_${runId?.toString() ?: "all"}_worker"
+    if (!DETAIL_DIR.exists()) return emptyList()
+    return Files.list(DETAIL_DIR).use { stream ->
+      stream
+          .filter { path ->
+            val name = path.fileName.toString()
+            name.startsWith(prefix) && name.endsWith(".jsonl")
+          }
+          .sorted()
+          .toList()
+    }
+  }
+
+  /**
+   * Coordinator-side aggregation: reads every worker's detail file (written by [runWorkerSlice],
+   * discovered via [discoverDetailFiles]) back in, line by line, and writes one
+   * [G0MutantCoverageReplaySummary] JSON.
    *
-   * Must only be called after every worker in `0 until numWorkers` has completed successfully — the
-   * caller (`RunG0MutantCoverageReplay.kt`) enforces this via `ProcessGroupRunner.awaitAll`, since
-   * aggregating over a partial/killed worker's file would silently under-report failures.
+   * Can be run standalone against an existing `details/` folder (see `RunG0MutantCoverageReplay.kt`
+   * `--aggregateOnly`) to cheaply regenerate the summary — e.g. after a corrupted copy/transfer of
+   * the previous summary file, or after a change to the aggregation logic itself — without
+   * re-running the (potentially multi-hour) replay that produced the detail files in the first
+   * place.
    *
    * @param runId Evaluation run id the analysis was restricted to, or `null` for every run.
-   * @param numWorkers Total number of workers that were spawned.
    * @return The written [G0MutantCoverageReplaySummary].
    */
-  fun aggregate(runId: Int?, numWorkers: Int): G0MutantCoverageReplaySummary {
+  fun aggregate(runId: Int?): G0MutantCoverageReplaySummary {
     val mutants = MutantsRepository.listAll()
     val originalTickCount = mutableMapOf<Int, Int>()
     val originalTickReproducedCount = mutableMapOf<Int, Int>()
@@ -188,11 +213,16 @@ object G0MutantCoverageReplayAnalysis {
     var originalMutantNotReproducedCount = 0
     var originalMutantInconclusiveCount = 0
     val unavoidableTickIds = mutableListOf<Int>()
+    // Exact tiers one step short of fully unavoidable: exactly 1, 2, or 3 of the other mutants
+    // avoided the failure. Non-cumulative - a tick appears in at most one of these (or in
+    // unavoidableTickIds, or in neither if more than 3 other mutants avoided it).
+    val almostUnavoidableTickIds =
+        mutableMapOf(1 to mutableListOf<Int>(), 2 to mutableListOf(), 3 to mutableListOf())
 
-    for (workerId in 0 until numWorkers) {
-      val path = detailFilePath(runId, workerId)
-      if (!path.exists()) continue
+    val detailFiles = discoverDetailFiles(runId)
+    println("Aggregating ${detailFiles.size} worker detail file(s) for runId=${runId ?: "all"}.")
 
+    for (path in detailFiles) {
       path.forEachLine { line ->
         if (line.isBlank()) return@forEachLine
         val tick = jsonConfiguration.decodeFromString<TickG0ReplaySummary>(line)
@@ -209,8 +239,12 @@ object G0MutantCoverageReplayAnalysis {
           originalTickReproducedCount.merge(tick.originalMutantId, 1, Int::plus)
         }
 
-        if (tick.newMutantsFailedCount == tick.mutantResults.size - 1) {
+        val otherMutantsCount = tick.mutantResults.size - 1
+        val otherMutantsAvoidedCount = otherMutantsCount - tick.newMutantsFailedCount
+        if (otherMutantsAvoidedCount == 0) {
           unavoidableTickIds += tick.tickId
+        } else {
+          almostUnavoidableTickIds[otherMutantsAvoidedCount]?.add(tick.tickId)
         }
 
         tick.mutantResults.forEach { result ->
@@ -234,6 +268,13 @@ object G0MutantCoverageReplayAnalysis {
           )
         }
 
+    val almostUnavoidableTicks =
+        listOf(1, 2, 3).map { avoided ->
+          val ids = almostUnavoidableTickIds.getValue(avoided)
+          NearUnavoidableTierStats(
+              otherMutantsAvoidedCount = avoided, tickCount = ids.size, tickIds = ids)
+        }
+
     val summary =
         G0MutantCoverageReplaySummary(
             runId = runId,
@@ -244,6 +285,7 @@ object G0MutantCoverageReplayAnalysis {
             originalMutantInconclusiveCount = originalMutantInconclusiveCount,
             unavoidableTickCount = unavoidableTickIds.size,
             unavoidableTickIds = unavoidableTickIds,
+            almostUnavoidableTicks = almostUnavoidableTicks,
             mutantsWithNewKillsCount = mutantStats.count { it.newKillTickIds.isNotEmpty() },
             mutantStats = mutantStats,
         )
