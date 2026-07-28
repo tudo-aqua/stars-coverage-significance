@@ -212,6 +212,9 @@ object G0MutantCoverageReplayAnalysis {
     var originalMutantReproducedCount = 0
     var originalMutantNotReproducedCount = 0
     var originalMutantInconclusiveCount = 0
+    val originalMutantReproducedTickIds = mutableListOf<Int>()
+    val originalMutantNotReproducedTickIds = mutableListOf<Int>()
+    val originalMutantInconclusiveTickIds = mutableListOf<Int>()
     val unavoidableTickIds = mutableListOf<Int>()
     // Exact tiers one step short of fully unavoidable: exactly 1, 2, or 3 of the other mutants
     // avoided the failure. Non-cumulative - a tick appears in at most one of these (or in
@@ -229,9 +232,18 @@ object G0MutantCoverageReplayAnalysis {
         totalTicksAnalyzed++
 
         when (tick.originalMutantFailed) {
-          true -> originalMutantReproducedCount++
-          false -> originalMutantNotReproducedCount++
-          null -> originalMutantInconclusiveCount++
+          true -> {
+            originalMutantReproducedCount++
+            originalMutantReproducedTickIds += tick.tickId
+          }
+          false -> {
+            originalMutantNotReproducedCount++
+            originalMutantNotReproducedTickIds += tick.tickId
+          }
+          null -> {
+            originalMutantInconclusiveCount++
+            originalMutantInconclusiveTickIds += tick.tickId
+          }
         }
 
         originalTickCount.merge(tick.originalMutantId, 1, Int::plus)
@@ -281,8 +293,11 @@ object G0MutantCoverageReplayAnalysis {
             totalTicksAnalyzed = totalTicksAnalyzed,
             totalMutants = mutants.size,
             originalMutantReproducedCount = originalMutantReproducedCount,
+            originalMutantReproducedTickIds = originalMutantReproducedTickIds,
             originalMutantNotReproducedCount = originalMutantNotReproducedCount,
+            originalMutantNotReproducedTickIds = originalMutantNotReproducedTickIds,
             originalMutantInconclusiveCount = originalMutantInconclusiveCount,
+            originalMutantInconclusiveTickIds = originalMutantInconclusiveTickIds,
             unavoidableTickCount = unavoidableTickIds.size,
             unavoidableTickIds = unavoidableTickIds,
             almostUnavoidableTicks = almostUnavoidableTicks,

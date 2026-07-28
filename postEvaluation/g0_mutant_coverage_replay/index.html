@@ -97,6 +97,7 @@
     margin-bottom: 12px;
   }
   .controls-row .spacer { flex: 1; }
+  .controls-row .inline-count { color: var(--text-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 
   #errorBanner {
     display: none;
@@ -229,6 +230,20 @@
     <p class="note">For each flagged tick, whether replaying the mutant that originally produced it reproduces the recorded G0 (Accidents) failure.</p>
     <div class="bar" id="reproductionBar"></div>
     <div class="legend" id="reproductionLegend"></div>
+
+    <div class="controls-row" style="margin-top:16px; margin-bottom:8px">
+      <label for="reproductionCategorySelect">Show tick ids for</label>
+      <select id="reproductionCategorySelect">
+        <option value="notReproduced" selected>Not reproduced</option>
+        <option value="inconclusive">Inconclusive</option>
+        <option value="reproduced">Reproduced</option>
+      </select>
+      <span class="inline-count" id="reproductionCategoryCount"></span>
+      <span class="spacer"></span>
+      <button id="reproductionCopyBtn" type="button">Copy ids</button>
+      <button id="reproductionDownloadBtn" type="button">Download .txt</button>
+    </div>
+    <div class="ticklist-box" id="reproductionTickList"></div>
   </section>
 
   <section class="card" id="unavoidableCard">
@@ -506,6 +521,21 @@
     });
   }
 
+  /** Maps the reproduction-category dropdown's value to that category's tick-id array on DATA. */
+  function reproductionCategoryTickIds(category) {
+    if (category === "reproduced") return DATA.originalMutantReproducedTickIds || [];
+    if (category === "inconclusive") return DATA.originalMutantInconclusiveTickIds || [];
+    return DATA.originalMutantNotReproducedTickIds || [];
+  }
+
+  /** Renders the tick-id list for whichever reproduction category is currently selected in the dropdown. */
+  function renderReproductionTickList() {
+    const category = document.getElementById("reproductionCategorySelect").value;
+    const ids = reproductionCategoryTickIds(category);
+    setText(document.getElementById("reproductionCategoryCount"), fmtNum(ids.length) + " ticks");
+    document.getElementById("reproductionTickList").textContent = formatTickIdList(ids);
+  }
+
   /** Renders up to INLINE_LIST_LIMIT ids inline, with a note (not the full list) beyond that — the download/copy buttons remain the way to get every id. */
   function formatTickIdList(ids) {
     if (!ids || ids.length === 0) return "(none)";
@@ -721,6 +751,18 @@
 
     document.getElementById("mutantsCsvBtn").addEventListener("click", downloadMutantsCsv);
 
+    document.getElementById("reproductionCategorySelect").addEventListener("change", renderReproductionTickList);
+    document.getElementById("reproductionCopyBtn").addEventListener("click", () => {
+      const category = document.getElementById("reproductionCategorySelect").value;
+      const text = reproductionCategoryTickIds(category).join(", ");
+      navigator.clipboard && navigator.clipboard.writeText(text);
+    });
+    document.getElementById("reproductionDownloadBtn").addEventListener("click", () => {
+      const category = document.getElementById("reproductionCategorySelect").value;
+      const ids = reproductionCategoryTickIds(category);
+      downloadText("g0_" + category + "_tick_ids.txt", ids.join("\n"));
+    });
+
     document.getElementById("unavoidableDetails").addEventListener("toggle", (e) => {
       const details = e.target;
       if (details.open && details.dataset.populated !== "true") {
@@ -746,6 +788,8 @@
     DATA = data;
     renderSummary(data);
     renderReproductionBar(data);
+    document.getElementById("reproductionCategorySelect").value = "notReproduced";
+    renderReproductionTickList();
     renderUnavoidable(data);
     renderAlmostUnavoidable(data);
     renderMutantsTable();

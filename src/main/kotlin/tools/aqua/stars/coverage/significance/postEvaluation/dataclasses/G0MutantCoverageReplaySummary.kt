@@ -71,13 +71,16 @@ data class NearUnavoidableTierStats(
  * @property totalMutants Number of known mutants each tick was replayed against.
  * @property originalMutantReproducedCount Ticks where replaying the original mutant reproduced the
  *   recorded G0 failure.
+ * @property originalMutantReproducedTickIds Ids of the [originalMutantReproducedCount] ticks.
  * @property originalMutantNotReproducedCount Ticks where replaying the original mutant did *not*
  *   reproduce the failure — a discrepancy between the recorded run and the replay worth
  *   investigating (see
  *   [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis] docs on
  *   replay fidelity).
+ * @property originalMutantNotReproducedTickIds Ids of the [originalMutantNotReproducedCount] ticks.
  * @property originalMutantInconclusiveCount Ticks where the original mutant's replay was
  *   inconclusive (the ego left the simulation before a next tick could be evaluated).
+ * @property originalMutantInconclusiveTickIds Ids of the [originalMutantInconclusiveCount] ticks.
  * @property unavoidableTickCount Ticks where *every other* mutant, substituted into the exact same
  *   recorded scene, also triggered a G0 failure — i.e. no known mutant strategy avoids it.
  * @property unavoidableTickIds Ids of the [unavoidableTickCount] ticks.
@@ -93,8 +96,11 @@ data class G0MutantCoverageReplaySummary(
     val totalTicksAnalyzed: Int,
     val totalMutants: Int,
     val originalMutantReproducedCount: Int,
+    val originalMutantReproducedTickIds: List<Int>,
     val originalMutantNotReproducedCount: Int,
+    val originalMutantNotReproducedTickIds: List<Int>,
     val originalMutantInconclusiveCount: Int,
+    val originalMutantInconclusiveTickIds: List<Int>,
     val unavoidableTickCount: Int,
     val unavoidableTickIds: List<Int>,
     val almostUnavoidableTicks: List<NearUnavoidableTierStats>,
