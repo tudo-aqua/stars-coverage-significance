@@ -303,7 +303,7 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageRepl
 
 # Also run with 0.2s/0.5s/0.7s/1.0s of lead time before each flagged tick (4 extra passes, 4 extra
 # output folders, sequential)
-docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--leadTimeSeconds=0.2,0.5,0.7,1.0"
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--leadTimeSeconds=0.0,0.2,0.5,0.7,1.0"
 ```
 
 ---
