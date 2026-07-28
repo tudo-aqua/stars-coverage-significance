@@ -200,11 +200,17 @@ object G0MutantCoverageReplayAnalysis {
     val mutants = MutantsRepository.listAll()
     val originalTickCount = mutableMapOf<Int, Int>()
     val originalTickReproducedCount = mutableMapOf<Int, Int>()
+    val originalTickReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
+    val originalTickNotReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
+    val originalTickInconclusiveTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
     val newKillTickIds = mutableMapOf<Int, MutableList<Int>>()
     mutants.forEach { mutant ->
       val mutantId = checkNotNull(mutant.id)
       originalTickCount[mutantId] = 0
       originalTickReproducedCount[mutantId] = 0
+      originalTickReproducedTickIdsByMutant[mutantId] = mutableListOf()
+      originalTickNotReproducedTickIdsByMutant[mutantId] = mutableListOf()
+      originalTickInconclusiveTickIdsByMutant[mutantId] = mutableListOf()
       newKillTickIds[mutantId] = mutableListOf()
     }
 
@@ -235,14 +241,23 @@ object G0MutantCoverageReplayAnalysis {
           true -> {
             originalMutantReproducedCount++
             originalMutantReproducedTickIds += tick.tickId
+            originalTickReproducedTickIdsByMutant.getOrPut(tick.originalMutantId) {
+              mutableListOf()
+            } += tick.tickId
           }
           false -> {
             originalMutantNotReproducedCount++
             originalMutantNotReproducedTickIds += tick.tickId
+            originalTickNotReproducedTickIdsByMutant.getOrPut(tick.originalMutantId) {
+              mutableListOf()
+            } += tick.tickId
           }
           null -> {
             originalMutantInconclusiveCount++
             originalMutantInconclusiveTickIds += tick.tickId
+            originalTickInconclusiveTickIdsByMutant.getOrPut(tick.originalMutantId) {
+              mutableListOf()
+            } += tick.tickId
           }
         }
 
@@ -276,6 +291,12 @@ object G0MutantCoverageReplayAnalysis {
               className = mutant.className,
               originalTickCount = originalTickCount.getValue(mutantId),
               originalTickReproducedCount = originalTickReproducedCount.getValue(mutantId),
+              originalTickReproducedTickIds =
+                  originalTickReproducedTickIdsByMutant.getValue(mutantId),
+              originalTickNotReproducedTickIds =
+                  originalTickNotReproducedTickIdsByMutant.getValue(mutantId),
+              originalTickInconclusiveTickIds =
+                  originalTickInconclusiveTickIdsByMutant.getValue(mutantId),
               newKillTickIds = newKillTickIds.getValue(mutantId),
           )
         }

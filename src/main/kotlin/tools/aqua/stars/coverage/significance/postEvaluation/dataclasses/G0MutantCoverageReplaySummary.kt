@@ -29,6 +29,11 @@ import kotlinx.serialization.Serializable
  *   this mutant is `metric_failed_monitors.mutant_id` for that row).
  * @property originalTickReproducedCount Of [originalTickCount], how many reproduced the recorded G0
  *   failure when this mutant was replayed against its own tick again.
+ * @property originalTickReproducedTickIds Ids of the [originalTickReproducedCount] ticks.
+ * @property originalTickNotReproducedTickIds Ids of this mutant's original ticks where replaying it
+ *   did *not* reproduce the recorded failure.
+ * @property originalTickInconclusiveTickIds Ids of this mutant's original ticks where the replay
+ *   was inconclusive (the ego left the simulation before a next tick could be evaluated).
  * @property newKillTickIds Ids of ticks *not* originally produced by this mutant, where
  *   substituting this mutant into the recorded scene also triggered a G0 failure — i.e. kills this
  *   mutant wasn't originally credited with.
@@ -40,6 +45,9 @@ data class MutantG0ReplayStats(
     val className: String,
     val originalTickCount: Int,
     val originalTickReproducedCount: Int,
+    val originalTickReproducedTickIds: List<Int>,
+    val originalTickNotReproducedTickIds: List<Int>,
+    val originalTickInconclusiveTickIds: List<Int>,
     val newKillTickIds: List<Int>,
 )
 

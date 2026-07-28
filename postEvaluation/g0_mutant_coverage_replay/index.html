@@ -232,6 +232,10 @@
     <div class="legend" id="reproductionLegend"></div>
 
     <div class="controls-row" style="margin-top:16px; margin-bottom:8px">
+      <label for="reproductionMutantSelect">Mutant</label>
+      <select id="reproductionMutantSelect">
+        <option value="">All mutants</option>
+      </select>
       <label for="reproductionCategorySelect">Show tick ids for</label>
       <select id="reproductionCategorySelect">
         <option value="notReproduced" selected>Not reproduced</option>
@@ -521,17 +525,44 @@
     });
   }
 
-  /** Maps the reproduction-category dropdown's value to that category's tick-id array on DATA. */
-  function reproductionCategoryTickIds(category) {
-    if (category === "reproduced") return DATA.originalMutantReproducedTickIds || [];
-    if (category === "inconclusive") return DATA.originalMutantInconclusiveTickIds || [];
-    return DATA.originalMutantNotReproducedTickIds || [];
+  /** Populates the reproduction card's mutant dropdown from DATA.mutantStats, ordered by mutant number. */
+  function populateReproductionMutantSelect(data) {
+    const select = document.getElementById("reproductionMutantSelect");
+    select.innerHTML = '<option value="">All mutants</option>';
+    data.mutantStats
+      .slice()
+      .sort((a, b) => a.mutantNumber - b.mutantNumber)
+      .forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = String(m.mutantId);
+        opt.textContent = "#" + m.mutantNumber + " " + m.className;
+        select.appendChild(opt);
+      });
   }
 
-  /** Renders the tick-id list for whichever reproduction category is currently selected in the dropdown. */
+  /**
+   * Maps the current mutant + category dropdown selections to a tick-id array: the global
+   * (all-mutants-combined) DATA field when "All mutants" is selected, or that one mutant's own
+   * originalTick*TickIds field from DATA.mutantStats otherwise.
+   */
+  function reproductionCategoryTickIds(mutantIdStr, category) {
+    if (mutantIdStr === "") {
+      if (category === "reproduced") return DATA.originalMutantReproducedTickIds || [];
+      if (category === "inconclusive") return DATA.originalMutantInconclusiveTickIds || [];
+      return DATA.originalMutantNotReproducedTickIds || [];
+    }
+    const mutant = DATA.mutantStats.find((m) => String(m.mutantId) === mutantIdStr);
+    if (!mutant) return [];
+    if (category === "reproduced") return mutant.originalTickReproducedTickIds || [];
+    if (category === "inconclusive") return mutant.originalTickInconclusiveTickIds || [];
+    return mutant.originalTickNotReproducedTickIds || [];
+  }
+
+  /** Renders the tick-id list for whichever mutant + reproduction category is currently selected. */
   function renderReproductionTickList() {
+    const mutantIdStr = document.getElementById("reproductionMutantSelect").value;
     const category = document.getElementById("reproductionCategorySelect").value;
-    const ids = reproductionCategoryTickIds(category);
+    const ids = reproductionCategoryTickIds(mutantIdStr, category);
     setText(document.getElementById("reproductionCategoryCount"), fmtNum(ids.length) + " ticks");
     document.getElementById("reproductionTickList").textContent = formatTickIdList(ids);
   }
@@ -751,16 +782,20 @@
 
     document.getElementById("mutantsCsvBtn").addEventListener("click", downloadMutantsCsv);
 
+    document.getElementById("reproductionMutantSelect").addEventListener("change", renderReproductionTickList);
     document.getElementById("reproductionCategorySelect").addEventListener("change", renderReproductionTickList);
     document.getElementById("reproductionCopyBtn").addEventListener("click", () => {
+      const mutantIdStr = document.getElementById("reproductionMutantSelect").value;
       const category = document.getElementById("reproductionCategorySelect").value;
-      const text = reproductionCategoryTickIds(category).join(", ");
+      const text = reproductionCategoryTickIds(mutantIdStr, category).join(", ");
       navigator.clipboard && navigator.clipboard.writeText(text);
     });
     document.getElementById("reproductionDownloadBtn").addEventListener("click", () => {
+      const mutantIdStr = document.getElementById("reproductionMutantSelect").value;
       const category = document.getElementById("reproductionCategorySelect").value;
-      const ids = reproductionCategoryTickIds(category);
-      downloadText("g0_" + category + "_tick_ids.txt", ids.join("\n"));
+      const ids = reproductionCategoryTickIds(mutantIdStr, category);
+      const fileNamePart = mutantIdStr === "" ? "all" : "mutant" + mutantIdStr;
+      downloadText("g0_" + fileNamePart + "_" + category + "_tick_ids.txt", ids.join("\n"));
     });
 
     document.getElementById("unavoidableDetails").addEventListener("toggle", (e) => {
@@ -788,6 +823,8 @@
     DATA = data;
     renderSummary(data);
     renderReproductionBar(data);
+    populateReproductionMutantSelect(data);
+    document.getElementById("reproductionMutantSelect").value = "";
     document.getElementById("reproductionCategorySelect").value = "notReproduced";
     renderReproductionTickList();
     renderUnavoidable(data);
