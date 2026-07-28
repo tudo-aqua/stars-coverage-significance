@@ -102,6 +102,31 @@ object MetricFailedMonitorsRepository {
   }
 
   /**
+   * Retrieves every [MetricFailedMonitorsEntry] recorded for one (run, scenario, mutant)
+   * combination — bounded by that scenario's own tick count (small), unlike the table as a whole.
+   * Used to find the tick closest to a target time for lead-time replays (see
+   * `tools.aqua.stars.coverage.significance.postEvaluation.LeadTimeReplay`).
+   *
+   * @param runId Evaluation run id.
+   * @param scenarioConfigId Scenario starting configuration id.
+   * @param mutantId Mutant id.
+   * @return All matching [MetricFailedMonitorsEntry]s.
+   */
+  fun getAllForScenarioAndMutant(
+      runId: Int,
+      scenarioConfigId: Int,
+      mutantId: Int
+  ): List<MetricFailedMonitorsEntry> = db {
+    MetricFailedMonitorsTable.selectAll()
+        .where {
+          (MetricFailedMonitorsTable.run eq runId) and
+              (MetricFailedMonitorsTable.startingScenarioConfiguration eq scenarioConfigId) and
+              (MetricFailedMonitorsTable.mutant eq mutantId)
+        }
+        .map { it.toEntry() }
+  }
+
+  /**
    * Retrieves all [MetricFailedMonitorsEntry]s where the G0 (Accidents) monitor failed at the next
    * tick, optionally restricted to a single evaluation run.
    *

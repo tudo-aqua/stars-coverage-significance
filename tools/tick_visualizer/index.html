@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tick Vehicle Visualizer</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --lane-fill:      #eeede8;
+    --lane-fill-alt:  #e6e5df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --lane-fill:      #232322;
+      --lane-fill-alt:  #1c1c1b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 20px clamp(16px, 4vw, 40px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  header p.subtitle { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
+
+  main {
+    padding: 20px clamp(16px, 4vw, 40px) 60px;
+    max-width: 1300px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .card p.note { margin: 0 0 12px; font-size: 0.85rem; color: var(--text-secondary); }
+
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    background: var(--page-plane);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 10px 12px;
+    resize: vertical;
+  }
+
+  label { font-size: 0.85rem; color: var(--text-secondary); }
+  button {
+    font: inherit;
+    cursor: pointer;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 6px 12px;
+  }
+  button:hover { border-color: var(--text-secondary); }
+  button.primary { background: #2a78d6; border-color: #2a78d6; color: #fff; }
+  button.primary:hover { opacity: 0.9; }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .controls-row .spacer { flex: 1; }
+  input[type="file"] { font-size: 0.85rem; color: var(--text-primary); }
+  input[type="file"]::file-selector-button {
+    font: inherit;
+    cursor: pointer;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin-right: 8px;
+  }
+
+  #errorBox {
+    display: none;
+    color: #d03b3b;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+
+  #vizWrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--page-plane);
+    touch-action: none;
+  }
+  #vizSvg { display: block; width: 100%; height: 60vh; min-height: 320px; cursor: grab; }
+  #vizSvg.dragging { cursor: grabbing; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); }
+  .legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin-top: 4px; }
+  table th, table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--gridline); }
+  table th { color: var(--text-muted); font-weight: 600; }
+  table td.num, table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow: auto; max-height: 360px; border: 1px solid var(--border); border-radius: 8px; }
+  .table-scroll thead th { position: sticky; top: 0; background: var(--surface-1); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Tick Vehicle Visualizer</h1>
+  <p class="subtitle">Paste or upload a tick's vehicle-snapshot JSON (the shape of <code>all_vehicles_json</code> / <code>TickVehicleSnapshot[]</code>) to see every vehicle's lane and position.</p>
+</header>
+
+<main>
+
+  <section class="card" id="inputCard">
+    <h2>Input</h2>
+    <p class="note">Fields expected per vehicle: <code>id</code>, <code>ego</code> (bool, optional), <code>type</code>, <code>lane</code>, <code>front</code>, <code>back</code>, <code>speed</code>, <code>accel</code>.</p>
+    <textarea id="jsonInput" spellcheck="false"></textarea>
+    <div class="controls-row">
+      <button id="renderBtn" class="primary" type="button">Render</button>
+      <label for="jsonFileInput">or load a file:</label>
+      <input type="file" id="jsonFileInput" accept=".json,application/json" />
+      <span class="spacer"></span>
+      <button id="fitBtn" type="button">Fit view</button>
+    </div>
+    <div id="errorBox"></div>
+  </section>
+
+  <section class="card" id="vizCard">
+    <h2>Scene</h2>
+    <p class="note">X: position along the lane (m), increasing to the right = direction of travel. Y: lane index, lane 0 at the bottom (rightmost, per SUMO convention). Scroll/pinch to zoom, drag to pan. Hover a vehicle for its full data.</p>
+    <div id="vizWrap"><svg id="vizSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="legend" id="vizLegend"></div>
+  </section>
+
+  <section class="card" id="tableCard">
+    <h2>Vehicles</h2>
+    <div class="table-scroll">
+      <table id="vehicleTable">
+        <thead><tr>
+          <th>Id</th><th>Ego</th><th>Type</th><th class="num">Lane</th><th class="num">Front (m)</th>
+          <th class="num">Back (m)</th><th class="num">Length (m)</th><th class="num">Speed (m/s)</th><th class="num">Accel (m/s&sup2;)</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  const EXAMPLE_JSON = [
+    { "id": "ego", "ego": true, "type": "ego", "lane": 2, "front": 133.436, "back": 128.436, "speed": 27.08, "accel": 2.6 },
+    { "id": "fast_1", "type": "car_speedy", "lane": 1, "front": 77.975, "back": 72.975, "speed": 29.283333, "accel": -4.5 },
+    { "id": "fast_2", "type": "car_speedy", "lane": 0, "front": 137.975, "back": 132.975, "speed": 29.283333, "accel": -4.5 },
+    { "id": "fast_3", "type": "car_speedy", "lane": 1, "front": 200.0, "back": 195.0, "speed": 33.333332, "accel": 0.0 },
+    { "id": "normal_1", "type": "car_normal", "lane": 2, "front": 72.5, "back": 67.5, "speed": 25.0, "accel": 0.0 },
+    { "id": "normal_2", "type": "car_normal", "lane": 0, "front": 192.5, "back": 187.5, "speed": 25.0, "accel": 0.0 },
+    { "id": "slow_1", "type": "car_calm", "lane": 1, "front": 125.0, "back": 120.0, "speed": 16.666666, "accel": 0.0 }
+  ];
+
+  const TYPE_COLORS = {
+    ego: "#eda100",
+    car_speedy: "#e34948",
+    car_normal: "#2a78d6",
+    car_calm: "#1baf7a",
+  };
+  const FALLBACK_PALETTE = ["#4a3aa7", "#e87ba4", "#eb6834", "#0d9488", "#92400e", "#db2777", "#475569"];
+
+  const LANE_HEIGHT = 3.5; // meters, nominal SUMO lane width
+  const VEHICLE_HEIGHT = 2.4; // meters, drawn vehicle "width" (perpendicular to travel)
+  const NS = "http://www.w3.org/2000/svg";
+
+  let vehicles = [];
+  let viewBox = { x: 0, y: 0, w: 100, h: 20 };
+
+  // ------------------------------------------------------------------ utils
+
+  function hashString(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+
+  function typeColor(type) {
+    if (TYPE_COLORS[type]) return TYPE_COLORS[type];
+    return FALLBACK_PALETTE[hashString(String(type)) % FALLBACK_PALETTE.length];
+  }
+
+  function fmtNum(v, digits) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    return Number(v).toFixed(digits === undefined ? 2 : digits);
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k]));
+    return el;
+  }
+
+  function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.textContent = msg;
+    box.style.display = msg ? "block" : "none";
+  }
+
+  // -------------------------------------------------------------- data load
+
+  function parseAndRender(text) {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      showError("Not valid JSON: " + err.message);
+      return;
+    }
+    if (!Array.isArray(data)) {
+      showError("Expected a JSON array of vehicles.");
+      return;
+    }
+    const bad = data.find((v) => typeof v.front !== "number" || typeof v.back !== "number" || typeof v.lane !== "number");
+    if (bad) {
+      showError('Every entry needs numeric "front", "back", and "lane" fields.');
+      return;
+    }
+    showError("");
+    vehicles = data;
+    fitView();
+    render();
+  }
+
+  function handleFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      document.getElementById("jsonInput").value = reader.result;
+      parseAndRender(reader.result);
+    };
+    reader.onerror = () => showError('Could not read "' + file.name + '" (' + reader.error + ").");
+    reader.readAsText(file);
+  }
+
+  // ------------------------------------------------------------ view / zoom
+
+  function fitView() {
+    if (vehicles.length === 0) return;
+    const minBack = Math.min(...vehicles.map((v) => v.back));
+    const maxFront = Math.max(...vehicles.map((v) => v.front));
+    const minLane = Math.min(...vehicles.map((v) => v.lane));
+    const maxLane = Math.max(...vehicles.map((v) => v.lane));
+
+    const padX = Math.max(5, (maxFront - minBack) * 0.08);
+    const padY = LANE_HEIGHT * 0.6;
+    viewBox = {
+      x: minBack - padX,
+      y: 0 - padY,
+      w: (maxFront - minBack) + 2 * padX,
+      h: (maxLane - minLane + 1) * LANE_HEIGHT + 2 * padY,
+    };
+    applyViewBox();
+  }
+
+  function applyViewBox() {
+    document
+      .getElementById("vizSvg")
+      .setAttribute("viewBox", viewBox.x + " " + viewBox.y + " " + viewBox.w + " " + viewBox.h);
+  }
+
+  function wireZoomPan() {
+    const svg = document.getElementById("vizSvg");
+
+    svg.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const rect = svg.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width;
+        const py = (e.clientY - rect.top) / rect.height;
+        const mouseUserX = viewBox.x + px * viewBox.w;
+        const mouseUserY = viewBox.y + py * viewBox.h;
+
+        const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+        const newW = Math.max(2, viewBox.w * factor);
+        const newH = Math.max(1, viewBox.h * factor);
+        viewBox = {
+          x: mouseUserX - px * newW,
+          y: mouseUserY - py * newH,
+          w: newW,
+          h: newH,
+        };
+        applyViewBox();
+      },
+      { passive: false });
+
+    let dragging = false;
+    let lastClientX = 0;
+    let lastClientY = 0;
+
+    svg.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      svg.classList.add("dragging");
+      svg.setPointerCapture(e.pointerId);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+    });
+    svg.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const rect = svg.getBoundingClientRect();
+      const dxUser = ((lastClientX - e.clientX) / rect.width) * viewBox.w;
+      const dyUser = ((lastClientY - e.clientY) / rect.height) * viewBox.h;
+      viewBox = { x: viewBox.x + dxUser, y: viewBox.y + dyUser, w: viewBox.w, h: viewBox.h };
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      applyViewBox();
+    });
+    const stopDragging = () => {
+      dragging = false;
+      svg.classList.remove("dragging");
+    };
+    svg.addEventListener("pointerup", stopDragging);
+    svg.addEventListener("pointercancel", stopDragging);
+    svg.addEventListener("pointerleave", stopDragging);
+  }
+
+  // ------------------------------------------------------------- rendering
+
+  function laneY(lane, maxLane) {
+    // Lane 0 at the bottom (SUMO convention: 0 = rightmost), higher lanes further up.
+    return (maxLane - lane) * LANE_HEIGHT;
+  }
+
+  function render() {
+    const svg = document.getElementById("vizSvg");
+    svg.innerHTML = "";
+    if (vehicles.length === 0) return;
+
+    const minLane = Math.min(...vehicles.map((v) => v.lane));
+    const maxLane = Math.max(...vehicles.map((v) => v.lane));
+    const minBack = Math.min(...vehicles.map((v) => v.back));
+    const maxFront = Math.max(...vehicles.map((v) => v.front));
+    const xStart = viewBox.x - viewBox.w; // draw lane bands well beyond the current view
+    const xEnd = viewBox.x + 2 * viewBox.w;
+
+    // Lane bands + dashed dividers
+    for (let lane = minLane; lane <= maxLane; lane++) {
+      const y = laneY(lane, maxLane);
+      const band = svgEl("rect", {
+        x: xStart,
+        y: y,
+        width: xEnd - xStart,
+        height: LANE_HEIGHT,
+        fill: (lane - minLane) % 2 === 0 ? "var(--lane-fill)" : "var(--lane-fill-alt)",
+      });
+      svg.appendChild(band);
+
+      const label = svgEl("text", {
+        x: minBack - (viewBox.w * 0.02),
+        y: y + LANE_HEIGHT / 2,
+        "text-anchor": "end",
+        "dominant-baseline": "middle",
+        "font-size": LANE_HEIGHT * 0.32,
+        fill: "var(--text-muted)",
+      });
+      label.textContent = "lane " + lane;
+      svg.appendChild(label);
+    }
+    for (let lane = minLane; lane <= maxLane; lane++) {
+      const yTop = laneY(lane, maxLane);
+      const divider = svgEl("line", {
+        x1: xStart, y1: yTop, x2: xEnd, y2: yTop,
+        stroke: "var(--gridline)", "stroke-width": LANE_HEIGHT * 0.02, "stroke-dasharray": LANE_HEIGHT * 0.15 + "," + LANE_HEIGHT * 0.1,
+      });
+      svg.appendChild(divider);
+    }
+    const bottomEdge = svgEl("line", {
+      x1: xStart, y1: laneY(minLane, maxLane) + LANE_HEIGHT, x2: xEnd, y2: laneY(minLane, maxLane) + LANE_HEIGHT,
+      stroke: "var(--baseline)", "stroke-width": LANE_HEIGHT * 0.03,
+    });
+    svg.appendChild(bottomEdge);
+
+    // Direction-of-travel arrow
+    const arrowY = laneY(maxLane, maxLane) - LANE_HEIGHT * 0.25;
+    const arrow = svgEl("text", {
+      x: (minBack + maxFront) / 2, y: arrowY, "text-anchor": "middle",
+      "font-size": LANE_HEIGHT * 0.3, fill: "var(--text-muted)",
+    });
+    arrow.textContent = "→ direction of travel";
+    svg.appendChild(arrow);
+
+    // Vehicles
+    vehicles.forEach((v) => {
+      const y = laneY(v.lane, maxLane) + (LANE_HEIGHT - VEHICLE_HEIGHT) / 2;
+      const length = Math.max(0.5, v.front - v.back);
+      const color = typeColor(v.type);
+      const isEgo = v.ego === true;
+
+      const g = svgEl("g");
+
+      const rect = svgEl("rect", {
+        x: v.back, y: y, width: length, height: VEHICLE_HEIGHT, rx: VEHICLE_HEIGHT * 0.15,
+        fill: color, stroke: isEgo ? "#000" : "var(--border)", "stroke-width": isEgo ? LANE_HEIGHT * 0.04 : LANE_HEIGHT * 0.015,
+        "fill-opacity": 0.9,
+      });
+      g.appendChild(rect);
+
+      // Front-edge marker
+      const frontMark = svgEl("rect", {
+        x: v.front - Math.min(0.6, length * 0.15), y: y, width: Math.min(0.6, length * 0.15), height: VEHICLE_HEIGHT,
+        fill: "#000", "fill-opacity": 0.25,
+      });
+      g.appendChild(frontMark);
+
+      const title = svgEl("title");
+      title.textContent =
+        v.id + (isEgo ? " (ego)" : "") + "\n" +
+        "type: " + v.type + "\n" +
+        "lane: " + v.lane + "\n" +
+        "front: " + fmtNum(v.front, 3) + " m\n" +
+        "back: " + fmtNum(v.back, 3) + " m\n" +
+        "length: " + fmtNum(length, 3) + " m\n" +
+        "speed: " + fmtNum(v.speed, 3) + " m/s\n" +
+        "accel: " + fmtNum(v.accel, 3) + " m/s²";
+      g.appendChild(title);
+
+      const label = svgEl("text", {
+        x: v.back + length / 2, y: y + VEHICLE_HEIGHT / 2, "text-anchor": "middle", "dominant-baseline": "middle",
+        "font-size": Math.min(VEHICLE_HEIGHT * 0.5, length * 0.28), fill: "#fff", "pointer-events": "none",
+        "font-weight": isEgo ? "700" : "400",
+      });
+      label.textContent = v.id;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+    });
+
+    renderLegend();
+    renderTable();
+  }
+
+  function renderLegend() {
+    const legend = document.getElementById("vizLegend");
+    legend.innerHTML = "";
+    const seenTypes = new Set();
+    vehicles.forEach((v) => seenTypes.add(v.type));
+    Array.from(seenTypes)
+      .sort()
+      .forEach((type) => {
+        const item = document.createElement("span");
+        const swatch = document.createElement("span");
+        swatch.className = "swatch";
+        swatch.style.background = typeColor(type);
+        item.appendChild(swatch);
+        item.appendChild(document.createTextNode(type));
+        legend.appendChild(item);
+      });
+  }
+
+  function renderTable() {
+    const tbody = document.querySelector("#vehicleTable tbody");
+    tbody.innerHTML = "";
+    vehicles
+      .slice()
+      .sort((a, b) => b.front - a.front)
+      .forEach((v) => {
+        const tr = document.createElement("tr");
+        const cells = [
+          v.id,
+          v.ego === true ? "✓" : "",
+          v.type,
+          [v.lane, "num"],
+          [fmtNum(v.front, 3), "num"],
+          [fmtNum(v.back, 3), "num"],
+          [fmtNum(v.front - v.back, 3), "num"],
+          [fmtNum(v.speed, 3), "num"],
+          [fmtNum(v.accel, 3), "num"],
+        ];
+        cells.forEach((c) => {
+          const td = document.createElement("td");
+          if (Array.isArray(c)) {
+            td.textContent = c[0];
+            td.className = c[1];
+          } else {
+            td.textContent = c;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+  }
+
+  // ----------------------------------------------------------------- init
+
+  document.getElementById("renderBtn").addEventListener("click", () => {
+    parseAndRender(document.getElementById("jsonInput").value);
+  });
+  document.getElementById("fitBtn").addEventListener("click", () => {
+    fitView();
+    render();
+  });
+  document.getElementById("jsonFileInput").addEventListener("change", handleFileUpload);
+
+  wireZoomPan();
+
+  document.getElementById("jsonInput").value = JSON.stringify(EXAMPLE_JSON, null, 2);
+  parseAndRender(document.getElementById("jsonInput").value);
+})();
+</script>
+</body>
+</html>

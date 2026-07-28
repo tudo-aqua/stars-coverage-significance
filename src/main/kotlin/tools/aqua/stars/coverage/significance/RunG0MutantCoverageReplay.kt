@@ -32,22 +32,47 @@ import tools.aqua.stars.coverage.significance.workers.startG0MutantCoverageRepla
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as
- *   `RunEvaluation.kt`), and `--aggregateOnly=true` to skip replaying entirely and just re-run
+ *   `RunEvaluation.kt`), `--aggregateOnly=true` to skip replaying entirely and just re-run
  *   aggregation against whatever detail files already exist under `details/` — e.g. to regenerate a
  *   summary that failed to copy/parse correctly, or to pick up a change to the aggregation logic
- *   itself, without repeating the (potentially multi-hour) replay.
+ *   itself, without repeating the (potentially multi-hour) replay — and `--leadTimeSeconds=<comma
+ *   separated values>` (e.g. `0.2,0.5,0.7,1.0`) to additionally run one full replay+aggregate pass
+ *   per lead time, each writing to its own `g0_mutant_coverage_replay_leadtime_<value>s/` folder,
+ *   leaving the original (omit this flag) single-step `g0_mutant_coverage_replay/` output
+ *   untouched. Passes run sequentially, each using the full available parallelism.
  */
 fun main(args: Array<String>) {
   val runId = CliArgs.optionalInt(args, "runId")
   val aggregateOnly = CliArgs.optionalBoolean(args, "aggregateOnly", false)
+  val bufferProcessors = (CliArgs.optionalInt(args, "bufferProcessors") ?: 0).coerceAtLeast(0)
+  val leadTimes = CliArgs.optionalDoubleList(args, "leadTimeSeconds")
 
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
+  // null (the original single-step behaviour, untouched) plus one pass per requested lead time.
+  val passes: List<Double?> = leadTimes ?: listOf(null)
+  passes.forEachIndexed { index, leadTimeSeconds ->
+    println(
+        "=== Pass ${index + 1}/${passes.size}" +
+            (leadTimeSeconds?.let { " (leadTimeSeconds=$it)" } ?: " (original, no lead time)") +
+            " ===")
+    runOnePass(runId, aggregateOnly, bufferProcessors, leadTimeSeconds)
+  }
+}
+
+/**
+ * Runs one full replay (unless [aggregateOnly]) + aggregate pass for a single [leadTimeSeconds].
+ */
+private fun runOnePass(
+    runId: Int?,
+    aggregateOnly: Boolean,
+    bufferProcessors: Int,
+    leadTimeSeconds: Double?
+) {
   if (aggregateOnly) {
     println(
         "--aggregateOnly: skipping replay, re-aggregating existing detail files for runId=${runId ?: "all"}.")
   } else {
-    val bufferProcessors = (CliArgs.optionalInt(args, "bufferProcessors") ?: 0).coerceAtLeast(0)
     val parallelism =
         (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
     println(
@@ -60,7 +85,10 @@ fun main(args: Array<String>) {
               name = "g0-replay-worker-$workerId",
               process =
                   startG0MutantCoverageReplayWorkerProcess(
-                      workerId = workerId, numWorkers = parallelism, runId = runId))
+                      workerId = workerId,
+                      numWorkers = parallelism,
+                      runId = runId,
+                      leadTimeSeconds = leadTimeSeconds))
         }
     try {
       ProcessGroupRunner.awaitAll(
@@ -72,7 +100,7 @@ fun main(args: Array<String>) {
     }
   }
 
-  val summary = G0MutantCoverageReplayAnalysis.aggregate(runId)
+  val summary = G0MutantCoverageReplayAnalysis.aggregate(runId, leadTimeSeconds)
   println(
       "Finished! ${summary.totalTicksAnalyzed} ticks analyzed, " +
           "${summary.originalMutantReproducedCount} original-mutant kills reproduced, " +

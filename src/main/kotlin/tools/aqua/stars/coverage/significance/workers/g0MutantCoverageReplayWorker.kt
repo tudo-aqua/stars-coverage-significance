@@ -31,7 +31,7 @@ import tools.aqua.stars.coverage.significance.utils.CliArgs
  * its own JVM process rather than as a thread, deterministically claiming every Nth flagged tick.
  *
  * @param args Command-line arguments: `--workerId=<id>` `--numWorkers=<n>` and optionally
- *   `--runId=<id>`.
+ *   `--runId=<id>` and `--leadTimeSeconds=<value>`.
  */
 fun main(args: Array<String>) {
   installParentDeathWatcher(args)
@@ -40,8 +40,9 @@ fun main(args: Array<String>) {
   val workerId = CliArgs.requireInt(args, "workerId")
   val numWorkers = CliArgs.requireInt(args, "numWorkers")
   val runId = CliArgs.optionalInt(args, "runId")
+  val leadTimeSeconds = CliArgs.optionalDouble(args, "leadTimeSeconds")
 
-  G0MutantCoverageReplayAnalysis.runWorkerSlice(runId, workerId, numWorkers)
+  G0MutantCoverageReplayAnalysis.runWorkerSlice(runId, workerId, numWorkers, leadTimeSeconds)
 }
 
 /**
@@ -50,9 +51,16 @@ fun main(args: Array<String>) {
  * @param workerId The index of this worker, in `0 until numWorkers`.
  * @param numWorkers Total number of workers splitting the flagged-tick list.
  * @param runId Evaluation run id to restrict to, or `null` to include every run.
+ * @param leadTimeSeconds Lead time to replay each flagged tick with, or `null` for the original
+ *   single-step behaviour — see [G0MutantCoverageReplayAnalysis.runWorkerSlice].
  * @return The started process.
  */
-fun startG0MutantCoverageReplayWorkerProcess(workerId: Int, numWorkers: Int, runId: Int?): Process =
+fun startG0MutantCoverageReplayWorkerProcess(
+    workerId: Int,
+    numWorkers: Int,
+    runId: Int?,
+    leadTimeSeconds: Double?,
+): Process =
     startJavaProcess(
         mainClass = "tools.aqua.stars.coverage.significance.workers.G0MutantCoverageReplayWorkerKt",
         args =
@@ -60,5 +68,6 @@ fun startG0MutantCoverageReplayWorkerProcess(workerId: Int, numWorkers: Int, run
               add("--workerId=$workerId")
               add("--numWorkers=$numWorkers")
               if (runId != null) add("--runId=$runId")
+              if (leadTimeSeconds != null) add("--leadTimeSeconds=$leadTimeSeconds")
               add("--parentPid=${ProcessHandle.current().pid()}")
             })

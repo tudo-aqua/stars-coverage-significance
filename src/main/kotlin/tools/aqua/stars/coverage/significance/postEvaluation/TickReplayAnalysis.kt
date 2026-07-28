@@ -44,13 +44,38 @@ import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
  * whether a collision occurs. It does **not** re-evaluate TSC monitors (G0-G4/I1/I2) — that
  * requires the full `TSCEvaluation` framework running across a longer window of ticks, which is out
  * of scope here.
+ *
+ * ## Lead time
+ *
+ * By default each requested tick is reconstructed right at its own recorded moment, giving the
+ * substituted mutant exactly one step to react — but a single-step SUMO lane-change decision from a
+ * freshly-placed *background* vehicle can't reproduce what that vehicle would actually do given a
+ * real run-up (see
+ * [tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector.replayFromTickForDuration]'s docs
+ * for the full reasoning). Passing [LeadTimeReplay] via `leadTimeSeconds` instead reconstructs the
+ * tick closest to that many seconds *before* the requested one (same scenario/mutant) and steps
+ * forward continuously through to one step past the original moment, so that build-up has a chance
+ * to happen for real.
  */
 object TickReplayAnalysis {
 
-  private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "tick_replay")
+  private fun basePath(leadTimeSeconds: Double?): Path =
+      Path.of(
+          POST_EVALUATION_BASE_DIR,
+          if (leadTimeSeconds == null) "tick_replay"
+          else "tick_replay_leadtime_${LeadTimeReplay.folderSuffix(leadTimeSeconds)}")
 
-  fun evaluate(tickIds: List<Int>) {
-    println("Starting TickReplayAnalysis for ticks: $tickIds")
+  /**
+   * @param tickIds `metric_failed_monitors.id` values to replay.
+   * @param leadTimeSeconds When `null` (default), each tick is reconstructed at its own recorded
+   *   moment with one step to react. When set, reconstructs from the closest available tick that
+   *   many seconds earlier instead, stepping forward through to one step past the original moment —
+   *   see this object's "Lead time" docs.
+   */
+  fun evaluate(tickIds: List<Int>, leadTimeSeconds: Double? = null) {
+    println(
+        "Starting TickReplayAnalysis for ticks: $tickIds" +
+            (leadTimeSeconds?.let { " with leadTimeSeconds=$it" } ?: ""))
 
     val mutants = MutantsRepository.listAll()
     println("Replaying against ${mutants.size} mutants.")
@@ -71,10 +96,26 @@ object TickReplayAnalysis {
         continue
       }
 
-      println("  Tick $tickId (tick=${tick.tick}, run=${tick.runId}):")
+      val startTick: MetricFailedMonitorsEntry
+      val stepCount: Int
+      if (leadTimeSeconds == null) {
+        startTick = tick
+        stepCount = 1
+      } else {
+        val candidates = LeadTimeReplay.candidatesFor(tick)
+        startTick = LeadTimeReplay.findStartTick(tick, leadTimeSeconds, candidates)
+        stepCount = LeadTimeReplay.stepCountThroughOriginal(tick, startTick)
+      }
+
+      println(
+          "  Tick $tickId (tick=${tick.tick}, run=${tick.runId}, startTick=${startTick.tick}, " +
+              "steps=$stepCount):")
       for (mutant in mutants) {
         val mutantId = checkNotNull(mutant.id)
-        val nextTick = collector.replayTickForMutant(tick.runId, tick, scenario, mutantId)
+        val nextTick =
+            collector
+                .replayFromTickForDuration(tick.runId, startTick, scenario, mutantId, stepCount)
+                .lastOrNull()
 
         val result = toExport(tick, mutant, nextTick)
         results += result
@@ -90,9 +131,10 @@ object TickReplayAnalysis {
       }
     }
 
-    Files.createDirectories(BASE_PATH)
+    val basePath = basePath(leadTimeSeconds)
+    Files.createDirectories(basePath)
     val fileName = "tick_replay_${tickIds.joinToString("-")}.json"
-    val jsonPath = BASE_PATH.resolve(fileName)
+    val jsonPath = basePath.resolve(fileName)
     jsonPath.writeText(jsonConfiguration.encodeToString(results))
     println("Finished TickReplayAnalysis. JSON written to: $jsonPath")
   }

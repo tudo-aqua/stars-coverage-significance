@@ -27,6 +27,7 @@ import kotlin.streams.toList
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
@@ -78,13 +79,24 @@ import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
  */
 object G0MutantCoverageReplayAnalysis {
 
-  private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "g0_mutant_coverage_replay")
-  private val DETAIL_DIR = BASE_PATH.resolve("details")
+  /**
+   * Output base folder for a given lead time — `null` (the original behaviour) keeps the existing
+   * `g0_mutant_coverage_replay/` folder untouched; a non-null lead time gets its own sibling
+   * folder, e.g. `g0_mutant_coverage_replay_leadtime_0.5s/`, so the two never collide.
+   */
+  private fun basePath(leadTimeSeconds: Double?): Path =
+      Path.of(
+          POST_EVALUATION_BASE_DIR,
+          if (leadTimeSeconds == null) "g0_mutant_coverage_replay"
+          else "g0_mutant_coverage_replay_leadtime_${LeadTimeReplay.folderSuffix(leadTimeSeconds)}")
+
+  private fun detailDir(leadTimeSeconds: Double?): Path =
+      basePath(leadTimeSeconds).resolve("details")
 
   /** Detail (NDJSON) file path for one worker's share of ticks. */
-  private fun detailFilePath(runId: Int?, workerId: Int): Path =
-      DETAIL_DIR.resolve(
-          "g0_mutant_coverage_replay_${runId?.toString() ?: "all"}_worker$workerId.jsonl")
+  private fun detailFilePath(runId: Int?, workerId: Int, leadTimeSeconds: Double?): Path =
+      detailDir(leadTimeSeconds)
+          .resolve("g0_mutant_coverage_replay_${runId?.toString() ?: "all"}_worker$workerId.jsonl")
 
   /**
    * Worker entry point: replays this worker's deterministic share of flagged ticks (every tick at
@@ -95,21 +107,32 @@ object G0MutantCoverageReplayAnalysis {
    * @param runId Evaluation run id to restrict to, or `null` to include every run's flagged ticks.
    * @param workerId This worker's index, in `0 until numWorkers`.
    * @param numWorkers Total number of workers splitting the flagged-tick list.
+   * @param leadTimeSeconds When `null` (default), replays each flagged tick exactly as recorded —
+   *   one step from the critical moment itself, via `replayTickForMutant`. When set, instead finds
+   *   the tick closest to `leadTimeSeconds` *before* each flagged tick (same scenario/mutant) and
+   *   replays continuously from there through to one step past the original moment, via
+   *   `replayFromTickForDuration` — see [LeadTimeReplay] and
+   *   [tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector.replayFromTickForDuration]
+   *   for why this matters for background-vehicle behaviour a single-step replay can't reproduce.
    */
-  fun runWorkerSlice(runId: Int?, workerId: Int, numWorkers: Int) {
+  fun runWorkerSlice(runId: Int?, workerId: Int, numWorkers: Int, leadTimeSeconds: Double? = null) {
     val allTicks =
         MetricFailedMonitorsRepository.getAllWithNextTickG0Failed(runId).sortedBy { it.id }
     val myTicks = allTicks.filterIndexed { index, _ -> index % numWorkers == workerId }
     println(
         "[worker-$workerId] Replaying ${myTicks.size}/${allTicks.size} flagged ticks" +
             (runId?.let { " for runId=$it" } ?: " across all runs") +
+            (leadTimeSeconds?.let { " with leadTimeSeconds=$it" } ?: "") +
             ".")
 
     val mutants = MutantsRepository.listAll()
     val collector = LibsumoDynamicDataCollector()
+    // Many flagged ticks in a row often share a scenario/mutant (an accident tends to be flagged
+    // over several consecutive ticks) - avoid re-querying the same candidate pool for each.
+    val candidatesCache = mutableMapOf<Pair<Int, Int>, List<MetricFailedMonitorsEntry>>()
 
-    Files.createDirectories(DETAIL_DIR)
-    detailFilePath(runId, workerId).bufferedWriter().use { writer ->
+    Files.createDirectories(detailDir(leadTimeSeconds))
+    detailFilePath(runId, workerId, leadTimeSeconds).bufferedWriter().use { writer ->
       for (tick in myTicks) {
         val tickId = checkNotNull(tick.id)
         val scenario = ScenarioStartingConfigurationRepository.getById(tick.scenarioConfigId)
@@ -120,16 +143,32 @@ object G0MutantCoverageReplayAnalysis {
           continue
         }
 
+        val startTick: MetricFailedMonitorsEntry
+        val stepCount: Int
+        if (leadTimeSeconds == null) {
+          startTick = tick
+          stepCount = 1
+        } else {
+          val candidates =
+              candidatesCache.getOrPut(tick.scenarioConfigId to tick.mutantId) {
+                LeadTimeReplay.candidatesFor(tick)
+              }
+          startTick = LeadTimeReplay.findStartTick(tick, leadTimeSeconds, candidates)
+          stepCount = LeadTimeReplay.stepCountThroughOriginal(tick, startTick)
+        }
+
         val mutantResults =
             mutants.map { mutant ->
               val mutantId = checkNotNull(mutant.id)
-              val nextTick = collector.replayTickForMutant(tick.runId, tick, scenario, mutantId)
+              val steps =
+                  collector.replayFromTickForDuration(
+                      tick.runId, startTick, scenario, mutantId, stepCount)
               TickMutantG0ReplayResult(
                   mutantId = mutantId,
                   mutantNumber = mutant.mutantNumber,
                   className = mutant.className,
                   isOriginalMutant = mutantId == tick.mutantId,
-                  g0Failed = nextTick?.let { !g0Accidents.holds(it) },
+                  g0Failed = if (steps.isEmpty()) null else steps.any { !g0Accidents.holds(it) },
               )
             }
 
@@ -138,9 +177,10 @@ object G0MutantCoverageReplayAnalysis {
             mutantResults.count { !it.isOriginalMutant && it.g0Failed == true }
 
         println(
-            "[worker-$workerId] Tick $tickId (tick=${tick.tick}, run=${tick.runId}): original " +
-                "mutant ${tick.mutantId} failed=${originalResult.g0Failed}, " +
-                "$newMutantsFailedCount/${mutantResults.size - 1} other mutants also failed.")
+            "[worker-$workerId] Tick $tickId (tick=${tick.tick}, run=${tick.runId}, " +
+                "startTick=${startTick.tick}, steps=$stepCount): original mutant ${tick.mutantId} " +
+                "failed=${originalResult.g0Failed}, $newMutantsFailedCount/" +
+                "${mutantResults.size - 1} other mutants also failed.")
 
         val summary =
             TickG0ReplaySummary(
@@ -158,20 +198,23 @@ object G0MutantCoverageReplayAnalysis {
         writer.flush()
       }
     }
-    println("[worker-$workerId] Finished. Detail written to: ${detailFilePath(runId, workerId)}")
+    println(
+        "[worker-$workerId] Finished. Detail written to: " +
+            detailFilePath(runId, workerId, leadTimeSeconds))
   }
 
   /**
-   * Finds every worker detail file for [runId] currently on disk, by directory listing rather than
-   * an assumed `0 until numWorkers` range — so aggregation doesn't need to know (or guess) how many
-   * workers the original run used, and works the same whether it's called right after that run's
-   * own workers finished or standalone, later, against detail files from a run with a different
-   * core count.
+   * Finds every worker detail file for [runId]/[leadTimeSeconds] currently on disk, by directory
+   * listing rather than an assumed `0 until numWorkers` range — so aggregation doesn't need to know
+   * (or guess) how many workers the original run used, and works the same whether it's called right
+   * after that run's own workers finished or standalone, later, against detail files from a run
+   * with a different core count.
    */
-  private fun discoverDetailFiles(runId: Int?): List<Path> {
+  private fun discoverDetailFiles(runId: Int?, leadTimeSeconds: Double?): List<Path> {
     val prefix = "g0_mutant_coverage_replay_${runId?.toString() ?: "all"}_worker"
-    if (!DETAIL_DIR.exists()) return emptyList()
-    return Files.list(DETAIL_DIR).use { stream ->
+    val dir = detailDir(leadTimeSeconds)
+    if (!dir.exists()) return emptyList()
+    return Files.list(dir).use { stream ->
       stream
           .filter { path ->
             val name = path.fileName.toString()
@@ -194,9 +237,11 @@ object G0MutantCoverageReplayAnalysis {
    * place.
    *
    * @param runId Evaluation run id the analysis was restricted to, or `null` for every run.
+   * @param leadTimeSeconds The lead time [runWorkerSlice] was run with, or `null` for the original
+   *   single-step behaviour — must match, since it determines which folder's detail files to read.
    * @return The written [G0MutantCoverageReplaySummary].
    */
-  fun aggregate(runId: Int?): G0MutantCoverageReplaySummary {
+  fun aggregate(runId: Int?, leadTimeSeconds: Double? = null): G0MutantCoverageReplaySummary {
     val mutants = MutantsRepository.listAll()
     val originalTickCount = mutableMapOf<Int, Int>()
     val originalTickReproducedCount = mutableMapOf<Int, Int>()
@@ -228,8 +273,11 @@ object G0MutantCoverageReplayAnalysis {
     val almostUnavoidableTickIds =
         mutableMapOf(1 to mutableListOf<Int>(), 2 to mutableListOf(), 3 to mutableListOf())
 
-    val detailFiles = discoverDetailFiles(runId)
-    println("Aggregating ${detailFiles.size} worker detail file(s) for runId=${runId ?: "all"}.")
+    val detailFiles = discoverDetailFiles(runId, leadTimeSeconds)
+    println(
+        "Aggregating ${detailFiles.size} worker detail file(s) for runId=${runId ?: "all"}" +
+            (leadTimeSeconds?.let { " leadTimeSeconds=$it" } ?: "") +
+            ".")
 
     for (path in detailFiles) {
       path.forEachLine { line ->
@@ -326,9 +374,10 @@ object G0MutantCoverageReplayAnalysis {
             mutantStats = mutantStats,
         )
 
-    Files.createDirectories(BASE_PATH)
+    val base = basePath(leadTimeSeconds)
+    Files.createDirectories(base)
     val summaryPath =
-        BASE_PATH.resolve("g0_mutant_coverage_replay_summary_${runId?.toString() ?: "all"}.json")
+        base.resolve("g0_mutant_coverage_replay_summary_${runId?.toString() ?: "all"}.json")
     summaryPath.writeText(jsonConfiguration.encodeToString(summary))
     println("Finished G0MutantCoverageReplayAnalysis. Summary written to: $summaryPath")
     return summary

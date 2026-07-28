@@ -261,8 +261,13 @@ Scope: this reports the mutant's maneuver command, the resulting next-tick kinem
 
 Writes `postEvaluation/tick_replay/tick_replay_<tick-ids>.json`, one entry per (tick, mutant) pair.
 
+**Lead time**: a single-step replay gives a substituted mutant exactly one simulated step to react from the recorded critical moment — plenty for **ego**, since its maneuver is a direct command, but not for *background* vehicles' own autonomous SUMO lane changes, which build up over several real steps before executing (SUMO's default LC2013 model accumulates a `mySpeedGainProbability*` value across ticks before crossing a threshold — a freshly force-placed vehicle starts that at zero regardless of how favorable its instantaneous situation looks). Pass `--leadTimeSeconds=<comma separated values>` (e.g. `0.2,0.5,0.7,1.0`) to additionally reconstruct each tick from the closest available tick that many seconds *earlier* instead, stepping forward continuously through to one step past the original moment — giving that build-up a chance to happen for real. Writes one output file per lead time under `postEvaluation/tick_replay_leadtime_<value>s/`, alongside the original (omit the flag) `tick_replay/` output.
+
 ```bash
 docker run stars-evaluation:latest ./gradlew --no-daemon runTickReplay --args="123,456"
+
+# Also replay with 0.2s/0.5s/0.7s/1.0s of lead time before each tick
+docker run stars-evaluation:latest ./gradlew --no-daemon runTickReplay --args="123,456 --leadTimeSeconds=0.2,0.5,0.7,1.0"
 ```
 
 ### Run the G0 mutant coverage replay analysis
@@ -280,7 +285,9 @@ After every worker completes, the coordinator reads all detail files back and wr
 - Which ticks are essentially unavoidable — every other mutant, substituted into the same recorded scene, also fails? (`unavoidableTickCount`, `unavoidableTickIds`), plus three "almost unavoidable" tiers one step short of that — exactly 1, 2, or 3 other mutants avoided it (`almostUnavoidableTicks`, non-cumulative)
 - How many mutants gained "new" kills — ticks not originally attributed to them where they also fail on replay? (`mutantsWithNewKillsCount`, plus each mutant's `newKillTickIds` in `mutantStats`)
 
-`postEvaluation/g0_mutant_coverage_replay/index.html` is a self-contained static viewer for that summary JSON (no server or build step needed — open it directly, or serve the folder over HTTP for it to auto-load `g0_mutant_coverage_replay_summary_all.json`).
+`postEvaluation/g0_mutant_coverage_replay/index.html` is a self-contained static viewer for that summary JSON (no server or build step needed — open it directly and use the file picker to load a specific summary file, or serve the folder over HTTP for it to auto-load `g0_mutant_coverage_replay_summary_all.json`). It works unmodified for the lead-time summaries below too — the JSON shape is identical, only the source folder differs.
+
+**Lead time**: over 200k of the ~380k flagged ticks turn out "unavoidable" or close to it (every, or all but a few, mutants also fail on replay) — see the "Lead time" section on `TickReplayAnalysis` above for why a single-step replay from the critical moment can under-report what a mutant (or the background traffic around it) would actually do given real reaction time, rather than that necessarily meaning the spawned situation itself is inescapable. Pass `--leadTimeSeconds=<comma separated values>` (e.g. `0.2,0.5,0.7,1.0`) to additionally run one full replay+aggregate pass per lead time — same worker/detail-file/aggregation machinery, just starting each flagged tick's replay from the closest available tick that many seconds earlier and stepping through to one step past the original moment. Each lead time gets its own sibling folder, `postEvaluation/g0_mutant_coverage_replay_leadtime_<value>s/`; the original (omit the flag) `g0_mutant_coverage_replay/` output is untouched. Passes run sequentially, each using full available parallelism.
 
 ```bash
 # All runs, one worker per available core
@@ -293,7 +300,21 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageRepl
 # regenerate a summary that failed to copy/parse correctly, or after a change to the aggregation
 # logic itself
 docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--aggregateOnly=true"
+
+# Also run with 0.2s/0.5s/0.7s/1.0s of lead time before each flagged tick (4 extra passes, 4 extra
+# output folders, sequential)
+docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageReplay --args="--leadTimeSeconds=0.2,0.5,0.7,1.0"
 ```
+
+---
+
+## Standalone Tools
+
+### `tools/tick_visualizer/index.html` — Tick vehicle position visualizer
+
+A self-contained static page (no server, build step, or Gradle task needed — just open it) that draws a top-down view of every vehicle in one tick: lanes as horizontal bands (lane 0 at the bottom, per SUMO's 0=rightmost convention), vehicles as colored rectangles sized/positioned by their `front`/`back` (m), with a shaded stripe marking the front edge. Scroll/pinch to zoom, drag to pan; hover a vehicle for its full data, or read it from the table below the scene.
+
+Paste or upload any JSON array shaped like `all_vehicles_json` / `TickVehicleSnapshot[]` — e.g. the value of a `metric_failed_monitors.all_vehicles_json` cell, or a tick's vehicle list from the tick-replay/G0 mutant coverage detail files. Opens with a small example scene pre-filled so it's immediately usable without pasting anything first.
 
 ---
 

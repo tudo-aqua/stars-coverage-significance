@@ -35,24 +35,34 @@ import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickDifferenceMillisec
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TickUnitMilliseconds
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.TimeStep
 import tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle
-import tools.aqua.stars.sumo.mutants.AutopilotMutants
+import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
 
 /**
  * This is a manual testing utility to run a single scenario and collect the dynamic data using
  * libsumo, then evaluate it using the TSCEvaluation. It can be used to quickly test changes to the
  * evaluation logic or metrics without running the entire evaluation pipeline.
+ *
+ * Uses the exact same [LibsumoDynamicDataCollector] as `RunEvaluation.kt`'s worker path (see
+ * `evaluationWorker.kt`) — same network/vType files, same vehicle-placement sequence, same
+ * mutant-control loop — so a tick replayed here matches what's recorded in the database. This used
+ * to run through a separate `LibsumoMutantDataCollector` copy in this package that had quietly
+ * drifted from the production implementation (most importantly, it was missing the
+ * `vehicle.setSpeed()` re-application after `vehicle.moveTo()` that `forcePlaceVehicles` does, and
+ * it loaded a stray `sumoData/fcdReplay/fcdReplay.add.xml` with an extra `has.driverstate.device`
+ * param on the ego vType that the production `sumoData/experiment/vTypes.add.xml` doesn't have) —
+ * both are exactly the kind of divergence a single shared implementation can't develop.
  */
 fun main() {
   val tscTTC = tsc()
   val tscTikz = TSCTikzRenderer.render(tscTTC)
 
   DbBootstrap.connect()
-  val libsumoDynamicDataCollector = LibsumoMutantDataCollector()
+  val libsumoDynamicDataCollector = LibsumoDynamicDataCollector()
 
   val runId = 1
   val mutantIds =
       setOf(
-          7, // replace with actual mutant ID from DB
+          56, // replace with actual mutant ID from DB
           //          2,
           //          3,
       )
@@ -68,16 +78,14 @@ fun main() {
   //  }
   //  scenarioIds += 1 // replace with actual scenario ID from DB
 
-  val scenarioIds = setOf(1601) // replace with actual scenario ID from DB
+  val scenarioIds = setOf(145901) // replace with actual scenario ID from DB
 
   val tickSequences = mutableListOf<TickSequence<TimeStep>>()
 
   mutantIds.forEach { mutantId ->
-    val mutantEntry =
-        checkNotNull(MutantsRepository.getById(mutantId)) {
-          "Mutant with id $mutantId not found in database. Please make sure to insert a mutant with this id before running the manual testing main function."
-        }
-    val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
+    checkNotNull(MutantsRepository.getById(mutantId)) {
+      "Mutant with id $mutantId not found in database. Please make sure to insert a mutant with this id before running the manual testing main function."
+    }
 
     scenarioIds.forEach { scenarioId ->
       val scenario = ScenarioStartingConfigurationRepository.getById(scenarioId)
@@ -109,11 +117,7 @@ fun main() {
 
       val libSumoTicks =
           libsumoDynamicDataCollector.runGeneratedScenario(
-              runId = runId,
-              scenario = scenario,
-              mutant = mutant,
-              mutantId = mutantId,
-              writeFCDReplayFile = true)
+              runId = runId, scenario = scenario, mutantId = mutantId, writeFCDReplayFile = true)
       val ticksUntilFirstAccident = libSumoTicks.takeUntilFirstAccident()
 
       tickSequences.add(

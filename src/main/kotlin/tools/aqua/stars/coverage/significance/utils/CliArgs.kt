@@ -67,6 +67,34 @@ object CliArgs {
   }
 
   /**
+   * Parses an optional Double argument from the command-line arguments.
+   *
+   * @param args Array of command-line arguments.
+   * @param name Name of the argument to parse.
+   * @return The parsed Double value, or `null` if the argument is not found or is not a valid
+   *   Double.
+   */
+  fun optionalDouble(args: Array<String>, name: String): Double? {
+    val prefix = "--$name="
+    return args.firstOrNull { it.startsWith(prefix) }?.substringAfter(prefix)?.toDoubleOrNull()
+  }
+
+  /**
+   * Parses an optional comma-separated list of Double arguments from the command-line arguments.
+   *
+   * @param args Array of command-line arguments.
+   * @param name Name of the argument to parse.
+   * @return The parsed Double values, or `null` if the argument is not found.
+   * @throws NumberFormatException if the argument is present but any comma-separated part isn't a
+   *   valid Double.
+   */
+  fun optionalDoubleList(args: Array<String>, name: String): List<Double>? {
+    val prefix = "--$name="
+    val raw = args.firstOrNull { it.startsWith(prefix) }?.substringAfter(prefix) ?: return null
+    return raw.split(",").map { it.trim().toDouble() }
+  }
+
+  /**
    * Parses an optional boolean argument from the command-line arguments.
    *
    * @param args Array of command-line arguments.

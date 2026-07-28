@@ -19,16 +19,24 @@ package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.postEvaluation.TickReplayAnalysis
+import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 /**
- * @param args A comma-separated list of `metric_failed_monitors.id` values to replay, e.g.
- *   `"123,456"`.
+ * @param args First: a comma-separated list of `metric_failed_monitors.id` values to replay, e.g.
+ *   `"123,456"`. Optionally followed by `--leadTimeSeconds=<comma separated values>` (e.g.
+ *   `0.2,0.5,0.7,1.0`) to additionally replay each tick from progressively earlier starting points
+ *   — see `TickReplayAnalysis`'s "Lead time" docs — writing one output file per lead time alongside
+ *   the original (omit this flag) `tick_replay/` output.
  */
 fun main(args: Array<String>) {
-  require(args.isNotEmpty()) { "Usage: RunTickReplay <tickId>[,<tickId>...]" }
+  require(args.isNotEmpty()) {
+    "Usage: RunTickReplay <tickId>[,<tickId>...] [--leadTimeSeconds=<comma separated values>]"
+  }
   val tickIds = args[0].split(",").map { it.trim().toInt() }
+  val leadTimes = CliArgs.optionalDoubleList(args, "leadTimeSeconds")
 
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
-  TickReplayAnalysis.evaluate(tickIds)
+  val passes: List<Double?> = leadTimes ?: listOf(null)
+  passes.forEach { leadTimeSeconds -> TickReplayAnalysis.evaluate(tickIds, leadTimeSeconds) }
   println("Finished!")
 }
