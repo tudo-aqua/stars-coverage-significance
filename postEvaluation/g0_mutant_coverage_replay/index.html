@@ -525,19 +525,38 @@
     });
   }
 
-  /** Populates the reproduction card's mutant dropdown from DATA.mutantStats, ordered by mutant number. */
-  function populateReproductionMutantSelect(data) {
+  /** That one mutant's own tick-id list for the given reproduction category. */
+  function mutantTickIdsForCategory(mutant, category) {
+    if (category === "reproduced") return mutant.originalTickReproducedTickIds || [];
+    if (category === "inconclusive") return mutant.originalTickInconclusiveTickIds || [];
+    return mutant.originalTickNotReproducedTickIds || [];
+  }
+
+  /**
+   * Populates the reproduction card's mutant dropdown from DATA.mutantStats, restricted to
+   * mutants that actually have at least one tick in the currently selected category — e.g. with
+   * "Not reproduced" selected, a mutant whose replay always reproduced the recorded failure
+   * wouldn't show anything anyway, so it's left out rather than cluttering the list with an empty
+   * result. Re-run whenever the category dropdown changes, since the relevant mutant set differs
+   * per category. Tries to keep the current selection if it's still valid under the new category,
+   * otherwise falls back to "All mutants".
+   */
+  function populateReproductionMutantSelect(data, category) {
     const select = document.getElementById("reproductionMutantSelect");
+    const previousValue = select.value;
     select.innerHTML = '<option value="">All mutants</option>';
     data.mutantStats
+      .filter((m) => mutantTickIdsForCategory(m, category).length > 0)
       .slice()
       .sort((a, b) => a.mutantNumber - b.mutantNumber)
       .forEach((m) => {
         const opt = document.createElement("option");
         opt.value = String(m.mutantId);
-        opt.textContent = "#" + m.mutantNumber + " " + m.className;
+        opt.textContent =
+          "#" + m.mutantNumber + " " + m.className + " (" + mutantTickIdsForCategory(m, category).length + ")";
         select.appendChild(opt);
       });
+    select.value = Array.from(select.options).some((o) => o.value === previousValue) ? previousValue : "";
   }
 
   /**
@@ -552,10 +571,7 @@
       return DATA.originalMutantNotReproducedTickIds || [];
     }
     const mutant = DATA.mutantStats.find((m) => String(m.mutantId) === mutantIdStr);
-    if (!mutant) return [];
-    if (category === "reproduced") return mutant.originalTickReproducedTickIds || [];
-    if (category === "inconclusive") return mutant.originalTickInconclusiveTickIds || [];
-    return mutant.originalTickNotReproducedTickIds || [];
+    return mutant ? mutantTickIdsForCategory(mutant, category) : [];
   }
 
   /** Renders the tick-id list for whichever mutant + reproduction category is currently selected. */
@@ -783,7 +799,10 @@
     document.getElementById("mutantsCsvBtn").addEventListener("click", downloadMutantsCsv);
 
     document.getElementById("reproductionMutantSelect").addEventListener("change", renderReproductionTickList);
-    document.getElementById("reproductionCategorySelect").addEventListener("change", renderReproductionTickList);
+    document.getElementById("reproductionCategorySelect").addEventListener("change", (e) => {
+      populateReproductionMutantSelect(DATA, e.target.value);
+      renderReproductionTickList();
+    });
     document.getElementById("reproductionCopyBtn").addEventListener("click", () => {
       const mutantIdStr = document.getElementById("reproductionMutantSelect").value;
       const category = document.getElementById("reproductionCategorySelect").value;
@@ -823,9 +842,8 @@
     DATA = data;
     renderSummary(data);
     renderReproductionBar(data);
-    populateReproductionMutantSelect(data);
-    document.getElementById("reproductionMutantSelect").value = "";
     document.getElementById("reproductionCategorySelect").value = "notReproduced";
+    populateReproductionMutantSelect(data, "notReproduced");
     renderReproductionTickList();
     renderUnavoidable(data);
     renderAlmostUnavoidable(data);
