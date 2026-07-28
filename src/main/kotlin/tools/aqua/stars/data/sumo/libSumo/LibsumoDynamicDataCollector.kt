@@ -26,6 +26,8 @@ import org.eclipse.sumo.libsumo.StringVector
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import org.eclipse.sumo.libsumo.VehicleType as SumoVehicleType
 import tools.aqua.stars.coverage.significance.EXPERIMENT_DIR
+import tools.aqua.stars.coverage.significance.FCD_DIR
+import tools.aqua.stars.coverage.significance.FCD_REPLAY_FILE_NAME
 import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
@@ -99,6 +101,9 @@ class LibsumoDynamicDataCollector(
    *   milliseconds. (e.g. if 1000, only take ticks at whole seconds).
    * @param maxLengthOfScenarioInSeconds If not null, only take ticks until this number of seconds
    *   into the scenario. (e.g. if 10, only take ticks until 10 seconds into the scenario).
+   * @param writeFCDReplayFile Whether to additionally write an FCD (floating car data) trace of
+   *   this run to `$FCD_DIR/$FCD_REPLAY_FILE_NAME`, for visual playback in `sumo-gui` via
+   *   `sumoData/fcdReplay/fcdReplay.py` — see `manualTesting/Main.kt`.
    * @return Collected dynamic data as list of [TimeStep]s.
    */
   fun runGeneratedScenario(
@@ -108,9 +113,10 @@ class LibsumoDynamicDataCollector(
       onlyFirstTick: Boolean = false,
       takeOnlyTicksAtXMillis: Long? = TAKE_ONLY_TICKS_AT_X_MILLIS.toLong(),
       maxLengthOfScenarioInSeconds: Double? = null,
+      writeFCDReplayFile: Boolean = false,
   ): List<TimeStep> {
     val routeId = "r_${scenario.id}"
-    reloadSimulationWithRoute(routeId)
+    reloadSimulationWithRoute(routeId, writeFCDReplayFile)
 
     // Spawn vehicles from placements
     val sortedPlacements =
@@ -206,6 +212,10 @@ class LibsumoDynamicDataCollector(
    * a maneuver from that state, then a second [Simulation.step] applies it and produces "tick T+1",
    * which is captured via the shared [getCurrentTimeStep].
    *
+   * A thin wrapper around [replayFromTickForDuration] with `stepCount = 1` — see that function for
+   * the general multi-step case (used to give a mutant lead time before a recorded tick instead of
+   * placing it right at the critical moment).
+   *
    * @param runId Run identifier to tag the resulting [TimeStep] with (the run [tick] originated
    *   from).
    * @param tick The recorded tick to reconstruct.
@@ -219,11 +229,45 @@ class LibsumoDynamicDataCollector(
       tick: MetricFailedMonitorsEntry,
       scenario: ScenarioStartingConfigurationEntry,
       mutantId: Int,
-  ): TimeStep? {
-    val routeId = "r_replay_${tick.id}"
+  ): TimeStep? =
+      replayFromTickForDuration(runId, tick, scenario, mutantId, stepCount = 1).lastOrNull()
+
+  /**
+   * Reconstructs [startTick]'s full traffic scene (same placement logic as [replayTickForMutant])
+   * and lets [mutantId] control the ego continuously for up to [stepCount] simulated steps —
+   * re-deciding a maneuver every step, exactly like [runGeneratedScenario]'s loop — stopping early
+   * if a collision ends the run or the ego leaves the simulation.
+   *
+   * Unlike [replayTickForMutant]'s single lookahead step, this simulates an extended window. It
+   * exists to test whether giving a mutant more lead time *before* a recorded near-miss/accident
+   * tick — i.e. starting the reconstruction from an earlier tick and stepping forward through to
+   * (and one past) the original tick's moment — is enough for it to avoid a failure that a
+   * single-step replay from the critical moment itself reports as unavoidable. A single-step SUMO
+   * lane-change decision from a freshly-placed vehicle can't reproduce what a background vehicle
+   * would do given a real run-up (see `G0MutantCoverageReplayAnalysis`'s "lead time" docs for the
+   * full reasoning) — this makes that run-up actually happen in the replay too.
+   *
+   * @param runId Run identifier to tag the resulting [TimeStep]s with.
+   * @param startTick The recorded tick to reconstruct and start stepping forward from — normally an
+   *   earlier tick than the one actually being investigated, found by the caller.
+   * @param scenario The scenario starting configuration [startTick] belongs to.
+   * @param mutantId Id of the mutant which should control the ego for every step.
+   * @param stepCount Number of simulation steps to run; the mutant re-decides a maneuver on each.
+   * @return The resulting [TimeStep]s, one per completed step, in order. Shorter than [stepCount]
+   *   if a collision ends the run early or the ego leaves the simulation; empty if the ego wasn't
+   *   present immediately after placement.
+   */
+  fun replayFromTickForDuration(
+      runId: Int,
+      startTick: MetricFailedMonitorsEntry,
+      scenario: ScenarioStartingConfigurationEntry,
+      mutantId: Int,
+      stepCount: Int,
+  ): List<TimeStep> {
+    val routeId = "r_replay_${startTick.id}_$stepCount"
     reloadSimulationWithRoute(routeId)
 
-    val replayPlacements = computeReplayPlacements(tick)
+    val replayPlacements = computeReplayPlacements(startTick)
     val egoId = replayPlacements.first { it.isEgo }.vehId
     SumoVehicleType.copy("DEFAULT_VEHTYPE", "mutant")
 
@@ -246,32 +290,44 @@ class LibsumoDynamicDataCollector(
 
     if (!checkEgoExistence(egoId)) {
       Simulation.close()
-      return null
+      return emptyList()
     }
 
     val mutantEntry = MutantsRepository.getById(mutantId)
     checkNotNull(mutantEntry) { "No mutant found for id=$mutantId" }
     val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
-    val maneuver = mutant.controlTick(egoId)
 
-    Simulation.step()
+    val ticks = mutableListOf<TimeStep>()
+    for (step in 1..stepCount) {
+      if (!checkEgoExistence(egoId)) break
 
-    val nextTick =
-        getCurrentTimeStep(
-            runId = runId,
-            scenarioConfigId = tick.scenarioConfigId,
-            egoId = egoId,
-            mutantId = mutantId,
-            scenario = scenario,
-            ticks = emptyList(),
-            egoManeuver = maneuver)
+      val maneuver = mutant.controlTick(egoId)
+      Simulation.step()
+
+      val nextTick =
+          getCurrentTimeStep(
+              runId = runId,
+              scenarioConfigId = startTick.scenarioConfigId,
+              egoId = egoId,
+              mutantId = mutantId,
+              scenario = scenario,
+              ticks = ticks,
+              egoManeuver = maneuver) ?: break
+      ticks += nextTick
+      if (nextTick.collisionsInTick.isNotEmpty()) break
+    }
 
     Simulation.close()
-    return nextTick
+    return ticks
   }
 
-  /** Reloads a fresh simulation from the network/vType files and adds a single [routeId]. */
-  private fun reloadSimulationWithRoute(routeId: String) {
+  /**
+   * Reloads a fresh simulation from the network/vType files and adds a single [routeId].
+   *
+   * @param writeFCDReplayFile Whether to additionally enable FCD (floating car data) trace output
+   *   to `$FCD_DIR/$FCD_REPLAY_FILE_NAME` — see [runGeneratedScenario]'s matching parameter.
+   */
+  private fun reloadSimulationWithRoute(routeId: String, writeFCDReplayFile: Boolean = false) {
     Simulation.preloadLibraries()
 
     val baseArgs =
@@ -291,6 +347,12 @@ class LibsumoDynamicDataCollector(
             "--no-warnings",
             "--collision.action",
             "warn")
+    if (writeFCDReplayFile) {
+      baseArgs.add("--fcd-output")
+      baseArgs.add(Path(FCD_DIR).toAbsolutePath().toString().plus("/$FCD_REPLAY_FILE_NAME"))
+      baseArgs.add("--fcd-output.attributes")
+      baseArgs.add("x,y,z,speed,acceleration")
+    }
 
     Simulation.load(StringVector(baseArgs.toTypedArray()))
 
