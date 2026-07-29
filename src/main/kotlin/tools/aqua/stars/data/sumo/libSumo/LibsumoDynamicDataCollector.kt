@@ -79,6 +79,21 @@ class LibsumoDynamicDataCollector(
   private val routeEdges: List<String> =
       roadNetwork.lanes.map { it.parentEdge.edgeId }.toSet().toList()
 
+  companion object {
+    /**
+     * Max speed (m/s) assigned to the "mutant" vType (a copy of `DEFAULT_VEHTYPE`) ego is placed
+     * with. `vehicle.add`'s `departSpeed` is rejected outright if it exceeds the vType's max speed
+     * — `DEFAULT_VEHTYPE`'s own built-in default isn't generous enough for every recorded ego speed
+     * a lead-time replay (see [replayFromTickForDuration]) can encounter, since it now visits many
+     * more ticks across a scenario's timeline than a single-step replay ever did, including
+     * whatever peak speed some mutant's autopilot commanded at any point. Harmless to set high:
+     * `setSpeedMode(egoId, 0)` (called right after placement) already disables SUMO's own speed
+     * enforcement for ego during the actual simulation, so this only affects the one-time insertion
+     * check, never the driven physics.
+     */
+    private const val MUTANT_MAX_SPEED_MPS = 100.0
+  }
+
   /**
    * Run a generated scenario in libsumo and collect dynamic data.
    *
@@ -138,6 +153,7 @@ class LibsumoDynamicDataCollector(
                 egoVehicleId = vehId
                 typeId = "mutant"
                 SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
+                SumoVehicleType.setMaxSpeed(typeId, MUTANT_MAX_SPEED_MPS)
               }
 
               PlacementSpec(
@@ -270,6 +286,7 @@ class LibsumoDynamicDataCollector(
     val replayPlacements = computeReplayPlacements(startTick)
     val egoId = replayPlacements.first { it.isEgo }.vehId
     SumoVehicleType.copy("DEFAULT_VEHTYPE", "mutant")
+    SumoVehicleType.setMaxSpeed("mutant", MUTANT_MAX_SPEED_MPS)
 
     val placementSpecs =
         replayPlacements.map { rp ->
