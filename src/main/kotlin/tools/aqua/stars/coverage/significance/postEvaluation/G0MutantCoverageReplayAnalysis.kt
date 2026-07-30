@@ -27,7 +27,9 @@ import kotlin.streams.toList
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
+import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
+import tools.aqua.stars.coverage.significance.db.dataclasses.MutantEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
@@ -39,6 +41,14 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickMut
 import tools.aqua.stars.coverage.significance.tsc.g0Accidents
 import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
+
+fun main() {
+  DbBootstrap.connect()
+  val tick = MetricFailedMonitorsRepository.getById(429778774) ?: error("Missing tick")
+  val mutant = MutantsRepository.getByNumber(172) ?: error("Missing mutant")
+  G0MutantCoverageReplayAnalysis.replayTicks(
+      listOf(tick), listOf(mutant), workerId = 1, runId = 1, leadTimeSeconds = 2.0)
+}
 
 /**
  * For every recorded tick (`metric_failed_monitors` row) whose *next* tick was flagged as a G0
@@ -126,6 +136,38 @@ object G0MutantCoverageReplayAnalysis {
             ".")
 
     val mutants = MutantsRepository.listAll()
+    replayTicks(
+        ticks = myTicks,
+        mutants = mutants,
+        runId = runId,
+        workerId = workerId,
+        leadTimeSeconds = leadTimeSeconds)
+  }
+
+  /**
+   * Replays every tick in [ticks] against every mutant in [mutants], streaming one
+   * [TickG0ReplaySummary] per line to this worker's detail file as each tick completes.
+   *
+   * This holds the actual replay work factored out of [runWorkerSlice] so it can also be driven
+   * manually — e.g. to re-replay a single tick against a single mutant — without going through the
+   * `numWorkers`/`workerId` slicing that [runWorkerSlice] uses to automatically split the full set
+   * of flagged ticks across worker processes.
+   *
+   * @param ticks The ticks to replay, in order.
+   * @param mutants The mutants to replay each tick against.
+   * @param runId Evaluation run id the ticks were restricted to, or `null` for every run — only
+   *   used to name the detail file, must match how [ticks] was queried.
+   * @param workerId Identifies the detail file this call writes/appends to, and is used in log
+   *   output — for a manual, non-worker call, any id not colliding with a real worker's is fine.
+   * @param leadTimeSeconds See [runWorkerSlice].
+   */
+  fun replayTicks(
+      ticks: List<MetricFailedMonitorsEntry>,
+      mutants: List<MutantEntry>,
+      runId: Int?,
+      workerId: Int,
+      leadTimeSeconds: Double? = null,
+  ) {
     val collector = LibsumoDynamicDataCollector()
     // Many flagged ticks in a row often share a scenario/mutant (an accident tends to be flagged
     // over several consecutive ticks) - avoid re-querying the same candidate pool for each.
@@ -133,7 +175,7 @@ object G0MutantCoverageReplayAnalysis {
 
     Files.createDirectories(detailDir(leadTimeSeconds))
     detailFilePath(runId, workerId, leadTimeSeconds).bufferedWriter().use { writer ->
-      for (tick in myTicks) {
+      for (tick in ticks) {
         val tickId = checkNotNull(tick.id)
         val scenario = ScenarioStartingConfigurationRepository.getById(tick.scenarioConfigId)
         if (scenario == null) {
