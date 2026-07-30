@@ -18,6 +18,8 @@
 package tools.aqua.stars.data.sumo.dataclasses.dynamicData
 
 import tools.aqua.stars.core.types.TickDataType
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot
+import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 import tools.aqua.stars.sumo.MutantManeuver
 
 /**
@@ -56,6 +58,29 @@ class TimeStep(
 
   /** Holds a list of all vehicles except the ego vehicle. */
   val nonEgoVehicles: List<Vehicle> = vehiclesInTick.filter { it != ego }
+
+  /**
+   * Debug-only: the same JSON string
+   * [tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric] stores as
+   * `metric_failed_monitors.all_vehicles_json` for this tick, for pasting directly into
+   * `tools/tick_visualizer/index.html`. Computed lazily so it's never built unless actually
+   * accessed (it's not needed outside debugging).
+   */
+  val debugVisualizerJson: String by lazy {
+    jsonConfiguration.encodeToString(
+        vehiclesInTick.map { v ->
+          TickVehicleSnapshot(
+              id = v.vehicleId,
+              ego = v.vehicleId == ego.vehicleId,
+              type = v.vehicleType.typeId,
+              lane = v.currentLane.laneIndex,
+              front = v.frontBumperPositionOnLaneMeters,
+              back = v.backBumperPositionOnLaneMeters,
+              speed = v.speedMetersPerSecond,
+              accel = v.accelerationMetersPerSecondSquared,
+          )
+        })
+  }
 
   /**
    * Gets all vehicles except the given one.
