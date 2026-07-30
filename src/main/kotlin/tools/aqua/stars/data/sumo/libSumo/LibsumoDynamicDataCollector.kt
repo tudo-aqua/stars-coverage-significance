@@ -108,6 +108,12 @@ class LibsumoDynamicDataCollector(
   /**
    * Run a generated scenario in libsumo and collect dynamic data.
    *
+   * The very first returned [TimeStep] (`tickTimeMillis == 0`) is the force-placed scene itself,
+   * captured before any [Simulation.step] — every subsequent [TimeStep] is captured after a step,
+   * as before. This gives every scenario a real t=0 anchor (e.g. for
+   * [tools.aqua.stars.coverage.significance.postEvaluation.LeadTimeReplay] to lead-time back to),
+   * instead of the earliest available tick always being one step (100ms) after actual insertion.
+   *
    * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.
    * @param mutantId Id of the mutant which should be simulated.
@@ -174,9 +180,17 @@ class LibsumoDynamicDataCollector(
 
     val ticks = mutableListOf<TimeStep>()
 
-    if (onlyFirstTick)
-        return listOfNotNull(
-            getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, null))
+    // Captures the force-placed scene itself (t=0, before any Simulation.step()) as a TimeStep, so
+    // it's recorded like every subsequent tick instead of being skipped — the loop below only ever
+    // captures state *after* stepping, which used to mean the earliest tick anything (metric
+    // recording, lead-time replays) could ever see was t=100ms, one step later than the vehicles'
+    // actual insertion moment.
+    val placementTick =
+        getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, null)
+
+    if (onlyFirstTick) return listOfNotNull(placementTick)
+
+    if (placementTick != null) ticks += placementTick
 
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
