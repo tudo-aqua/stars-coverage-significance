@@ -173,10 +173,18 @@ class LibsumoDynamicDataCollector(
 
     val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
 
+    // Inserted in vehicle-id order — a deterministic ordering [replayFromTickForDuration] can
+    // exactly reconstruct from a recorded tick's vehicle ids alone (unlike (row, lane, position),
+    // which isn't itself part of a recorded TickVehicleSnapshot). Matters because addVehicles calls
+    // consume SUMO's single shared RNG stream (seed 1, used for every vehicle's per-step
+    // sigma-driven car-following/lane-change noise) — inserting vehicles in a different order than
+    // this desyncs which random draw lands on which vehicle at every subsequent step.
+    val insertionOrderedSpecs = placementSpecs.sortedBy { it.vehId }
+
     // Add all vehicles first, then force-place all of them, so that all vehicleType parameters
     // are set correctly (see PlacementSpec/addVehicles/forcePlaceVehicles KDoc).
-    addVehicles(placementSpecs, routeId)
-    forcePlaceVehicles(placementSpecs)
+    addVehicles(insertionOrderedSpecs, routeId)
+    forcePlaceVehicles(insertionOrderedSpecs)
 
     val ticks = mutableListOf<TimeStep>()
 
@@ -297,7 +305,12 @@ class LibsumoDynamicDataCollector(
     val routeId = "r_replay_${startTick.id}_$stepCount"
     reloadSimulationWithRoute(routeId)
 
-    val replayPlacements = computeReplayPlacements(startTick)
+    // Sorted by vehicle id, matching runGeneratedScenario's own insertion order — see that
+    // function's matching comment for why insertion order matters (SUMO's shared per-step RNG
+    // stream). Vehicle id is the one ordering key that's both deterministic and actually preserved
+    // in a recorded tick (TickVehicleSnapshot.id / ReplayPlacement.vehId), unlike the live run's
+    // (row, lane, position).
+    val replayPlacements = computeReplayPlacements(startTick).sortedBy { it.vehId }
     val egoId = replayPlacements.first { it.isEgo }.vehId
     SumoVehicleType.copy("DEFAULT_VEHTYPE", "mutant")
     SumoVehicleType.setMaxSpeed("mutant", MUTANT_MAX_SPEED_MPS)
@@ -313,8 +326,17 @@ class LibsumoDynamicDataCollector(
           )
         }
 
-    addVehicles(placementSpecs, routeId)
+    val insertionOrderedSpecs = placementSpecs.sortedBy { it.vehId }
+
+    addVehicles(insertionOrderedSpecs, routeId)
     forcePlaceVehicles(placementSpecs)
+
+    val ticks = mutableListOf<TimeStep>()
+
+    val placementTick =
+        getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, null)
+
+    if (placementTick != null) ticks += placementTick
 
     SumoVehicle.setSpeedMode(egoId, 0)
     SumoVehicle.setLaneChangeMode(egoId, 0)
@@ -328,24 +350,18 @@ class LibsumoDynamicDataCollector(
     checkNotNull(mutantEntry) { "No mutant found for id=$mutantId" }
     val mutant = AutopilotMutants.create(mutantEntry.mutantNumber)
 
-    val ticks = mutableListOf<TimeStep>()
     for (step in 1..stepCount) {
-      if (!checkEgoExistence(egoId)) break
-
-      val maneuver = mutant.controlTick(egoId)
       Simulation.step()
 
-      val nextTick =
-          getCurrentTimeStep(
-              runId = runId,
-              scenarioConfigId = startTick.scenarioConfigId,
-              egoId = egoId,
-              mutantId = mutantId,
-              scenario = scenario,
-              ticks = ticks,
-              egoManeuver = maneuver) ?: break
-      ticks += nextTick
-      if (nextTick.collisionsInTick.isNotEmpty()) break
+      if (!checkEgoExistence(egoId)) break
+
+      val egoManeuver = mutant.controlTick(egoId)
+
+      val timeStep =
+          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, egoManeuver)
+              ?: break
+      ticks += timeStep
+      if (timeStep.collisionsInTick.isNotEmpty()) break
     }
 
     Simulation.close()
