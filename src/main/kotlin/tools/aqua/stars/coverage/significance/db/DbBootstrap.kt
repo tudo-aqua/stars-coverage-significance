@@ -200,6 +200,7 @@ object DbBootstrap {
   }
 
   fun buildMaterializedViews() {
+    connect()
     transaction {
       exec(
           """
