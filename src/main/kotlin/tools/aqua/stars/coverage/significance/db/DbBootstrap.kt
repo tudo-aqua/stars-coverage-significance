@@ -195,9 +195,11 @@ object DbBootstrap {
           DecisionTreeMutantSplitsTable,
           DecisionTreeLeafAssignmentsTable)
     }
+
+    buildMaterializedViews()
   }
 
-  private fun buildMaterializedViews() {
+  fun buildMaterializedViews() {
     transaction {
       exec(
           """

@@ -97,6 +97,20 @@ val prepareDatabaseAndSeedWithScenariosAndMutants by
       // args = listOf("--flag", "value")
     }
 
+val buildMaterializedViews by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Builds materialized views."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.BuildMaterializedViewsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // jvmArgs = listOf("-Xmx64g")
+      // args = listOf("--flag", "value")
+    }
+
 val createChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
