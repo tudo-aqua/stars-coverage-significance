@@ -238,7 +238,6 @@ object DbBootstrap {
                    JOIN mutant_scenario_g0_violations
                         ON metric_failed_monitors.mutant_id = mutant_scenario_g0_violations.mutant_id
                        AND metric_failed_monitors.scenario_config_id = mutant_scenario_g0_violations.scenario_config_id
-          WHERE decision_tree_leaf_assignments.run_id = 3
           """
               .trimIndent())
 
