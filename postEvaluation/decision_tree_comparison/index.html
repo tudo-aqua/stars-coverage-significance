@@ -620,14 +620,18 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
+  /** German-locale display formatting: `.` groups magnitudes, `,` is the decimal point - matches csvEscape's CSV formatting below, so on-screen and exported numbers always agree. */
+  const NUM_LOCALE = "de-DE";
+
   function fmtNum(v) {
     if (v === null || v === undefined) return "—";
-    return v.toLocaleString();
+    return v.toLocaleString(NUM_LOCALE);
   }
 
   function fmtFloat(v, digits) {
     if (v === null || v === undefined) return "—";
-    return Number(v).toFixed(digits === undefined ? 3 : digits);
+    const d = digits === undefined ? 3 : digits;
+    return Number(v).toLocaleString(NUM_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
   }
 
   /** Feature-flag cell in the run metadata grid: a checkmark/cross reads faster at a glance than "Enabled"/"Disabled" across seven rows. */
@@ -643,7 +647,8 @@
   }
 
   function fmtPercent(v, digits) {
-    return v.toFixed(digits === undefined ? 2 : digits) + "%";
+    const d = digits === undefined ? 2 : digits;
+    return v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
   }
 
   /**
@@ -658,22 +663,24 @@
   function fmtProb(v) {
     if (v === null || v === undefined) return "—";
     if (v === 0) return "0";
-    if (Math.abs(v) < 1e-4) return v.toExponential(3);
-    return v.toFixed(6);
+    // toExponential has no locale-aware variant; it only ever emits a single "." (the
+    // mantissa's decimal point), so a plain replace is safe - same trick csvEscape uses.
+    if (Math.abs(v) < 1e-4) return v.toExponential(3).replace(".", ",");
+    return v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
   }
 
   /**
-   * Formats an "expected number of ticks" estimator (see the significance card).
-   * These range from a handful (a well-signposted mutant under weighted sampling) to
-   * hundreds of millions (a mutant this run barely killed, under naive k/N sampling) -
-   * fixed-decimal would either lose all precision or print absurd trailing zeros, so
-   * small values keep two decimals and large ones round to the nearest integer.
+   * Formats an "expected number of ticks" estimator (see the significance card: E(k/N),
+   * E(equal), E(weight)). These range from a handful (a well-signposted mutant under
+   * weighted sampling) to hundreds of millions (a mutant this run barely killed, under
+   * naive k/N sampling), but always render with exactly two decimals regardless of
+   * magnitude, so the column stays visually aligned and comparable row to row.
    * Non-finite values happen when the denominator is 0 (nothing in this run signals
    * that category at all) and are shown as "—" rather than "Infinity".
    */
   function fmtExpected(v) {
     if (v === null || v === undefined || !isFinite(v)) return "—";
-    return Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2);
+    return v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function ratioOf(bucket) {
@@ -1064,7 +1071,7 @@
     return {
       stacked: true,
       type: "logarithmic",
-      ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString() },
+      ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString(NUM_LOCALE) },
       grid: { color: c.grid },
       border: { color: c.border },
       title: { display: true, text: absoluteTitle, color: c.title },
@@ -1091,8 +1098,8 @@
         label: (item) => {
           const raw = rawOf(item);
           return proportion
-            ? item.dataset.label + ": " + fmtPercent(item.raw, 1) + " (" + raw.toLocaleString() + " ticks)"
-            : item.dataset.label + ": " + item.raw.toLocaleString() + " ticks";
+            ? item.dataset.label + ": " + fmtPercent(item.raw, 1) + " (" + raw.toLocaleString(NUM_LOCALE) + " ticks)"
+            : item.dataset.label + ": " + item.raw.toLocaleString(NUM_LOCALE) + " ticks";
         },
       },
     };
@@ -1333,7 +1340,7 @@
           },
           y: {
             type: "logarithmic",
-            ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString() },
+            ticks: { color: c.tick, callback: (v) => Number(v).toLocaleString(NUM_LOCALE) },
             grid: { color: c.grid },
             border: { color: c.border },
             title: { display: true, text: "Ticks (log scale)", color: c.title },
