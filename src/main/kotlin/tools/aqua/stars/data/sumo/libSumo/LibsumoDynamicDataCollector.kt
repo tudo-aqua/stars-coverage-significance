@@ -334,7 +334,8 @@ class LibsumoDynamicDataCollector(
     val ticks = mutableListOf<TimeStep>()
 
     val placementTick =
-        getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, null)
+        getCurrentTimeStep(
+            runId, scenario.id, egoId, mutantId, scenario, ticks, null, startTick.tick)
 
     if (placementTick != null) ticks += placementTick
 
@@ -358,7 +359,8 @@ class LibsumoDynamicDataCollector(
       val egoManeuver = mutant.controlTick(egoId)
 
       val timeStep =
-          getCurrentTimeStep(runId, scenario.id, egoId, mutantId, scenario, ticks, egoManeuver)
+          getCurrentTimeStep(
+              runId, scenario.id, egoId, mutantId, scenario, ticks, egoManeuver, startTick.tick)
               ?: break
       ticks += timeStep
       if (timeStep.collisionsInTick.isNotEmpty()) break
@@ -464,10 +466,14 @@ class LibsumoDynamicDataCollector(
       mutantId: Int?,
       scenario: ScenarioStartingConfigurationEntry,
       ticks: List<TimeStep> = emptyList(),
-      egoManeuver: MutantManeuver?
+      egoManeuver: MutantManeuver?,
+      // Reload-relative Simulation.getTime() always restarts at 0, so a replay anchored to a
+      // recorded tick (e.g. replayFromTickForDuration's startTick) must add that tick's real
+      // timestamp back in to produce tickTimeMillis values comparable to the original recording.
+      baseTickMillis: Long = 0,
   ): TimeStep? {
     val simTimeSeconds = Simulation.getTime()
-    val tickTimeMillis = (simTimeSeconds * 1000.0).toLong()
+    val tickTimeMillis = baseTickMillis + (simTimeSeconds * 1000.0).toLong()
 
     val vehIds = SumoVehicle.getIDList()
     val vehiclesInTick = ArrayList<Vehicle>(vehIds.size)
