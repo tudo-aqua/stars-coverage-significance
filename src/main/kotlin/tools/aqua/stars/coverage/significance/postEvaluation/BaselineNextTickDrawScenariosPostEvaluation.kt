@@ -53,7 +53,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Startin
  * All tick data is loaded from the database exactly once per evaluation call, then all groupings
  * and repetitions operate on the in-memory list.
  */
-object BaselineNextTickPostEvaluation {
+object BaselineNextTickDrawScenariosPostEvaluation {
 
   private val BASE_PATH = Path.of(POST_EVALUATION_BASE_DIR, "baseline_next_tick")
 

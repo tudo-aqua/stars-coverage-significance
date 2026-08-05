@@ -29,7 +29,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0ViolationsView
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
@@ -119,14 +119,14 @@ const val REPETITIONS: Int = 100
 /** The size of the test suite. */
 const val TEST_SUITE_SIZE: Int = 300
 
-/** Suite sizes evaluated by [BaselineNextTickPostEvaluation]. */
+/** Suite sizes evaluated by [BaselineNextTickDrawScenariosPostEvaluation]. */
 val NEXT_TICK_SUITE_SIZES: List<Int> =
     listOf(1, 5, 10, 20, 30, 50, 80, 100, 200, 300, 500, 800, 1000, 2000)
 
 /**
  * Maximum number of scenario-config violations (i.e. entries in [MutantScenarioG0ViolationsView]
  * where [MutantScenarioG0ViolationsView.anyG0Violation] is `true`) for a mutant to be considered
- * "rare". Used by the rare-mutant strategy in [BaselineNextTickPostEvaluation].
+ * "rare". Used by the rare-mutant strategy in [BaselineNextTickDrawScenariosPostEvaluation].
  */
 const val MAX_RARE_MUTANT_FAILURES: Int = 10
 

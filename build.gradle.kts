@@ -181,39 +181,25 @@ val runPostEvaluation by
       // args = listOf("--flag", "value")
     }
 
-val runBaselineNextTick by
+val runBaselineNextTickDrawScenario by
     tasks.registering(JavaExec::class) {
       group = "application"
       dependsOn(tasks.run.get().taskDependencies)
 
-      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickKt")
+      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickDrawScenarioKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       jvmArgs = listOf("-Xmx300g")
     }
 
-val runBaselineNextTickWithStartingScenario by
-    tasks.registering(JavaExec::class) {
-      group = "application"
-      description =
-          "Run the scenario-based next-tick baseline evaluation (evaluateWithStartingScenario)."
-      dependsOn(tasks.run.get().taskDependencies)
-
-      mainClass.set(
-          "tools.aqua.stars.coverage.significance.RunBaselineNextTickWithStartingScenarioKt")
-      classpath = sourceSets.main.get().runtimeClasspath
-
-      jvmArgs = listOf("-Xmx300g")
-    }
-
-val runBaselineNextTickTimeToKill by
+val runBaselineNextTickTimeToKillDrawScenario by
     tasks.registering(JavaExec::class) {
       group = "application"
       description =
           "For each accident mutant, measure how many starting scenarios each strategy needs to first kill it (evaluateTimeToKill)."
       dependsOn(tasks.run.get().taskDependencies)
 
-      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickTimeToKillKt")
+      mainClass.set("tools.aqua.stars.coverage.significance.RunBaselineNextTickTimeToKillDrawScenarioKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       jvmArgs = listOf("-Xmx300g")

@@ -18,10 +18,10 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
 
 /**
- * Runs [BaselineNextTickPostEvaluation.evaluateTimeToKill] in isolation.
+ * Runs [BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill] in isolation.
  *
  * For each mutant that causes at least one G0 accident, measures how many starting scenarios each
  * sampling strategy (random, TSC, leaf, accident-leaf) requires before the mutant is first killed.
@@ -29,6 +29,6 @@ import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickPos
  */
 fun main() {
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
-  BaselineNextTickPostEvaluation.evaluateTimeToKill()
+  BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill()
   println("Finished!")
 }
