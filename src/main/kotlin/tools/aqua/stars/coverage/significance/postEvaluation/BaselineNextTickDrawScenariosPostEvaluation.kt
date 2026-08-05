@@ -427,7 +427,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
       suiteSize: Int,
       rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
-      (0..REPETITIONS)
+      (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
@@ -451,7 +451,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
       suiteSize: Int,
       rareMutantIds: Set<MutantId>? = null,
   ): List<Int> {
-    return (0..REPETITIONS)
+    return (1..REPETITIONS)
         .toList()
         .parallelStream()
         .map { rep ->
@@ -491,7 +491,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
       killingScenarios: Map<MutantId, Set<StartingScenarioId>>,
       mutantIdToKill: MutantId
   ): List<Int> {
-    return (0..REPETITIONS)
+    return (1..REPETITIONS)
         .toList()
         .parallelStream()
         .map { rep ->
@@ -515,7 +515,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
       killingScenariosByMutant: Map<MutantId, Set<StartingScenarioId>>,
       mutantId: MutantId
   ): List<Int> =
-      (0..REPETITIONS)
+      (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
