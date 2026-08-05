@@ -206,6 +206,20 @@ val runBaselineNextTickTimeToKillDrawScenario by
       jvmArgs = listOf("-Xmx300g")
     }
 
+val runDrawTicksWithDecisionTreeGrouping by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Sample individual ticks (uniform-random, DC-leaf round-robin, DC-leaf weighted) and measure distinct mutants killed per suite size, plus time-to-kill per mutant."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set(
+          "tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGroupingKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx300g")
+    }
+
 val runDecisionTreeComparison by
     tasks.registering(JavaExec::class) {
       group = "application"
