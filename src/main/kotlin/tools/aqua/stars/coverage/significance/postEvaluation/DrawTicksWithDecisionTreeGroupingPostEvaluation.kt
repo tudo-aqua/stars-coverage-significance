@@ -290,8 +290,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   /**
    * Weighted-leaf variant of [evaluateRoundRobinTicks]: instead of cycling leaves in a fixed order,
    * each draw picks a leaf via [weightedPickLeaf] (probability proportional to [leafWeights],
-   * renormalized over leaves that still have ticks left), then draws one random tick from that
-   * leaf via [MutableList.drawAndRemoveRandomTick] (no per-leaf `shuffled()` - same reasoning as
+   * renormalized over leaves that still have ticks left), then draws one random tick from that leaf
+   * via [MutableList.drawAndRemoveRandomTick] (no per-leaf `shuffled()` - same reasoning as
    * [evaluateRoundRobinTicks]). This is the sampling process the significance card's E(weight) = 1
    * / Σ(p_l·w_l) estimator assumes.
    */

@@ -1,5 +1,11 @@
 # STARS Coverage Significance — Docker Usage
 
+#### (Optional) Git Hooks
+If you want to use our proposed Git Hooks you can execute the following command:
+```shell
+git config --local core.hooksPath .githooks
+```
+
 This repository ships:
 
 - A `Dockerfile` that builds a container image capable of running the Gradle task `runEvaluation`.
