@@ -37,7 +37,7 @@ import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0Violatio
 import tools.aqua.stars.coverage.significance.db.tables.ScenarioMutantKillCountView
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.SamplingData
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.SamplingDataScenarioDrawing
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.StartingScenarioId
 
 /**
@@ -64,12 +64,12 @@ object BaselineNextTickDrawScenariosPostEvaluation {
    *
    * @param ticks The tick list to group (may be the full dataset or a filtered subset).
    * @param hasLeaf Whether leaf node IDs are populated in [ticks]; when `false` all leaf-related
-   *   fields in the returned [SamplingData] are empty lists.
+   *   fields in the returned [SamplingDataScenarioDrawing] are empty lists.
    */
   private fun buildSamplingData(
       ticks: List<NextTickPostEvaluationDatabaseEntry>,
       hasLeaf: Boolean,
-  ): SamplingData {
+  ): SamplingDataScenarioDrawing {
     val dcLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
     val accidentDCLeafGroups: List<List<NextTickPostEvaluationDatabaseEntry>>
     val startingScenarioIdsPerDCLeafId: List<Set<StartingScenarioId>>
@@ -130,9 +130,9 @@ object BaselineNextTickDrawScenariosPostEvaluation {
 
     val allScenarioIds = ScenarioStartingConfigurationRepository.getAll().map { it.id!! }.toSet()
 
-    return SamplingData(
+    return SamplingDataScenarioDrawing(
         allTicks = ticks,
-        dcLeafGroups = dcLeafGroups,
+        dtLeafGroups = dcLeafGroups,
         accidentDCLeafGroups = accidentDCLeafGroups,
         allScenarioIds = allScenarioIds,
         accidentScenarioIds = accidentScenarioIds,
