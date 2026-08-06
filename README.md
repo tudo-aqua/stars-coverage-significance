@@ -413,7 +413,9 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --max-leaves 512 \
   --out-dir /results/runs \
   --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
-  --db-workers 48
+  --db-workers 48 \
+  --train-fraction 0.5 \
+  --seed 43
 
 # Train/test split: 80 % of mutants for training, rest for evaluation
 # Run is recorded in the DB; run_<id>.dot and run_<id>.log are written automatically
