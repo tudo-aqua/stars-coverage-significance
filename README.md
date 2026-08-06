@@ -247,6 +247,16 @@ docker run --name stars-coverage-significance-post-evaluation stars-evaluation:l
 docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --args="8"
 ```
 
+### Run the draw-ticks-with-decision-tree-grouping evaluation
+
+`RunDrawTicksWithDecisionTreeGrouping.kt` samples individual ticks directly (rather than whole starting scenarios, contrast with the baseline next-tick evaluation above) under four sampling strategies — uniform-random, DC-leaf round-robin ("equal"), DC-leaf significance-weighted, and DC-leaf alternating (alternates draw-by-draw between the round-robin and weighted policies, falling back to whichever still has ticks left if the other is exhausted) — and writes two kinds of results under `postEvaluation/draw_ticks_with_decision_tree_grouping/`: how many distinct mutants each strategy kills per suite size (`size_<n>/draw_ticks_<strategy>.csv`), and, per accident-causing mutant, how many ticks each strategy needs before first killing it (`time_to_kill/mutant_<id>/ttk_<strategy>.csv`).
+
+It optionally parses a `decisionTreeRunId` (the `decision_tree_runs.id` to use for leaf assignments) as the first `main(args)` entry, same as the baseline next-tick evaluation above. When omitted, it falls back to the latest full run (`train_fraction=1.0`). Pass it via the Gradle `--args` flag:
+
+```bash
+docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping --args="8"
+```
+
 ### Run the duplicate-tick analysis
 
 `RunAnalyzeDuplicateTicks.kt` checks how many ticks in `metric_failed_monitors` are duplicates of each other, where two ticks count as "the same" when the ego vehicle's spatial relation to its neighbours (relative bumper-to-bumper distances), the ego and neighbour speeds, and the ego and neighbour accelerations all match — see `MetricFailedMonitorsTable.buildDuplicateTickCompareColumns`. Since these values are floats, the compared columns are rounded to a decreasing number of decimal places (exact, then 6 decimals down to 0) and duplicate counts are reported at each level. Writes `postEvaluation/duplicate_ticks/duplicate_tick_groups.json` containing every group (member row IDs + rounded values) per precision level plus a summary.

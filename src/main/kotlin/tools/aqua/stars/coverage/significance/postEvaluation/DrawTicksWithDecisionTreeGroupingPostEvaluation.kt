@@ -56,8 +56,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Samplin
  *    round-robin (2) and weighted (3) policies above, sharing the same depleting tick pool between
  *    them. If the policy whose turn it is has nothing left to draw from (its leaves are all empty,
  *    which for the weighted policy also includes every w_l = 0 leaf), that turn falls back to the
- *    other policy instead of being skipped, so the alternation only truly stops once the pool itself
- *    is exhausted.
+ *    other policy instead of being skipped, so the alternation only truly stops once the pool
+ *    itself is exhausted.
  *
  * All tick data is loaded from the database exactly once per evaluation call, then all groupings
  * and repetitions operate on the in-memory list.
@@ -160,7 +160,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               "leaf_tick_weighted_rare",
               suiteSize)
 
-          println("    Evaluating DC-leaf alternating (equal/weighted) tick sampling (rare mutants).")
+          println(
+              "    Evaluating DC-leaf alternating (equal/weighted) tick sampling (rare mutants).")
           save(
               evaluateAlternatingDrawTicks(
                   data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
@@ -219,7 +220,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             "leaf_tick_weighted",
             mutantId)
 
-        println("    Evaluating DC-leaf alternating (equal/weighted) time-to-kill for mutant $mutantId.")
+        println(
+            "    Evaluating DC-leaf alternating (equal/weighted) time-to-kill for mutant $mutantId.")
         saveTimeToKill(
             evaluateTimeToKillAlternatingTicks(data.dtLeafGroups, data.leafWeights, mutantId),
             "leaf_tick_alternating",
@@ -499,7 +501,10 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           }
           .collect(Collectors.toList())
 
-  /** Time-to-kill counterpart of [evaluateAlternatingDrawTicks] - see that function for the alternation/fallback rules. */
+  /**
+   * Time-to-kill counterpart of [evaluateAlternatingDrawTicks] - see that function for the
+   * alternation/fallback rules.
+   */
   private fun evaluateTimeToKillAlternatingTicks(
       ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
       leafWeights: Map<DecisionTreeLeafId, Double>,
