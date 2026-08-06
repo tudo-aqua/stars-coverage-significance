@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Time To Kill Explorer</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+
+    --status-good:     #0ca30c;
+    --status-critical: #d03b3b;
+
+    --series-1: #2a78d6;  /* blue    */
+    --series-2: #1baf7a;  /* aqua    */
+    --series-3: #eda100;  /* yellow  */
+    --series-4: #008300;  /* green   */
+    --series-5: #4a3aa7;  /* violet  */
+    --series-6: #e34948;  /* red     */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+
+      --series-1: #3987e5;
+      --series-2: #199e70;
+      --series-3: #c98500;
+      --series-4: #008300;
+      --series-5: #9085e9;
+      --series-6: #e66767;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 20px clamp(16px, 4vw, 40px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  header p.subtitle { margin: 0; color: var(--text-secondary); }
+  .summary-row { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 14px; }
+  .summary-tile { min-width: 120px; }
+  .summary-tile .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
+  .summary-tile .value { font-size: 1.15rem; font-weight: 600; }
+
+  main {
+    padding: 20px clamp(16px, 4vw, 40px) 60px;
+    max-width: 1500px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .card h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--text-secondary); }
+
+  label { font-size: 0.85rem; color: var(--text-secondary); }
+  select, button, input[type="text"] {
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--text-secondary); }
+
+  .controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .controls-row .spacer { flex: 1; }
+  .controls-row:last-child { margin-bottom: 0; }
+
+  .legend-note { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 10px; }
+  code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+
+  #errorBanner {
+    display: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin: 0 clamp(16px, 4vw, 40px);
+  }
+  #errorBanner h2 { margin: 0 0 8px; font-size: 1.05rem; }
+  #errorBanner .upload-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+  #errorBanner .note { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+  #errorBanner input[type="file"] { font-size: 0.85rem; color: var(--text-primary); }
+  #errorBanner input[type="file"]::file-selector-button {
+    font: inherit; cursor: pointer; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--baseline); border-radius: 6px; padding: 5px 10px; margin-right: 8px;
+  }
+  #errorBanner input[type="file"]::file-selector-button:hover { border-color: var(--text-secondary); }
+
+  .status-note { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+  .status-note.warn { color: var(--status-critical); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  table th, table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--gridline); white-space: nowrap; }
+  table th { color: var(--text-muted); font-weight: 600; }
+  table td.num, table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table th.group-sep, table td.group-sep { border-left: 1px solid var(--border); }
+  .table-scroll { overflow: auto; max-height: 640px; border: 1px solid var(--border); border-radius: 8px; }
+  .table-scroll table { width: 100%; }
+  .table-scroll thead th { position: sticky; top: 0; background: var(--surface-1); z-index: 2; }
+  th[data-sort-key] { cursor: pointer; user-select: none; }
+  th[data-sort-key]:hover { color: var(--text-primary); }
+  .sort-indicator { display: inline-block; width: 1em; font-size: 0.75em; color: var(--text-muted); }
+
+  .ratio-good { color: var(--status-good); }
+  .ratio-bad { color: var(--status-critical); }
+
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 0.8rem; color: var(--text-secondary); }
+  .legend-row .item { display: flex; align-items: center; }
+
+  .mutant-toggle-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .mutant-toggle-grid label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; cursor: pointer; }
+
+  .chart-scroll { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1); }
+  .chart-inner { padding: 10px 14px 4px; }
+
+  .mutant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 14px; }
+  .mutant-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--page-plane); }
+  .mutant-card h4 { margin: 0 0 8px; font-size: 0.88rem; }
+  .mutant-card table { font-size: 0.75rem; }
+  .mutant-card table th, .mutant-card table td { padding: 3px 6px; white-space: normal; }
+
+  #chartTooltip {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    z-index: 50;
+    white-space: nowrap;
+  }
+  #chartTooltip .row { display: flex; justify-content: space-between; gap: 12px; }
+  #chartTooltip .row b { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Time To Kill Explorer</h1>
+  <p class="subtitle">Reads CSVs directly from <code>baseline_next_tick/time_to_kill/</code> and <code>draw_ticks_with_decision_tree_grouping/time_to_kill/</code>, plus <code>decision_tree_comparison/decision_tree_comparison.json</code> for the expected-value comparison &mdash; no build/generation step. Serve the <code>postEvaluation</code> folder over HTTP (e.g. <code>python -m http.server 8000</code> run <em>there</em>, not in this subfolder) so relative fetches and directory listings work.</p>
+  <div class="summary-row" id="summaryRow"></div>
+</header>
+
+<div id="errorBanner"></div>
+
+<main id="mainContent" style="display:none">
+
+  <section class="card" id="mutantToggleCard">
+    <h2>Mutants</h2>
+    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison below.</p>
+    <div class="controls-row">
+      <input type="text" id="mutantFilterInput" placeholder="Filter by ID…" style="max-width:160px" />
+      <button id="mutantsAllBtn" type="button">All</button>
+      <button id="mutantsNoneBtn" type="button">None</button>
+      <span class="spacer"></span>
+      <span class="status-note" id="mutantToggleCount"></span>
+    </div>
+    <div class="mutant-toggle-grid" id="mutantToggleGrid"></div>
+  </section>
+
+  <section class="card" id="comparisonCard" style="display:none">
+    <h2>Expected vs. actual</h2>
+    <p class="legend-note">
+      E(k/N), E(equal) and E(weight) come from <code>decision_tree_comparison.json</code>'s significance card (see that page's Statistics tab for the definitions) for the selected decision tree run. <strong>Actual mean</strong> is this page's own empirically observed mean draws-to-kill for the strategy that most closely matches each estimator's sampling policy: E(k/N) &harr; uniform random, E(equal) &harr; unweighted leaf round-robin, E(weight) &harr; significance-weighted leaf sampling (only available for the tick-level dataset). <strong>Actual&nbsp;&divide;&nbsp;Expected</strong> below 1 (<span class="ratio-good">green</span>) means the mutant was killed faster in practice than the estimator predicted; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower.
+    </p>
+    <div class="controls-row">
+      <label for="dtRunSelect">Decision tree run</label>
+      <select id="dtRunSelect"></select>
+      <span class="spacer"></span>
+      <span class="status-note" id="dtStatusNote"></span>
+    </div>
+    <div id="comparisonTables"></div>
+  </section>
+
+  <div id="datasetSections"></div>
+
+</main>
+
+<div id="chartTooltip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // -------------------------------------------------------------- config
+
+  const DT_COMPARISON_PATH = "decision_tree_comparison/decision_tree_comparison.json";
+
+  const DATASETS = [
+    {
+      id: "draw_ticks",
+      title: "Draw Ticks (Decision Tree Grouping)",
+      note: "Tick-level sampling &mdash; DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill().",
+      dir: "draw_ticks_with_decision_tree_grouping/time_to_kill/",
+      unit: "ticks",
+      strategies: [
+        { key: "random_tick", label: "Random" },
+        { key: "leaf_tick", label: "Leaf" },
+        { key: "leaf_tick_weighted", label: "Leaf (Weighted)" },
+      ],
+      expectedMap: { ek: "random_tick", eEqual: "leaf_tick", eWeight: "leaf_tick_weighted" },
+    },
+    {
+      id: "baseline_next_tick",
+      title: "Baseline Next Tick (Scenario)",
+      note: "Scenario-level sampling &mdash; BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill().",
+      dir: "baseline_next_tick/time_to_kill/",
+      unit: "scenarios",
+      strategies: [
+        { key: "random", label: "Random" },
+        { key: "random_accident-scenarios", label: "Random (Accident Scenarios)" },
+        { key: "leaf", label: "Leaf" },
+        { key: "leaf_accidents", label: "Leaf (Accidents)" },
+        { key: "leaf_accidents_accident-scenarios", label: "Leaf (Accidents, Accident Scenarios)" },
+      ],
+      expectedMap: { ek: "random", eEqual: "leaf", eWeight: null },
+    },
+  ];
+
+  const SERIES_COLORS = ["--series-1", "--series-2", "--series-3", "--series-4", "--series-5", "--series-6"];
+
+  const NUM_LOCALE = "de-DE";
+
+  // ------------------------------------------------------------- state
+
+  let dataSource = { mode: "http" }; // or { mode: "folder", files: Map<string, File> }
+  let visibleMutantIds = new Set();
+  let allMutantIds = [];
+  let dtData = null;
+  let currentRunId = null;
+
+  // ---------------------------------------------------------------- utils
+
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function fmtNum(v) { return v === null || v === undefined ? "—" : v.toLocaleString(NUM_LOCALE); }
+
+  function fmtFloat(v, digits) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    const d = digits === undefined ? 1 : digits;
+    return Number(v).toLocaleString(NUM_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function fmtExpected(v) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    return v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtRatio(v) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    return v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "×";
+  }
+
+  function ratioClass(v) {
+    if (v === null || v === undefined || !isFinite(v)) return "";
+    if (v <= 1) return "ratio-good";
+    if (v > 2) return "ratio-bad";
+    return "";
+  }
+
+  function csvEscape(value) {
+    if (typeof value === "number") return String(value).replace(".", ",");
+    const s = value === null || value === undefined ? "" : String(value);
+    return /["\r\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadCsv(filename, rows) {
+    const csv = rows.map((row) => row.map(csvEscape).join(";")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function baseScaleColors() {
+    return {
+      grid: cssVar("--gridline"),
+      border: cssVar("--baseline"),
+      tick: cssVar("--text-muted"),
+      title: cssVar("--text-secondary"),
+      text: cssVar("--text-primary"),
+      surface: cssVar("--surface-1"),
+    };
+  }
+
+  // ------------------------------------------------------- data source
+
+  function toPageUrl(relPath) { return "../" + relPath; }
+
+  function readText(relPath) {
+    if (dataSource.mode === "folder") {
+      const file = dataSource.files.get(relPath);
+      return file ? file.text() : Promise.resolve(null);
+    }
+    return fetch(toPageUrl(relPath)).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  }
+
+  /** `relDir` must end with "/". Returns immediate child names (files and subdirectories, no trailing slash). */
+  function listDir(relDir) {
+    if (dataSource.mode === "folder") {
+      const names = new Set();
+      dataSource.files.forEach((_file, key) => {
+        if (key.startsWith(relDir)) {
+          const seg = key.slice(relDir.length).split("/")[0];
+          if (seg) names.add(seg);
+        }
+      });
+      return Promise.resolve(Array.from(names));
+    }
+    return fetch(toPageUrl(relDir)).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status + " listing " + relDir);
+      return r.text();
+    }).then((html) => {
+      const names = new Set();
+      const re = /href="([^"?#]+)"/g;
+      let m;
+      while ((m = re.exec(html))) {
+        let href = m[1];
+        if (!href || href.startsWith("http") || href.startsWith("/") || href.startsWith("..")) continue;
+        try { href = decodeURIComponent(href); } catch (e) { /* leave as-is */ }
+        names.add(href.replace(/\/$/, ""));
+      }
+      return Array.from(names);
+    });
+  }
+
+  /** Builds a relPath -> File map from a webkitdirectory FileList, anchored on a landmark file so it works regardless of which folder the user actually picked (postEvaluation itself, its parent, ...). */
+  function buildFolderMap(fileList) {
+    const files = Array.from(fileList).map((f) => ({ file: f, path: f.webkitRelativePath.replace(/\\/g, "/") }));
+    const landmarks = [DT_COMPARISON_PATH].concat(DATASETS.map((ds) => ds.dir));
+    let prefix = null;
+    for (const landmark of landmarks) {
+      for (const { path } of files) {
+        const idx = path.indexOf(landmark);
+        if (idx !== -1) { prefix = path.slice(0, idx); break; }
+      }
+      if (prefix !== null) break;
+    }
+    if (prefix === null && files.length) {
+      // Fallback: assume the picked folder *is* postEvaluation itself.
+      const parts = files[0].path.split("/");
+      prefix = parts.length > 1 ? parts[0] + "/" : "";
+    }
+    const map = new Map();
+    files.forEach(({ file, path }) => {
+      if (path.startsWith(prefix)) map.set(path.slice(prefix.length), file);
+    });
+    return map;
+  }
+
+  function handleFolderPick(e) {
+    const fileList = e.target.files;
+    if (!fileList || !fileList.length) return;
+    const files = buildFolderMap(fileList);
+    if (!files.size) {
+      showError("The selected folder doesn't seem to contain any recognizable files. Pick the \"postEvaluation\" folder (or a parent of it).");
+      return;
+    }
+    dataSource = { mode: "folder", files };
+    hideError();
+    boot();
+  }
+
+  // --------------------------------------------------------- error banner
+
+  function showError(detail) {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Load the time-to-kill data";
+    banner.appendChild(heading);
+
+    if (detail) {
+      const msg = document.createElement("p");
+      msg.style.margin = "0 0 4px";
+      msg.textContent = detail;
+      banner.appendChild(msg);
+    }
+
+    const uploadRow = document.createElement("div");
+    uploadRow.className = "upload-row";
+    const label = document.createElement("label");
+    label.setAttribute("for", "folderInput");
+    label.textContent = "Choose the postEvaluation folder:";
+    const input = document.createElement("input");
+    input.type = "file";
+    input.id = "folderInput";
+    input.webkitdirectory = true;
+    input.directory = true;
+    input.multiple = true;
+    input.addEventListener("change", handleFolderPick);
+    uploadRow.appendChild(label);
+    uploadRow.appendChild(input);
+    banner.appendChild(uploadRow);
+
+    const note = document.createElement("p");
+    note.className = "note";
+    note.innerHTML =
+      "Tip: serving <code>postEvaluation</code> over HTTP loads everything automatically instead " +
+      "— e.g. run <code>python -m http.server 8000</code> from the <code>postEvaluation</code> folder " +
+      "(not from <code>time_to_kill_comparison</code>), then open " +
+      "<code>http://localhost:8000/time_to_kill_comparison/</code>.";
+    banner.appendChild(note);
+
+    banner.style.display = "block";
+    document.getElementById("mainContent").style.display = "none";
+  }
+
+  function hideError() {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+    banner.style.display = "none";
+  }
+
+  // ---------------------------------------------------------- csv + stats
+
+  function parseCsv(text) {
+    const lines = text.split(/\r?\n/);
+    const values = [];
+    let total = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      total++;
+      const val = parseInt(line, 10);
+      if (!isNaN(val) && val > 0) values.push(val);
+    }
+    return { values, total };
+  }
+
+  function quantileSorted(sorted, q) {
+    const pos = (sorted.length - 1) * q;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (sorted[base + 1] !== undefined) return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+    return sorted[base];
+  }
+
+  /** Five-number summary + matplotlib-style whiskers (most extreme point within 1.5*IQR of the quartiles) and outliers beyond that. */
+  function computeStats(values) {
+    if (!values.length) return null;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const n = sorted.length;
+    const mean = sorted.reduce((s, v) => s + v, 0) / n;
+    const median = quantileSorted(sorted, 0.5);
+    const q1 = quantileSorted(sorted, 0.25);
+    const q3 = quantileSorted(sorted, 0.75);
+    const iqr = q3 - q1;
+    const lowFence = q1 - 1.5 * iqr;
+    const highFence = q3 + 1.5 * iqr;
+    let whiskerLow = sorted[0];
+    for (const v of sorted) { if (v >= lowFence) { whiskerLow = v; break; } }
+    let whiskerHigh = sorted[n - 1];
+    for (let i = n - 1; i >= 0; i--) { if (sorted[i] <= highFence) { whiskerHigh = sorted[i]; break; } }
+    const outliers = sorted.filter((v) => v < whiskerLow || v > whiskerHigh);
+    return { n, total: n, mean, median, q1, q3, min: sorted[0], max: sorted[n - 1], whiskerLow, whiskerHigh, outliers };
+  }
+
+  // ------------------------------------------------------------ loading
+
+  function loadDataset(ds) {
+    return listDir(ds.dir).then((names) => {
+      ds.mutantIds = names
+        .map((n) => /^mutant_(\d+)$/.exec(n))
+        .filter(Boolean)
+        .map((m) => parseInt(m[1], 10))
+        .sort((a, b) => a - b);
+      ds.available = true;
+      ds.data = {}; // mutantId -> strategyKey -> stats
+      const fetches = [];
+      ds.mutantIds.forEach((mid) => {
+        ds.data[mid] = {};
+        ds.strategies.forEach((strat) => {
+          const path = ds.dir + "mutant_" + mid + "/ttk_" + strat.key + ".csv";
+          fetches.push(
+            readText(path).then((text) => {
+              if (!text) return;
+              const { values, total } = parseCsv(text);
+              const stats = computeStats(values);
+              if (stats) { stats.total = total; ds.data[mid][strat.key] = stats; }
+            })
+          );
+        });
+      });
+      return Promise.all(fetches);
+    }).catch((e) => {
+      ds.available = false;
+      ds.error = e.message;
+    });
+  }
+
+  function loadDtComparison() {
+    return readText(DT_COMPARISON_PATH).then((text) => {
+      if (!text) return;
+      try {
+        dtData = JSON.parse(text);
+      } catch (e) {
+        dtData = null;
+      }
+    });
+  }
+
+  function boot() {
+    dtData = null;
+    document.getElementById("errorBanner").style.display = "none";
+    Promise.all([Promise.all(DATASETS.map(loadDataset)), loadDtComparison()]).then(() => {
+      const anyAvailable = DATASETS.some((ds) => ds.available);
+      if (!anyAvailable && !dtData) {
+        showError(
+          dataSource.mode === "folder"
+            ? "Couldn't find any recognizable files in the selected folder."
+            : "Automatic loading failed. This usually happens when the page is opened directly from disk (file://), since browsers block fetch() there, or when the HTTP server wasn't started from the postEvaluation folder."
+        );
+        return;
+      }
+      hideError();
+      const idSet = new Set();
+      DATASETS.forEach((ds) => (ds.mutantIds || []).forEach((id) => idSet.add(id)));
+      allMutantIds = Array.from(idSet).sort((a, b) => a - b);
+      visibleMutantIds = new Set(allMutantIds);
+      document.getElementById("mainContent").style.display = "";
+      renderSummary();
+      renderMutantToggle();
+      renderComparisonSection();
+      renderDatasetSections();
+    });
+  }
+
+  // --------------------------------------------------------------- header
+
+  function renderSummary() {
+    const row = document.getElementById("summaryRow");
+    row.innerHTML = "";
+    const tiles = [
+      ["Mutants", allMutantIds.length],
+      ["Datasets loaded", DATASETS.filter((d) => d.available).length + " / " + DATASETS.length],
+      ["Expected-value reference", dtData ? "loaded" : "not found"],
+      ["Data source", dataSource.mode === "folder" ? "local folder" : "HTTP"],
+    ];
+    tiles.forEach(([label, value]) => {
+      const tile = document.createElement("div");
+      tile.className = "summary-tile";
+      const l = document.createElement("div"); l.className = "label"; l.textContent = label;
+      const v = document.createElement("div"); v.className = "value"; v.textContent = value;
+      tile.appendChild(l); tile.appendChild(v);
+      row.appendChild(tile);
+    });
+  }
+
+  // ---------------------------------------------------------- mutant toggle
+
+  function renderMutantToggle() {
+    const grid = document.getElementById("mutantToggleGrid");
+    grid.innerHTML = "";
+    allMutantIds.forEach((mid) => {
+      const wrap = document.createElement("label");
+      wrap.dataset.mutantId = String(mid);
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = visibleMutantIds.has(mid);
+      cb.addEventListener("change", () => {
+        if (cb.checked) visibleMutantIds.add(mid); else visibleMutantIds.delete(mid);
+        updateMutantToggleCount();
+        renderComparisonSection();
+        renderDatasetSections();
+      });
+      wrap.appendChild(cb);
+      wrap.appendChild(document.createTextNode("Mutant " + mid));
+      grid.appendChild(wrap);
+    });
+    updateMutantToggleCount();
+
+    document.getElementById("mutantsAllBtn").onclick = () => {
+      visibleMutantIds = new Set(allMutantIds);
+      grid.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = true));
+      updateMutantToggleCount();
+      renderComparisonSection();
+      renderDatasetSections();
+    };
+    document.getElementById("mutantsNoneBtn").onclick = () => {
+      visibleMutantIds = new Set();
+      grid.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = false));
+      updateMutantToggleCount();
+      renderComparisonSection();
+      renderDatasetSections();
+    };
+    document.getElementById("mutantFilterInput").oninput = (e) => {
+      const q = e.target.value.trim();
+      grid.querySelectorAll("label").forEach((lbl) => {
+        lbl.style.display = !q || lbl.dataset.mutantId.includes(q) ? "" : "none";
+      });
+    };
+  }
+
+  function updateMutantToggleCount() {
+    document.getElementById("mutantToggleCount").textContent =
+      visibleMutantIds.size + " of " + allMutantIds.length + " shown";
+  }
+
+  function visibleSortedMutantIds(ids) {
+    return ids.filter((id) => visibleMutantIds.has(id)).sort((a, b) => a - b);
+  }
+
+  // ------------------------------------------------- significance (from decision_tree_comparison.json)
+
+  function anyKillProbability(b) { return b.totalTicks > 0 ? b.failingTicks / b.totalTicks : 0; }
+  function probKillValue(b, mid) { return b.totalTicks > 0 ? (b.mutantKillingAmount[String(mid)] || 0) / b.totalTicks : 0; }
+  function tickKillValue(b, mid) { return b.mutantKillingAmount[String(mid)] || 0; }
+
+  function computeLeafWeights(buckets) {
+    const sumP = buckets.reduce((s, b) => s + anyKillProbability(b), 0);
+    const map = new Map();
+    buckets.forEach((b) => { const p = anyKillProbability(b); map.set(b.leafId, { p, w: sumP > 0 ? p / sumP : 0 }); });
+    return map;
+  }
+
+  /** Mirrors decision_tree_comparison's buildSignificanceRows, restricted to mutants that kill at least one tick in this run. Returns Map<mutantId, {ticks, N, L, ek, eEqual, eWeight}>. */
+  function computeSignificance(run) {
+    const buckets = run.buckets;
+    const N = dtData.totalTicks;
+    const L = run.runInfo.learnedNumLeaves;
+    const leafWeights = computeLeafWeights(buckets);
+    const mutantIds = new Set();
+    buckets.forEach((b) => Object.keys(b.mutantKillingAmount).forEach((k) => mutantIds.add(Number(k))));
+
+    const rows = new Map();
+    mutantIds.forEach((mid) => {
+      const sumPm = buckets.reduce((s, b) => s + probKillValue(b, mid), 0);
+      const sumPWm = buckets.reduce((s, b) => s + probKillValue(b, mid) * leafWeights.get(b.leafId).w, 0);
+      const ticks = buckets.reduce((s, b) => s + tickKillValue(b, mid), 0);
+      rows.set(mid, {
+        ticks, N, L,
+        ek: ticks > 0 ? N / ticks : null,
+        eEqual: sumPm > 0 ? L / sumPm : null,
+        eWeight: sumPWm > 0 ? 1 / sumPWm : null,
+      });
+    });
+    return rows;
+  }
+
+  function renderComparisonSection() {
+    const card = document.getElementById("comparisonCard");
+    if (!dtData) { card.style.display = "none"; return; }
+    card.style.display = "";
+
+    const sel = document.getElementById("dtRunSelect");
+    if (sel.options.length !== dtData.decisionTreeRunIds.length) {
+      sel.innerHTML = "";
+      dtData.decisionTreeRunIds.forEach((id) => {
+        const opt = document.createElement("option");
+        opt.value = String(id);
+        const info = dtData.runsById[id].runInfo;
+        opt.textContent = "Run " + id + " (leaves: " + fmtNum(info.learnedNumLeaves) + ")";
+        sel.appendChild(opt);
+      });
+      sel.onchange = () => { currentRunId = sel.value; renderComparisonSection(); };
+      currentRunId = String(dtData.decisionTreeRunIds[0]);
+    }
+    sel.value = currentRunId;
+
+    const run = dtData.runsById[currentRunId];
+    const sig = computeSignificance(run);
+    document.getElementById("dtStatusNote").textContent =
+      sig.size + " mutants scored in this run's tree (" + fmtNum(run.runInfo.learnedNumLeaves) + " leaves).";
+
+    const container = document.getElementById("comparisonTables");
+    container.innerHTML = "";
+
+    DATASETS.forEach((ds) => {
+      if (!ds.available) return;
+      const mids = visibleSortedMutantIds(ds.mutantIds).filter((mid) => sig.has(mid));
+      const section = document.createElement("div");
+      section.style.marginTop = "16px";
+
+      const h3 = document.createElement("h3");
+      h3.textContent = ds.title;
+      section.appendChild(h3);
+
+      if (!mids.length) {
+        const p = document.createElement("p");
+        p.className = "status-note";
+        p.textContent = "No overlap between visible mutants, this dataset's data, and this run's tree.";
+        section.appendChild(p);
+        container.appendChild(section);
+        return;
+      }
+
+      const estimators = [
+        { key: "ek", label: "E(k/N)" },
+        { key: "eEqual", label: "E(equal)" },
+        { key: "eWeight", label: "E(weight)" },
+      ];
+
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headTr = document.createElement("tr");
+      headTr.appendChild(el("th", "Mutant"));
+      estimators.forEach((est) => {
+        const stratKey = ds.expectedMap[est.key];
+        const stratLabel = stratKey ? (ds.strategies.find((s) => s.key === stratKey) || {}).label : null;
+        headTr.appendChild(el("th num group-sep", est.label));
+        headTr.appendChild(el("th num", stratLabel ? "Actual mean (" + stratLabel + ")" : "Actual mean"));
+        headTr.appendChild(el("th num", "Actual ÷ Expected"));
+      });
+      thead.appendChild(headTr);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      const csvRows = [["Mutant"].concat(estimators.flatMap((est) => [est.label, "Actual mean", "Actual/Expected"]))];
+      mids.forEach((mid) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(el("td", "Mutant " + mid));
+        const csvRow = [mid];
+        estimators.forEach((est) => {
+          const expected = sig.get(mid)[est.key];
+          const stratKey = ds.expectedMap[est.key];
+          const actualStats = stratKey ? (ds.data[mid] || {})[stratKey] : null;
+          const actual = actualStats ? actualStats.mean : null;
+          const ratio = actual !== null && expected !== null && expected !== 0 ? actual / expected : null;
+          tr.appendChild(el("td num group-sep", fmtExpected(expected)));
+          tr.appendChild(el("td num", fmtFloat(actual, 1)));
+          const ratioTd = el("td num " + ratioClass(ratio), fmtRatio(ratio));
+          tr.appendChild(ratioTd);
+          csvRow.push(expected, actual, ratio);
+        });
+        tbody.appendChild(tr);
+        csvRows.push(csvRow);
+      });
+      table.appendChild(tbody);
+
+      const scroll = document.createElement("div");
+      scroll.className = "table-scroll";
+      scroll.appendChild(table);
+      section.appendChild(scroll);
+
+      const btnRow = document.createElement("div");
+      btnRow.className = "controls-row";
+      btnRow.style.marginTop = "8px";
+      const spacer = document.createElement("span"); spacer.className = "spacer";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Download CSV";
+      btn.onclick = () => downloadCsv("expected_vs_actual_" + ds.id + ".csv", csvRows);
+      btnRow.appendChild(spacer);
+      btnRow.appendChild(btn);
+      section.appendChild(btnRow);
+
+      container.appendChild(section);
+    });
+  }
+
+  /** `tagAndClass` is "<tagName> [classNames...]", e.g. "td num group-sep". */
+  function el(tagAndClass, text) {
+    const parts = tagAndClass.split(" ").filter(Boolean);
+    const e = document.createElement(parts[0]);
+    if (parts.length > 1) e.className = parts.slice(1).join(" ");
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // -------------------------------------------------------------- charts
+
+  function drawBoxplot(canvas, groups, opts) {
+    opts = opts || {};
+    const c = baseScaleColors();
+    const dpr = window.devicePixelRatio || 1;
+    const groupWidth = opts.groupWidth || 130;
+    const boxWidth = opts.boxWidth || 28;
+    const boxGap = opts.boxGap || 8;
+    const height = opts.height || 300;
+    const marginLeft = 58, marginBottom = 46, marginTop = 12, marginRight = 12;
+    const width = Math.max(opts.minWidth || 360, groups.length * groupWidth);
+
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const plotW = width - marginLeft - marginRight;
+    const plotH = height - marginTop - marginBottom;
+
+    let max = opts.yMax;
+    if (max === undefined) {
+      max = 1;
+      groups.forEach((g) => g.boxes.forEach((b) => { if (b.stats) max = Math.max(max, b.stats.max); }));
+    }
+    const yScale = (v) => marginTop + plotH - (v / max) * plotH;
+
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.strokeStyle = c.grid;
+    ctx.fillStyle = c.tick;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 1;
+    const tickCount = 5;
+    for (let i = 0; i <= tickCount; i++) {
+      const v = (max * i) / tickCount;
+      const y = yScale(v);
+      ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+      ctx.fillText(Math.round(v).toLocaleString(NUM_LOCALE), marginLeft - 8, y);
+    }
+
+    ctx.strokeStyle = c.border;
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, marginTop);
+    ctx.lineTo(marginLeft, marginTop + plotH);
+    ctx.lineTo(width - marginRight, marginTop + plotH);
+    ctx.stroke();
+
+    const rects = [];
+    groups.forEach((g, gi) => {
+      const gx0 = marginLeft + (gi * plotW) / groups.length;
+      const gw = plotW / groups.length;
+      const n = g.boxes.length;
+      const totalBoxesWidth = n * boxWidth + (n - 1) * boxGap;
+      let bx = gx0 + (gw - totalBoxesWidth) / 2;
+      g.boxes.forEach((b) => {
+        if (b.stats) {
+          drawOneBox(ctx, bx, boxWidth, yScale, b.stats, cssVar(b.color));
+          rects.push({ x0: bx, x1: bx + boxWidth, box: b, group: g });
+        }
+        bx += boxWidth + boxGap;
+      });
+      ctx.fillStyle = c.title;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.font = "11px system-ui, sans-serif";
+      wrapText(ctx, g.label, gx0 + gw / 2, marginTop + plotH + 8, gw, 12);
+    });
+
+    canvas._boxRects = rects;
+  }
+
+  function drawOneBox(ctx, x, w, yScale, stats, color) {
+    const cx = x + w / 2;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(cx, yScale(stats.whiskerLow)); ctx.lineTo(cx, yScale(stats.q1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, yScale(stats.q3)); ctx.lineTo(cx, yScale(stats.whiskerHigh)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.25, yScale(stats.whiskerLow)); ctx.lineTo(x + w * 0.75, yScale(stats.whiskerLow)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.25, yScale(stats.whiskerHigh)); ctx.lineTo(x + w * 0.75, yScale(stats.whiskerHigh)); ctx.stroke();
+    ctx.fillStyle = cssVar("--surface-1");
+    const boxTop = yScale(stats.q3), boxBottom = yScale(stats.q1);
+    ctx.fillRect(x, boxTop, w, boxBottom - boxTop);
+    ctx.strokeRect(x, boxTop, w, boxBottom - boxTop);
+    ctx.beginPath(); ctx.moveTo(x, yScale(stats.median)); ctx.lineTo(x + w, yScale(stats.median)); ctx.stroke();
+    ctx.fillStyle = color;
+    stats.outliers.forEach((v) => {
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(cx, yScale(v), 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
+    const words = String(text).split(" ");
+    let line = "";
+    let lines = [];
+    words.forEach((w) => {
+      const test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+      else line = test;
+    });
+    if (line) lines.push(line);
+    lines = lines.slice(0, 2);
+    lines.forEach((l, i) => ctx.fillText(l, cx, y + i * lineHeight));
+  }
+
+  function wireTooltip(canvas, unit) {
+    const tooltip = document.getElementById("chartTooltip");
+    canvas.addEventListener("mousemove", (e) => {
+      const rects = canvas._boxRects || [];
+      const canvasRect = canvas.getBoundingClientRect();
+      const x = e.clientX - canvasRect.left;
+      const hit = rects.find((r) => x >= r.x0 - 2 && x <= r.x1 + 2);
+      if (!hit) { tooltip.style.display = "none"; return; }
+      const s = hit.box.stats;
+      tooltip.innerHTML =
+        "<div style='font-weight:600;margin-bottom:4px'>" + hit.group.label + " — " + hit.box.label + "</div>" +
+        row("n", fmtNum(s.n)) + row("mean", fmtFloat(s.mean, 1) + " " + unit) +
+        row("median", fmtFloat(s.median, 1) + " " + unit) +
+        row("q1 / q3", fmtFloat(s.q1, 1) + " / " + fmtFloat(s.q3, 1)) +
+        row("min / max", fmtNum(s.min) + " / " + fmtNum(s.max)) +
+        (s.outliers.length ? row("outliers", String(s.outliers.length)) : "");
+      tooltip.style.display = "block";
+      tooltip.style.left = e.clientX + 14 + "px";
+      tooltip.style.top = e.clientY + 14 + "px";
+    });
+    canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+    function row(k, v) {
+      return "<div class='row'><span>" + k + "</span><b>" + v + "</b></div>";
+    }
+  }
+
+  // ---------------------------------------------------------- summary table
+
+  function renderSummaryTable(ds, container, mids) {
+    const sortState = ds._sortState || (ds._sortState = { key: "mutant", dir: "asc" });
+
+    function sortValue(mid, key) {
+      if (key === "mutant") return mid;
+      const [stratKey, field] = key.split(":");
+      const s = (ds.data[mid] || {})[stratKey];
+      if (!s) return null;
+      if (field === "median") return s.median;
+      if (field === "min") return s.min;
+      if (field === "max") return s.max;
+      return s.mean;
+    }
+    function sortedMids() {
+      const copy = mids.slice();
+      const dir = sortState.dir === "asc" ? 1 : -1;
+      copy.sort((a, b) => {
+        const av = sortValue(a, sortState.key), bv = sortValue(b, sortState.key);
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return (av - bv) * dir;
+      });
+      return copy;
+    }
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const headTr = document.createElement("tr");
+    const mutantTh = document.createElement("th");
+    mutantTh.textContent = "Mutant";
+    mutantTh.dataset.sortKey = "mutant";
+    headTr.appendChild(mutantTh);
+    ds.strategies.forEach((strat) => {
+      const meanTh = document.createElement("th");
+      meanTh.className = "num group-sep";
+      meanTh.dataset.sortKey = strat.key + ":mean";
+      meanTh.textContent = strat.label + " — mean";
+      headTr.appendChild(meanTh);
+      const medianTh = document.createElement("th");
+      medianTh.className = "num";
+      medianTh.dataset.sortKey = strat.key + ":median";
+      medianTh.textContent = strat.label + " — median";
+      headTr.appendChild(medianTh);
+      const minTh = document.createElement("th");
+      minTh.className = "num";
+      minTh.dataset.sortKey = strat.key + ":min";
+      minTh.textContent = strat.label + " — min";
+      headTr.appendChild(minTh);
+      const maxTh = document.createElement("th");
+      maxTh.className = "num";
+      maxTh.dataset.sortKey = strat.key + ":max";
+      maxTh.textContent = strat.label + " — max";
+      headTr.appendChild(maxTh);
+      const nTh = document.createElement("th");
+      nTh.className = "num";
+      nTh.textContent = strat.label + " — n";
+      headTr.appendChild(nTh);
+    });
+    thead.appendChild(headTr);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+
+    function draw() {
+      tbody.innerHTML = "";
+      sortedMids().forEach((mid) => {
+        const tr = document.createElement("tr");
+        const mtd = document.createElement("td");
+        mtd.textContent = "Mutant " + mid;
+        tr.appendChild(mtd);
+        ds.strategies.forEach((strat) => {
+          const s = (ds.data[mid] || {})[strat.key];
+          const meanTd = document.createElement("td"); meanTd.className = "num group-sep"; meanTd.textContent = s ? fmtFloat(s.mean, 1) : "—";
+          const medianTd = document.createElement("td"); medianTd.className = "num"; medianTd.textContent = s ? fmtFloat(s.median, 1) : "—";
+          const minTd = document.createElement("td"); minTd.className = "num"; minTd.textContent = s ? fmtNum(s.min) : "—";
+          const maxTd = document.createElement("td"); maxTd.className = "num"; maxTd.textContent = s ? fmtNum(s.max) : "—";
+          const nTd = document.createElement("td"); nTd.className = "num"; nTd.textContent = s ? fmtNum(s.n) : "—";
+          tr.appendChild(meanTd); tr.appendChild(medianTd); tr.appendChild(minTd); tr.appendChild(maxTd); tr.appendChild(nTd);
+        });
+        tbody.appendChild(tr);
+      });
+      thead.querySelectorAll("th[data-sort-key]").forEach((th) => {
+        let ind = th.querySelector(".sort-indicator");
+        if (!ind) { ind = document.createElement("span"); ind.className = "sort-indicator"; th.appendChild(ind); }
+        ind.textContent = th.dataset.sortKey === sortState.key ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+      });
+    }
+    thead.querySelectorAll("th[data-sort-key]").forEach((th) => {
+      th.addEventListener("click", () => {
+        if (sortState.key === th.dataset.sortKey) sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+        else { sortState.key = th.dataset.sortKey; sortState.dir = "asc"; }
+        draw();
+      });
+    });
+    draw();
+
+    const scroll = document.createElement("div");
+    scroll.className = "table-scroll";
+    scroll.appendChild(table);
+    container.appendChild(scroll);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "controls-row";
+    btnRow.style.marginTop = "8px";
+    const spacer = document.createElement("span"); spacer.className = "spacer";
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.textContent = "Download CSV";
+    btn.onclick = () => {
+      const header = ["Mutant"];
+      ds.strategies.forEach((s) => header.push(s.label + " mean", s.label + " median", s.label + " min", s.label + " max", s.label + " n"));
+      const rows = [header];
+      sortedMids().forEach((mid) => {
+        const row = [mid];
+        ds.strategies.forEach((s) => {
+          const st = (ds.data[mid] || {})[s.key];
+          row.push(st ? st.mean : "", st ? st.median : "", st ? st.min : "", st ? st.max : "", st ? st.n : "");
+        });
+        rows.push(row);
+      });
+      downloadCsv("time_to_kill_summary_" + ds.id + ".csv", rows);
+    };
+    btnRow.appendChild(spacer); btnRow.appendChild(btn);
+    container.appendChild(btnRow);
+  }
+
+  // --------------------------------------------------------- dataset section
+
+  function renderDatasetSections() {
+    const root = document.getElementById("datasetSections");
+    root.innerHTML = "";
+    DATASETS.forEach((ds) => root.appendChild(renderDatasetSection(ds)));
+  }
+
+  function renderDatasetSection(ds) {
+    const card = document.createElement("section");
+    card.className = "card";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = ds.title;
+    card.appendChild(h2);
+
+    const note = document.createElement("p");
+    note.className = "legend-note";
+    note.innerHTML = ds.note;
+    card.appendChild(note);
+
+    if (!ds.available) {
+      const p = document.createElement("p");
+      p.className = "status-note warn";
+      p.textContent = "Couldn't load this dataset" + (ds.error ? " (" + ds.error + ")" : "") + ". Folder: " + ds.dir;
+      card.appendChild(p);
+      return card;
+    }
+
+    const mids = visibleSortedMutantIds(ds.mutantIds);
+    if (!mids.length) {
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = ds.mutantIds.length ? "No mutants toggled on." : "No mutant data found under " + ds.dir;
+      card.appendChild(p);
+      return card;
+    }
+
+    // legend
+    const legend = document.createElement("div");
+    legend.className = "legend-row";
+    ds.strategies.forEach((strat, i) => {
+      const item = document.createElement("span");
+      item.className = "item";
+      const sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = cssVar(SERIES_COLORS[i % SERIES_COLORS.length]);
+      item.appendChild(sw);
+      item.appendChild(document.createTextNode(strat.label));
+      legend.appendChild(item);
+    });
+    card.appendChild(legend);
+
+    // combined chart
+    const combinedWrap = document.createElement("div");
+    combinedWrap.className = "chart-scroll";
+    const combinedInner = document.createElement("div");
+    combinedInner.className = "chart-inner";
+    const combinedCanvas = document.createElement("canvas");
+    combinedInner.appendChild(combinedCanvas);
+    combinedWrap.appendChild(combinedInner);
+    card.appendChild(combinedWrap);
+
+    let globalMax = 1;
+    mids.forEach((mid) => ds.strategies.forEach((s) => {
+      const st = (ds.data[mid] || {})[s.key];
+      if (st) globalMax = Math.max(globalMax, st.max);
+    }));
+
+    const groups = mids.map((mid) => ({
+      label: "Mutant " + mid,
+      boxes: ds.strategies.map((s, i) => ({
+        label: s.label,
+        color: SERIES_COLORS[i % SERIES_COLORS.length],
+        stats: (ds.data[mid] || {})[s.key] || null,
+      })),
+    }));
+    requestAnimationFrame(() => {
+      drawBoxplot(combinedCanvas, groups, { yMax: globalMax, height: 320 });
+      wireTooltip(combinedCanvas, ds.unit);
+    });
+
+    // summary table
+    const tableTitle = document.createElement("h3");
+    tableTitle.style.marginTop = "16px";
+    tableTitle.textContent = "Mean / median draws-to-kill";
+    card.appendChild(tableTitle);
+    renderSummaryTable(ds, card, mids);
+
+    // per-mutant grid
+    const gridTitle = document.createElement("h3");
+    gridTitle.style.marginTop = "18px";
+    gridTitle.textContent = "Per-mutant detail";
+    card.appendChild(gridTitle);
+
+    const grid = document.createElement("div");
+    grid.className = "mutant-grid";
+    mids.forEach((mid) => {
+      const mcard = document.createElement("div");
+      mcard.className = "mutant-card";
+      const h4 = document.createElement("h4");
+      h4.textContent = "Mutant " + mid;
+      mcard.appendChild(h4);
+
+      const wrap = document.createElement("div");
+      wrap.className = "chart-scroll";
+      const inner = document.createElement("div");
+      inner.className = "chart-inner";
+      const canvas = document.createElement("canvas");
+      inner.appendChild(canvas);
+      wrap.appendChild(inner);
+      mcard.appendChild(wrap);
+
+      const group = [{
+        label: "Mutant " + mid,
+        boxes: ds.strategies.map((s, i) => ({
+          label: s.label,
+          color: SERIES_COLORS[i % SERIES_COLORS.length],
+          stats: (ds.data[mid] || {})[s.key] || null,
+        })),
+      }];
+      requestAnimationFrame(() => {
+        drawBoxplot(canvas, group, { height: 220, groupWidth: Math.max(220, ds.strategies.length * 70), minWidth: 260 });
+        wireTooltip(canvas, ds.unit);
+      });
+
+      const table = document.createElement("table");
+      table.innerHTML =
+        "<thead><tr><th>Strategy</th><th class='num'>n</th><th class='num'>Mean</th><th class='num'>Median</th><th class='num'>Min</th><th class='num'>Max</th></tr></thead>";
+      const tbody = document.createElement("tbody");
+      ds.strategies.forEach((s) => {
+        const st = (ds.data[mid] || {})[s.key];
+        if (!st) return;
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + s.label + "</td>" +
+          "<td class='num'>" + fmtNum(st.n) + "</td>" +
+          "<td class='num'>" + fmtFloat(st.mean, 1) + "</td>" +
+          "<td class='num'>" + fmtFloat(st.median, 1) + "</td>" +
+          "<td class='num'>" + fmtNum(st.min) + "</td>" +
+          "<td class='num'>" + fmtNum(st.max) + "</td>";
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      mcard.appendChild(table);
+
+      grid.appendChild(mcard);
+    });
+    card.appendChild(grid);
+
+    return card;
+  }
+
+  // ------------------------------------------------------------------ init
+
+  boot();
+})();
+</script>
+
+</body>
+</html>
