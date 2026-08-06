@@ -2,7 +2,7 @@
 """Box plots for time-to-first-kill across tick-sampling strategies, one per mutant.
 
 Reads CSVs from:
-  draw_ticks_with_decision_tree_grouping/time_to_kill/mutant_<id>/ttk_{random_tick,leaf_tick,leaf_tick_weighted}.csv
+  draw_ticks_with_decision_tree_grouping/time_to_kill/mutant_<id>/ttk_{random_tick,leaf_tick,leaf_tick_weighted,leaf_tick_alternating}.csv
 
 Produced by DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill() (see
 RunDrawTicksWithDecisionTreeGrouping.kt), which samples individual ticks directly rather than whole
@@ -31,6 +31,7 @@ STRATEGIES = [
     ("random_tick", "Random"),
     ("leaf_tick", "Leaf"),
     ("leaf_tick_weighted", "Leaf\n(Weighted)"),
+    ("leaf_tick_alternating", "Leaf\n(Alternating)"),
 ]
 
 

@@ -31,12 +31,14 @@ STRATEGIES_FULL = [
     ("random_tick", "Random"),
     ("leaf_tick", "Leaf"),
     ("leaf_tick_weighted", "Leaf\n(Weighted)"),
+    ("leaf_tick_alternating", "Leaf\n(Alternating)"),
 ]
 
 STRATEGIES_RARE = [
     ("random_tick_rare", "Random\n(Rare)"),
     ("leaf_tick_rare", "Leaf\n(Rare)"),
     ("leaf_tick_weighted_rare", "Leaf\n(Weighted,\nRare)"),
+    ("leaf_tick_alternating_rare", "Leaf\n(Alternating,\nRare)"),
 ]
 
 STRATEGIES = STRATEGIES_FULL + STRATEGIES_RARE

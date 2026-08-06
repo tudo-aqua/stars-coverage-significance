@@ -41,10 +41,10 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Samplin
  * many distinct mutants are killed, i.e. have at least one drawn tick where
  * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true`.
  *
- * Three sampling strategies are evaluated, matching the three estimators on the significance card
- * of `/decision_tree_comparison/index.html`'s [tools.aqua.stars.coverage.significance] dashboard
- * (see that file's `buildSignificanceRows`/`computeLeafWeights` for the reference definitions this
- * mirrors):
+ * Four sampling strategies are evaluated. The first three match the three estimators on the
+ * significance card of `/decision_tree_comparison/index.html`'s
+ * [tools.aqua.stars.coverage.significance] dashboard (see that file's
+ * `buildSignificanceRows`/`computeLeafWeights` for the reference definitions these mirror):
  * 1. **Uniform random** from the full tick pool — corresponds to E(k/N).
  * 2. **DC-leaf round-robin**, cycling leaf groups with equal probability regardless of leaf size —
  *    corresponds to E(equal).
@@ -52,6 +52,12 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Samplin
  *    significance weight w_l (its share of the summed "any monitor failure" probability across all
  *    leaves) — corresponds to E(weight). A leaf with w_l = 0 (no failing ticks at all) is never
  *    drawn from, exactly as the E(weight) sampling policy assumes.
+ * 4. **DC-leaf alternating**, no estimator counterpart: alternates draw-by-draw between the
+ *    round-robin (2) and weighted (3) policies above, sharing the same depleting tick pool between
+ *    them. If the policy whose turn it is has nothing left to draw from (its leaves are all empty,
+ *    which for the weighted policy also includes every w_l = 0 leaf), that turn falls back to the
+ *    other policy instead of being skipped, so the alternation only truly stops once the pool itself
+ *    is exhausted.
  *
  * All tick data is loaded from the database exactly once per evaluation call, then all groupings
  * and repetitions operate on the in-memory list.
@@ -125,6 +131,12 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             evaluateWeightedDrawTicks(data.dtLeafGroups, data.leafWeights, suiteSize),
             "leaf_tick_weighted",
             suiteSize)
+
+        println("    Evaluating DC-leaf alternating (equal/weighted) tick sampling.")
+        save(
+            evaluateAlternatingDrawTicks(data.dtLeafGroups, data.leafWeights, suiteSize),
+            "leaf_tick_alternating",
+            suiteSize)
       }
 
       if (rareMutantIds.isNotEmpty()) {
@@ -146,6 +158,13 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               evaluateWeightedDrawTicks(
                   data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
               "leaf_tick_weighted_rare",
+              suiteSize)
+
+          println("    Evaluating DC-leaf alternating (equal/weighted) tick sampling (rare mutants).")
+          save(
+              evaluateAlternatingDrawTicks(
+                  data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
+              "leaf_tick_alternating_rare",
               suiteSize)
         }
       }
@@ -198,6 +217,12 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
         saveTimeToKill(
             evaluateTimeToKillWeightedTicks(data.dtLeafGroups, data.leafWeights, mutantId),
             "leaf_tick_weighted",
+            mutantId)
+
+        println("    Evaluating DC-leaf alternating (equal/weighted) time-to-kill for mutant $mutantId.")
+        saveTimeToKill(
+            evaluateTimeToKillAlternatingTicks(data.dtLeafGroups, data.leafWeights, mutantId),
+            "leaf_tick_alternating",
             mutantId)
       }
     }
@@ -323,6 +348,70 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           }
           .collect(Collectors.toList())
 
+  /**
+   * Alternates draw-by-draw between the round-robin policy of [evaluateRoundRobinTicks] and the
+   * weighted policy of [evaluateWeightedDrawTicks], both operating on the same depleting
+   * `workingLists` pool (a draw made by one policy is no longer available to the other). Each turn
+   * starts with its "own" policy (round-robin on even draw indices, weighted on odd ones) and only
+   * falls back to the other policy if its own has nothing left to draw from - so a leaf pool
+   * exhausted for one policy (e.g. every w_l = 0 leaf, which the weighted policy never visits) can
+   * still be drained by the other, and the alternation only stops once every leaf is empty.
+   */
+  private fun evaluateAlternatingDrawTicks(
+      ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
+      leafWeights: Map<DecisionTreeLeafId, Double>,
+      suiteSize: Int,
+      rareMutantIds: Set<MutantId>? = null,
+  ): List<Int> =
+      (1..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
+            val roundRobinOrder = workingLists.keys.shuffled(rng).toMutableList()
+            var rrPos = 0
+            val candidateLeafIds =
+                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+
+            fun nextEqualLeafOrNull(): DecisionTreeLeafId? {
+              while (roundRobinOrder.isNotEmpty() &&
+                  workingLists.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
+                roundRobinOrder.removeAt(rrPos % roundRobinOrder.size)
+              }
+              if (roundRobinOrder.isEmpty()) return null
+              val leafId = roundRobinOrder[rrPos % roundRobinOrder.size]
+              rrPos = (rrPos + 1) % roundRobinOrder.size
+              return leafId
+            }
+
+            fun nextWeightedLeafOrNull(): DecisionTreeLeafId? {
+              candidateLeafIds.removeAll { workingLists.getValue(it).isEmpty() }
+              return if (candidateLeafIds.isEmpty()) null
+              else weightedPickLeaf(candidateLeafIds, leafWeights, rng)
+            }
+
+            var useEqualTurn = true
+            fun nextLeafId(): DecisionTreeLeafId? {
+              val leafId =
+                  if (useEqualTurn) nextEqualLeafOrNull() ?: nextWeightedLeafOrNull()
+                  else nextWeightedLeafOrNull() ?: nextEqualLeafOrNull()
+              useEqualTurn = !useEqualTurn
+              return leafId
+            }
+
+            val killed = mutableSetOf<MutantId>()
+            var drawn = 0
+            while (drawn < suiteSize) {
+              val leafId = nextLeafId() ?: break
+              val tick = workingLists.getValue(leafId).drawAndRemoveRandomTick(rng)
+              drawn++
+              tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
+            }
+            killed.size
+          }
+          .collect(Collectors.toList())
+
   // ------------------------------------------------------------------- time-to-kill strategies
 
   /** Draws ticks one at a time without replacement until [mutantId] is killed. */
@@ -405,6 +494,61 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               drawn++
               if (leafTicks.isEmpty()) candidateLeafIds.remove(leafId)
               if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
+            }
+            -1
+          }
+          .collect(Collectors.toList())
+
+  /** Time-to-kill counterpart of [evaluateAlternatingDrawTicks] - see that function for the alternation/fallback rules. */
+  private fun evaluateTimeToKillAlternatingTicks(
+      ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
+      leafWeights: Map<DecisionTreeLeafId, Double>,
+      mutantId: MutantId,
+  ): List<Int> =
+      (1..REPETITIONS)
+          .toList()
+          .parallelStream()
+          .map { rep ->
+            val rng = Random(42L + rep)
+            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
+            val roundRobinOrder = workingLists.keys.shuffled(rng).toMutableList()
+            var rrPos = 0
+            val candidateLeafIds =
+                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+
+            fun nextEqualLeafOrNull(): DecisionTreeLeafId? {
+              while (roundRobinOrder.isNotEmpty() &&
+                  workingLists.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
+                roundRobinOrder.removeAt(rrPos % roundRobinOrder.size)
+              }
+              if (roundRobinOrder.isEmpty()) return null
+              val leafId = roundRobinOrder[rrPos % roundRobinOrder.size]
+              rrPos = (rrPos + 1) % roundRobinOrder.size
+              return leafId
+            }
+
+            fun nextWeightedLeafOrNull(): DecisionTreeLeafId? {
+              candidateLeafIds.removeAll { workingLists.getValue(it).isEmpty() }
+              return if (candidateLeafIds.isEmpty()) null
+              else weightedPickLeaf(candidateLeafIds, leafWeights, rng)
+            }
+
+            var useEqualTurn = true
+            fun nextLeafId(): DecisionTreeLeafId? {
+              val leafId =
+                  if (useEqualTurn) nextEqualLeafOrNull() ?: nextWeightedLeafOrNull()
+                  else nextWeightedLeafOrNull() ?: nextEqualLeafOrNull()
+              useEqualTurn = !useEqualTurn
+              return leafId
+            }
+
+            var drawn = 0
+            var leafId = nextLeafId()
+            while (leafId != null) {
+              val tick = workingLists.getValue(leafId).drawAndRemoveRandomTick(rng)
+              drawn++
+              if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
+              leafId = nextLeafId()
             }
             -1
           }
