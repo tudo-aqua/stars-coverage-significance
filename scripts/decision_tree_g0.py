@@ -615,6 +615,14 @@ def main() -> None:
                              "The held-out test split is what gets annotated and written to the DB.")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for the train/test split (default: 42)")
+    parser.add_argument("--mutants", default=None, metavar="ID[,ID...]",
+                        help="Comma-separated list of mutant IDs to restrict the run to (default: "
+                             "every mutant present in the Parquet file). Applied before the "
+                             "--train-fraction/--seed split, so the split itself is unaffected — it "
+                             "just runs over this smaller universe instead of every mutant. Additive "
+                             "to everything else: combine with --train-fraction for a train/test "
+                             "split within just these mutants, or leave --train-fraction=1.0 to train "
+                             "on all of them.")
     parser.add_argument("--output", default=None, metavar="PATH",
                         help="Write Graphviz .dot file to an explicit path (overrides --out-dir naming)")
     parser.add_argument("--annotate", default=None, metavar="PATH",
@@ -699,6 +707,23 @@ def main() -> None:
 
         X, y, row_ids, mutant_ids = load_and_prepare(args.parquet, feature_cols)
         print(f"Loaded {len(X):,} rows  |  positives: {y.sum():,} ({y.mean():.1%})")
+
+        # ── Optional mutant allow-list, applied before the split ──────────────
+        # Restricts the universe the train/test split (below) operates over to just
+        # these mutants, without changing how that split itself works.
+        if args.mutants:
+            requested_mutants = {int(m.strip()) for m in args.mutants.split(",") if m.strip()}
+            present_mutants = set(np.unique(mutant_ids).tolist())
+            missing_mutants = sorted(requested_mutants - present_mutants)
+            if missing_mutants:
+                print(f"Warning: {len(missing_mutants)} requested mutant ID(s) not found in the "
+                      f"data: {missing_mutants}")
+            mutant_mask = np.isin(mutant_ids, list(requested_mutants))
+            X, y, row_ids, mutant_ids = X[mutant_mask], y[mutant_mask], row_ids[mutant_mask], mutant_ids[mutant_mask]
+            print(
+                f"Restricted to {len(requested_mutants):,} requested mutant(s) "
+                f"({len(requested_mutants & present_mutants):,} present): {len(X):,} rows remain.\n"
+            )
 
         # ── Mutant-based train / test split ───────────────────────────────────
         # Split over unique mutant IDs so no mutant leaks across train/test.

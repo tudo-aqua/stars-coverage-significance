@@ -407,6 +407,7 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--tuning-jobs` | `8`  | Number of Optuna trials run concurrently during tuning; `--n-jobs` threads are split evenly across them (`n-jobs / tuning-jobs` threads per trial). Since each trial fits only one tree, more concurrent trials with fewer threads each is usually faster than one trial at a time with many threads |
 | `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
+| `--mutants` | *(none, = every mutant in the Parquet file)* | Comma-separated mutant IDs to restrict the run to, e.g. `1,10,11,12`. Applied *before* the `--train-fraction`/`--seed` split — the split logic itself is unchanged, it just runs over this smaller universe instead of every mutant in the file. Additive to everything else above: combine with `--train-fraction` for a train/test split within just these mutants, or leave `--train-fraction 1.0` to train on all of them |
 | `--output` | *(none)* | Write a Graphviz `.dot` file to an explicit path (overrides the run-named file from `--out-dir`) |
 | `--annotate` | *(none)* | Write a Parquet file containing features + target + `leaf_node_id` for every row |
 | `--uri` | *(none)* | Record the run and write leaf assignments to the database: `postgresql://user:pass@host:port/db` |
@@ -414,6 +415,15 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--out-dir` | parquet's directory | Directory for run-named output files (`run_<id>.dot`, `run_<id>.log`); only used when `--uri` is set |
 
 When `--uri` is provided the script automatically captures the full stdout log and the DOT source, stores both in the `decision_tree_runs` table, and writes `run_<id>.dot` / `run_<id>.log` to `--out-dir`.
+
+#### Mutant category lists (`AutopilotMutants.kt`)
+
+`AutopilotMutants.kt` groups the autopilot mutants by which mutation operator created them, in two `Set<KClass<out Mutant>>`s. Their mutant IDs are the natural values to pass to `--mutants` above, to train one decision tree per category instead of one tree over every mutant:
+
+| List | Mutant IDs | Composition (per `AutopilotMutants.byIndex`'s comments) |
+|---|---|---|
+| `arithmeticReplacementOperatorMutants` | `1,10,11,12,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125` | All `ArithmeticReplacementOperator` mutants |
+| `otherReplacementOperatorMutants` | `145,146,147,149,150,152,153,154,155,156,157,158,159,160,161,162,163,164,165,167,168,169,170,171,172,174,175,176,177,178` | `LogicalReplacementOperator` and `UnaryRemovalOperator` mutants |
 
 #### Feature groups
 
@@ -473,6 +483,20 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 
 # Render a stored dot file to PNG
 dot -Tpng run_42.dot -o run_42.png
+
+# Train one decision tree per mutant-operator category (see "Mutant category lists" above),
+# one after another in a single invocation — each --uri call records its own run in the DB,
+# so afterwards you have two separate decision_tree_runs rows/DOT files/logs to compare.
+python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --mutants 1,10,11,12,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125 \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 48 \
+  --out-dir /results/runs \
+&& python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+  --mutants 145,146,147,149,150,152,153,154,155,156,157,158,159,160,161,162,163,164,165,167,168,169,170,171,172,174,175,176,177,178 \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+  --db-workers 48 \
+  --out-dir /results/runs
 ```
 
 ---
