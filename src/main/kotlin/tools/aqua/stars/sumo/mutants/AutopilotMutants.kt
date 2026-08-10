@@ -23,299 +23,301 @@ import tools.aqua.stars.sumo.Mutant
 
 /** AUTO-GENERATED: registry of all Autopilot mutants. */
 object AutopilotMutants {
-  val arithmeticReplacementOperatorMutants = setOf(
-    AutopilotMutant1::class,
-    AutopilotMutant10::class,
-    AutopilotMutant11::class,
-    AutopilotMutant12::class,
-    AutopilotMutant100::class,
-    AutopilotMutant101::class,
-    AutopilotMutant102::class,
-    AutopilotMutant103::class,
-    AutopilotMutant104::class,
-    AutopilotMutant105::class,
-    AutopilotMutant106::class,
-    AutopilotMutant107::class,
-    AutopilotMutant108::class,
-    AutopilotMutant109::class,
-    AutopilotMutant110::class,
-    AutopilotMutant111::class,
-    AutopilotMutant112::class,
-    AutopilotMutant113::class,
-    AutopilotMutant114::class,
-    AutopilotMutant115::class,
-    AutopilotMutant116::class,
-    AutopilotMutant117::class,
-    AutopilotMutant118::class,
-    AutopilotMutant119::class,
-    AutopilotMutant120::class,
-    AutopilotMutant121::class,
-    AutopilotMutant122::class,
-    AutopilotMutant123::class,
-    AutopilotMutant124::class,
-    AutopilotMutant125::class,
-  )
+  val arithmeticReplacementOperatorMutants =
+      setOf(
+          AutopilotMutant1::class,
+          AutopilotMutant10::class,
+          AutopilotMutant11::class,
+          AutopilotMutant12::class,
+          AutopilotMutant100::class,
+          AutopilotMutant101::class,
+          AutopilotMutant102::class,
+          AutopilotMutant103::class,
+          AutopilotMutant104::class,
+          AutopilotMutant105::class,
+          AutopilotMutant106::class,
+          AutopilotMutant107::class,
+          AutopilotMutant108::class,
+          AutopilotMutant109::class,
+          AutopilotMutant110::class,
+          AutopilotMutant111::class,
+          AutopilotMutant112::class,
+          AutopilotMutant113::class,
+          AutopilotMutant114::class,
+          AutopilotMutant115::class,
+          AutopilotMutant116::class,
+          AutopilotMutant117::class,
+          AutopilotMutant118::class,
+          AutopilotMutant119::class,
+          AutopilotMutant120::class,
+          AutopilotMutant121::class,
+          AutopilotMutant122::class,
+          AutopilotMutant123::class,
+          AutopilotMutant124::class,
+          AutopilotMutant125::class,
+      )
 
-  val otherReplacementOperatorMutants = setOf(
-    AutopilotMutant145::class,
-    AutopilotMutant146::class,
-    AutopilotMutant147::class,
-    AutopilotMutant149::class,
-    AutopilotMutant150::class,
-    AutopilotMutant152::class,
-    AutopilotMutant153::class,
-    AutopilotMutant154::class,
-    AutopilotMutant155::class,
-    AutopilotMutant156::class,
-    AutopilotMutant157::class,
-    AutopilotMutant158::class,
-    AutopilotMutant159::class,
-    AutopilotMutant160::class,
-    AutopilotMutant161::class,
-    AutopilotMutant162::class,
-    AutopilotMutant163::class,
-    AutopilotMutant164::class,
-    AutopilotMutant165::class,
-    AutopilotMutant167::class,
-    AutopilotMutant168::class,
-    AutopilotMutant169::class,
-    AutopilotMutant170::class,
-    AutopilotMutant171::class,
-    AutopilotMutant172::class,
-    AutopilotMutant174::class,
-    AutopilotMutant175::class,
-    AutopilotMutant176::class,
-    AutopilotMutant177::class,
-    AutopilotMutant178::class,
-  )
+  val otherReplacementOperatorMutants =
+      setOf(
+          AutopilotMutant145::class,
+          AutopilotMutant146::class,
+          AutopilotMutant147::class,
+          AutopilotMutant149::class,
+          AutopilotMutant150::class,
+          AutopilotMutant152::class,
+          AutopilotMutant153::class,
+          AutopilotMutant154::class,
+          AutopilotMutant155::class,
+          AutopilotMutant156::class,
+          AutopilotMutant157::class,
+          AutopilotMutant158::class,
+          AutopilotMutant159::class,
+          AutopilotMutant160::class,
+          AutopilotMutant161::class,
+          AutopilotMutant162::class,
+          AutopilotMutant163::class,
+          AutopilotMutant164::class,
+          AutopilotMutant165::class,
+          AutopilotMutant167::class,
+          AutopilotMutant168::class,
+          AutopilotMutant169::class,
+          AutopilotMutant170::class,
+          AutopilotMutant171::class,
+          AutopilotMutant172::class,
+          AutopilotMutant174::class,
+          AutopilotMutant175::class,
+          AutopilotMutant176::class,
+          AutopilotMutant177::class,
+          AutopilotMutant178::class,
+      )
 
   /** Mapping from index to the corresponding mutant class. */
   val byIndex: Map<Int, KClass<out Mutant>> =
-    mapOf(
-      1 to AutopilotMutant1::class, // ArithmeticReplacementOperator
-      //          2 to AutopilotMutant2::class,
-      //          3 to AutopilotMutant3::class,
-      //          4 to AutopilotMutant4::class,
-      //          5 to AutopilotMutant5::class,
-      //          6 to AutopilotMutant6::class,
-      //          7 to AutopilotMutant7::class,
-      //          8 to AutopilotMutant8::class,
-      //          9 to AutopilotMutant9::class,
-      10 to AutopilotMutant10::class, // ArithmeticReplacementOperator
-      11 to AutopilotMutant11::class, // ArithmeticReplacementOperator
-      12 to AutopilotMutant12::class, // ArithmeticReplacementOperator
-      //          13 to AutopilotMutant13::class,
-      //          14 to AutopilotMutant14::class,
-      //          15 to AutopilotMutant15::class,
-      //          16 to AutopilotMutant16::class,
-      //          17 to AutopilotMutant17::class,
-      //          18 to AutopilotMutant18::class,
-      //          19 to AutopilotMutant19::class,
-      //          20 to AutopilotMutant20::class,
-      //          21 to AutopilotMutant21::class,
-      //          22 to AutopilotMutant22::class,
-      //          23 to AutopilotMutant23::class,
-      //          24 to AutopilotMutant24::class,
-      //          25 to AutopilotMutant25::class,
-      //          26 to AutopilotMutant26::class,
-      //          27 to AutopilotMutant27::class,
-      //          28 to AutopilotMutant28::class,
-      //          29 to AutopilotMutant29::class,
-      //          30 to AutopilotMutant30::class,
-      //          31 to AutopilotMutant31::class,
-      //          32 to AutopilotMutant32::class,
-      //          33 to AutopilotMutant33::class,
-      //          34 to AutopilotMutant34::class,
-      //          35 to AutopilotMutant35::class,
-      //          36 to AutopilotMutant36::class,
-      //          37 to AutopilotMutant37::class,
-      //          38 to AutopilotMutant38::class,
-      //          39 to AutopilotMutant39::class,
-      //          40 to AutopilotMutant40::class,
-      //          41 to AutopilotMutant41::class,
-      //          42 to AutopilotMutant42::class,
-      //          43 to AutopilotMutant43::class,
-      //          44 to AutopilotMutant44::class,
-      //          45 to AutopilotMutant45::class,
-      //          46 to AutopilotMutant46::class,
-      //          47 to AutopilotMutant47::class,
-      //          48 to AutopilotMutant48::class,
-      //          49 to AutopilotMutant49::class,
-      //          50 to AutopilotMutant50::class,
-      //          51 to AutopilotMutant51::class,
-      //          52 to AutopilotMutant52::class,
-      //          53 to AutopilotMutant53::class,
-      //          54 to AutopilotMutant54::class,
-      //          55 to AutopilotMutant55::class,
-      //          56 to AutopilotMutant56::class,
-      //          57 to AutopilotMutant57::class,
-      //          58 to AutopilotMutant58::class,
-      //          59 to AutopilotMutant59::class,
-      //          60 to AutopilotMutant60::class,
-      //          61 to AutopilotMutant61::class,
-      //          62 to AutopilotMutant62::class,
-      //          63 to AutopilotMutant63::class,
-      //          64 to AutopilotMutant64::class,
-      //          65 to AutopilotMutant65::class,
-      //          66 to AutopilotMutant66::class,
-      //          67 to AutopilotMutant67::class,
-      //          68 to AutopilotMutant68::class,
-      //          69 to AutopilotMutant69::class,
-      //          70 to AutopilotMutant70::class,
-      //          71 to AutopilotMutant71::class,
-      //          72 to AutopilotMutant72::class,
-      //          73 to AutopilotMutant73::class,
-      //          74 to AutopilotMutant74::class,
-      //          75 to AutopilotMutant75::class,
-      //          76 to AutopilotMutant76::class,
-      //          77 to AutopilotMutant77::class,
-      //          78 to AutopilotMutant78::class,
-      //          79 to AutopilotMutant79::class,
-      //          80 to AutopilotMutant80::class,
-      //          81 to AutopilotMutant81::class,
-      //          82 to AutopilotMutant82::class,
-      //          83 to AutopilotMutant83::class,
-      //          84 to AutopilotMutant84::class,
-      //          85 to AutopilotMutant85::class,
-      //          86 to AutopilotMutant86::class,
-      //          87 to AutopilotMutant87::class,
-      //          88 to AutopilotMutant88::class,
-      //          89 to AutopilotMutant89::class,
-      //          90 to AutopilotMutant90::class,
-      //          91 to AutopilotMutant91::class,
-      //          92 to AutopilotMutant92::class,
-      //          93 to AutopilotMutant93::class,
-      //          94 to AutopilotMutant94::class,
-      //          95 to AutopilotMutant95::class,
-      //          96 to AutopilotMutant96::class,
-      //          97 to AutopilotMutant97::class,
-      //          98 to AutopilotMutant98::class,
-      //          99 to AutopilotMutant99::class,
-      100 to AutopilotMutant100::class, // ArithmeticReplacementOperator
-      101 to AutopilotMutant101::class, // ArithmeticReplacementOperator
-      102 to AutopilotMutant102::class, // ArithmeticReplacementOperator
-      103 to AutopilotMutant103::class, // ArithmeticReplacementOperator
-      104 to AutopilotMutant104::class, // ArithmeticReplacementOperator
-      105 to AutopilotMutant105::class, // ArithmeticReplacementOperator
-      106 to AutopilotMutant106::class, // ArithmeticReplacementOperator
-      107 to AutopilotMutant107::class, // ArithmeticReplacementOperator
-      108 to AutopilotMutant108::class, // ArithmeticReplacementOperator
-      109 to AutopilotMutant109::class, // ArithmeticReplacementOperator
-      110 to AutopilotMutant110::class, // ArithmeticReplacementOperator
-      111 to AutopilotMutant111::class, // ArithmeticReplacementOperator
-      112 to AutopilotMutant112::class, // ArithmeticReplacementOperator
-      113 to AutopilotMutant113::class, // ArithmeticReplacementOperator
-      114 to AutopilotMutant114::class, // ArithmeticReplacementOperator
-      115 to AutopilotMutant115::class, // ArithmeticReplacementOperator
-      116 to AutopilotMutant116::class, // ArithmeticReplacementOperator
-      117 to AutopilotMutant117::class, // ArithmeticReplacementOperator
-      118 to AutopilotMutant118::class, // ArithmeticReplacementOperator
-      119 to AutopilotMutant119::class, // ArithmeticReplacementOperator
-      120 to AutopilotMutant120::class, // ArithmeticReplacementOperator
-      121 to AutopilotMutant121::class, // ArithmeticReplacementOperator
-      122 to AutopilotMutant122::class, // ArithmeticReplacementOperator
-      123 to AutopilotMutant123::class, // ArithmeticReplacementOperator
-      124 to AutopilotMutant124::class, // ArithmeticReplacementOperator
-      125 to AutopilotMutant125::class, // ArithmeticReplacementOperator
-      //          126 to AutopilotMutant126::class,
-      //          127 to AutopilotMutant127::class,
-      //          128 to AutopilotMutant128::class,
-      //          129 to AutopilotMutant129::class,
-      //          130 to AutopilotMutant130::class,
-      //          131 to AutopilotMutant131::class,
-      //          132 to AutopilotMutant132::class,
-      //          133 to AutopilotMutant133::class,
-      //          134 to AutopilotMutant134::class,
-      //          135 to AutopilotMutant135::class,
-      //          136 to AutopilotMutant136::class,
-      //          137 to AutopilotMutant137::class,
-      //          138 to AutopilotMutant138::class,
-      //          139 to AutopilotMutant139::class,
-      //          140 to AutopilotMutant140::class,
-      //          141 to AutopilotMutant141::class,
-      //          142 to AutopilotMutant142::class,
-      //          143 to AutopilotMutant143::class,
-      //          144 to AutopilotMutant144::class,
-      145 to AutopilotMutant145::class, // LogicalReplacementOperator
-      146 to AutopilotMutant146::class, // UnaryRemovalOperator
-      147 to AutopilotMutant147::class, // UnaryRemovalOperator
-      //          148 to AutopilotMutant148::class,
-      149 to AutopilotMutant149::class, // UnaryRemovalOperator
-      150 to AutopilotMutant150::class, // UnaryRemovalOperator
-      //          151 to AutopilotMutant151::class,
-      152 to AutopilotMutant152::class, // LogicalReplacementOperator
-      153 to AutopilotMutant153::class, // UnaryRemovalOperator
-      154 to AutopilotMutant154::class, // LogicalReplacementOperator
-      155 to AutopilotMutant155::class, // UnaryRemovalOperator
-      156 to AutopilotMutant156::class, // LogicalReplacementOperator
-      157 to AutopilotMutant157::class, // LogicalReplacementOperator
-      158 to AutopilotMutant158::class, // UnaryRemovalOperator
-      159 to AutopilotMutant159::class, // UnaryRemovalOperator
-      160 to AutopilotMutant160::class, // LogicalReplacementOperator
-      161 to AutopilotMutant161::class, // UnaryRemovalOperator
-      162 to AutopilotMutant162::class, // UnaryRemovalOperator
-      163 to AutopilotMutant163::class, // LogicalReplacementOperator
-      164 to AutopilotMutant164::class, // LogicalReplacementOperator
-      165 to AutopilotMutant165::class, // UnaryRemovalOperator
-      //          166 to AutopilotMutant166::class,
-      167 to AutopilotMutant167::class, // LogicalReplacementOperator
-      168 to AutopilotMutant168::class, // UnaryRemovalOperator
-      169 to AutopilotMutant169::class, // UnaryRemovalOperator
-      170 to AutopilotMutant170::class, // UnaryRemovalOperator
-      171 to AutopilotMutant171::class, // UnaryRemovalOperator
-      172 to AutopilotMutant172::class, // UnaryRemovalOperator
-      //          173 to AutopilotMutant173::class,
-      174 to AutopilotMutant174::class, // LogicalReplacementOperator
-      175 to AutopilotMutant175::class, // UnaryRemovalOperator
-      176 to AutopilotMutant176::class, // UnaryRemovalOperator
-      177 to AutopilotMutant177::class, // UnaryRemovalOperator
-      178 to AutopilotMutant178::class, // LogicalReplacementOperator
-      //          179 to AutopilotMutant179::class,
-      //          180 to AutopilotMutant180::class,
-      //          181 to AutopilotMutant181::class,
-      //          182 to AutopilotMutant182::class,
-      //          183 to AutopilotMutant183::class,
-      //          184 to AutopilotMutant184::class,
-      //          185 to AutopilotMutant185::class,
-      //          186 to AutopilotMutant186::class,
-      //          187 to AutopilotMutant187::class,
-      //          188 to AutopilotMutant188::class,
-      //          189 to AutopilotMutant189::class,
-      //          190 to AutopilotMutant190::class,
-      //          191 to AutopilotMutant191::class,
-      //          192 to AutopilotMutant192::class,
-      //          193 to AutopilotMutant193::class,
-      //          194 to AutopilotMutant194::class,
-      //          195 to AutopilotMutant195::class,
-      //          196 to AutopilotMutant196::class,
-      //          197 to AutopilotMutant197::class,
-      //          198 to AutopilotMutant198::class,
-      //          199 to AutopilotMutant199::class,
-      //          200 to AutopilotMutant200::class,
-      //          201 to AutopilotMutant201::class,
-      //          202 to AutopilotMutant202::class,
-      //          203 to AutopilotMutant203::class,
-      //          204 to AutopilotMutant204::class,
-      //          205 to AutopilotMutant205::class,
-      //          206 to AutopilotMutant206::class,
-      //          207 to AutopilotMutant207::class,
-      //          208 to AutopilotMutant208::class,
-      //          209 to AutopilotMutant209::class,
-      //          210 to AutopilotMutant210::class,
-      //          211 to AutopilotMutant211::class,
-      //          212 to AutopilotMutant212::class,
-      //          213 to AutopilotMutant213::class,
-      //          214 to AutopilotMutant214::class,
-      //          215 to AutopilotMutant215::class,
-      //          216 to AutopilotMutant216::class,
-      //          217 to AutopilotMutant217::class,
-      //          218 to AutopilotMutant218::class,
-      //          219 to AutopilotMutant219::class,
-      //          220 to AutopilotMutant220::class,
-      //          221 to AutopilotMutant221::class,
-      //          222 to AutopilotMutant222::class,
-      //          223 to AutopilotMutant223::class
-    )
+      mapOf(
+          1 to AutopilotMutant1::class, // ArithmeticReplacementOperator
+          //          2 to AutopilotMutant2::class,
+          //          3 to AutopilotMutant3::class,
+          //          4 to AutopilotMutant4::class,
+          //          5 to AutopilotMutant5::class,
+          //          6 to AutopilotMutant6::class,
+          //          7 to AutopilotMutant7::class,
+          //          8 to AutopilotMutant8::class,
+          //          9 to AutopilotMutant9::class,
+          10 to AutopilotMutant10::class, // ArithmeticReplacementOperator
+          11 to AutopilotMutant11::class, // ArithmeticReplacementOperator
+          12 to AutopilotMutant12::class, // ArithmeticReplacementOperator
+          //          13 to AutopilotMutant13::class,
+          //          14 to AutopilotMutant14::class,
+          //          15 to AutopilotMutant15::class,
+          //          16 to AutopilotMutant16::class,
+          //          17 to AutopilotMutant17::class,
+          //          18 to AutopilotMutant18::class,
+          //          19 to AutopilotMutant19::class,
+          //          20 to AutopilotMutant20::class,
+          //          21 to AutopilotMutant21::class,
+          //          22 to AutopilotMutant22::class,
+          //          23 to AutopilotMutant23::class,
+          //          24 to AutopilotMutant24::class,
+          //          25 to AutopilotMutant25::class,
+          //          26 to AutopilotMutant26::class,
+          //          27 to AutopilotMutant27::class,
+          //          28 to AutopilotMutant28::class,
+          //          29 to AutopilotMutant29::class,
+          //          30 to AutopilotMutant30::class,
+          //          31 to AutopilotMutant31::class,
+          //          32 to AutopilotMutant32::class,
+          //          33 to AutopilotMutant33::class,
+          //          34 to AutopilotMutant34::class,
+          //          35 to AutopilotMutant35::class,
+          //          36 to AutopilotMutant36::class,
+          //          37 to AutopilotMutant37::class,
+          //          38 to AutopilotMutant38::class,
+          //          39 to AutopilotMutant39::class,
+          //          40 to AutopilotMutant40::class,
+          //          41 to AutopilotMutant41::class,
+          //          42 to AutopilotMutant42::class,
+          //          43 to AutopilotMutant43::class,
+          //          44 to AutopilotMutant44::class,
+          //          45 to AutopilotMutant45::class,
+          //          46 to AutopilotMutant46::class,
+          //          47 to AutopilotMutant47::class,
+          //          48 to AutopilotMutant48::class,
+          //          49 to AutopilotMutant49::class,
+          //          50 to AutopilotMutant50::class,
+          //          51 to AutopilotMutant51::class,
+          //          52 to AutopilotMutant52::class,
+          //          53 to AutopilotMutant53::class,
+          //          54 to AutopilotMutant54::class,
+          //          55 to AutopilotMutant55::class,
+          //          56 to AutopilotMutant56::class,
+          //          57 to AutopilotMutant57::class,
+          //          58 to AutopilotMutant58::class,
+          //          59 to AutopilotMutant59::class,
+          //          60 to AutopilotMutant60::class,
+          //          61 to AutopilotMutant61::class,
+          //          62 to AutopilotMutant62::class,
+          //          63 to AutopilotMutant63::class,
+          //          64 to AutopilotMutant64::class,
+          //          65 to AutopilotMutant65::class,
+          //          66 to AutopilotMutant66::class,
+          //          67 to AutopilotMutant67::class,
+          //          68 to AutopilotMutant68::class,
+          //          69 to AutopilotMutant69::class,
+          //          70 to AutopilotMutant70::class,
+          //          71 to AutopilotMutant71::class,
+          //          72 to AutopilotMutant72::class,
+          //          73 to AutopilotMutant73::class,
+          //          74 to AutopilotMutant74::class,
+          //          75 to AutopilotMutant75::class,
+          //          76 to AutopilotMutant76::class,
+          //          77 to AutopilotMutant77::class,
+          //          78 to AutopilotMutant78::class,
+          //          79 to AutopilotMutant79::class,
+          //          80 to AutopilotMutant80::class,
+          //          81 to AutopilotMutant81::class,
+          //          82 to AutopilotMutant82::class,
+          //          83 to AutopilotMutant83::class,
+          //          84 to AutopilotMutant84::class,
+          //          85 to AutopilotMutant85::class,
+          //          86 to AutopilotMutant86::class,
+          //          87 to AutopilotMutant87::class,
+          //          88 to AutopilotMutant88::class,
+          //          89 to AutopilotMutant89::class,
+          //          90 to AutopilotMutant90::class,
+          //          91 to AutopilotMutant91::class,
+          //          92 to AutopilotMutant92::class,
+          //          93 to AutopilotMutant93::class,
+          //          94 to AutopilotMutant94::class,
+          //          95 to AutopilotMutant95::class,
+          //          96 to AutopilotMutant96::class,
+          //          97 to AutopilotMutant97::class,
+          //          98 to AutopilotMutant98::class,
+          //          99 to AutopilotMutant99::class,
+          100 to AutopilotMutant100::class, // ArithmeticReplacementOperator
+          101 to AutopilotMutant101::class, // ArithmeticReplacementOperator
+          102 to AutopilotMutant102::class, // ArithmeticReplacementOperator
+          103 to AutopilotMutant103::class, // ArithmeticReplacementOperator
+          104 to AutopilotMutant104::class, // ArithmeticReplacementOperator
+          105 to AutopilotMutant105::class, // ArithmeticReplacementOperator
+          106 to AutopilotMutant106::class, // ArithmeticReplacementOperator
+          107 to AutopilotMutant107::class, // ArithmeticReplacementOperator
+          108 to AutopilotMutant108::class, // ArithmeticReplacementOperator
+          109 to AutopilotMutant109::class, // ArithmeticReplacementOperator
+          110 to AutopilotMutant110::class, // ArithmeticReplacementOperator
+          111 to AutopilotMutant111::class, // ArithmeticReplacementOperator
+          112 to AutopilotMutant112::class, // ArithmeticReplacementOperator
+          113 to AutopilotMutant113::class, // ArithmeticReplacementOperator
+          114 to AutopilotMutant114::class, // ArithmeticReplacementOperator
+          115 to AutopilotMutant115::class, // ArithmeticReplacementOperator
+          116 to AutopilotMutant116::class, // ArithmeticReplacementOperator
+          117 to AutopilotMutant117::class, // ArithmeticReplacementOperator
+          118 to AutopilotMutant118::class, // ArithmeticReplacementOperator
+          119 to AutopilotMutant119::class, // ArithmeticReplacementOperator
+          120 to AutopilotMutant120::class, // ArithmeticReplacementOperator
+          121 to AutopilotMutant121::class, // ArithmeticReplacementOperator
+          122 to AutopilotMutant122::class, // ArithmeticReplacementOperator
+          123 to AutopilotMutant123::class, // ArithmeticReplacementOperator
+          124 to AutopilotMutant124::class, // ArithmeticReplacementOperator
+          125 to AutopilotMutant125::class, // ArithmeticReplacementOperator
+          //          126 to AutopilotMutant126::class,
+          //          127 to AutopilotMutant127::class,
+          //          128 to AutopilotMutant128::class,
+          //          129 to AutopilotMutant129::class,
+          //          130 to AutopilotMutant130::class,
+          //          131 to AutopilotMutant131::class,
+          //          132 to AutopilotMutant132::class,
+          //          133 to AutopilotMutant133::class,
+          //          134 to AutopilotMutant134::class,
+          //          135 to AutopilotMutant135::class,
+          //          136 to AutopilotMutant136::class,
+          //          137 to AutopilotMutant137::class,
+          //          138 to AutopilotMutant138::class,
+          //          139 to AutopilotMutant139::class,
+          //          140 to AutopilotMutant140::class,
+          //          141 to AutopilotMutant141::class,
+          //          142 to AutopilotMutant142::class,
+          //          143 to AutopilotMutant143::class,
+          //          144 to AutopilotMutant144::class,
+          145 to AutopilotMutant145::class, // LogicalReplacementOperator
+          146 to AutopilotMutant146::class, // UnaryRemovalOperator
+          147 to AutopilotMutant147::class, // UnaryRemovalOperator
+          //          148 to AutopilotMutant148::class,
+          149 to AutopilotMutant149::class, // UnaryRemovalOperator
+          150 to AutopilotMutant150::class, // UnaryRemovalOperator
+          //          151 to AutopilotMutant151::class,
+          152 to AutopilotMutant152::class, // LogicalReplacementOperator
+          153 to AutopilotMutant153::class, // UnaryRemovalOperator
+          154 to AutopilotMutant154::class, // LogicalReplacementOperator
+          155 to AutopilotMutant155::class, // UnaryRemovalOperator
+          156 to AutopilotMutant156::class, // LogicalReplacementOperator
+          157 to AutopilotMutant157::class, // LogicalReplacementOperator
+          158 to AutopilotMutant158::class, // UnaryRemovalOperator
+          159 to AutopilotMutant159::class, // UnaryRemovalOperator
+          160 to AutopilotMutant160::class, // LogicalReplacementOperator
+          161 to AutopilotMutant161::class, // UnaryRemovalOperator
+          162 to AutopilotMutant162::class, // UnaryRemovalOperator
+          163 to AutopilotMutant163::class, // LogicalReplacementOperator
+          164 to AutopilotMutant164::class, // LogicalReplacementOperator
+          165 to AutopilotMutant165::class, // UnaryRemovalOperator
+          //          166 to AutopilotMutant166::class,
+          167 to AutopilotMutant167::class, // LogicalReplacementOperator
+          168 to AutopilotMutant168::class, // UnaryRemovalOperator
+          169 to AutopilotMutant169::class, // UnaryRemovalOperator
+          170 to AutopilotMutant170::class, // UnaryRemovalOperator
+          171 to AutopilotMutant171::class, // UnaryRemovalOperator
+          172 to AutopilotMutant172::class, // UnaryRemovalOperator
+          //          173 to AutopilotMutant173::class,
+          174 to AutopilotMutant174::class, // LogicalReplacementOperator
+          175 to AutopilotMutant175::class, // UnaryRemovalOperator
+          176 to AutopilotMutant176::class, // UnaryRemovalOperator
+          177 to AutopilotMutant177::class, // UnaryRemovalOperator
+          178 to AutopilotMutant178::class, // LogicalReplacementOperator
+          //          179 to AutopilotMutant179::class,
+          //          180 to AutopilotMutant180::class,
+          //          181 to AutopilotMutant181::class,
+          //          182 to AutopilotMutant182::class,
+          //          183 to AutopilotMutant183::class,
+          //          184 to AutopilotMutant184::class,
+          //          185 to AutopilotMutant185::class,
+          //          186 to AutopilotMutant186::class,
+          //          187 to AutopilotMutant187::class,
+          //          188 to AutopilotMutant188::class,
+          //          189 to AutopilotMutant189::class,
+          //          190 to AutopilotMutant190::class,
+          //          191 to AutopilotMutant191::class,
+          //          192 to AutopilotMutant192::class,
+          //          193 to AutopilotMutant193::class,
+          //          194 to AutopilotMutant194::class,
+          //          195 to AutopilotMutant195::class,
+          //          196 to AutopilotMutant196::class,
+          //          197 to AutopilotMutant197::class,
+          //          198 to AutopilotMutant198::class,
+          //          199 to AutopilotMutant199::class,
+          //          200 to AutopilotMutant200::class,
+          //          201 to AutopilotMutant201::class,
+          //          202 to AutopilotMutant202::class,
+          //          203 to AutopilotMutant203::class,
+          //          204 to AutopilotMutant204::class,
+          //          205 to AutopilotMutant205::class,
+          //          206 to AutopilotMutant206::class,
+          //          207 to AutopilotMutant207::class,
+          //          208 to AutopilotMutant208::class,
+          //          209 to AutopilotMutant209::class,
+          //          210 to AutopilotMutant210::class,
+          //          211 to AutopilotMutant211::class,
+          //          212 to AutopilotMutant212::class,
+          //          213 to AutopilotMutant213::class,
+          //          214 to AutopilotMutant214::class,
+          //          215 to AutopilotMutant215::class,
+          //          216 to AutopilotMutant216::class,
+          //          217 to AutopilotMutant217::class,
+          //          218 to AutopilotMutant218::class,
+          //          219 to AutopilotMutant219::class,
+          //          220 to AutopilotMutant220::class,
+          //          221 to AutopilotMutant221::class,
+          //          222 to AutopilotMutant222::class,
+          //          223 to AutopilotMutant223::class
+      )
 
   /**
    * Creates a new instance of the [Mutant] at the given [index].
@@ -338,5 +340,5 @@ object AutopilotMutants {
    * @return A list of new instances of [Mutant] in the range [from]..[toInclusive].
    */
   fun createRange(from: Int, toInclusive: Int): List<Mutant> =
-    (from..toInclusive).map { create(it) }
+      (from..toInclusive).map { create(it) }
 }
