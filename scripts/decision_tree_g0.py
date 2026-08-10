@@ -359,6 +359,26 @@ def _update_run_artifacts(
         conn.close()
 
 
+def _resolve_mutant_numbers(uri: str, mutant_numbers: "set[int]") -> "dict[int, int]":
+    """Looks up {mutant_number: mutant_id} for the given mutant_numbers via the `mutants` table.
+
+    Numbers with no matching row are simply absent from the returned dict — the caller is
+    responsible for warning about those.
+    """
+    import psycopg2
+
+    conn = psycopg2.connect(uri)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT mutant_number, id FROM mutants WHERE mutant_number = ANY(%s)",
+                (list(mutant_numbers),),
+            )
+            return dict(cur.fetchall())
+    finally:
+        conn.close()
+
+
 def _ensure_tracking_tables(conn) -> None:
     """Create or migrate decision tree tracking tables."""
     with conn.cursor() as cur:
@@ -400,9 +420,10 @@ def _ensure_tracking_tables(conn) -> None:
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS learned_max_depth INT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS train_accuracy DOUBLE PRECISION")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS test_accuracy DOUBLE PRECISION")
-        # Every mutant ID that went into this run (train ∪ test — i.e. everything --mutants
-        # restricted the run to, or every mutant in the Parquet file if --mutants was omitted).
-        # Mirrors decision_tree_mutant_splits for this run_id, but as a single queryable column
+        # Every mutant ID that went into this run (train ∪ test — i.e. everything
+        # --mutant-ids/--mutant-numbers restricted the run to, or every mutant in the Parquet
+        # file if neither was given). Mirrors decision_tree_mutant_splits for this run_id, but
+        # as a single queryable column
         # instead of requiring a join/aggregate.
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS used_mutants INT[]")
         cur.execute("""
@@ -453,8 +474,8 @@ def _insert_run(
     """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
     import psycopg2.extras
 
-    # Every mutant this run actually saw, train or test — what --mutants restricted the run to,
-    # or every mutant in the Parquet file if --mutants was omitted.
+    # Every mutant this run actually saw, train or test — what --mutant-ids/--mutant-numbers
+    # restricted the run to, or every mutant in the Parquet file if neither was given.
     used_mutants = sorted(train_mutants | test_mutants)
 
     with conn.cursor() as cur:
@@ -627,14 +648,24 @@ def main() -> None:
                              "The held-out test split is what gets annotated and written to the DB.")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for the train/test split (default: 42)")
-    parser.add_argument("--mutants", default=None, metavar="ID[,ID...]",
-                        help="Comma-separated list of mutant IDs to restrict the run to (default: "
-                             "every mutant present in the Parquet file). Applied before the "
-                             "--train-fraction/--seed split, so the split itself is unaffected — it "
-                             "just runs over this smaller universe instead of every mutant. Additive "
-                             "to everything else: combine with --train-fraction for a train/test "
-                             "split within just these mutants, or leave --train-fraction=1.0 to train "
-                             "on all of them.")
+    parser.add_argument("--mutant-ids", default=None, metavar="ID[,ID...]",
+                        help="Comma-separated list of raw mutant_id values (metric_failed_monitors."
+                             "mutant_id / mutants.id — the database's own serial primary key) to "
+                             "restrict the run to (default: every mutant present in the Parquet "
+                             "file). Applied before the --train-fraction/--seed split, so the split "
+                             "itself is unaffected — it just runs over this smaller universe instead "
+                             "of every mutant. Additive to everything else: combine with "
+                             "--train-fraction for a train/test split within just these mutants, or "
+                             "leave --train-fraction=1.0 to train on all of them. Combines with "
+                             "--mutant-numbers (union) if both are given.")
+    parser.add_argument("--mutant-numbers", default=None, metavar="N[,N...]",
+                        help="Comma-separated list of mutant_number values (mutants.mutant_number — "
+                             "the human-meaningful AutopilotMutant<N> index, e.g. the numbers in "
+                             "AutopilotMutants.kt/README, NOT the same as mutant_id) to restrict the "
+                             "run to. Requires --uri to resolve mutant_number -> mutant_id via the "
+                             "mutants table, since the Parquet file only carries mutant_id. Otherwise "
+                             "behaves exactly like --mutant-ids (applied before the split; combines "
+                             "with --mutant-ids via union if both are given).")
     parser.add_argument("--output", default=None, metavar="PATH",
                         help="Write Graphviz .dot file to an explicit path (overrides --out-dir naming)")
     parser.add_argument("--annotate", default=None, metavar="PATH",
@@ -723,13 +754,35 @@ def main() -> None:
         # ── Optional mutant allow-list, applied before the split ──────────────
         # Restricts the universe the train/test split (below) operates over to just
         # these mutants, without changing how that split itself works.
-        if args.mutants:
-            requested_mutants = {int(m.strip()) for m in args.mutants.split(",") if m.strip()}
+        if args.mutant_ids or args.mutant_numbers:
+            requested_mutants: "set[int]" = set()
+
+            if args.mutant_ids:
+                requested_mutants |= {
+                    int(m.strip()) for m in args.mutant_ids.split(",") if m.strip()
+                }
+
+            if args.mutant_numbers:
+                if not args.uri:
+                    sys.exit(
+                        "--mutant-numbers requires --uri to resolve mutant_number -> mutant_id "
+                        "via the mutants table."
+                    )
+                requested_numbers = {
+                    int(m.strip()) for m in args.mutant_numbers.split(",") if m.strip()
+                }
+                number_to_id = _resolve_mutant_numbers(args.uri, requested_numbers)
+                missing_numbers = sorted(requested_numbers - number_to_id.keys())
+                if missing_numbers:
+                    print(f"Warning: {len(missing_numbers)} requested mutant_number(s) not found "
+                          f"in the mutants table: {missing_numbers}")
+                requested_mutants |= set(number_to_id.values())
+
             present_mutants = set(np.unique(mutant_ids).tolist())
             missing_mutants = sorted(requested_mutants - present_mutants)
             if missing_mutants:
-                print(f"Warning: {len(missing_mutants)} requested mutant ID(s) not found in the "
-                      f"data: {missing_mutants}")
+                print(f"Warning: {len(missing_mutants)} requested mutant_id(s) not found in the "
+                      f"Parquet data: {missing_mutants}")
             mutant_mask = np.isin(mutant_ids, list(requested_mutants))
             X, y, row_ids, mutant_ids = X[mutant_mask], y[mutant_mask], row_ids[mutant_mask], mutant_ids[mutant_mask]
             print(
