@@ -751,9 +751,12 @@ def main() -> None:
         X, y, row_ids, mutant_ids = load_and_prepare(args.parquet, feature_cols)
         print(f"Loaded {len(X):,} rows  |  positives: {y.sum():,} ({y.mean():.1%})")
 
-        # ── Optional mutant allow-list, applied before the split ──────────────
-        # Restricts the universe the train/test split (below) operates over to just
-        # these mutants, without changing how that split itself works.
+        # ── Optional mutant allow-list ─────────────────────────────────────────
+        # Restricts which mutants the split (below) is computed over and which mutants
+        # trained rows may come from. Deliberately does NOT touch X/y/row_ids/mutant_ids
+        # themselves — those must stay the full Parquet dataset so evaluation/leaf-labeling
+        # below still covers every row, regardless of this filter (see "Predict on ALL rows").
+        allowed_mutants: "set[int] | None" = None  # None = every mutant in the Parquet file
         if args.mutant_ids or args.mutant_numbers:
             requested_mutants: "set[int]" = set()
 
@@ -783,37 +786,44 @@ def main() -> None:
             if missing_mutants:
                 print(f"Warning: {len(missing_mutants)} requested mutant_id(s) not found in the "
                       f"Parquet data: {missing_mutants}")
-            mutant_mask = np.isin(mutant_ids, list(requested_mutants))
-            X, y, row_ids, mutant_ids = X[mutant_mask], y[mutant_mask], row_ids[mutant_mask], mutant_ids[mutant_mask]
+            allowed_mutants = requested_mutants & present_mutants
             print(
-                f"Restricted to {len(requested_mutants):,} requested mutant(s) "
-                f"({len(requested_mutants & present_mutants):,} present): {len(X):,} rows remain.\n"
+                f"Restricting training/split to {len(allowed_mutants):,} of "
+                f"{len(requested_mutants):,} requested mutant(s) (present in the data). "
+                f"Evaluation/leaf-labeling below still covers all {len(X):,} rows.\n"
             )
 
         # ── Mutant-based train / test split ───────────────────────────────────
-        # Split over unique mutant IDs so no mutant leaks across train/test.
-        # All rows are annotated; trained_on is tracked per mutant in the DB.
-        unique_mutants = np.unique(mutant_ids)
+        # Split over unique mutant IDs (restricted to allowed_mutants, if given) so no mutant
+        # leaks across train/test. All rows are annotated regardless of this split; trained_on
+        # is tracked per mutant in the DB.
+        unique_mutants = (
+            np.unique(mutant_ids) if allowed_mutants is None
+            else np.array(sorted(allowed_mutants))
+        )
         if args.train_fraction < 1.0:
             rng = np.random.default_rng(args.seed)
             rng.shuffle(unique_mutants)
             n_train_mut = int(len(unique_mutants) * args.train_fraction)
             train_mutants = set(unique_mutants[:n_train_mut].tolist())
             test_mutants  = set(unique_mutants[n_train_mut:].tolist())
-
-            train_mask = np.isin(mutant_ids, list(train_mutants))
-            X_train, y_train = X.iloc[train_mask], y[train_mask]
-            print(
-                f"Mutants — train: {len(train_mutants):,}  |  test: {len(test_mutants):,}\n"
-                f"Rows    — train: {train_mask.sum():,} ({y_train.mean():.1%} pos)"
-                f"  |  all (annotated): {len(X):,}\n"
-            )
         else:
             train_mutants = set(unique_mutants.tolist())
             test_mutants  = set()
-            X_train, y_train = X, y
 
-        # Predict on ALL rows so every row gets a leaf label.
+        # Always mask explicitly (even when train_mutants covers every mutant with no
+        # allow-list) rather than special-casing "no split" as `X_train, y_train = X, y` —
+        # that shortcut would silently stop honoring allowed_mutants once train_fraction=1.0.
+        train_mask = np.isin(mutant_ids, list(train_mutants))
+        X_train, y_train = X.iloc[train_mask], y[train_mask]
+        print(
+            f"Mutants — train: {len(train_mutants):,}  |  test: {len(test_mutants):,}\n"
+            f"Rows    — train: {train_mask.sum():,} ({y_train.mean():.1%} pos)"
+            f"  |  all (annotated): {len(X):,}\n"
+        )
+
+        # Predict on ALL rows so every row gets a leaf label — always the full Parquet
+        # dataset, even when allowed_mutants restricted what the tree was *trained* on above.
         X_eval, y_eval, row_ids_eval = X, y, row_ids
 
         if args.class_weight == "balanced":
