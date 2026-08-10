@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Box plots for time-to-first-kill across tick-sampling strategies, one per mutant.
 
-Reads CSVs from:
-  draw_ticks_with_decision_tree_grouping/time_to_kill/mutant_<id>/ttk_{random_tick,leaf_tick,leaf_tick_weighted,leaf_tick_alternating}.csv
+Auto-discovers run_<id>/ subdirectories (one per decision tree run the evaluator was pointed at —
+see DrawTicksWithDecisionTreeGroupingPostEvaluation.basePath) and, for each, reads CSVs from:
+  draw_ticks_with_decision_tree_grouping/run_<id>/time_to_kill/mutant_<id>/ttk_{random_tick,leaf_tick,leaf_tick_weighted,leaf_tick_alternating}.csv
 
 Produced by DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill() (see
 RunDrawTicksWithDecisionTreeGrouping.kt), which samples individual ticks directly rather than whole
 starting scenarios (contrast with baseline_next_tick_time_to_kill.py's scenario-based strategies).
 
-Produces:
-  - Per mutant: time_to_kill/mutant_<id>/ttk_boxplot.[png|pdf]
-  - Combined:   time_to_kill/ttk_combined.[png|pdf]  (all mutants side by side)
+Produces, per run:
+  - Per mutant: run_<id>/time_to_kill/mutant_<id>/ttk_boxplot.[png|pdf]
+  - Combined:   run_<id>/time_to_kill/ttk_combined.[png|pdf]  (all mutants side by side)
 
 Each CSV has a single column of draw counts (one per repetition). -1 entries (pool exhausted
 without kill) are silently excluded.
@@ -90,12 +91,19 @@ def _boxplot_ax(
         ax.set_ylabel("Ticks to first kill", fontsize=tick_fontsize, labelpad=10)
 
 
-def main() -> None:
-    base = Path(__file__).resolve().parent / "time_to_kill"
-    if not base.exists():
-        print(f"Directory {base} not found — run evaluateTimeToKill() first.")
-        return
+def _discover_runs(base: Path) -> list[tuple[int, Path]]:
+    return sorted(
+        [
+            (int(m.group(1)), d)
+            for d in base.iterdir()
+            if d.is_dir() and (m := re.fullmatch(r"run_(\d+)", d.name))
+        ],
+        key=lambda x: x[0],
+    )
 
+
+def _process_run(base: Path, run_id: int) -> None:
+    print(f"Run {run_id}:")
     mutant_dirs = _discover_mutants(base)
     if not mutant_dirs:
         print("No mutant_<id>/ subdirectories found.")
@@ -173,6 +181,21 @@ def main() -> None:
         fig.savefig(out.with_suffix(ext), bbox_inches="tight")
     plt.close(fig)
     print(f"Saved combined plot to {out.with_suffix('.pdf')}")
+
+
+def main() -> None:
+    root = Path(__file__).resolve().parent
+    run_dirs = _discover_runs(root)
+    if not run_dirs:
+        print("No run_<id>/ subdirectories found — run evaluateTimeToKill() first.")
+        return
+
+    for run_id, run_dir in run_dirs:
+        base = run_dir / "time_to_kill"
+        if not base.exists():
+            print(f"Run {run_id}: directory {base} not found, skipping.")
+            continue
+        _process_run(base, run_id)
 
 
 if __name__ == "__main__":

@@ -249,12 +249,34 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --a
 
 ### Run the draw-ticks-with-decision-tree-grouping evaluation
 
-`RunDrawTicksWithDecisionTreeGrouping.kt` samples individual ticks directly (rather than whole starting scenarios, contrast with the baseline next-tick evaluation above) under four sampling strategies — uniform-random, DC-leaf round-robin ("equal"), DC-leaf significance-weighted, and DC-leaf alternating (alternates draw-by-draw between the round-robin and weighted policies, falling back to whichever still has ticks left if the other is exhausted) — and writes two kinds of results under `postEvaluation/draw_ticks_with_decision_tree_grouping/`: how many distinct mutants each strategy kills per suite size (`size_<n>/draw_ticks_<strategy>.csv`), and, per accident-causing mutant, how many ticks each strategy needs before first killing it (`time_to_kill/mutant_<id>/ttk_<strategy>.csv`).
+`RunDrawTicksWithDecisionTreeGrouping.kt` samples individual ticks directly (rather than whole starting scenarios, contrast with the baseline next-tick evaluation above) under four sampling strategies — uniform-random, DC-leaf round-robin ("equal"), DC-leaf significance-weighted, and DC-leaf alternating (alternates draw-by-draw between the round-robin and weighted policies, falling back to whichever still has ticks left if the other is exhausted) — and writes three kinds of results, each scoped under its own `postEvaluation/draw_ticks_with_decision_tree_grouping/run_<runId>/` folder (`runId` being the decision tree run whose leaf assignments were used) so repeated evaluations against different runs don't overwrite each other: how many distinct mutants each strategy kills per suite size (`size_<n>/draw_ticks_<strategy>.csv`); per accident-causing mutant, how many ticks each strategy needs before first killing it (`time_to_kill/mutant_<id>/ttk_<strategy>.csv`); and the per-leaf significance data (`significance.json`) needed to compute the E(k/N)/E(equal)/E(weight)/E(alternating) estimators for that run, consumed by `postEvaluation/time_to_kill_comparison/index.html`'s expected-vs-actual comparison.
 
-It optionally parses a `decisionTreeRunId` (the `decision_tree_runs.id` to use for leaf assignments) as the first `main(args)` entry, same as the baseline next-tick evaluation above. When omitted, it falls back to the latest full run (`train_fraction=1.0`). Pass it via the Gradle `--args` flag:
+`main(args)` selects which decision tree run(s) to evaluate:
+
+| `args` | Behavior |
+|---|---|
+| *(none)*, or `--latest` | The actual latest decision tree run overall (highest ID), full or split |
+| `--latest-full` | The latest *full* run (`train_fraction = 1.0`) |
+| `--latest-split` | The latest *split* run (`train_fraction != 1.0`, i.e. a train/test split) |
+| `--all` | Every run currently in `decision_tree_runs`, evaluated one after another (ascending ID) — multiplies runtime by the number of runs, since each run reloads the full tick table |
+| a single run ID, e.g. `8` | Just that run (`decision_tree_runs.id`) |
+| multiple run IDs, comma- and/or space-separated, e.g. `1,2,3` or `1 2 3` | Each in turn, in the given order |
 
 ```bash
+# Actual latest run, full or split (default)
+docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping
+
+# Latest full run specifically
+docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping --args="--latest-full"
+
+# One specific run
 docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping --args="8"
+
+# Several specific runs, one after another
+docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping --args="1,2,3"
+
+# Every run in the database
+docker run stars-evaluation:latest ./gradlew --no-daemon runDrawTicksWithDecisionTreeGrouping --args="--all"
 ```
 
 ### Run the duplicate-tick analysis

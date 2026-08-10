@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Scatter plots for tick-sampling strategies across all suite sizes.
 
-Auto-discovers size_<n>/ subdirectories and produces:
-  - Per size: size_<n>/draw_ticks_scatter_<strategy>.[png|pdf]
-  - All sizes (full strategies):  draw_ticks_scatter_all.[png|pdf]
-  - All sizes (rare strategies):  draw_ticks_scatter_all_rare.[png|pdf]
+Auto-discovers run_<id>/ subdirectories (one per decision tree run — see
+DrawTicksWithDecisionTreeGroupingPostEvaluation.basePath) and, within each, size_<n>/
+subdirectories, producing:
+  - Per size: run_<id>/size_<n>/draw_ticks_scatter_<strategy>.[png|pdf]
+  - All sizes (full strategies):  run_<id>/draw_ticks_scatter_all.[png|pdf]
+  - All sizes (rare strategies):  run_<id>/draw_ticks_scatter_all_rare.[png|pdf]
     Grid layout: rows = strategies, columns = suite sizes.
 
 Reads CSVs produced by DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluate() (see
@@ -93,8 +95,19 @@ def _scatter_ax(
     ax.set_ylim(-1, y_max + 1)
 
 
-def main() -> None:
-    base = Path(__file__).resolve().parent
+def _discover_runs(base: Path) -> list[tuple[int, Path]]:
+    return sorted(
+        [
+            (int(m.group(1)), d)
+            for d in base.iterdir()
+            if d.is_dir() and (m := re.fullmatch(r"run_(\d+)", d.name))
+        ],
+        key=lambda x: x[0],
+    )
+
+
+def _process_run(base: Path, run_id: int) -> None:
+    print(f"Run {run_id}:")
     rng = np.random.default_rng(42)
 
     size_dirs = _discover_sizes(base)
@@ -177,6 +190,17 @@ def main() -> None:
             fig.savefig(out.with_suffix(ext), bbox_inches="tight")
         plt.close(fig)
         print(f"Saved all-sizes scatter to {out.with_suffix('.pdf')}")
+
+
+def main() -> None:
+    root = Path(__file__).resolve().parent
+    run_dirs = _discover_runs(root)
+    if not run_dirs:
+        print("No run_<id>/ subdirectories found — run evaluate() first.")
+        return
+
+    for run_id, run_dir in run_dirs:
+        _process_run(run_dir, run_id)
 
 
 if __name__ == "__main__":

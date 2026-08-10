@@ -95,6 +95,14 @@
   .legend-note { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 10px; }
   code { background: var(--gridline); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
 
+  button.active { background: var(--series-1); color: #fff; border-color: var(--series-1); }
+  .tab-panel { display: flex; flex-direction: column; gap: 20px; }
+  .tab-panel.hidden { display: none; }
+  .compare-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .compare-columns > div { min-width: 0; }
+  @media (max-width: 900px) { .compare-columns { grid-template-columns: 1fr; } }
+  .compare-columns h3 { margin: 0 0 8px; font-size: 0.9rem; }
+
   #errorBanner {
     display: none;
     background: var(--surface-1);
@@ -125,6 +133,13 @@
   .table-scroll { overflow: auto; max-height: 640px; border: 1px solid var(--border); border-radius: 8px; }
   .table-scroll table { width: 100%; }
   .table-scroll thead th { position: sticky; top: 0; background: var(--surface-1); z-index: 2; }
+
+  /* Two-row header (estimator name spanning 3 sub-columns) keeps the comparison table narrow
+     enough to fit full-width on a 1080p screen without horizontal scrolling. */
+  .comparison-table th, .comparison-table td { padding: 5px 8px; }
+  .comparison-table th.group-header { text-align: center; }
+  .comparison-table thead tr:first-child th { top: 0; }
+  .comparison-table thead tr:last-child th { top: 27px; }
   th[data-sort-key] { cursor: pointer; user-select: none; }
   th[data-sort-key]:hover { color: var(--text-primary); }
   .sort-indicator { display: inline-block; width: 1em; font-size: 0.75em; color: var(--text-muted); }
@@ -178,7 +193,7 @@
 
 <header>
   <h1>Time To Kill Explorer</h1>
-  <p class="subtitle">Reads CSVs directly from <code>baseline_next_tick/time_to_kill/</code> and <code>draw_ticks_with_decision_tree_grouping/time_to_kill/</code>, plus <code>decision_tree_comparison/decision_tree_comparison.json</code> for the expected-value comparison &mdash; no build/generation step. Serve the <code>postEvaluation</code> folder over HTTP (e.g. <code>python -m http.server 8000</code> run <em>there</em>, not in this subfolder) so relative fetches and directory listings work.</p>
+  <p class="subtitle">Reads CSVs and JSON directly from <code>baseline_next_tick/time_to_kill/</code> and <code>draw_ticks_with_decision_tree_grouping/run_&lt;id&gt;/</code> (one folder per decision tree run, holding that run's <code>time_to_kill/</code> draws alongside its <code>significance.json</code> for the expected-value comparison) &mdash; no build/generation step. Serve the <code>postEvaluation</code> folder over HTTP (e.g. <code>python -m http.server 8000</code> run <em>there</em>, not in this subfolder) so relative fetches and directory listings work.</p>
   <div class="summary-row" id="summaryRow"></div>
 </header>
 
@@ -188,7 +203,7 @@
 
   <section class="card" id="mutantToggleCard">
     <h2>Mutants</h2>
-    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison below.</p>
+    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison below (on both tabs).</p>
     <div class="controls-row">
       <input type="text" id="mutantFilterInput" placeholder="Filter by ID…" style="max-width:160px" />
       <button id="mutantsAllBtn" type="button">All</button>
@@ -199,21 +214,64 @@
     <div class="mutant-toggle-grid" id="mutantToggleGrid"></div>
   </section>
 
-  <section class="card" id="comparisonCard" style="display:none">
-    <h2>Expected vs. actual</h2>
-    <p class="legend-note">
-      E(k/N), E(equal) and E(weight) come from <code>decision_tree_comparison.json</code>'s significance card (see that page's Statistics tab for the definitions) for the selected decision tree run. <strong>Actual mean</strong> is this page's own empirically observed mean draws-to-kill for the strategy that most closely matches each estimator's sampling policy: E(k/N) &harr; uniform random, E(equal) &harr; unweighted leaf round-robin, E(weight) &harr; significance-weighted leaf sampling (only available for the tick-level dataset). <strong>Actual&nbsp;&divide;&nbsp;Expected</strong> below 1 (<span class="ratio-good">green</span>) means the mutant was killed faster in practice than the estimator predicted; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower.
-    </p>
-    <div class="controls-row">
-      <label for="dtRunSelect">Decision tree run</label>
-      <select id="dtRunSelect"></select>
-      <span class="spacer"></span>
-      <span class="status-note" id="dtStatusNote"></span>
-    </div>
-    <div id="comparisonTables"></div>
-  </section>
+  <div class="controls-row" id="tabBar">
+    <button class="active" id="tabOverviewBtn" type="button">Overview</button>
+    <button id="tabCompareBtn" type="button">Compare Runs</button>
+    <button id="tabAllRunsBtn" type="button">All Runs</button>
+  </div>
 
-  <div id="datasetSections"></div>
+  <div class="tab-panel" id="tabPanelOverview">
+
+    <section class="card" id="comparisonCard" style="display:none">
+      <h2>Expected vs. actual</h2>
+      <p class="legend-note">
+        E(k/N), E(equal) and E(weight) come from that run's <code>significance.json</code> (written by <code>DrawTicksWithDecisionTreeGroupingPostEvaluation.exportSignificance()</code>) for whichever run is currently selected below in the "Draw Ticks..." card &mdash; both cards always show the same run, so there's no separate run picker here. E(alternating) is derived on this page from the same per-leaf probabilities (see <code>expectedAlternating</code> in the page source for the derivation): the expected number of draws until first kill when draws alternate between the equal and weighted policies, under the same fixed-probability/with-replacement simplification the other estimators already make. <strong>Actual mean</strong> is this page's own empirically observed mean draws-to-kill for the strategy that most closely matches each estimator's sampling policy: E(k/N) &harr; uniform random, E(equal) &harr; unweighted leaf round-robin, E(weight) &harr; significance-weighted leaf sampling, E(alternating) &harr; alternating leaf sampling. <strong>Actual&nbsp;&divide;&nbsp;Expected</strong> below 1 (<span class="ratio-good">green</span>) means the mutant was killed faster in practice than the estimator predicted; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower.
+      </p>
+      <div class="controls-row">
+        <span class="status-note" id="dtStatusNote"></span>
+      </div>
+      <div id="comparisonTables"></div>
+    </section>
+
+    <div id="datasetSections"></div>
+
+  </div>
+
+  <div class="tab-panel hidden" id="tabPanelCompare">
+
+    <section class="card" id="compareRunsCard">
+      <h2>Compare two runs</h2>
+      <p class="legend-note" id="compareLegendNote">
+        Compares empirically observed draws-to-kill between two decision tree runs of the same run-scoped dataset (their <code>run_&lt;id&gt;/time_to_kill/</code> folders under <code>draw_ticks_with_decision_tree_grouping/</code>), strategy by strategy. <strong>Ratio</strong> is Run B &divide; Run A mean &mdash; below 1 (<span class="ratio-good">green</span>) means Run B killed faster on average; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower.
+      </p>
+      <div class="controls-row">
+        <label for="compareRunASelect">Run A</label>
+        <select id="compareRunASelect"></select>
+        <label for="compareRunBSelect">Run B</label>
+        <select id="compareRunBSelect"></select>
+        <span class="spacer"></span>
+        <span class="status-note" id="compareStatusNote"></span>
+      </div>
+      <div id="compareContent"></div>
+    </section>
+
+  </div>
+
+  <div class="tab-panel hidden" id="tabPanelAllRuns">
+
+    <section class="card" id="allRunsCard">
+      <h2>All runs &mdash; summary statistics</h2>
+      <p class="legend-note">
+        Aggregates every discovered <code>run_&lt;id&gt;/</code> folder: for each mutant and strategy/estimator, the mean, median, and standard deviation across runs. <strong>Actual</strong> summarizes each run's empirical mean draws-to-kill (so "mean" here is the mean-of-means); <strong>Expected</strong> summarizes each run's E(&hellip;) estimator value, showing how much the theoretical prediction itself shifts as the decision tree changes from run to run. Standard deviation needs at least two runs with data for that cell; otherwise it shows as &mdash;.
+      </p>
+      <div class="controls-row">
+        <span class="spacer"></span>
+        <span class="status-note" id="allRunsStatusNote"></span>
+      </div>
+      <div id="allRunsContent"></div>
+    </section>
+
+  </div>
 
 </main>
 
@@ -225,14 +283,14 @@
 
   // -------------------------------------------------------------- config
 
-  const DT_COMPARISON_PATH = "decision_tree_comparison/decision_tree_comparison.json";
-
   const DATASETS = [
     {
       id: "draw_ticks",
       title: "Draw Ticks (Decision Tree Grouping)",
-      note: "Tick-level sampling &mdash; DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill().",
-      dir: "draw_ticks_with_decision_tree_grouping/time_to_kill/",
+      note: "Tick-level sampling &mdash; DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill(). Each decision tree run's output lives in its own run_&lt;id&gt;/ folder.",
+      runsDir: "draw_ticks_with_decision_tree_grouping/",
+      dirForRun: (runId) => "draw_ticks_with_decision_tree_grouping/run_" + runId + "/time_to_kill/",
+      significancePathForRun: (runId) => "draw_ticks_with_decision_tree_grouping/run_" + runId + "/significance.json",
       unit: "ticks",
       strategies: [
         { key: "random_tick", label: "Random" },
@@ -240,7 +298,12 @@
         { key: "leaf_tick_weighted", label: "Leaf (Weighted)" },
         { key: "leaf_tick_alternating", label: "Leaf (Alternating)" },
       ],
-      expectedMap: { ek: "random_tick", eEqual: "leaf_tick", eWeight: "leaf_tick_weighted" },
+      expectedMap: {
+        ek: "random_tick",
+        eEqual: "leaf_tick",
+        eWeight: "leaf_tick_weighted",
+        eAlternating: "leaf_tick_alternating",
+      },
     },
     {
       id: "baseline_next_tick",
@@ -255,7 +318,7 @@
         { key: "leaf_accidents", label: "Leaf (Accidents)" },
         { key: "leaf_accidents_accident-scenarios", label: "Leaf (Accidents, Accident Scenarios)" },
       ],
-      expectedMap: { ek: "random", eEqual: "leaf", eWeight: null },
+      expectedMap: { ek: "random", eEqual: "leaf", eWeight: null, eAlternating: null },
     },
   ];
 
@@ -268,8 +331,6 @@
   let dataSource = { mode: "http" }; // or { mode: "folder", files: Map<string, File> }
   let visibleMutantIds = new Set();
   let allMutantIds = [];
-  let dtData = null;
-  let currentRunId = null;
 
   // ---------------------------------------------------------------- utils
 
@@ -371,7 +432,7 @@
   /** Builds a relPath -> File map from a webkitdirectory FileList, anchored on a landmark file so it works regardless of which folder the user actually picked (postEvaluation itself, its parent, ...). */
   function buildFolderMap(fileList) {
     const files = Array.from(fileList).map((f) => ({ file: f, path: f.webkitRelativePath.replace(/\\/g, "/") }));
-    const landmarks = [DT_COMPARISON_PATH].concat(DATASETS.map((ds) => ds.dir));
+    const landmarks = DATASETS.map((ds) => ds.dir || ds.runsDir);
     let prefix = null;
     for (const landmark of landmarks) {
       for (const { path } of files) {
@@ -501,56 +562,119 @@
     return { n, total: n, mean, median, q1, q3, min: sorted[0], max: sorted[n - 1], whiskerLow, whiskerHigh, outliers };
   }
 
+  // ------------------------------------------------- cross-run summary stats
+
+  function meanOf(values) {
+    return values.length ? values.reduce((s, v) => s + v, 0) / values.length : null;
+  }
+
+  function medianOf(values) {
+    if (!values.length) return null;
+    return quantileSorted(values.slice().sort((a, b) => a - b), 0.5);
+  }
+
+  /** Sample standard deviation (n-1 denominator) - needs at least two values, else `null`. */
+  function stddevOf(values) {
+    if (values.length < 2) return null;
+    const m = meanOf(values);
+    const variance = values.reduce((s, v) => s + (v - m) * (v - m), 0) / (values.length - 1);
+    return Math.sqrt(variance);
+  }
+
   // ------------------------------------------------------------ loading
 
-  function loadDataset(ds) {
-    return listDir(ds.dir).then((names) => {
-      ds.mutantIds = names
+  /** Discovers `mutant_<id>/` folders under `dir` and fetches every strategy's CSV for each, computing stats. Never rejects - failures surface as `available: false`. */
+  function loadTimeToKillData(dir, strategies) {
+    return listDir(dir).then((names) => {
+      const mutantIds = names
         .map((n) => /^mutant_(\d+)$/.exec(n))
         .filter(Boolean)
         .map((m) => parseInt(m[1], 10))
         .sort((a, b) => a - b);
-      ds.available = true;
-      ds.data = {}; // mutantId -> strategyKey -> stats
+      const data = {}; // mutantId -> strategyKey -> stats
       const fetches = [];
-      ds.mutantIds.forEach((mid) => {
-        ds.data[mid] = {};
-        ds.strategies.forEach((strat) => {
-          const path = ds.dir + "mutant_" + mid + "/ttk_" + strat.key + ".csv";
+      mutantIds.forEach((mid) => {
+        data[mid] = {};
+        strategies.forEach((strat) => {
+          const path = dir + "mutant_" + mid + "/ttk_" + strat.key + ".csv";
           fetches.push(
             readText(path).then((text) => {
               if (!text) return;
               const { values, total } = parseCsv(text);
               const stats = computeStats(values);
-              if (stats) { stats.total = total; ds.data[mid][strat.key] = stats; }
+              if (stats) { stats.total = total; data[mid][strat.key] = stats; }
             })
           );
         });
       });
-      return Promise.all(fetches);
-    }).catch((e) => {
-      ds.available = false;
-      ds.error = e.message;
+      return Promise.all(fetches).then(() => ({ available: true, mutantIds, data }));
+    }).catch((e) => ({ available: false, error: e.message, mutantIds: [], data: {} }));
+  }
+
+  /** `dirPrefix` must end with "/". Returns sorted numeric ids of `run_<id>/` subdirectories. */
+  function discoverRuns(dirPrefix) {
+    return listDir(dirPrefix)
+      .then((names) =>
+        names
+          .map((n) => /^run_(\d+)$/.exec(n))
+          .filter(Boolean)
+          .map((m) => parseInt(m[1], 10))
+          .sort((a, b) => a - b)
+      )
+      .catch(() => []);
+  }
+
+  function loadDataset(ds) {
+    return loadTimeToKillData(ds.dir, ds.strategies).then((result) => {
+      ds.available = result.available;
+      ds.error = result.error;
+      ds.mutantIds = result.mutantIds;
+      ds.data = result.data;
     });
   }
 
-  function loadDtComparison() {
-    return readText(DT_COMPARISON_PATH).then((text) => {
-      if (!text) return;
+  /** Fetches `run_<selectedRunId>/significance.json` for a dataset that has one (see `significancePathForRun`), storing the parsed object (or `null` if absent/unparseable) as `ds.significance`. No-op for datasets without that capability. */
+  function loadSignificance(ds) {
+    if (!ds.significancePathForRun || ds.selectedRunId === undefined || ds.selectedRunId === null) {
+      ds.significance = null;
+      return Promise.resolve();
+    }
+    return readText(ds.significancePathForRun(ds.selectedRunId)).then((text) => {
+      if (!text) { ds.significance = null; return; }
       try {
-        dtData = JSON.parse(text);
+        ds.significance = JSON.parse(text);
       } catch (e) {
-        dtData = null;
+        ds.significance = null;
       }
     });
   }
 
+  /** For run-scoped datasets (have `runsDir`/`dirForRun`), discovers available runs, picks/keeps a selected run, resolves `ds.dir` from it, then loads its time-to-kill data and (if available) its significance.json. Flat datasets just load their static `ds.dir` directly. */
+  function resolveDatasetDir(ds) {
+    if (!ds.runsDir) return loadDataset(ds);
+    return discoverRuns(ds.runsDir).then((runs) => {
+      ds.availableRuns = runs;
+      if (!runs.length) {
+        ds.available = false;
+        ds.error = "No run_<id>/ subdirectories found under " + ds.runsDir;
+        ds.mutantIds = [];
+        ds.data = {};
+        ds.significance = null;
+        return;
+      }
+      if (ds.selectedRunId === undefined || ds.selectedRunId === null || !runs.includes(ds.selectedRunId)) {
+        ds.selectedRunId = runs[runs.length - 1]; // default to the latest (highest id) run
+      }
+      ds.dir = ds.dirForRun(ds.selectedRunId);
+      return Promise.all([loadDataset(ds), loadSignificance(ds)]);
+    });
+  }
+
   function boot() {
-    dtData = null;
     document.getElementById("errorBanner").style.display = "none";
-    Promise.all([Promise.all(DATASETS.map(loadDataset)), loadDtComparison()]).then(() => {
+    Promise.all(DATASETS.map(resolveDatasetDir)).then(() => {
       const anyAvailable = DATASETS.some((ds) => ds.available);
-      if (!anyAvailable && !dtData) {
+      if (!anyAvailable) {
         showError(
           dataSource.mode === "folder"
             ? "Couldn't find any recognizable files in the selected folder."
@@ -568,6 +692,8 @@
       renderMutantToggle();
       renderComparisonSection();
       renderDatasetSections();
+      initCompareTab();
+      initAllRunsTab();
     });
   }
 
@@ -576,10 +702,11 @@
   function renderSummary() {
     const row = document.getElementById("summaryRow");
     row.innerHTML = "";
+    const sigDs = DATASETS.find((d) => d.significancePathForRun);
     const tiles = [
       ["Mutants", allMutantIds.length],
       ["Datasets loaded", DATASETS.filter((d) => d.available).length + " / " + DATASETS.length],
-      ["Expected-value reference", dtData ? "loaded" : "not found"],
+      ["Expected-value reference", sigDs && sigDs.significance ? "run " + sigDs.selectedRunId : "not found"],
       ["Data source", dataSource.mode === "folder" ? "local folder" : "HTTP"],
     ];
     tiles.forEach(([label, value]) => {
@@ -608,6 +735,8 @@
         updateMutantToggleCount();
         renderComparisonSection();
         renderDatasetSections();
+        refreshCompareTabIfLoaded();
+        refreshAllRunsTabIfLoaded();
       });
       wrap.appendChild(cb);
       wrap.appendChild(document.createTextNode("Mutant " + mid));
@@ -621,6 +750,8 @@
       updateMutantToggleCount();
       renderComparisonSection();
       renderDatasetSections();
+      refreshCompareTabIfLoaded();
+      refreshAllRunsTabIfLoaded();
     };
     document.getElementById("mutantsNoneBtn").onclick = () => {
       visibleMutantIds = new Set();
@@ -628,6 +759,8 @@
       updateMutantToggleCount();
       renderComparisonSection();
       renderDatasetSections();
+      refreshCompareTabIfLoaded();
+      refreshAllRunsTabIfLoaded();
     };
     document.getElementById("mutantFilterInput").oninput = (e) => {
       const q = e.target.value.trim();
@@ -646,7 +779,7 @@
     return ids.filter((id) => visibleMutantIds.has(id)).sort((a, b) => a - b);
   }
 
-  // ------------------------------------------------- significance (from decision_tree_comparison.json)
+  // ------------------------------------------------- significance (from run_<id>/significance.json)
 
   function anyKillProbability(b) { return b.totalTicks > 0 ? b.failingTicks / b.totalTicks : 0; }
   function probKillValue(b, mid) { return b.totalTicks > 0 ? (b.mutantKillingAmount[String(mid)] || 0) / b.totalTicks : 0; }
@@ -659,11 +792,32 @@
     return map;
   }
 
-  /** Mirrors decision_tree_comparison's buildSignificanceRows, restricted to mutants that kill at least one tick in this run. Returns Map<mutantId, {ticks, N, L, ek, eEqual, eWeight}>. */
-  function computeSignificance(run) {
-    const buckets = run.buckets;
-    const N = dtData.totalTicks;
-    const L = run.runInfo.learnedNumLeaves;
+  /**
+   * Expected number of draws until first success when draws alternate between two independent
+   * Bernoulli trials with per-draw success probabilities `p1` (odd draws, "equal" policy first)
+   * and `p2` (even draws, "weighted" policy) - the same fixed-probability/with-replacement
+   * simplification E(equal) and E(weight) already make (the real evaluator draws without
+   * replacement from a depleting pool), applied to [DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateAlternatingDrawTicks]'s
+   * alternation instead of a single policy.
+   *
+   * Derivation: let `E` be the answer. Draw 1 succeeds with probability `p1` (done, 1 draw). It
+   * fails with probability `q1 = 1-p1`, then draw 2 succeeds with probability `p2` (done, 2
+   * draws) or both fail with probability `q1*q2`, after which the alternation has reset to draw 1's
+   * policy again, so the remaining expectation is exactly `E` once more:
+   * `E = p1 + 2*q1*p2 + q1*q2*(2+E)`. Solving for `E` and simplifying `p1 + 2*q1*(p2+q2) = 2 - p1`
+   * gives `E = (2 - p1) / (1 - q1*q2) = (2 - p1) / (p1 + p2 - p1*p2)`. Sanity check: if `p1 = p2 = p`
+   * this collapses to the familiar geometric-distribution mean `1/p`.
+   */
+  function expectedAlternating(p1, p2) {
+    const denom = p1 + p2 - p1 * p2;
+    return denom > 0 ? (2 - p1) / denom : null;
+  }
+
+  /** `sig` is a parsed `run_<id>/significance.json` ({totalTicks, learnedNumLeaves, buckets}). Restricted to mutants that kill at least one tick in this run. Returns Map<mutantId, {ticks, N, L, ek, eEqual, eWeight, eAlternating}>. */
+  function computeSignificanceRows(sig) {
+    const buckets = sig.buckets;
+    const N = sig.totalTicks;
+    const L = sig.learnedNumLeaves;
     const leafWeights = computeLeafWeights(buckets);
     const mutantIds = new Set();
     buckets.forEach((b) => Object.keys(b.mutantKillingAmount).forEach((k) => mutantIds.add(Number(k))));
@@ -673,125 +827,129 @@
       const sumPm = buckets.reduce((s, b) => s + probKillValue(b, mid), 0);
       const sumPWm = buckets.reduce((s, b) => s + probKillValue(b, mid) * leafWeights.get(b.leafId).w, 0);
       const ticks = buckets.reduce((s, b) => s + tickKillValue(b, mid), 0);
+      const pEqualPerDraw = L > 0 ? sumPm / L : 0; // = 1 / eEqual
+      const pWeightedPerDraw = sumPWm; // = 1 / eWeight
       rows.set(mid, {
         ticks, N, L,
         ek: ticks > 0 ? N / ticks : null,
         eEqual: sumPm > 0 ? L / sumPm : null,
         eWeight: sumPWm > 0 ? 1 / sumPWm : null,
+        eAlternating: expectedAlternating(pEqualPerDraw, pWeightedPerDraw),
       });
     });
     return rows;
   }
 
+  const SIGNIFICANCE_ESTIMATORS = [
+    { key: "ek", label: "E(k/N)" },
+    { key: "eEqual", label: "E(equal)" },
+    { key: "eWeight", label: "E(weight)" },
+    { key: "eAlternating", label: "E(alternating)" },
+  ];
+
   function renderComparisonSection() {
     const card = document.getElementById("comparisonCard");
-    if (!dtData) { card.style.display = "none"; return; }
+    const ds = DATASETS.find((d) => d.significancePathForRun);
+    if (!ds || !ds.available || !ds.significance) { card.style.display = "none"; return; }
     card.style.display = "";
 
-    const sel = document.getElementById("dtRunSelect");
-    if (sel.options.length !== dtData.decisionTreeRunIds.length) {
-      sel.innerHTML = "";
-      dtData.decisionTreeRunIds.forEach((id) => {
-        const opt = document.createElement("option");
-        opt.value = String(id);
-        const info = dtData.runsById[id].runInfo;
-        opt.textContent = "Run " + id + " (leaves: " + fmtNum(info.learnedNumLeaves) + ")";
-        sel.appendChild(opt);
-      });
-      sel.onchange = () => { currentRunId = sel.value; renderComparisonSection(); };
-      currentRunId = String(dtData.decisionTreeRunIds[0]);
-    }
-    sel.value = currentRunId;
-
-    const run = dtData.runsById[currentRunId];
-    const sig = computeSignificance(run);
+    const sig = computeSignificanceRows(ds.significance);
     document.getElementById("dtStatusNote").textContent =
-      sig.size + " mutants scored in this run's tree (" + fmtNum(run.runInfo.learnedNumLeaves) + " leaves).";
+      "Run " + ds.selectedRunId + " — " + sig.size + " mutants scored (" +
+      fmtNum(ds.significance.learnedNumLeaves) + " leaves).";
 
     const container = document.getElementById("comparisonTables");
     container.innerHTML = "";
 
-    DATASETS.forEach((ds) => {
-      if (!ds.available) return;
-      const mids = visibleSortedMutantIds(ds.mutantIds).filter((mid) => sig.has(mid));
-      const section = document.createElement("div");
-      section.style.marginTop = "16px";
+    const mids = visibleSortedMutantIds(ds.mutantIds).filter((mid) => sig.has(mid));
+    if (!mids.length) {
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No overlap between visible mutants, this dataset's data, and this run's tree.";
+      container.appendChild(p);
+      return;
+    }
 
-      const h3 = document.createElement("h3");
-      h3.textContent = ds.title;
-      section.appendChild(h3);
+    const estimators = SIGNIFICANCE_ESTIMATORS;
 
-      if (!mids.length) {
-        const p = document.createElement("p");
-        p.className = "status-note";
-        p.textContent = "No overlap between visible mutants, this dataset's data, and this run's tree.";
-        section.appendChild(p);
-        container.appendChild(section);
-        return;
-      }
+    const table = document.createElement("table");
+    table.className = "comparison-table";
+    const thead = document.createElement("thead");
 
-      const estimators = [
-        { key: "ek", label: "E(k/N)" },
-        { key: "eEqual", label: "E(equal)" },
-        { key: "eWeight", label: "E(weight)" },
-      ];
-
-      const table = document.createElement("table");
-      const thead = document.createElement("thead");
-      const headTr = document.createElement("tr");
-      headTr.appendChild(el("th", "Mutant"));
-      estimators.forEach((est) => {
-        const stratKey = ds.expectedMap[est.key];
-        const stratLabel = stratKey ? (ds.strategies.find((s) => s.key === stratKey) || {}).label : null;
-        headTr.appendChild(el("th num group-sep", est.label));
-        headTr.appendChild(el("th num", stratLabel ? "Actual mean (" + stratLabel + ")" : "Actual mean"));
-        headTr.appendChild(el("th num", "Actual ÷ Expected"));
-      });
-      thead.appendChild(headTr);
-      table.appendChild(thead);
-
-      const tbody = document.createElement("tbody");
-      const csvRows = [["Mutant"].concat(estimators.flatMap((est) => [est.label, "Actual mean", "Actual/Expected"]))];
-      mids.forEach((mid) => {
-        const tr = document.createElement("tr");
-        tr.appendChild(el("td", "Mutant " + mid));
-        const csvRow = [mid];
-        estimators.forEach((est) => {
-          const expected = sig.get(mid)[est.key];
-          const stratKey = ds.expectedMap[est.key];
-          const actualStats = stratKey ? (ds.data[mid] || {})[stratKey] : null;
-          const actual = actualStats ? actualStats.mean : null;
-          const ratio = actual !== null && expected !== null && expected !== 0 ? actual / expected : null;
-          tr.appendChild(el("td num group-sep", fmtExpected(expected)));
-          tr.appendChild(el("td num", fmtFloat(actual, 1)));
-          const ratioTd = el("td num " + ratioClass(ratio), fmtRatio(ratio));
-          tr.appendChild(ratioTd);
-          csvRow.push(expected, actual, ratio);
-        });
-        tbody.appendChild(tr);
-        csvRows.push(csvRow);
-      });
-      table.appendChild(tbody);
-
-      const scroll = document.createElement("div");
-      scroll.className = "table-scroll";
-      scroll.appendChild(table);
-      section.appendChild(scroll);
-
-      const btnRow = document.createElement("div");
-      btnRow.className = "controls-row";
-      btnRow.style.marginTop = "8px";
-      const spacer = document.createElement("span"); spacer.className = "spacer";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = "Download CSV";
-      btn.onclick = () => downloadCsv("expected_vs_actual_" + ds.id + ".csv", csvRows);
-      btnRow.appendChild(spacer);
-      btnRow.appendChild(btn);
-      section.appendChild(btnRow);
-
-      container.appendChild(section);
+    const groupTr = document.createElement("tr");
+    const mutantTh = el("th", "Mutant");
+    mutantTh.rowSpan = 2;
+    groupTr.appendChild(mutantTh);
+    estimators.forEach((est) => {
+      const th = el("th group-sep group-header", est.label);
+      th.colSpan = 3;
+      groupTr.appendChild(th);
     });
+    thead.appendChild(groupTr);
+
+    const subTr = document.createElement("tr");
+    estimators.forEach((est) => {
+      const stratKey = ds.expectedMap[est.key];
+      const stratLabel = stratKey ? (ds.strategies.find((s) => s.key === stratKey) || {}).label : null;
+      subTr.appendChild(el("th num group-sep", "Expected"));
+      const actTh = el("th num", "Actual");
+      if (stratLabel) actTh.title = "Actual mean draws-to-kill — strategy: " + stratLabel;
+      subTr.appendChild(actTh);
+      subTr.appendChild(el("th num", "Ratio"));
+    });
+    thead.appendChild(subTr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const csvRows = [
+      ["Mutant"].concat(
+          estimators.flatMap((est) => {
+            const stratKey = ds.expectedMap[est.key];
+            const stratLabel = stratKey ? (ds.strategies.find((s) => s.key === stratKey) || {}).label : null;
+            return [
+              est.label + " expected",
+              est.label + " actual" + (stratLabel ? " (" + stratLabel + ")" : ""),
+              est.label + " actual/expected",
+            ];
+          })),
+    ];
+    mids.forEach((mid) => {
+      const tr = document.createElement("tr");
+      tr.appendChild(el("td", "Mutant " + mid));
+      const csvRow = [mid];
+      estimators.forEach((est) => {
+        const expected = sig.get(mid)[est.key];
+        const stratKey = ds.expectedMap[est.key];
+        const actualStats = stratKey ? (ds.data[mid] || {})[stratKey] : null;
+        const actual = actualStats ? actualStats.mean : null;
+        const ratio = actual !== null && expected !== null && expected !== 0 ? actual / expected : null;
+        tr.appendChild(el("td num group-sep", fmtExpected(expected)));
+        tr.appendChild(el("td num", fmtFloat(actual, 1)));
+        const ratioTd = el("td num " + ratioClass(ratio), fmtRatio(ratio));
+        tr.appendChild(ratioTd);
+        csvRow.push(expected, actual, ratio);
+      });
+      tbody.appendChild(tr);
+      csvRows.push(csvRow);
+    });
+    table.appendChild(tbody);
+
+    const scroll = document.createElement("div");
+    scroll.className = "table-scroll";
+    scroll.appendChild(table);
+    container.appendChild(scroll);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "controls-row";
+    btnRow.style.marginTop = "8px";
+    const spacer = document.createElement("span"); spacer.className = "spacer";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Download CSV";
+    btn.onclick = () => downloadCsv("expected_vs_actual_run_" + ds.selectedRunId + ".csv", csvRows);
+    btnRow.appendChild(spacer);
+    btnRow.appendChild(btn);
+    container.appendChild(btnRow);
   }
 
   /** `tagAndClass` is "<tagName> [classNames...]", e.g. "td num group-sep". */
@@ -804,6 +962,28 @@
   }
 
   // -------------------------------------------------------------- charts
+
+  /** Builds one [drawBoxplot] group per mutant, one box per strategy, colored by strategy index (fixed across mutants/runs). */
+  function buildCombinedGroups(dsData, strategies, mids) {
+    return mids.map((mid) => ({
+      label: "Mutant " + mid,
+      boxes: strategies.map((s, i) => ({
+        label: s.label,
+        color: SERIES_COLORS[i % SERIES_COLORS.length],
+        stats: (dsData[mid] || {})[s.key] || null,
+      })),
+    }));
+  }
+
+  /** Largest `.max` across every strategy of every given mutant, or 1 if none have data (keeps the y-axis sane on an empty chart). */
+  function maxStat(dsData, strategies, mids) {
+    let max = 1;
+    mids.forEach((mid) => strategies.forEach((s) => {
+      const st = (dsData[mid] || {})[s.key];
+      if (st) max = Math.max(max, st.max);
+    }));
+    return max;
+  }
 
   function drawBoxplot(canvas, groups, opts) {
     opts = opts || {};
@@ -1089,10 +1269,39 @@
     note.innerHTML = ds.note;
     card.appendChild(note);
 
+    if (ds.runsDir && ds.availableRuns && ds.availableRuns.length) {
+      const runRow = document.createElement("div");
+      runRow.className = "controls-row";
+      const label = document.createElement("label");
+      label.textContent = "Run";
+      label.setAttribute("for", "runSelect-" + ds.id);
+      const select = document.createElement("select");
+      select.id = "runSelect-" + ds.id;
+      ds.availableRuns.forEach((runId) => {
+        const opt = document.createElement("option");
+        opt.value = String(runId);
+        opt.textContent = "Run " + runId;
+        if (runId === ds.selectedRunId) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener("change", () => {
+        ds.selectedRunId = parseInt(select.value, 10);
+        ds.dir = ds.dirForRun(ds.selectedRunId);
+        select.disabled = true;
+        Promise.all([loadDataset(ds), loadSignificance(ds)]).then(() => {
+          renderDatasetSections();
+          renderComparisonSection();
+        });
+      });
+      runRow.appendChild(label);
+      runRow.appendChild(select);
+      card.appendChild(runRow);
+    }
+
     if (!ds.available) {
       const p = document.createElement("p");
       p.className = "status-note warn";
-      p.textContent = "Couldn't load this dataset" + (ds.error ? " (" + ds.error + ")" : "") + ". Folder: " + ds.dir;
+      p.textContent = "Couldn't load this dataset" + (ds.error ? " (" + ds.error + ")" : "") + ". Folder: " + (ds.dir || ds.runsDir);
       card.appendChild(p);
       return card;
     }
@@ -1131,20 +1340,9 @@
     combinedWrap.appendChild(combinedInner);
     card.appendChild(combinedWrap);
 
-    let globalMax = 1;
-    mids.forEach((mid) => ds.strategies.forEach((s) => {
-      const st = (ds.data[mid] || {})[s.key];
-      if (st) globalMax = Math.max(globalMax, st.max);
-    }));
+    const globalMax = maxStat(ds.data, ds.strategies, mids);
 
-    const groups = mids.map((mid) => ({
-      label: "Mutant " + mid,
-      boxes: ds.strategies.map((s, i) => ({
-        label: s.label,
-        color: SERIES_COLORS[i % SERIES_COLORS.length],
-        stats: (ds.data[mid] || {})[s.key] || null,
-      })),
-    }));
+    const groups = buildCombinedGroups(ds.data, ds.strategies, mids);
     requestAnimationFrame(() => {
       drawBoxplot(combinedCanvas, groups, { yMax: globalMax, height: 320 });
       wireTooltip(combinedCanvas, ds.unit);
@@ -1181,14 +1379,7 @@
       wrap.appendChild(inner);
       mcard.appendChild(wrap);
 
-      const group = [{
-        label: "Mutant " + mid,
-        boxes: ds.strategies.map((s, i) => ({
-          label: s.label,
-          color: SERIES_COLORS[i % SERIES_COLORS.length],
-          stats: (ds.data[mid] || {})[s.key] || null,
-        })),
-      }];
+      const group = buildCombinedGroups(ds.data, ds.strategies, [mid]);
       requestAnimationFrame(() => {
         drawBoxplot(canvas, group, { height: 220, groupWidth: Math.max(220, ds.strategies.length * 70), minWidth: 260 });
         wireTooltip(canvas, ds.unit);
@@ -1221,8 +1412,429 @@
     return card;
   }
 
+  // -------------------------------------------------------------- tabs
+
+  function wireTabs() {
+    const tabs = [
+      { btn: "tabOverviewBtn", panel: "tabPanelOverview" },
+      { btn: "tabCompareBtn", panel: "tabPanelCompare" },
+      { btn: "tabAllRunsBtn", panel: "tabPanelAllRuns" },
+    ];
+    tabs.forEach(({ btn }) => {
+      document.getElementById(btn).addEventListener("click", () => {
+        tabs.forEach(({ btn: otherBtn, panel: otherPanel }) => {
+          document.getElementById(otherBtn).classList.toggle("active", otherBtn === btn);
+          document.getElementById(otherPanel).classList.toggle("hidden", otherBtn !== btn);
+        });
+      });
+    });
+  }
+
+  // --------------------------------------------------------- compare runs
+
+  let compareRunA = null;
+  let compareRunB = null;
+  let compareDataA = null;
+  let compareDataB = null;
+
+  /** The first (today, only) dataset whose output is split by decision tree run. */
+  function runScopedDataset() {
+    return DATASETS.find((d) => d.runsDir);
+  }
+
+  function refreshCompareTabIfLoaded() {
+    const ds = runScopedDataset();
+    if (ds && compareDataA && compareDataB) renderCompareTab(ds);
+  }
+
+  function initCompareTab() {
+    const ds = runScopedDataset();
+    const selA = document.getElementById("compareRunASelect");
+    const selB = document.getElementById("compareRunBSelect");
+    const status = document.getElementById("compareStatusNote");
+    const content = document.getElementById("compareContent");
+
+    if (!ds || !ds.availableRuns || !ds.availableRuns.length) {
+      selA.innerHTML = "";
+      selB.innerHTML = "";
+      status.textContent = "";
+      content.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No run-scoped dataset available (no run_<id>/ folders found).";
+      content.appendChild(p);
+      return;
+    }
+
+    const runs = ds.availableRuns;
+    const fillSelect = (select, selected) => {
+      select.innerHTML = "";
+      runs.forEach((runId) => {
+        const opt = document.createElement("option");
+        opt.value = String(runId);
+        opt.textContent = "Run " + runId;
+        if (runId === selected) opt.selected = true;
+        select.appendChild(opt);
+      });
+    };
+
+    if (compareRunA === null || !runs.includes(compareRunA)) {
+      compareRunA = runs.length > 1 ? runs[runs.length - 2] : runs[runs.length - 1];
+    }
+    if (compareRunB === null || !runs.includes(compareRunB)) {
+      compareRunB = runs[runs.length - 1];
+    }
+
+    fillSelect(selA, compareRunA);
+    fillSelect(selB, compareRunB);
+
+    selA.onchange = () => { compareRunA = parseInt(selA.value, 10); loadCompareRuns(); };
+    selB.onchange = () => { compareRunB = parseInt(selB.value, 10); loadCompareRuns(); };
+
+    loadCompareRuns();
+  }
+
+  function loadCompareRuns() {
+    const ds = runScopedDataset();
+    if (!ds) return;
+    const status = document.getElementById("compareStatusNote");
+    status.textContent = "Loading…";
+    const dirA = ds.dirForRun(compareRunA);
+    const dirB = ds.dirForRun(compareRunB);
+    Promise.all([loadTimeToKillData(dirA, ds.strategies), loadTimeToKillData(dirB, ds.strategies)]).then(
+      ([a, b]) => {
+        compareDataA = a;
+        compareDataB = b;
+        status.textContent = "";
+        renderCompareTab(ds);
+      }
+    );
+  }
+
+  function renderCompareTab(ds) {
+    const container = document.getElementById("compareContent");
+    container.innerHTML = "";
+
+    if (!compareDataA.available || !compareDataB.available) {
+      const p = document.createElement("p");
+      p.className = "status-note warn";
+      p.textContent =
+        "Couldn't load one or both runs" +
+        (compareDataA.error ? " (Run " + compareRunA + ": " + compareDataA.error + ")" : "") +
+        (compareDataB.error ? " (Run " + compareRunB + ": " + compareDataB.error + ")" : "");
+      container.appendChild(p);
+      return;
+    }
+
+    const idSet = new Set();
+    compareDataA.mutantIds.forEach((id) => idSet.add(id));
+    compareDataB.mutantIds.forEach((id) => idSet.add(id));
+    const mids = visibleSortedMutantIds(Array.from(idSet));
+
+    if (!mids.length) {
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No mutants toggled on, or neither run has data for the visible mutants.";
+      container.appendChild(p);
+      return;
+    }
+
+    // comparison table: mean draws-to-kill, Run A vs Run B, per strategy
+    const table = document.createElement("table");
+    table.className = "comparison-table";
+    const thead = document.createElement("thead");
+
+    const groupTr = document.createElement("tr");
+    const mutantTh = el("th", "Mutant");
+    mutantTh.rowSpan = 2;
+    groupTr.appendChild(mutantTh);
+    ds.strategies.forEach((strat) => {
+      const th = el("th group-sep group-header", strat.label);
+      th.colSpan = 3;
+      groupTr.appendChild(th);
+    });
+    thead.appendChild(groupTr);
+
+    const subTr = document.createElement("tr");
+    ds.strategies.forEach(() => {
+      subTr.appendChild(el("th num group-sep", "Run " + compareRunA));
+      subTr.appendChild(el("th num", "Run " + compareRunB));
+      subTr.appendChild(el("th num", "Ratio"));
+    });
+    thead.appendChild(subTr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const csvRows = [
+      ["Mutant"].concat(
+        ds.strategies.flatMap((s) => [
+          s.label + " Run " + compareRunA + " mean",
+          s.label + " Run " + compareRunB + " mean",
+          s.label + " ratio (B/A)",
+        ])
+      ),
+    ];
+    mids.forEach((mid) => {
+      const tr = document.createElement("tr");
+      tr.appendChild(el("td", "Mutant " + mid));
+      const csvRow = [mid];
+      ds.strategies.forEach((s) => {
+        const statA = (compareDataA.data[mid] || {})[s.key];
+        const statB = (compareDataB.data[mid] || {})[s.key];
+        const meanA = statA ? statA.mean : null;
+        const meanB = statB ? statB.mean : null;
+        const ratio = meanA !== null && meanB !== null && meanA !== 0 ? meanB / meanA : null;
+        tr.appendChild(el("td num group-sep", fmtFloat(meanA, 1)));
+        tr.appendChild(el("td num", fmtFloat(meanB, 1)));
+        tr.appendChild(el("td num " + ratioClass(ratio), fmtRatio(ratio)));
+        csvRow.push(meanA, meanB, ratio);
+      });
+      tbody.appendChild(tr);
+      csvRows.push(csvRow);
+    });
+    table.appendChild(tbody);
+
+    const scroll = document.createElement("div");
+    scroll.className = "table-scroll";
+    scroll.appendChild(table);
+    container.appendChild(scroll);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "controls-row";
+    btnRow.style.marginTop = "8px";
+    const spacer = document.createElement("span");
+    spacer.className = "spacer";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Download CSV";
+    btn.onclick = () => downloadCsv("compare_run_" + compareRunA + "_vs_" + compareRunB + ".csv", csvRows);
+    btnRow.appendChild(spacer);
+    btnRow.appendChild(btn);
+    container.appendChild(btnRow);
+
+    // combined box plots, side by side
+    const chartsTitle = document.createElement("h3");
+    chartsTitle.style.marginTop = "18px";
+    chartsTitle.textContent = "Combined box plots";
+    container.appendChild(chartsTitle);
+
+    const globalMax = Math.max(
+      maxStat(compareDataA.data, ds.strategies, mids),
+      maxStat(compareDataB.data, ds.strategies, mids)
+    );
+
+    const columns = document.createElement("div");
+    columns.className = "compare-columns";
+    [
+      ["Run " + compareRunA, compareDataA],
+      ["Run " + compareRunB, compareDataB],
+    ].forEach(([label, dataObj]) => {
+      const col = document.createElement("div");
+      const h3 = document.createElement("h3");
+      h3.textContent = label;
+      col.appendChild(h3);
+      const wrap = document.createElement("div");
+      wrap.className = "chart-scroll";
+      const inner = document.createElement("div");
+      inner.className = "chart-inner";
+      const canvas = document.createElement("canvas");
+      inner.appendChild(canvas);
+      wrap.appendChild(inner);
+      col.appendChild(wrap);
+      const groups = buildCombinedGroups(dataObj.data, ds.strategies, mids);
+      requestAnimationFrame(() => {
+        drawBoxplot(canvas, groups, { yMax: globalMax, height: 300 });
+        wireTooltip(canvas, ds.unit);
+      });
+      columns.appendChild(col);
+    });
+    container.appendChild(columns);
+  }
+
+  // ----------------------------------------------------------- all runs
+
+  let allRunsData = null; // [{ runId, ttk: {available, mutantIds, data}, sig: parsed significance.json | null }]
+
+  function refreshAllRunsTabIfLoaded() {
+    const ds = runScopedDataset();
+    if (ds && allRunsData) renderAllRunsTab(ds);
+  }
+
+  function initAllRunsTab() {
+    const ds = runScopedDataset();
+    const status = document.getElementById("allRunsStatusNote");
+    const content = document.getElementById("allRunsContent");
+
+    if (!ds || !ds.availableRuns || !ds.availableRuns.length) {
+      status.textContent = "";
+      content.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No run-scoped dataset available (no run_<id>/ folders found).";
+      content.appendChild(p);
+      return;
+    }
+
+    status.textContent = "Loading " + ds.availableRuns.length + " runs…";
+    Promise.all(
+      ds.availableRuns.map((runId) =>
+        Promise.all([
+          loadTimeToKillData(ds.dirForRun(runId), ds.strategies),
+          ds.significancePathForRun
+            ? readText(ds.significancePathForRun(runId)).then((text) => {
+                if (!text) return null;
+                try {
+                  return JSON.parse(text);
+                } catch (e) {
+                  return null;
+                }
+              })
+            : Promise.resolve(null),
+        ]).then(([ttk, sig]) => ({ runId, ttk, sig }))
+      )
+    ).then((perRun) => {
+      allRunsData = perRun;
+      status.textContent = perRun.length + " runs loaded.";
+      renderAllRunsTab(ds);
+    });
+  }
+
+  /**
+   * Renders a grouped mean/median/stddev table: one row per mutant, one 3-column group
+   * (Mean/Median/StdDev) per entry in `groups`. `valueFn(mid, groupKey)` returns the raw array of
+   * per-run values to summarize for that cell.
+   */
+  function buildStatsTable({ title, note, container, mids, groups, valueFn, csvName }) {
+    const h3 = document.createElement("h3");
+    h3.style.marginTop = "18px";
+    h3.textContent = title;
+    container.appendChild(h3);
+    if (note) {
+      const p = document.createElement("p");
+      p.className = "legend-note";
+      p.textContent = note;
+      container.appendChild(p);
+    }
+
+    const table = document.createElement("table");
+    table.className = "comparison-table";
+    const thead = document.createElement("thead");
+
+    const groupTr = document.createElement("tr");
+    const mutantTh = el("th", "Mutant");
+    mutantTh.rowSpan = 2;
+    groupTr.appendChild(mutantTh);
+    groups.forEach((g) => {
+      const th = el("th group-sep group-header", g.label);
+      th.colSpan = 3;
+      groupTr.appendChild(th);
+    });
+    thead.appendChild(groupTr);
+
+    const subTr = document.createElement("tr");
+    groups.forEach(() => {
+      subTr.appendChild(el("th num group-sep", "Mean"));
+      subTr.appendChild(el("th num", "Median"));
+      subTr.appendChild(el("th num", "StdDev"));
+    });
+    thead.appendChild(subTr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const csvRows = [
+      ["Mutant"].concat(groups.flatMap((g) => [g.label + " mean", g.label + " median", g.label + " stddev"])),
+    ];
+    mids.forEach((mid) => {
+      const tr = document.createElement("tr");
+      tr.appendChild(el("td", "Mutant " + mid));
+      const csvRow = [mid];
+      groups.forEach((g) => {
+        const values = valueFn(mid, g.key);
+        const mean = meanOf(values);
+        const median = medianOf(values);
+        const stddev = stddevOf(values);
+        tr.appendChild(el("td num group-sep", fmtFloat(mean, 1)));
+        tr.appendChild(el("td num", fmtFloat(median, 1)));
+        tr.appendChild(el("td num", fmtFloat(stddev, 1)));
+        csvRow.push(mean, median, stddev);
+      });
+      tbody.appendChild(tr);
+      csvRows.push(csvRow);
+    });
+    table.appendChild(tbody);
+
+    const scroll = document.createElement("div");
+    scroll.className = "table-scroll";
+    scroll.appendChild(table);
+    container.appendChild(scroll);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "controls-row";
+    btnRow.style.marginTop = "8px";
+    const spacer = document.createElement("span");
+    spacer.className = "spacer";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Download CSV";
+    btn.onclick = () => downloadCsv(csvName, csvRows);
+    btnRow.appendChild(spacer);
+    btnRow.appendChild(btn);
+    container.appendChild(btnRow);
+  }
+
+  function renderAllRunsTab(ds) {
+    const container = document.getElementById("allRunsContent");
+    container.innerHTML = "";
+
+    const idSet = new Set();
+    allRunsData.forEach(({ ttk }) => { if (ttk.available) ttk.mutantIds.forEach((id) => idSet.add(id)); });
+    const mids = visibleSortedMutantIds(Array.from(idSet));
+
+    if (!mids.length) {
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No mutants toggled on, or no run has data for the visible mutants.";
+      container.appendChild(p);
+      return;
+    }
+
+    buildStatsTable({
+      title: "Actual mean draws-to-kill — across " + allRunsData.length + " runs",
+      note: "Each cell summarizes that strategy's per-run mean draws-to-kill (already an average over repetitions) across every run — so \"Mean\" here is the mean of means.",
+      container,
+      mids,
+      groups: ds.strategies,
+      valueFn: (mid, stratKey) =>
+        allRunsData
+          .map(({ ttk }) => (ttk.available ? (ttk.data[mid] || {})[stratKey] : null))
+          .filter(Boolean)
+          .map((s) => s.mean),
+      csvName: "all_runs_actual_summary.csv",
+    });
+
+    if (ds.significancePathForRun) {
+      const perRunSignificance = allRunsData.map(({ sig }) => (sig ? computeSignificanceRows(sig) : null));
+      const anySignificance = perRunSignificance.some((rows) => rows !== null);
+      if (anySignificance) {
+        buildStatsTable({
+          title: "Expected value estimators — across " + allRunsData.length + " runs",
+          note: "Each cell summarizes that estimator's per-run value across every run with a significance.json — showing how much the theoretical prediction itself shifts as the decision tree changes from run to run.",
+          container,
+          mids,
+          groups: SIGNIFICANCE_ESTIMATORS,
+          valueFn: (mid, estKey) =>
+            perRunSignificance
+              .map((rows) => (rows && rows.has(mid) ? rows.get(mid)[estKey] : null))
+              .filter((v) => v !== null && v !== undefined && isFinite(v)),
+          csvName: "all_runs_expected_summary.csv",
+        });
+      }
+    }
+  }
+
   // ------------------------------------------------------------------ init
 
+  wireTabs();
   boot();
 })();
 </script>

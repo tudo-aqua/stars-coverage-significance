@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Box plots for tick-sampling strategies across all suite sizes.
 
-Auto-discovers size_<n>/ subdirectories and produces:
-  - Per size (full strategies):  size_<n>/draw_ticks_boxplot.[png|pdf]
-  - Per size (rare strategies):  size_<n>/draw_ticks_boxplot_rare.[png|pdf]
-  - All sizes (full strategies): draw_ticks_boxplot_all.[png|pdf]
-  - All sizes (rare strategies): draw_ticks_boxplot_all_rare.[png|pdf]
+Auto-discovers run_<id>/ subdirectories (one per decision tree run — see
+DrawTicksWithDecisionTreeGroupingPostEvaluation.basePath) and, within each, size_<n>/
+subdirectories, producing:
+  - Per size (full strategies):  run_<id>/size_<n>/draw_ticks_boxplot.[png|pdf]
+  - Per size (rare strategies):  run_<id>/size_<n>/draw_ticks_boxplot_rare.[png|pdf]
+  - All sizes (full strategies): run_<id>/draw_ticks_boxplot_all.[png|pdf]
+  - All sizes (rare strategies): run_<id>/draw_ticks_boxplot_all_rare.[png|pdf]
 
 Reads CSVs produced by DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluate() (see
 RunDrawTicksWithDecisionTreeGrouping.kt), which samples individual ticks directly rather than whole
@@ -82,7 +84,7 @@ def _boxplot_ax(
 ) -> None:
     ax.boxplot(
         data,
-        tick_labels=labels,
+        labels=labels,
         patch_artist=True,
         widths=0.5,
         medianprops=dict(color="black", linewidth=linewidth),
@@ -97,9 +99,19 @@ def _boxplot_ax(
     ax.set_ylim(-1, y_max + 1)
 
 
-def main() -> None:
-    base = Path(__file__).resolve().parent
+def _discover_runs(base: Path) -> list[tuple[int, Path]]:
+    return sorted(
+        [
+            (int(m.group(1)), d)
+            for d in base.iterdir()
+            if d.is_dir() and (m := re.fullmatch(r"run_(\d+)", d.name))
+        ],
+        key=lambda x: x[0],
+    )
 
+
+def _process_run(base: Path, run_id: int) -> None:
+    print(f"Run {run_id}:")
     size_dirs = _discover_sizes(base)
     if not size_dirs:
         print("No size_<n>/ subdirectories found.")
@@ -168,6 +180,17 @@ def main() -> None:
             fig.savefig(out.with_suffix(ext), bbox_inches="tight")
         plt.close(fig)
         print(f"Saved all-sizes boxplot to {out.with_suffix('.pdf')}")
+
+
+def main() -> None:
+    root = Path(__file__).resolve().parent
+    run_dirs = _discover_runs(root)
+    if not run_dirs:
+        print("No run_<id>/ subdirectories found — run evaluate() first.")
+        return
+
+    for run_id, run_dir in run_dirs:
+        _process_run(run_dir, run_id)
 
 
 if __name__ == "__main__":

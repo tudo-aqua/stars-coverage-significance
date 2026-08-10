@@ -22,6 +22,8 @@ import java.nio.file.Path
 import java.util.stream.Collectors
 import kotlin.io.path.writeText
 import kotlin.random.Random
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
 import tools.aqua.stars.coverage.significance.MAX_RARE_MUTANT_FAILURES
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
@@ -29,11 +31,14 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
+import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
+import tools.aqua.stars.coverage.significance.db.tables.DtMonitorFailuresCombinationView
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DecisionTreeLeafId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.NextTickPostEvaluationDatabaseEntry
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.SamplingDataTickDrawing
+import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 
 /**
  * Post-evaluation that simulates test suites by sampling individual ticks directly from
@@ -41,10 +46,10 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Samplin
  * many distinct mutants are killed, i.e. have at least one drawn tick where
  * [NextTickPostEvaluationDatabaseEntry.nextTickG0Failed] is `true`.
  *
- * Four sampling strategies are evaluated. The first three match the three estimators on the
- * significance card of `/decision_tree_comparison/index.html`'s
- * [tools.aqua.stars.coverage.significance] dashboard (see that file's
- * `buildSignificanceRows`/`computeLeafWeights` for the reference definitions these mirror):
+ * Four sampling strategies are evaluated by [evaluate]/[evaluateTimeToKill]. The first three match
+ * the three estimators [exportSignificance] computes (see that function and `computeSignificance`
+ * in `time_to_kill_comparison/index.html`, which consumes its output, for the reference definitions
+ * these mirror):
  * 1. **Uniform random** from the full tick pool — corresponds to E(k/N).
  * 2. **DC-leaf round-robin**, cycling leaf groups with equal probability regardless of leaf size —
  *    corresponds to E(equal).
@@ -64,8 +69,14 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Samplin
  */
 object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
-  private val BASE_PATH =
-      Path.of(POST_EVALUATION_BASE_DIR, "draw_ticks_with_decision_tree_grouping")
+  /**
+   * Every output of a call is scoped under its own `run_<runId>/` folder (`runId` being the
+   * decision tree run whose leaf assignments were used), so that repeated evaluations against
+   * different decision tree runs land in separate folders instead of overwriting/mixing each
+   * other's `size_<n>/` and `time_to_kill/` output.
+   */
+  private fun basePath(runId: Int): Path =
+      Path.of(POST_EVALUATION_BASE_DIR, "draw_ticks_with_decision_tree_grouping", "run_$runId")
 
   private fun buildSamplingData(
       allTicks: List<NextTickPostEvaluationDatabaseEntry>
@@ -87,18 +98,19 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   /**
    * For each suite size in [NEXT_TICK_SUITE_SIZES], measures how many distinct mutants each
    * sampling strategy kills across [REPETITIONS] repetitions, and writes one CSV per strategy/suite
-   * size to `draw_ticks_with_decision_tree_grouping/size_<suiteSize>/`.
+   * size to `draw_ticks_with_decision_tree_grouping/run_<runId>/size_<suiteSize>/`.
    */
   fun evaluate(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation.")
 
     val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    val resolvedRunId: Int =
+        fullRunId?.value
+            ?: error("  No full run (train_fraction=1.0) found - leaf strategies will be skipped.")
     if (decisionTreeRunId != null) {
-      println("  Using given decision tree run ${decisionTreeRunId.value}.")
-    } else if (fullRunId != null) {
-      println("  Using leaf assignments from full run ${fullRunId.value}.")
+      println("  Using given decision tree run $resolvedRunId.")
     } else {
-      error("  No full run (train_fraction=1.0) found - leaf strategies will be skipped.")
+      println("  Using leaf assignments from full run $resolvedRunId.")
     }
 
     println("  Loading tick data into memory (this may take several minutes)...")
@@ -117,26 +129,32 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
       println("    Evaluating uniform-random tick sampling.")
       println("      Tick Pool: ${data.allTicks.size} entries.")
-      save(evaluateRandomDrawTicks(data.allTicks, suiteSize), "random_tick", suiteSize)
+      save(
+          evaluateRandomDrawTicks(data.allTicks, suiteSize),
+          "random_tick",
+          suiteSize,
+          resolvedRunId)
 
       if (leafGroups.isNotEmpty()) {
         println("    Evaluating DC-leaf round-robin tick sampling.")
         leafGroups.forEachIndexed { index, ticks ->
           println("      DC Leaf Group '$index': ${ticks.size} entries.")
         }
-        save(evaluateRoundRobinTicks(leafGroups, suiteSize), "leaf_tick", suiteSize)
+        save(evaluateRoundRobinTicks(leafGroups, suiteSize), "leaf_tick", suiteSize, resolvedRunId)
 
         println("    Evaluating DC-leaf weighted tick sampling.")
         save(
             evaluateWeightedDrawTicks(data.dtLeafGroups, data.leafWeights, suiteSize),
             "leaf_tick_weighted",
-            suiteSize)
+            suiteSize,
+            resolvedRunId)
 
         println("    Evaluating DC-leaf alternating (equal/weighted) tick sampling.")
         save(
             evaluateAlternatingDrawTicks(data.dtLeafGroups, data.leafWeights, suiteSize),
             "leaf_tick_alternating",
-            suiteSize)
+            suiteSize,
+            resolvedRunId)
       }
 
       if (rareMutantIds.isNotEmpty()) {
@@ -144,21 +162,24 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
         save(
             evaluateRandomDrawTicks(data.allTicks, suiteSize, rareMutantIds),
             "random_tick_rare",
-            suiteSize)
+            suiteSize,
+            resolvedRunId)
 
         if (leafGroups.isNotEmpty()) {
           println("    Evaluating DC-leaf round-robin tick sampling (rare mutants).")
           save(
               evaluateRoundRobinTicks(leafGroups, suiteSize, rareMutantIds),
               "leaf_tick_rare",
-              suiteSize)
+              suiteSize,
+              resolvedRunId)
 
           println("    Evaluating DC-leaf weighted tick sampling (rare mutants).")
           save(
               evaluateWeightedDrawTicks(
                   data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
               "leaf_tick_weighted_rare",
-              suiteSize)
+              suiteSize,
+              resolvedRunId)
 
           println(
               "    Evaluating DC-leaf alternating (equal/weighted) tick sampling (rare mutants).")
@@ -166,7 +187,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               evaluateAlternatingDrawTicks(
                   data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
               "leaf_tick_alternating_rare",
-              suiteSize)
+              suiteSize,
+              resolvedRunId)
         }
       }
     }
@@ -179,18 +201,19 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * strategy draws (without replacement) before that mutant is first killed. Each of the
    * [REPETITIONS] repetitions produces one draw count; -1 is recorded if the entire pool was
    * exhausted without a kill. Results are written to
-   * `draw_ticks_with_decision_tree_grouping/time_to_kill/mutant_<id>/ttk_<strategy>.csv`.
+   * `draw_ticks_with_decision_tree_grouping/run_<runId>/time_to_kill/mutant_<id>/ttk_<strategy>.csv`.
    */
   fun evaluateTimeToKill(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
 
     val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    val resolvedRunId: Int =
+        fullRunId?.value
+            ?: error("  No full run (train_fraction=1.0) found - leaf strategies will be skipped.")
     if (decisionTreeRunId != null) {
-      println("  Using given decision tree run ${decisionTreeRunId.value}.")
-    } else if (fullRunId != null) {
-      println("  Using leaf assignments from full run ${fullRunId.value}.")
+      println("  Using given decision tree run $resolvedRunId.")
     } else {
-      error("  No full run (train_fraction=1.0) found - leaf strategies will be skipped.")
+      println("  Using leaf assignments from full run $resolvedRunId.")
     }
 
     println("  Loading tick data into memory (this may take several minutes)...")
@@ -207,30 +230,132 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     for (mutantId in accidentMutantIds) {
       println("    Evaluating random time-to-kill for mutant $mutantId.")
       saveTimeToKill(
-          evaluateTimeToKillRandomTicks(data.allTicks, mutantId), "random_tick", mutantId)
+          evaluateTimeToKillRandomTicks(data.allTicks, mutantId),
+          "random_tick",
+          mutantId,
+          resolvedRunId)
 
       if (leafGroups.isNotEmpty()) {
         println("    Evaluating DC-leaf round-robin time-to-kill for mutant $mutantId.")
         saveTimeToKill(
-            evaluateTimeToKillRoundRobinTicks(leafGroups, mutantId), "leaf_tick", mutantId)
+            evaluateTimeToKillRoundRobinTicks(leafGroups, mutantId),
+            "leaf_tick",
+            mutantId,
+            resolvedRunId)
 
         println("    Evaluating DC-leaf weighted time-to-kill for mutant $mutantId.")
         saveTimeToKill(
             evaluateTimeToKillWeightedTicks(data.dtLeafGroups, data.leafWeights, mutantId),
             "leaf_tick_weighted",
-            mutantId)
+            mutantId,
+            resolvedRunId)
 
         println(
             "    Evaluating DC-leaf alternating (equal/weighted) time-to-kill for mutant $mutantId.")
         saveTimeToKill(
             evaluateTimeToKillAlternatingTicks(data.dtLeafGroups, data.leafWeights, mutantId),
             "leaf_tick_alternating",
-            mutantId)
+            mutantId,
+            resolvedRunId)
       }
     }
 
     println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
   }
+
+  /**
+   * Exports the per-leaf bucket statistics needed to compute the E(k/N)/E(equal)/E(weight)/
+   * E(alternating) significance estimators for [decisionTreeRunId] against the [evaluate]/
+   * [evaluateTimeToKill] strategies above - the database-wide total tick count (N), the run's
+   * learned leaf count (L), and per-leaf `{totalTicks, failingTicks, mutantKillingAmount}` (from
+   * which every per-mutant p_lm, p_l and w_l used by the estimators is derived). Both aggregates
+   * are computed entirely in SQL via [DtMonitorFailuresCombinationView], so no per-tick rows are
+   * loaded into the JVM - unlike [evaluate]/[evaluateTimeToKill], this runs in seconds regardless
+   * of table size.
+   *
+   * Written to `draw_ticks_with_decision_tree_grouping/run_<runId>/significance.json`, alongside
+   * that run's `size_<n>/` and `time_to_kill/` output, so a single run folder is self-sufficient
+   * for the full expected-vs-actual comparison. This supersedes the former standalone
+   * `DecisionTreeComparisonPostEvaluation`/`decision_tree_comparison.json` export, which computed
+   * the same bucket data but kept it in a separate, run-id-unscoped file.
+   */
+  fun exportSignificance(decisionTreeRunId: EntityID<Int>? = null) {
+    println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation (significance export).")
+
+    val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
+    val resolvedRunId: Int =
+        fullRunId?.value
+            ?: error("  No full run (train_fraction=1.0) found - cannot export significance data.")
+    println("  Using decision tree run $resolvedRunId.")
+
+    println("  Counting total ticks...")
+    val totalTicks = MetricFailedMonitorsRepository.count()
+    println("    Found $totalTicks total ticks.")
+
+    val learnedNumLeaves = DecisionTreeRunsRepository.getById(resolvedRunId)?.learnedNumLeaves
+    println("  Learned leaves for this run: ${learnedNumLeaves ?: "unknown"}.")
+
+    println("  Aggregating per-leaf bucket totals in SQL...")
+    val leafTotals = DtMonitorFailuresCombinationView.getLeafBucketTotalsForRunId(resolvedRunId)
+    val mutantKillingAmountByLeafId =
+        DtMonitorFailuresCombinationView.getLeafMutantFailureCountsForRunId(resolvedRunId)
+            .groupBy { it.leafNodeId }
+            .mapValues { (_, counts) -> counts.associate { it.mutantId to it.failingTicks } }
+    val buckets =
+        leafTotals.map { totals ->
+          SignificanceLeafBucket(
+              leafId = totals.leafNodeId,
+              totalTicks = totals.totalTicks,
+              failingTicks = totals.failingTicks,
+              mutantKillingAmount = mutantKillingAmountByLeafId[totals.leafNodeId].orEmpty())
+        }
+    println("    Found ${buckets.size} leaves.")
+
+    val export =
+        SignificanceExport(
+            runId = resolvedRunId,
+            totalTicks = totalTicks,
+            learnedNumLeaves = learnedNumLeaves,
+            buckets = buckets)
+    val path = basePath(resolvedRunId).resolve("significance.json")
+    Files.createDirectories(path.parent)
+    path.writeText(jsonConfiguration.encodeToString(export))
+    println("    JSON written to: $path")
+
+    println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (significance export).")
+  }
+
+  /**
+   * @property leafId Leaf node index.
+   * @property totalTicks Total number of ticks assigned to this leaf.
+   * @property failingTicks Number of ticks in this leaf where the next tick's G0 (Accidents)
+   *   monitor fires.
+   * @property mutantKillingAmount Per-mutant count of failing ticks within this leaf; only mutants
+   *   that killed at least one tick in the leaf are present.
+   */
+  @Serializable
+  private data class SignificanceLeafBucket(
+      val leafId: DecisionTreeLeafId,
+      val totalTicks: Long,
+      val failingTicks: Long,
+      val mutantKillingAmount: Map<MutantId, Long>,
+  )
+
+  /**
+   * @property runId Decision tree run these buckets were computed against.
+   * @property totalTicks N: total number of ticks recorded in `metric_failed_monitors`,
+   *   database-wide (not scoped to [runId]).
+   * @property learnedNumLeaves L: the actual number of leaves LightGBM produced for this run (not
+   *   the Optuna-tuned target), or `null` if the run has no recorded value.
+   * @property buckets Per-leaf bucket information for [runId].
+   */
+  @Serializable
+  private data class SignificanceExport(
+      val runId: Int,
+      val totalTicks: Long,
+      val learnedNumLeaves: Int?,
+      val buckets: List<SignificanceLeafBucket>,
+  )
 
   private fun buildRareMutantIds(
       allTicks: List<NextTickPostEvaluationDatabaseEntry>
@@ -609,14 +734,15 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   ): Set<MutantId> = mapNotNull { it.killingMutantOrNull(rareMutantIds) }.toSet()
 
   /**
-   * Saves [results] as a single-column CSV under `[BASE_PATH]/size_<suiteSize>/`.
+   * Saves [results] as a single-column CSV under `[basePath]/run_<runId>/size_<suiteSize>/`.
    *
    * @param results One killed-mutant count per repetition.
    * @param identifier Sampling strategy label used in the file name (e.g. `"random_tick"`).
    * @param suiteSize Suite size used for this evaluation run, determines the subfolder.
+   * @param runId Decision tree run whose leaf assignments were used, determines the parent folder.
    */
-  private fun save(results: List<Int>, identifier: String, suiteSize: Int) {
-    val path = BASE_PATH.resolve("size_$suiteSize/draw_ticks_${identifier}.csv")
+  private fun save(results: List<Int>, identifier: String, suiteSize: Int, runId: Int) {
+    val path = basePath(runId).resolve("size_$suiteSize/draw_ticks_${identifier}.csv")
     Files.createDirectories(path.parent)
     path.writeText(
         results.joinToString(prefix = "Mutants killed ${identifier}\n", separator = "\n") {
@@ -625,8 +751,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     println("    CSV written to: $path")
   }
 
-  private fun saveTimeToKill(results: List<Int>, strategy: String, mutantId: Int) {
-    val path = BASE_PATH.resolve("time_to_kill/mutant_${mutantId}/ttk_${strategy}.csv")
+  private fun saveTimeToKill(results: List<Int>, strategy: String, mutantId: Int, runId: Int) {
+    val path = basePath(runId).resolve("time_to_kill/mutant_${mutantId}/ttk_${strategy}.csv")
     Files.createDirectories(path.parent)
     path.writeText(
         results.joinToString(prefix = "draws_to_kill\n", separator = "\n") { it.toString() })

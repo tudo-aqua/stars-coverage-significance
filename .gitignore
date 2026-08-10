@@ -25,10 +25,6 @@
 !/sumoData/fcdReplay/fcdReplay.sumocfg
 !/sumoData/gridHighway.net.xml
 
-!/postEvaluation/decision_tree_comparison/
-/postEvaluation/decision_tree_comparison/*
-!/postEvaluation/decision_tree_comparison/index.html
-
 !/postEvaluation/g0_mutant_coverage_replay/
 /postEvaluation/g0_mutant_coverage_replay/*
 !/postEvaluation/g0_mutant_coverage_replay/index.html

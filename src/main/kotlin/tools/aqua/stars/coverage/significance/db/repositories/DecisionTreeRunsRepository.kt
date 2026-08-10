@@ -73,12 +73,38 @@ object DecisionTreeRunsRepository {
   }
 
   /**
+   * Returns the ID of the most recent decision tree run overall, regardless of
+   * [DecisionTreeRunsTable.trainFraction], or `null` if no run has been recorded yet.
+   */
+  fun getLatestRunId(): EntityID<Int>? = transaction {
+    DecisionTreeRunsTable.selectAll()
+        .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.get(DecisionTreeRunsTable.id)
+  }
+
+  /**
    * Returns the ID of the most recent decision tree run where the full dataset was used for
    * training (`train_fraction = 1.0`), or `null` if no such run exists.
    */
   fun getLatestFullRunId(): EntityID<Int>? = transaction {
     DecisionTreeRunsTable.selectAll()
         .where { DecisionTreeRunsTable.trainFraction eq 1.0 }
+        .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.get(DecisionTreeRunsTable.id)
+  }
+
+  /**
+   * Returns the ID of the most recent decision tree run where less than the full dataset was used
+   * for training (`train_fraction != 1.0`, i.e. a train/test split run), or `null` if no such run
+   * exists.
+   */
+  fun getLatestSplitRunId(): EntityID<Int>? = transaction {
+    DecisionTreeRunsTable.selectAll()
+        .where { DecisionTreeRunsTable.trainFraction neq 1.0 }
         .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
         .limit(1)
         .firstOrNull()

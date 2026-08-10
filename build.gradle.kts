@@ -210,23 +210,10 @@ val runDrawTicksWithDecisionTreeGrouping by
     tasks.registering(JavaExec::class) {
       group = "application"
       description =
-          "Sample individual ticks (uniform-random, DC-leaf round-robin, DC-leaf weighted) and measure distinct mutants killed per suite size, plus time-to-kill per mutant."
+          "Sample individual ticks (uniform-random, DC-leaf round-robin, DC-leaf weighted, DC-leaf alternating) and measure distinct mutants killed per suite size, plus time-to-kill per mutant, plus the per-leaf significance data needed for the expected-vs-actual comparison - all scoped under run_<runId>/."
       dependsOn(tasks.run.get().taskDependencies)
 
       mainClass.set("tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGroupingKt")
-      classpath = sourceSets.main.get().runtimeClasspath
-
-      jvmArgs = listOf("-Xmx300g")
-    }
-
-val runDecisionTreeComparison by
-    tasks.registering(JavaExec::class) {
-      group = "application"
-      description =
-          "Compare decision tree runs by exporting per-run metadata and leaf bucket information to JSON."
-      dependsOn(tasks.run.get().taskDependencies)
-
-      mainClass.set("tools.aqua.stars.coverage.significance.RunDecisionTreeComparisonKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
       jvmArgs = listOf("-Xmx300g")
