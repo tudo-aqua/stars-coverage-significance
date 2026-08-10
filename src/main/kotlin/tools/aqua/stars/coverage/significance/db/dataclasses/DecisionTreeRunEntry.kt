@@ -55,6 +55,8 @@ import kotlinx.serialization.Serializable
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
  * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
  *   [trainFraction] is `1.0` (no test split).
+ * @property usedMutants Every mutant ID that went into this run (train ∪ test), null if not
+ *   recorded (e.g. runs created before this column existed).
  */
 data class DecisionTreeRunEntry(
     val id: Int? = null,
@@ -85,6 +87,7 @@ data class DecisionTreeRunEntry(
     val learnedMaxDepth: Int? = null,
     val trainAccuracy: Double? = null,
     val testAccuracy: Double? = null,
+    val usedMutants: List<Int>? = null,
 ) {
   /**
    * Converts a [DecisionTreeRunEntry] to its serializable [DecisionTreeRunMetadata].
@@ -121,6 +124,7 @@ data class DecisionTreeRunEntry(
           learnedMaxDepth = learnedMaxDepth,
           trainAccuracy = trainAccuracy,
           testAccuracy = testAccuracy,
+          usedMutants = usedMutants,
       )
 }
 
@@ -158,6 +162,8 @@ data class DecisionTreeRunEntry(
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
  * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
  *   [trainFraction] is `1.0` (no test split).
+ * @property usedMutants Every mutant ID that went into this run (train ∪ test), null if not
+ *   recorded (e.g. runs created before this column existed).
  */
 @Serializable
 data class DecisionTreeRunMetadata(
@@ -188,4 +194,5 @@ data class DecisionTreeRunMetadata(
     val learnedMaxDepth: Int?,
     val trainAccuracy: Double?,
     val testAccuracy: Double?,
+    val usedMutants: List<Int>?,
 )

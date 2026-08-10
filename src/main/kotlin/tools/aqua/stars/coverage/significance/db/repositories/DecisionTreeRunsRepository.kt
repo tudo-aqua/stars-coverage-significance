@@ -168,5 +168,6 @@ object DecisionTreeRunsRepository {
           learnedMaxDepth = this[DecisionTreeRunsTable.learnedMaxDepth],
           trainAccuracy = this[DecisionTreeRunsTable.trainAccuracy],
           testAccuracy = this[DecisionTreeRunsTable.testAccuracy],
+          usedMutants = this[DecisionTreeRunsTable.usedMutants],
       )
 }

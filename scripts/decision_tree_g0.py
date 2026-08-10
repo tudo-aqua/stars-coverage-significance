@@ -400,6 +400,11 @@ def _ensure_tracking_tables(conn) -> None:
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS learned_max_depth INT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS train_accuracy DOUBLE PRECISION")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS test_accuracy DOUBLE PRECISION")
+        # Every mutant ID that went into this run (train ∪ test — i.e. everything --mutants
+        # restricted the run to, or every mutant in the Parquet file if --mutants was omitted).
+        # Mirrors decision_tree_mutant_splits for this run_id, but as a single queryable column
+        # instead of requiring a join/aggregate.
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS used_mutants INT[]")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS decision_tree_mutant_splits (
                 run_id     INT  NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
@@ -448,6 +453,10 @@ def _insert_run(
     """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
     import psycopg2.extras
 
+    # Every mutant this run actually saw, train or test — what --mutants restricted the run to,
+    # or every mutant in the Parquet file if --mutants was omitted.
+    used_mutants = sorted(train_mutants | test_mutants)
+
     with conn.cursor() as cur:
         cur.execute(
             "INSERT INTO decision_tree_runs ("
@@ -457,7 +466,8 @@ def _insert_run(
             "  n_trials, max_leaves_bound, class_weight, scale_pos_weight,"
             "  hp_num_leaves, hp_max_depth, hp_min_child_samples, hp_min_split_gain,"
             "  tuning_roc_auc,"
-            "  learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy"
+            "  learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,"
+            "  used_mutants"
             ") VALUES ("
             "  %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
@@ -465,7 +475,8 @@ def _insert_run(
             "  %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
             "  %s,"
-            "  %s, %s, %s, %s"
+            "  %s, %s, %s, %s,"
+            "  %s"
             ") RETURNING id",
             (
                 train_fraction, seed, len(train_mutants), len(test_mutants),
@@ -478,6 +489,7 @@ def _insert_run(
                 best_params["min_child_samples"], best_params["min_split_gain"],
                 tuning_roc_auc,
                 learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,
+                used_mutants,
             ),
         )
         run_id = cur.fetchone()[0]

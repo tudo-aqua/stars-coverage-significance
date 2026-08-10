@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.IntegerColumnType
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
 
@@ -69,6 +70,9 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
  * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
  *   `train_fraction = 1.0` (no test split).
+ * @property usedMutants Every mutant ID that went into this run (train ∪ test) — what `--mutants`
+ *   restricted the run to, or every mutant in the Parquet file if `--mutants` was omitted. Mirrors
+ *   [DecisionTreeMutantSplitsTable] for this run, as a single queryable column.
  */
 object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
@@ -106,4 +110,6 @@ object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val learnedMaxDepth = integer("learned_max_depth").nullable()
   val trainAccuracy = double("train_accuracy").nullable()
   val testAccuracy = double("test_accuracy").nullable()
+
+  val usedMutants = array("used_mutants", IntegerColumnType()).nullable()
 }
