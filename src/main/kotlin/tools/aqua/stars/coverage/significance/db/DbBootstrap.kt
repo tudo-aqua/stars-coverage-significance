@@ -195,8 +195,6 @@ object DbBootstrap {
           DecisionTreeMutantSplitsTable,
           DecisionTreeLeafAssignmentsTable)
     }
-
-    buildMaterializedViews()
   }
 
   fun buildMaterializedViews() {
