@@ -25,7 +25,12 @@ import kotlinx.serialization.Serializable
  *
  * @property id Unique identifier of the decision tree run.
  * @property createdAt Timestamp of when the run was recorded.
- * @property trainFraction Fraction of unique mutant IDs used for training (0.0–1.0).
+ * @property trainFraction The requested `--train-fraction` split ratio (0.0–1.0); null for a manual
+ *   [manualMutantSelection] run left at the default 1.0, since its train/test split isn't a
+ *   fraction the user requested. Use [nTestMutants] to check whether a run has a test set at all,
+ *   not this column.
+ * @property manualMutantSelection Whether `--mutant-ids`/`--mutant-numbers` restricted this run to
+ *   a hand-picked mutant set. Null for older runs recorded before this column existed.
  * @property seed Random seed used to shuffle the mutant split.
  * @property nTrainMutants Number of mutants assigned to the training set.
  * @property nTestMutants Number of mutants assigned to the test set.
@@ -53,15 +58,16 @@ import kotlinx.serialization.Serializable
  * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0); may differ from
  *   [hpMaxDepth] for the same reason.
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
- * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
- *   [trainFraction] is `1.0` (no test split).
+ * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when there is
+ *   no test set at all ([nTestMutants] is `0`).
  * @property usedMutants Every mutant ID that went into this run (train ∪ test), null if not
  *   recorded (e.g. runs created before this column existed).
  */
 data class DecisionTreeRunEntry(
     val id: Int? = null,
     val createdAt: Instant = Instant.now(),
-    val trainFraction: Double,
+    val trainFraction: Double? = null,
+    val manualMutantSelection: Boolean? = null,
     val seed: Int,
     val nTrainMutants: Int,
     val nTestMutants: Int,
@@ -99,6 +105,7 @@ data class DecisionTreeRunEntry(
       DecisionTreeRunMetadata(
           createdAt = createdAt.toString(),
           trainFraction = trainFraction,
+          manualMutantSelection = manualMutantSelection,
           seed = seed,
           nTrainMutants = nTrainMutants,
           nTestMutants = nTestMutants,
@@ -132,7 +139,11 @@ data class DecisionTreeRunEntry(
  * Serializable mirror of [DecisionTreeRunEntry]'s columns from the `decision_tree_runs` table.
  *
  * @property createdAt ISO-8601 timestamp of when the run was recorded.
- * @property trainFraction Fraction of unique mutant IDs used for training (0.0–1.0).
+ * @property trainFraction The requested `--train-fraction` split ratio (0.0–1.0); null for a manual
+ *   [manualMutantSelection] run left at the default 1.0. Use [nTestMutants] to check whether a run
+ *   has a test set at all, not this column.
+ * @property manualMutantSelection Whether `--mutant-ids`/`--mutant-numbers` restricted this run to
+ *   a hand-picked mutant set. Null for older runs recorded before this column existed.
  * @property seed Random seed used to shuffle the mutant split.
  * @property nTrainMutants Number of mutants assigned to the training set.
  * @property nTestMutants Number of mutants assigned to the test set.
@@ -160,15 +171,16 @@ data class DecisionTreeRunEntry(
  * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0); may differ from
  *   [hpMaxDepth] for the same reason.
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
- * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
- *   [trainFraction] is `1.0` (no test split).
+ * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when there is
+ *   no test set at all ([nTestMutants] is `0`).
  * @property usedMutants Every mutant ID that went into this run (train ∪ test), null if not
  *   recorded (e.g. runs created before this column existed).
  */
 @Serializable
 data class DecisionTreeRunMetadata(
     val createdAt: String,
-    val trainFraction: Double,
+    val trainFraction: Double?,
+    val manualMutantSelection: Boolean?,
     val seed: Int,
     val nTrainMutants: Int,
     val nTestMutants: Int,

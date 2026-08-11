@@ -386,7 +386,7 @@ def _ensure_tracking_tables(conn) -> None:
             CREATE TABLE IF NOT EXISTS decision_tree_runs (
                 id               SERIAL PRIMARY KEY,
                 created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                train_fraction   DOUBLE PRECISION NOT NULL,
+                train_fraction   DOUBLE PRECISION,
                 seed             INT NOT NULL,
                 n_train_mutants  INT NOT NULL,
                 n_test_mutants   INT NOT NULL,
@@ -397,6 +397,9 @@ def _ensure_tracking_tables(conn) -> None:
         # Migrate: columns added after initial schema
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS log_text TEXT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS dot_source TEXT")
+        # train_fraction is NULL for manual-mutant-selection runs with no explicit split
+        # requested (see manual_mutant_selection below) — was NOT NULL in the initial schema.
+        cur.execute("ALTER TABLE decision_tree_runs ALTER COLUMN train_fraction DROP NOT NULL")
         # Feature group flags
         for col in (
             "feat_ego_maneuver", "feat_ego_speed", "feat_ego_accel", "feat_ego_position",
@@ -426,6 +429,9 @@ def _ensure_tracking_tables(conn) -> None:
         # as a single queryable column
         # instead of requiring a join/aggregate.
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS used_mutants INT[]")
+        # True when --mutant-ids/--mutant-numbers restricted this run to a hand-picked mutant
+        # set, regardless of whether train_fraction also applied a further random split.
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS manual_mutant_selection BOOL")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS decision_tree_mutant_splits (
                 run_id     INT  NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
@@ -455,7 +461,8 @@ def _ensure_tracking_tables(conn) -> None:
 
 def _insert_run(
     conn,
-    train_fraction: float,
+    train_fraction: "float | None",
+    manual_mutant_selection: bool,
     seed: int,
     train_mutants: set[int],
     test_mutants: set[int],
@@ -481,7 +488,7 @@ def _insert_run(
     with conn.cursor() as cur:
         cur.execute(
             "INSERT INTO decision_tree_runs ("
-            "  train_fraction, seed, n_train_mutants, n_test_mutants,"
+            "  train_fraction, manual_mutant_selection, seed, n_train_mutants, n_test_mutants,"
             "  feat_ego_maneuver, feat_ego_speed, feat_ego_accel, feat_ego_position,"
             "  feat_distances, feat_neighbor_kinematics, feat_time_gaps,"
             "  n_trials, max_leaves_bound, class_weight, scale_pos_weight,"
@@ -490,7 +497,7 @@ def _insert_run(
             "  learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,"
             "  used_mutants"
             ") VALUES ("
-            "  %s, %s, %s, %s,"
+            "  %s, %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
             "  %s, %s, %s,"
             "  %s, %s, %s, %s,"
@@ -500,7 +507,7 @@ def _insert_run(
             "  %s"
             ") RETURNING id",
             (
-                train_fraction, seed, len(train_mutants), len(test_mutants),
+                train_fraction, manual_mutant_selection, seed, len(train_mutants), len(test_mutants),
                 feature_flags["ego-maneuver"], feature_flags["ego-speed"],
                 feature_flags["ego-accel"], feature_flags["ego-position"],
                 feature_flags["distances"], feature_flags["neighbor-kinematics"],
@@ -644,8 +651,12 @@ def main() -> None:
                              "fits only one tree, more concurrent trials with fewer threads each is "
                              "usually faster than one trial at a time with many threads.")
     parser.add_argument("--train-fraction", type=float, default=1.0, metavar="F",
-                        help="Fraction of rows used for training (0 < F <= 1.0, default: 1.0 = all data). "
-                             "The held-out test split is what gets annotated and written to the DB.")
+                        help="Fraction of rows used for training (0 < F <= 1.0, default: 1.0 = all data, "
+                             "or all requested mutants if --mutant-ids/--mutant-numbers is given — see "
+                             "those flags). The held-out test split is what gets annotated and written "
+                             "to the DB. The train_fraction stored in the DB reflects mutants actually "
+                             "used for training over total mutants used (train + test), which may differ "
+                             "from this flag when a manual mutant selection creates its own test set.")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for the train/test split (default: 42)")
     parser.add_argument("--mutant-ids", default=None, metavar="ID[,ID...]",
@@ -656,8 +667,10 @@ def main() -> None:
                              "itself is unaffected — it just runs over this smaller universe instead "
                              "of every mutant. Additive to everything else: combine with "
                              "--train-fraction for a train/test split within just these mutants, or "
-                             "leave --train-fraction=1.0 to train on all of them. Combines with "
-                             "--mutant-numbers (union) if both are given.")
+                             "leave --train-fraction=1.0 (default) to train on all of them and "
+                             "automatically test on every other mutant present in the Parquet file "
+                             "instead — measuring generalization to mutant categories not selected "
+                             "here. Combines with --mutant-numbers (union) if both are given.")
     parser.add_argument("--mutant-numbers", default=None, metavar="N[,N...]",
                         help="Comma-separated list of mutant_number values (mutants.mutant_number — "
                              "the human-meaningful AutopilotMutant<N> index, e.g. the numbers in "
@@ -801,15 +814,40 @@ def main() -> None:
             np.unique(mutant_ids) if allowed_mutants is None
             else np.array(sorted(allowed_mutants))
         )
+        # True whenever --mutant-ids/--mutant-numbers restricted the run, regardless of
+        # --train-fraction — recorded separately from train_fraction below since it answers a
+        # different question ("was the mutant set hand-picked?" vs. "what fraction trained?").
+        manual_mutant_selection = allowed_mutants is not None
+
         if args.train_fraction < 1.0:
             rng = np.random.default_rng(args.seed)
             rng.shuffle(unique_mutants)
             n_train_mut = int(len(unique_mutants) * args.train_fraction)
             train_mutants = set(unique_mutants[:n_train_mut].tolist())
             test_mutants  = set(unique_mutants[n_train_mut:].tolist())
+            # A real, explicitly-requested split ratio (possibly within a manually-restricted
+            # mutant universe) — always meaningful, so store it as-is.
+            train_fraction_to_store: "float | None" = args.train_fraction
+        elif manual_mutant_selection:
+            # Manual mutant selection with no random split (train_fraction=1.0): train on
+            # exactly the requested mutants, test on every other mutant present in the
+            # Parquet file. Measures generalization to mutant categories the tree never
+            # trained on, e.g. whether a tree trained only on arithmetic-operator mutants
+            # also catches accidents caused by other operator categories.
+            #
+            # train_fraction has no meaningful value here — the split wasn't a fraction the
+            # user requested, just whichever mutants they happened to list — so it's left
+            # NULL rather than backfilled with a derived ratio (e.g. 30/61). Callers that need
+            # to distinguish "genuine full run" from "some kind of split happened" should use
+            # n_test_mutants = 0 / > 0, which stays correct in every case since it doesn't
+            # depend on train_fraction being non-null.
+            train_mutants = set(unique_mutants.tolist())
+            test_mutants  = present_mutants - train_mutants
+            train_fraction_to_store = None
         else:
             train_mutants = set(unique_mutants.tolist())
             test_mutants  = set()
+            train_fraction_to_store = args.train_fraction
 
         # Always mask explicitly (even when train_mutants covers every mutant with no
         # allow-list) rather than special-casing "no split" as `X_train, y_train = X, y` —
@@ -870,9 +908,13 @@ def main() -> None:
             f"Training accuracy: {train_acc:.4f}",
             end="",
         )
-        if args.train_fraction < 1.0:
-            eval_preds = booster.predict(X_eval)
-            eval_acc = float(np.mean((eval_preds > 0.5).astype(int) == y_eval))
+        if test_mutants:
+            # Scored on test-mutant rows only (never rows the tree trained on), so this
+            # measures held-out/cross-category generalization rather than a blend with the
+            # near-perfectly-fit training rows.
+            test_mask = np.isin(mutant_ids, list(test_mutants))
+            eval_preds = booster.predict(X_eval.iloc[test_mask])
+            eval_acc = float(np.mean((eval_preds > 0.5).astype(int) == y_eval[test_mask]))
             print(f"  |  Test accuracy: {eval_acc:.4f}", end="")
         print("\n")
 
@@ -944,7 +986,8 @@ def main() -> None:
                 _ensure_tracking_tables(conn)
                 run_id = _insert_run(
                     conn,
-                    train_fraction=args.train_fraction,
+                    train_fraction=train_fraction_to_store,
+                    manual_mutant_selection=manual_mutant_selection,
                     seed=args.seed,
                     train_mutants=train_mutants,
                     test_mutants=test_mutants,

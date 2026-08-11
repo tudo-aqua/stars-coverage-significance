@@ -241,7 +241,7 @@ docker run --name stars-coverage-significance-post-evaluation stars-evaluation:l
 
 ### Run the baseline next-tick evaluation
 
-`RunBaselineNextTick.kt` optionally parses a `decisionTreeRunId` (the `decision_tree_runs.id` to use for leaf assignments) as the first `main(args)` entry. When omitted, it falls back to the latest full run (`train_fraction=1.0`). Pass it via the Gradle `--args` flag:
+`RunBaselineNextTick.kt` optionally parses a `decisionTreeRunId` (the `decision_tree_runs.id` to use for leaf assignments) as the first `main(args)` entry. When omitted, it falls back to the latest full run (no test set at all, `n_test_mutants = 0`). Pass it via the Gradle `--args` flag:
 
 ```bash
 docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --args="8"
@@ -256,8 +256,8 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runBaselineNextTick --a
 | `args` | Behavior |
 |---|---|
 | *(none)*, or `--latest` | The actual latest decision tree run overall (highest ID), full or split |
-| `--latest-full` | The latest *full* run (`train_fraction = 1.0`) |
-| `--latest-split` | The latest *split* run (`train_fraction != 1.0`, i.e. a train/test split) |
+| `--latest-full` | The latest *full* run — no test set at all (`n_test_mutants = 0`) |
+| `--latest-split` | The latest *split* run — has a test set (`n_test_mutants > 0`), whether from a random `--train-fraction` split or a manual `--mutant-ids`/`--mutant-numbers` selection |
 | `--all` | Every run currently in `decision_tree_runs`, evaluated one after another (ascending ID) — multiplies runtime by the number of runs, since each run reloads the full tick table |
 | a single run ID, e.g. `8` | Just that run (`decision_tree_runs.id`) |
 | multiple run IDs, comma- and/or space-separated, e.g. `1,2,3` or `1 2 3` | Each in turn, in the given order |
@@ -405,9 +405,9 @@ Trains a single LightGBM decision tree that predicts whether the G0 (Accidents) 
 | `--class-weight` | `balanced` | Class imbalance strategy: `balanced` (per-sample upweighting, `min_child_samples` applies to weighted counts) or `scale-pos-weight` (scalar loss correction, `min_child_samples` applies to raw counts — prevents tiny leaves) |
 | `--n-jobs` | `48` | Total CPU threads available; set to match available cores |
 | `--tuning-jobs` | `8`  | Number of Optuna trials run concurrently during tuning; `--n-jobs` threads are split evenly across them (`n-jobs / tuning-jobs` threads per trial). Since each trial fits only one tree, more concurrent trials with fewer threads each is usually faster than one trial at a time with many threads |
-| `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set |
+| `--train-fraction` | `1.0` | Fraction of unique mutant IDs used for training (`0 < F ≤ 1.0`); the remaining mutants form the test set. Left at `1.0` with no `--mutant-ids`/`--mutant-numbers`, there is no test set at all |
 | `--seed` | `42` | Random seed for the mutant train/test shuffle |
-| `--mutant-ids` | *(none, = every mutant in the Parquet file)* | Comma-separated raw `mutant_id` values (`metric_failed_monitors.mutant_id` / `mutants.id` — the database's own serial primary key) to restrict the run to, e.g. `1,10,11,12`. **Not** the same as a mutant's number (see `--mutant-numbers` below and "Mutant category lists"). Applied *before* the `--train-fraction`/`--seed` split — the split logic itself is unchanged, it just runs over this smaller universe instead of every mutant in the file. Additive to everything else above: combine with `--train-fraction` for a train/test split within just these mutants, or leave `--train-fraction 1.0` to train on all of them. Combines with `--mutant-numbers` (union) if both are given |
+| `--mutant-ids` | *(none, = every mutant in the Parquet file)* | Comma-separated raw `mutant_id` values (`metric_failed_monitors.mutant_id` / `mutants.id` — the database's own serial primary key) to restrict the run to, e.g. `1,10,11,12`. **Not** the same as a mutant's number (see `--mutant-numbers` below and "Mutant category lists"). Applied *before* the `--train-fraction`/`--seed` split — the split logic itself is unchanged, it just runs over this smaller universe instead of every mutant in the file. Additive to everything else above: combine with `--train-fraction` for a train/test split within just these mutants, or leave `--train-fraction 1.0` (default) to train on exactly these mutants and automatically test on every *other* mutant present in the Parquet file — measuring generalization to mutant categories not selected here. Combines with `--mutant-numbers` (union) if both are given |
 | `--mutant-numbers` | *(none)* | Comma-separated `mutant_number` values (`mutants.mutant_number` — the human-meaningful `AutopilotMutant<N>` index, e.g. the numbers in `AutopilotMutants.kt`/README) to restrict the run to. **Requires `--uri`**, to resolve `mutant_number → mutant_id` via the `mutants` table, since the Parquet file only carries `mutant_id`. Otherwise behaves exactly like `--mutant-ids` |
 | `--output` | *(none)* | Write a Graphviz `.dot` file to an explicit path (overrides the run-named file from `--out-dir`) |
 | `--annotate` | *(none)* | Write a Parquet file containing features + target + `leaf_node_id` for every row |

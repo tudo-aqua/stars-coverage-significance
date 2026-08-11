@@ -85,12 +85,18 @@ object DecisionTreeRunsRepository {
   }
 
   /**
-   * Returns the ID of the most recent decision tree run where the full dataset was used for
-   * training (`train_fraction = 1.0`), or `null` if no such run exists.
+   * Returns the ID of the most recent decision tree run with no test set at all, i.e. a genuine
+   * full-dataset training run (`n_test_mutants = 0`), or `null` if no such run exists.
+   *
+   * Deliberately keyed on [DecisionTreeRunsTable.nTestMutants] rather than
+   * [DecisionTreeRunsTable.trainFraction]: a manual `--mutant-ids`/`--mutant-numbers` selection
+   * with no explicit `--train-fraction` leaves `trainFraction` `null` (see its KDoc) while still
+   * having a real test set, and SQL's `NULL = 1.0` / `NULL != 1.0` are both unknown — comparing
+   * against `trainFraction` directly would silently misclassify those runs either way.
    */
   fun getLatestFullRunId(): EntityID<Int>? = transaction {
     DecisionTreeRunsTable.selectAll()
-        .where { DecisionTreeRunsTable.trainFraction eq 1.0 }
+        .where { DecisionTreeRunsTable.nTestMutants eq 0 }
         .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
         .limit(1)
         .firstOrNull()
@@ -98,13 +104,15 @@ object DecisionTreeRunsRepository {
   }
 
   /**
-   * Returns the ID of the most recent decision tree run where less than the full dataset was used
-   * for training (`train_fraction != 1.0`, i.e. a train/test split run), or `null` if no such run
-   * exists.
+   * Returns the ID of the most recent decision tree run with a test set, whether from a random
+   * `--train-fraction` split or a manual `--mutant-ids`/`--mutant-numbers` selection
+   * (`n_test_mutants > 0`), or `null` if no such run exists. See [getLatestFullRunId] for why this
+   * is keyed on [DecisionTreeRunsTable.nTestMutants] rather than
+   * [DecisionTreeRunsTable.trainFraction].
    */
   fun getLatestSplitRunId(): EntityID<Int>? = transaction {
     DecisionTreeRunsTable.selectAll()
-        .where { DecisionTreeRunsTable.trainFraction neq 1.0 }
+        .where { DecisionTreeRunsTable.nTestMutants greater 0 }
         .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
         .limit(1)
         .firstOrNull()
@@ -143,6 +151,7 @@ object DecisionTreeRunsRepository {
           id = this[DecisionTreeRunsTable.id].value,
           createdAt = this[DecisionTreeRunsTable.createdAt],
           trainFraction = this[DecisionTreeRunsTable.trainFraction],
+          manualMutantSelection = this[DecisionTreeRunsTable.manualMutantSelection],
           seed = this[DecisionTreeRunsTable.seed],
           nTrainMutants = this[DecisionTreeRunsTable.nTrainMutants],
           nTestMutants = this[DecisionTreeRunsTable.nTestMutants],

@@ -29,7 +29,18 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * split. The associated per-mutant assignments are stored in [DecisionTreeMutantSplitsTable].
  *
  * @property createdAt Timestamp of when the run was recorded (default: `CURRENT_TIMESTAMP`).
- * @property trainFraction Fraction of unique mutant IDs used for training (0.0–1.0).
+ * @property trainFraction The `--train-fraction` value that produced this run's split (0.0–1.0),
+ *   when that flag is what determined the split — i.e. every run except a manual
+ *   `--mutant-ids`/`--mutant-numbers` selection left at the default `--train-fraction=1.0`. For
+ *   that case this is `null`: the resulting train/test split (requested mutants vs. every other
+ *   mutant in the data) isn't a fraction the user asked for, just whatever the mutant counts happen
+ *   to imply, so backfilling a derived ratio here would misrepresent it as an intentional split
+ *   ratio. See [manualMutantSelection] for whether this run used a hand-picked mutant set, and use
+ *   [nTestMutants] rather than this column to check whether a run has a test set at all —
+ *   `DecisionTreeRunsRepository.getLatestFullRunId()`/`getLatestSplitRunId()` do exactly that.
+ * @property manualMutantSelection Whether `--mutant-ids`/`--mutant-numbers` restricted this run to
+ *   a hand-picked mutant set, regardless of whether `--train-fraction` also applied a further
+ *   random split on top of that set. Null for older runs recorded before this column existed.
  * @property seed Random seed used to shuffle the mutant split.
  * @property nTrainMutants Number of mutants assigned to the training set.
  * @property nTestMutants Number of mutants assigned to the test set.
@@ -68,15 +79,18 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property learnedNumLeaves Actual number of leaves in the fitted tree.
  * @property learnedMaxDepth Actual max depth of the fitted tree (root = 0).
  * @property trainAccuracy Accuracy of the fitted tree on the training set.
- * @property testAccuracy Accuracy of the fitted tree on the held-out test set; null when
- *   `train_fraction = 1.0` (no test split).
- * @property usedMutants Every mutant ID that went into this run (train ∪ test) — what `--mutants`
- *   restricted the run to, or every mutant in the Parquet file if `--mutants` was omitted. Mirrors
- *   [DecisionTreeMutantSplitsTable] for this run, as a single queryable column.
+ * @property testAccuracy Accuracy of the fitted tree evaluated on test-mutant rows only (never rows
+ *   it trained on); null when there is no test set, i.e. no random split (`--train-fraction < 1.0`)
+ *   and no `--mutant-ids`/`--mutant-numbers` restriction was given.
+ * @property usedMutants Every mutant ID that went into this run (train ∪ test) — what
+ *   `--mutant-ids`/`--mutant-numbers` restricted the run to, or every mutant in the Parquet file if
+ *   neither was given. Mirrors [DecisionTreeMutantSplitsTable] for this run, as a single queryable
+ *   column.
  */
 object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
-  val trainFraction = double("train_fraction")
+  val trainFraction = double("train_fraction").nullable()
+  val manualMutantSelection = bool("manual_mutant_selection").nullable()
   val seed = integer("seed")
   val nTrainMutants = integer("n_train_mutants")
   val nTestMutants = integer("n_test_mutants")
