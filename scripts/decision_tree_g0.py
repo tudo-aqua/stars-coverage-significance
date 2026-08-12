@@ -466,6 +466,7 @@ def _insert_run(
     seed: int,
     train_mutants: set[int],
     test_mutants: set[int],
+    used_mutants: list[int],
     feature_flags: dict[str, bool],
     n_trials: int,
     max_leaves_bound: int,
@@ -480,10 +481,6 @@ def _insert_run(
 ) -> int:
     """Insert a run record and its per-mutant trained_on flags; return the new run_id."""
     import psycopg2.extras
-
-    # Every mutant this run actually saw, train or test — what --mutant-ids/--mutant-numbers
-    # restricted the run to, or every mutant in the Parquet file if neither was given.
-    used_mutants = sorted(train_mutants | test_mutants)
 
     with conn.cursor() as cur:
         cur.execute(
@@ -991,6 +988,13 @@ def main() -> None:
                     seed=args.seed,
                     train_mutants=train_mutants,
                     test_mutants=test_mutants,
+                    # What --mutant-ids/--mutant-numbers restricted the run to, or every mutant
+                    # in the Parquet file if neither was given — NOT train_mutants | test_mutants,
+                    # since the manual-selection-without-split branch above deliberately sets
+                    # test_mutants to "every other present mutant" (for generalization testing),
+                    # which would make that union always the full mutant universe regardless of
+                    # what was actually requested.
+                    used_mutants=sorted(unique_mutants.tolist()),
                     feature_flags=group_flags,
                     n_trials=args.n_trials,
                     max_leaves_bound=args.max_leaves,
