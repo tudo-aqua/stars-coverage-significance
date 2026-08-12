@@ -216,7 +216,7 @@ val runDrawTicksWithDecisionTreeGrouping by
       mainClass.set("tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGroupingKt")
       classpath = sourceSets.main.get().runtimeClasspath
 
-      jvmArgs = listOf("-Xmx300g")
+      jvmArgs = listOf("-Xmx400g")
     }
 
 val runAnalyzeDuplicateTicks by
