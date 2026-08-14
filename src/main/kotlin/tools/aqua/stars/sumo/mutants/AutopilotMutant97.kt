@@ -18,7 +18,6 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
-import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.LaneChangeDirection
@@ -59,12 +58,6 @@ class AutopilotMutant97 : Mutant() {
   var minTargetSpeedMps = 0.0
 
   // -------------------- Lane change parameters --------------------
-  /**
-   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
-   * of time before considering lane changes.
-   */
-  var laneChangeCooldownInSeconds = 2.0
-
   /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
@@ -110,8 +103,6 @@ class AutopilotMutant97 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  private var lastLaneChangeSimTimeInSeconds = -1e9
-
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
@@ -145,7 +136,12 @@ class AutopilotMutant97 : Mutant() {
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
     val gapError = gap - desiredGap
-    val relSpeed = vLeader - vEgo
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 147 Id:
+     * 9141591f-edaa-46e5-8453-85c3efbed16f, Old Operator: -, New Operator: +
+     */
+    val relSpeed = vLeader + vEgo
 
     // Start with cruising, then restrict downwards.
     var vTarget = cruiseSpeedInMps
@@ -216,12 +212,7 @@ class AutopilotMutant97 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 227 Id:
-     * 2810d501-7ea2-4a5d-bcb2-ac649795f19f, Old Operator: *, New Operator: %
-     */
-    val dvMaxDown = -maxDecelerationInMps2 % dt
+    val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -239,10 +230,6 @@ class AutopilotMutant97 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): LaneChangeDirection {
-    val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
-        return LaneChangeDirection.NO_LANE_CHANGE
-
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -261,7 +248,6 @@ class AutopilotMutant97 : Mutant() {
     if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    lastLaneChangeSimTimeInSeconds = now
     return LaneChangeDirection.fromDirection(chosenDir)
   }
 

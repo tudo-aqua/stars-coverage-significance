@@ -18,7 +18,6 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
-import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.LaneChangeDirection
@@ -59,12 +58,6 @@ class AutopilotMutant23 : Mutant() {
   var minTargetSpeedMps = 0.0
 
   // -------------------- Lane change parameters --------------------
-  /**
-   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
-   * of time before considering lane changes.
-   */
-  var laneChangeCooldownInSeconds = 2.0
-
   /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
@@ -110,8 +103,6 @@ class AutopilotMutant23 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
-  private var lastLaneChangeSimTimeInSeconds = -1e9
-
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
@@ -151,12 +142,7 @@ class AutopilotMutant23 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
-     * a040d6a7-656c-4109-b259-1a51424af292, Old Operator: +, New Operator: -
-     */
-    val followProposal = vLeader - gapGain * gapError + relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -221,7 +207,12 @@ class AutopilotMutant23 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 218 Id:
+     * f3cc1b6d-32f5-4721-96db-b17457b15d7b, Old Operator: -, New Operator: RemoveOperator
+     */
+    val dvMaxDown = maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -239,10 +230,6 @@ class AutopilotMutant23 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): LaneChangeDirection {
-    val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
-        return LaneChangeDirection.NO_LANE_CHANGE
-
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -261,7 +248,6 @@ class AutopilotMutant23 : Mutant() {
     if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    lastLaneChangeSimTimeInSeconds = now
     return LaneChangeDirection.fromDirection(chosenDir)
   }
 

@@ -18,7 +18,6 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
-import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.LaneChangeDirection
@@ -60,12 +59,6 @@ class AutopilotMutant28 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
-   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
-   * of time before considering lane changes.
-   */
-  var laneChangeCooldownInSeconds = 2.0
-
-  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -81,7 +74,12 @@ class AutopilotMutant28 : Mutant() {
   var laneChangeSideFrontGapInMeters = 20.0
 
   /** Required free distance behind on all lanes on the chosen side before changing lanes. */
-  var laneChangeSideBackGapInMeters = 15.0
+
+  /**
+   * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 85 Id:
+   * 273f1c8e-5286-417b-81a5-d059b9ee3183, Old Operator: 15, New Operator: 0.3995707
+   */
+  var laneChangeSideBackGapInMeters = 0.3995707
 
   /**
    * Whether to prefer a left lane change. If true, the ego vehicle will prefer left lane change. If
@@ -109,8 +107,6 @@ class AutopilotMutant28 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
-
-  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): MutantManeuver {
@@ -151,12 +147,7 @@ class AutopilotMutant28 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162 Id:
-     * c8d19045-7a47-4137-ad82-adeffbba1ae7, Old Operator: *, New Operator: -
-     */
-    val followProposal = vLeader + gapGain - gapError + relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -239,10 +230,6 @@ class AutopilotMutant28 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): LaneChangeDirection {
-    val now = Simulation.getTime()
-    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
-        return LaneChangeDirection.NO_LANE_CHANGE
-
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -261,7 +248,6 @@ class AutopilotMutant28 : Mutant() {
     if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    lastLaneChangeSimTimeInSeconds = now
     return LaneChangeDirection.fromDirection(chosenDir)
   }
 

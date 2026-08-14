@@ -10,9 +10,11 @@ RUN cargo install mutant-kraken
 
 FROM debian:bookworm-slim AS runtime
 
-# Minimal runtime deps
+# Minimal runtime deps.
+# jq/diffutils are used by create_mutants.sh to read mutations.json and match each generated
+# mutant file back to the mutation operator that produced it (see that script for details).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates jq diffutils \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy the installed binary from the builder stage
