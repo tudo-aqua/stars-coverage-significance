@@ -32,8 +32,9 @@ class AiPilot : Mutant() {
   val weights: Array<Array<Array<Double>>> = loadWeights()
   val bias: Array<Array<Double>> = loadBias()
 
-  override fun controlTick(egoId: String) {
-    var speed = SumoVehicle.getSpeed(egoId)
+  override fun controlTick(egoId: String): MutantManeuver {
+    val speedNow = SumoVehicle.getSpeed(egoId)
+    var speed = speedNow
     var laneIndex = SumoVehicle.getLaneIndex(egoId).toDouble()
     var leftLane = neighborLookAheadInMeters
     var frontLane = neighborLookAheadInMeters
@@ -59,11 +60,22 @@ class AiPilot : Mutant() {
 
     val actions = forward(speed, laneIndex, leftLane, frontLane, rightLane)
 
-    if (actions[0] >= 1) SumoVehicle.changeLane(egoId, SumoVehicle.getLaneIndex(egoId) + 1, 1.0)
-    else if (actions[0] <= -1)
-        SumoVehicle.changeLane(egoId, SumoVehicle.getLaneIndex(egoId) - 1, 1.0)
+    val laneChangeDirection: LaneChangeDirection
+    if (actions[0] >= 1) {
+      SumoVehicle.changeLane(egoId, SumoVehicle.getLaneIndex(egoId) + 1, 1.0)
+      laneChangeDirection = LaneChangeDirection.CHANGE_LEFT
+    } else if (actions[0] <= -1) {
+      SumoVehicle.changeLane(egoId, SumoVehicle.getLaneIndex(egoId) - 1, 1.0)
+      laneChangeDirection = LaneChangeDirection.CHANGE_RIGHT
+    } else {
+      laneChangeDirection = LaneChangeDirection.NO_LANE_CHANGE
+    }
 
-    SumoVehicle.setAcceleration(egoId, actions[1], 0.1)
+    val accelerationDurationSeconds = 0.1
+    SumoVehicle.setAcceleration(egoId, actions[1], accelerationDurationSeconds)
+    val newSpeedMps = speedNow + actions[1] * accelerationDurationSeconds
+
+    return MutantManeuver(newSpeedMps, laneChangeDirection)
   }
 
   private fun leaderInfoOrNull(egoId: String): StringDoublePair? =
