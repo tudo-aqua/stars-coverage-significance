@@ -157,6 +157,8 @@ object DecisionTreeRunsRepository {
           nTestMutants = this[DecisionTreeRunsTable.nTestMutants],
           logText = this[DecisionTreeRunsTable.logText],
           dotSource = this[DecisionTreeRunsTable.dotSource],
+          modelText = this[DecisionTreeRunsTable.modelText],
+          featureColumns = this[DecisionTreeRunsTable.featureColumns],
           featEgoManeuver = this[DecisionTreeRunsTable.featEgoManeuver],
           featEgoSpeed = this[DecisionTreeRunsTable.featEgoSpeed],
           featEgoAccel = this[DecisionTreeRunsTable.featEgoAccel],

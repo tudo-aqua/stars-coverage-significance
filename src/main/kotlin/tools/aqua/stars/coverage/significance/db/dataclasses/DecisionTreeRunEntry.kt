@@ -36,6 +36,12 @@ import kotlinx.serialization.Serializable
  * @property nTestMutants Number of mutants assigned to the test set.
  * @property logText Full stdout log captured during the training run, null if not yet persisted.
  * @property dotSource Graphviz DOT source of the decision tree, null if not yet persisted.
+ * @property modelText The fitted LightGBM booster serialized via `Booster.model_to_string()`, null
+ *   if not yet persisted. Reload via `lgb.Booster(model_str=...)` to label new data without
+ *   retraining.
+ * @property featureColumns The exact, ordered feature column names this run's booster was trained
+ *   on, null if not yet persisted. Required alongside [modelText] since leaf-prediction aligns
+ *   feature columns positionally, not by name.
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
@@ -73,6 +79,8 @@ data class DecisionTreeRunEntry(
     val nTestMutants: Int,
     val logText: String? = null,
     val dotSource: String? = null,
+    val modelText: String? = null,
+    val featureColumns: List<String>? = null,
     val featEgoManeuver: Boolean? = null,
     val featEgoSpeed: Boolean? = null,
     val featEgoAccel: Boolean? = null,
@@ -111,6 +119,8 @@ data class DecisionTreeRunEntry(
           nTestMutants = nTestMutants,
           logText = logText,
           dotSource = dotSource,
+          modelText = modelText,
+          featureColumns = featureColumns,
           featEgoManeuver = featEgoManeuver,
           featEgoSpeed = featEgoSpeed,
           featEgoAccel = featEgoAccel,
@@ -149,6 +159,10 @@ data class DecisionTreeRunEntry(
  * @property nTestMutants Number of mutants assigned to the test set.
  * @property logText Full stdout log captured during the training run, null if not persisted.
  * @property dotSource Graphviz DOT source of the decision tree, null if not persisted.
+ * @property modelText The fitted LightGBM booster serialized via `Booster.model_to_string()`, null
+ *   if not persisted.
+ * @property featureColumns The exact, ordered feature column names this run's booster was trained
+ *   on, null if not persisted.
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
@@ -186,6 +200,8 @@ data class DecisionTreeRunMetadata(
     val nTestMutants: Int,
     val logText: String?,
     val dotSource: String?,
+    val modelText: String?,
+    val featureColumns: List<String>?,
     val featEgoManeuver: Boolean?,
     val featEgoSpeed: Boolean?,
     val featEgoAccel: Boolean?,

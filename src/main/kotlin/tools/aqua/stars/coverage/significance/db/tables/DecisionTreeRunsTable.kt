@@ -19,6 +19,7 @@ package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.IntegerColumnType
+import org.jetbrains.exposed.sql.TextColumnType
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.javatime.timestamp
 
@@ -46,6 +47,16 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property nTestMutants Number of mutants assigned to the test set.
  * @property logText Full stdout log captured during the training run, stored for later inspection.
  * @property dotSource Graphviz DOT source of the decision tree, stored for later visualization.
+ * @property modelText The fitted LightGBM booster, serialized via `Booster.model_to_string()` -
+ *   LightGBM's own portable text format (not pickle-based, so it isn't tied to a specific
+ *   Python/LightGBM version). Reload via `lgb.Booster(model_str=...)` to label new data with this
+ *   exact tree without retraining.
+ * @property featureColumns The exact, ordered list of feature column names this run's booster was
+ *   trained on. Needed alongside [modelText] to label new data correctly: the raw
+ *   `Booster.predict()` used for leaf assignment aligns feature columns *positionally*, not by
+ *   name, so replaying the same order the model was trained with is required - reconstructing it
+ *   from [featEgoManeuver]/etc. plus whatever `FEATURE_GROUPS` happens to look like at label time
+ *   would silently break if that dict is ever reordered or edited after this run was trained.
  *
  * Feature group flags (all default true in the script):
  *
@@ -96,6 +107,8 @@ object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val nTestMutants = integer("n_test_mutants")
   val logText = text("log_text").nullable()
   val dotSource = text("dot_source").nullable()
+  val modelText = text("model_text").nullable()
+  val featureColumns = array("feature_columns", TextColumnType()).nullable()
 
   // Feature group flags
   val featEgoManeuver = bool("feat_ego_maneuver").nullable()

@@ -157,21 +157,32 @@ def _print_node(node: dict, feature_names: list[str], depth: int = 0) -> None:
     threshold = node["threshold"]
     decision = node.get("decision_type", "<=")
 
+    # LightGBM trees are strictly binary: a missing (NaN) value for this feature isn't tested as
+    # its own branch, it's silently folded into whichever child "default_left" points at for this
+    # node - a choice learned independently per split, which is why the exact same
+    # feature/threshold can reappear at different depths (once to separate "genuinely below X"
+    # from "above X or missing", then again deeper to peel missing values back out of that mixed
+    # group). Surfacing default_left/missing_type here makes that visible instead of hidden.
+    missing_type = node.get("missing_type", "None")
+    default_left = node.get("default_left", True)
+    missing_note_left = " (missing -> here)" if missing_type != "None" and default_left else ""
+    missing_note_right = " (missing -> here)" if missing_type != "None" and not default_left else ""
+
     if decision == "==" and fname == "ego_maneuver_lane_change":
         idx = int(threshold)
         left_cat = LANE_CHANGE_CATEGORIES[idx] if idx < len(LANE_CHANGE_CATEGORIES) else str(idx)
         right_cats = [c for i, c in enumerate(LANE_CHANGE_CATEGORIES) if i != idx]
-        print(f"{prefix}|--- {fname} = {left_cat}")
+        print(f"{prefix}|--- {fname} = {left_cat}{missing_note_left}")
         _print_node(node["left_child"], feature_names, depth + 1)
-        print(f"{prefix}|--- {fname} in {{{', '.join(right_cats)}}}")
+        print(f"{prefix}|--- {fname} in {{{', '.join(right_cats)}}}{missing_note_right}")
         _print_node(node["right_child"], feature_names, depth + 1)
         return
 
     # LightGBM represents boolean 0/1 splits as ~1e-35 floats; display as 0
     display_threshold = 0 if isinstance(threshold, float) and abs(threshold) < 1e-10 else threshold
-    print(f"{prefix}|--- {fname} {decision} {display_threshold}")
+    print(f"{prefix}|--- {fname} {decision} {display_threshold}{missing_note_left}")
     _print_node(node["left_child"], feature_names, depth + 1)
-    print(f"{prefix}|--- {fname} > {display_threshold}")
+    print(f"{prefix}|--- {fname} > {display_threshold}{missing_note_right}")
     _print_node(node["right_child"], feature_names, depth + 1)
 
 
@@ -397,6 +408,14 @@ def _ensure_tracking_tables(conn) -> None:
         # Migrate: columns added after initial schema
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS log_text TEXT")
         cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS dot_source TEXT")
+        # Serialized fitted booster (Booster.model_to_string()) and the exact, ordered feature
+        # columns it was trained on - together enough to label new data later via
+        # lgb.Booster(model_str=...).predict(..., pred_leaf=True) without retraining. The column
+        # order matters: raw Booster.predict() aligns features positionally, not by name, so
+        # feature_columns has to be replayed exactly rather than re-derived from the feat_* flags
+        # below plus whatever FEATURE_GROUPS looks like at label time (which could silently drift).
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS model_text TEXT")
+        cur.execute("ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS feature_columns TEXT[]")
         # train_fraction is NULL for manual-mutant-selection runs with no explicit split
         # requested (see manual_mutant_selection below) — was NOT NULL in the initial schema.
         cur.execute("ALTER TABLE decision_tree_runs ALTER COLUMN train_fraction DROP NOT NULL")
@@ -467,6 +486,8 @@ def _insert_run(
     train_mutants: set[int],
     test_mutants: set[int],
     used_mutants: list[int],
+    model_text: str,
+    feature_columns: list[str],
     feature_flags: dict[str, bool],
     n_trials: int,
     max_leaves_bound: int,
@@ -492,7 +513,7 @@ def _insert_run(
             "  hp_num_leaves, hp_max_depth, hp_min_child_samples, hp_min_split_gain,"
             "  tuning_roc_auc,"
             "  learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,"
-            "  used_mutants"
+            "  used_mutants, model_text, feature_columns"
             ") VALUES ("
             "  %s, %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
@@ -501,7 +522,7 @@ def _insert_run(
             "  %s, %s, %s, %s,"
             "  %s,"
             "  %s, %s, %s, %s,"
-            "  %s"
+            "  %s, %s, %s"
             ") RETURNING id",
             (
                 train_fraction, manual_mutant_selection, seed, len(train_mutants), len(test_mutants),
@@ -514,7 +535,7 @@ def _insert_run(
                 best_params["min_child_samples"], best_params["min_split_gain"],
                 tuning_roc_auc,
                 learned_num_leaves, learned_max_depth, train_accuracy, test_accuracy,
-                used_mutants,
+                used_mutants, model_text, feature_columns,
             ),
         )
         run_id = cur.fetchone()[0]
@@ -995,6 +1016,12 @@ def main() -> None:
                     # which would make that union always the full mutant universe regardless of
                     # what was actually requested.
                     used_mutants=sorted(unique_mutants.tolist()),
+                    # Booster.model_to_string()/feature_cols together let a later process reload
+                    # this exact tree (lgb.Booster(model_str=...)) and label new data with it,
+                    # without retraining - see _ensure_tracking_tables for why feature_cols must be
+                    # persisted verbatim (predict() aligns features positionally, not by name).
+                    model_text=booster.model_to_string(),
+                    feature_columns=feature_cols,
                     feature_flags=group_flags,
                     n_trials=args.n_trials,
                     max_leaves_bound=args.max_leaves,
