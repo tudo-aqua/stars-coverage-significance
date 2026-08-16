@@ -3,7 +3,6 @@
     "operators": [
       "UnaryRemovalOperator",
       "LogicalReplacementOperator",
-      "LiteralChangeOperator",
       "ArithmeticReplacementOperator"
     ]
   },
