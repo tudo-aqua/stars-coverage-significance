@@ -20,9 +20,7 @@ package tools.aqua.stars.sumo.mutants
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.LaneChangeDirection
 import tools.aqua.stars.sumo.Mutant
-import tools.aqua.stars.sumo.MutantManeuver
 
 /** Simple AutopilotMutant68 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant68 : Mutant() {
@@ -30,15 +28,19 @@ class AutopilotMutant68 : Mutant() {
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
+
   /** The time headway to the leader in seconds. */
   var timeHeadwayToLeaderInSeconds = 1.0
+
   /** The minimum gap to the leading vehicle in meters. */
   var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
   var maxAccelerationInMps2 = 2.6
+
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
+
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 
@@ -50,10 +52,12 @@ class AutopilotMutant68 : Mutant() {
 
   /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
   var relativeSpeedGain = 0.2
+
   /**
    * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
    */
   var hardBrakeGapFactor = 0.6
+
   /** The minimum target speed in meters per second. */
   var minTargetSpeedMps = 0.0
 
@@ -104,7 +108,7 @@ class AutopilotMutant68 : Mutant() {
   var maxLaneChangeDurationInSeconds = 1.0
 
   // -------------------- Public tick --------------------
-  override fun controlTick(egoId: String): MutantManeuver {
+  override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -116,7 +120,7 @@ class AutopilotMutant68 : Mutant() {
     SumoVehicle.setSpeed(egoId, vCmd)
 
     val laneChangeDir = maybeLaneChange(egoId, vEgo, desiredGap, leader)
-    return MutantManeuver(vCmd, laneChangeDir)
+    return tools.aqua.stars.sumo.MutantManeuver(vCmd, laneChangeDir)
   }
 
   // -------------------- ACC --------------------
@@ -146,7 +150,12 @@ class AutopilotMutant68 : Mutant() {
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
-    if (gap < hardBrakeGapFactor * desiredGap) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 161 Id:
+     * 900bf1a5-ee6e-4092-ae36-0b3a80eeaa64, Old Operator: *, New Operator: +
+     */
+    if (gap < hardBrakeGapFactor + desiredGap) {
       val penalty = absVal(gapError) * 0.3
       val hardProposal = vLeader - penalty
       if (hardProposal < vTarget) vTarget = hardProposal
@@ -224,7 +233,7 @@ class AutopilotMutant68 : Mutant() {
       vEgo: Double,
       desiredGap: Double,
       leader: StringDoublePair?
-  ): LaneChangeDirection {
+  ): tools.aqua.stars.sumo.LaneChangeDirection {
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -237,13 +246,15 @@ class AutopilotMutant68 : Mutant() {
     val right =
         evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
-    val chosenDir = chooseDirection(left, right) ?: return LaneChangeDirection.NO_LANE_CHANGE
+    val chosenDir =
+        chooseDirection(left, right)
+            ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     val targetLaneIndex = baseLaneIndex + chosenDir
-    if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
+    if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    return LaneChangeDirection.fromDirection(chosenDir)
+    return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
@@ -383,12 +394,7 @@ class AutopilotMutant68 : Mutant() {
    * is intentionally written as a readable loop (more mutation points).
    */
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LiteralChangeOperator Line number: 394 Id:
-     * 60ef8759-2362-45a4-8eec-0e01ceb05494, Old Operator: 0, New Operator: -1002458252
-     */
-    val wantRight = dir < -1002458252
+    val wantRight = dir < 0
     val wantLeft = dir > 0
     if (!wantLeft && !wantRight) return null
 

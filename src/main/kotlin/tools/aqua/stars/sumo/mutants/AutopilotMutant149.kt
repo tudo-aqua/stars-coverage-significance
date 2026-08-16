@@ -20,9 +20,7 @@ package tools.aqua.stars.sumo.mutants
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.LaneChangeDirection
 import tools.aqua.stars.sumo.Mutant
-import tools.aqua.stars.sumo.MutantManeuver
 
 /** Simple AutopilotMutant149 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant149 : Mutant() {
@@ -30,15 +28,19 @@ class AutopilotMutant149 : Mutant() {
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
+
   /** The time headway to the leader in seconds. */
   var timeHeadwayToLeaderInSeconds = 1.0
+
   /** The minimum gap to the leading vehicle in meters. */
   var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
   var maxAccelerationInMps2 = 2.6
+
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
+
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 
@@ -50,10 +52,12 @@ class AutopilotMutant149 : Mutant() {
 
   /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
   var relativeSpeedGain = 0.2
+
   /**
    * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
    */
   var hardBrakeGapFactor = 0.6
+
   /** The minimum target speed in meters per second. */
   var minTargetSpeedMps = 0.0
 
@@ -104,7 +108,7 @@ class AutopilotMutant149 : Mutant() {
   var maxLaneChangeDurationInSeconds = 1.0
 
   // -------------------- Public tick --------------------
-  override fun controlTick(egoId: String): MutantManeuver {
+  override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -116,7 +120,7 @@ class AutopilotMutant149 : Mutant() {
     SumoVehicle.setSpeed(egoId, vCmd)
 
     val laneChangeDir = maybeLaneChange(egoId, vEgo, desiredGap, leader)
-    return MutantManeuver(vCmd, laneChangeDir)
+    return tools.aqua.stars.sumo.MutantManeuver(vCmd, laneChangeDir)
   }
 
   // -------------------- ACC --------------------
@@ -206,12 +210,7 @@ class AutopilotMutant149 : Mutant() {
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 217 Id:
-     * 247d5a4f-a780-4bf8-93d3-e90502fbaca2, Old Operator: *, New Operator: +
-     */
-    val dvMaxUp = maxAccelerationInMps2 + dt
+    val dvMaxUp = maxAccelerationInMps2 * dt
     val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
@@ -229,7 +228,7 @@ class AutopilotMutant149 : Mutant() {
       vEgo: Double,
       desiredGap: Double,
       leader: StringDoublePair?
-  ): LaneChangeDirection {
+  ): tools.aqua.stars.sumo.LaneChangeDirection {
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -242,13 +241,15 @@ class AutopilotMutant149 : Mutant() {
     val right =
         evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
-    val chosenDir = chooseDirection(left, right) ?: return LaneChangeDirection.NO_LANE_CHANGE
+    val chosenDir =
+        chooseDirection(left, right)
+            ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     val targetLaneIndex = baseLaneIndex + chosenDir
-    if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
+    if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    return LaneChangeDirection.fromDirection(chosenDir)
+    return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
@@ -283,7 +284,11 @@ class AutopilotMutant149 : Mutant() {
     val vSideLeader =
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
-    val gain = vSideLeader - curLeaderSpeed
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
+     * b5c1da47-2384-47a8-bc50-43de5b3271d8, Old Operator: -, New Operator: /
+     */
+    val gain = vSideLeader / curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus

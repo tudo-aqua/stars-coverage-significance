@@ -20,9 +20,7 @@ package tools.aqua.stars.sumo.mutants
 import kotlin.math.sqrt
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.LaneChangeDirection
 import tools.aqua.stars.sumo.Mutant
-import tools.aqua.stars.sumo.MutantManeuver
 
 /** Simple AutopilotMutant109 with ACC and Lane Change behavior. Extends [Mutant]. */
 class AutopilotMutant109 : Mutant() {
@@ -30,15 +28,19 @@ class AutopilotMutant109 : Mutant() {
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
   var cruiseSpeedInMps = 27.77
+
   /** The time headway to the leader in seconds. */
   var timeHeadwayToLeaderInSeconds = 1.0
+
   /** The minimum gap to the leading vehicle in meters. */
   var minGapToLeadingInMeters = 2.5
 
   /** Maximum longitudinal acceleration [m/s²]. */
   var maxAccelerationInMps2 = 2.6
+
   /** The maximum deceleration in meters per second squared. */
   var maxDecelerationInMps2 = 4.5
+
   /** The step length in seconds. */
   var stepLengthSeconds = 0.1
 
@@ -50,10 +52,12 @@ class AutopilotMutant109 : Mutant() {
 
   /** Gain applied to the relative speed term (`vLeader - vEgo`) when computing ACC target speed. */
   var relativeSpeedGain = 0.2
+
   /**
    * If `gap < hardBrakeGapFactor * desiredGap`, apply an additional penalty to reduce target speed.
    */
   var hardBrakeGapFactor = 0.6
+
   /** The minimum target speed in meters per second. */
   var minTargetSpeedMps = 0.0
 
@@ -104,7 +108,7 @@ class AutopilotMutant109 : Mutant() {
   var maxLaneChangeDurationInSeconds = 1.0
 
   // -------------------- Public tick --------------------
-  override fun controlTick(egoId: String): MutantManeuver {
+  override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
     val leader = leaderInfoOrNull(egoId)
 
@@ -116,7 +120,7 @@ class AutopilotMutant109 : Mutant() {
     SumoVehicle.setSpeed(egoId, vCmd)
 
     val laneChangeDir = maybeLaneChange(egoId, vEgo, desiredGap, leader)
-    return MutantManeuver(vCmd, laneChangeDir)
+    return tools.aqua.stars.sumo.MutantManeuver(vCmd, laneChangeDir)
   }
 
   // -------------------- ACC --------------------
@@ -126,12 +130,7 @@ class AutopilotMutant109 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 137
-       * Id: d8f2e2ec-3fd7-41ef-9172-9718b0c242b1, Old Operator: *, New Operator: -
-       */
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds - vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -212,7 +211,12 @@ class AutopilotMutant109 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 222 Id:
+     * 6429c953-1e8c-40bd-984e-4af8c6be8208, Old Operator: *, New Operator: %
+     */
+    val dvMaxDown = -maxDecelerationInMps2 % dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -229,7 +233,7 @@ class AutopilotMutant109 : Mutant() {
       vEgo: Double,
       desiredGap: Double,
       leader: StringDoublePair?
-  ): LaneChangeDirection {
+  ): tools.aqua.stars.sumo.LaneChangeDirection {
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -242,13 +246,15 @@ class AutopilotMutant109 : Mutant() {
     val right =
         evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
-    val chosenDir = chooseDirection(left, right) ?: return LaneChangeDirection.NO_LANE_CHANGE
+    val chosenDir =
+        chooseDirection(left, right)
+            ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     val targetLaneIndex = baseLaneIndex + chosenDir
-    if (targetLaneIndex < 0) return LaneChangeDirection.NO_LANE_CHANGE
+    if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
-    return LaneChangeDirection.fromDirection(chosenDir)
+    return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
