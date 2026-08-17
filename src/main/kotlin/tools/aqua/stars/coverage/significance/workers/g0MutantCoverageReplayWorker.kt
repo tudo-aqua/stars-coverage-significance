@@ -42,6 +42,9 @@ fun main(args: Array<String>) {
   val runId = CliArgs.optionalInt(args, "runId")
   val leadTimeSeconds = CliArgs.optionalDouble(args, "leadTimeSeconds")
 
+  println(
+      "Starting G0 mutant coverage replay worker: workerId=$workerId, numWorkers=$numWorkers, runId=$runId, leadTimeSeconds=$leadTimeSeconds")
+
   G0MutantCoverageReplayAnalysis.runWorkerSlice(runId, workerId, numWorkers, leadTimeSeconds)
 }
 
