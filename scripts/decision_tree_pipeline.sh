@@ -1,23 +1,8 @@
 #!/bin/bash
-psql "postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars" -c "
-  BEGIN;
-  DELETE FROM decision_tree_runs WHERE id IN (5, 6);
-  SELECT setval(pg_get_serial_sequence('decision_tree_runs', 'id'), 5, false);
-  COMMIT;" \
-&&
-python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
---n-trials 200 \
---no-ego-maneuver \
---no-ego-position \
---no-ego-accel \
---no-distances \
---no-neighbor-kinematics \
---class-weight balanced \
---max-leaves 512 \
---out-dir /results/runs \
---uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
---db-workers 48 \
---mutant-numbers 1,10,11,12,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125 \
+python3 scripts/export_parquet.py \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
+  --output metric_failed_monitors.parquet \
+  --partitions 4 \
 && python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --n-trials 200 \
 --no-ego-maneuver \
@@ -30,6 +15,59 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --out-dir /results/runs \
 --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
 --db-workers 48 \
---mutant-numbers 145,146,147,149,150,152,153,154,155,156,157,158,159,160,161,162,163,164,165,167,168,169,170,171,172,174,175,176,177,178 \
+&& python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+--n-trials 200 \
+--no-ego-maneuver \
+--no-ego-position \
+--no-ego-accel \
+--no-distances \
+--no-neighbor-kinematics \
+--class-weight balanced \
+--max-leaves 512 \
+--out-dir /results/runs \
+--uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+--db-workers 48 \
+--seed 42 \
+--train-fraction 0.5 \
+&& python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+--n-trials 200 \
+--no-ego-maneuver \
+--no-ego-position \
+--no-ego-accel \
+--no-distances \
+--no-neighbor-kinematics \
+--class-weight balanced \
+--max-leaves 512 \
+--out-dir /results/runs \
+--uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+--db-workers 48 \
+--seed 43 \
+--train-fraction 0.5 \
+&& python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+--n-trials 200 \
+--no-ego-maneuver \
+--no-ego-position \
+--no-ego-accel \
+--no-distances \
+--no-neighbor-kinematics \
+--class-weight balanced \
+--max-leaves 512 \
+--out-dir /results/runs \
+--uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+--db-workers 48 \
+--mutant-numbers 26,29,30,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58 \
+&& python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
+--n-trials 200 \
+--no-ego-maneuver \
+--no-ego-position \
+--no-ego-accel \
+--no-distances \
+--no-neighbor-kinematics \
+--class-weight balanced \
+--max-leaves 512 \
+--out-dir /results/runs \
+--uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
+--db-workers 48 \
+--mutant-numbers 1,2,3,4,6,7,8,9,11,12,13,14,15,16,17,21,22,23 \
 && ./gradlew buildMaterializedViews \
-&& ./gradlew runDrawTicksWithDecisionTreeGrouping --args="5,6"
+&& ./gradlew runDrawTicksWithDecisionTreeGrouping
