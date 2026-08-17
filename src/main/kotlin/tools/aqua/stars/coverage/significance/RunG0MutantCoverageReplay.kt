@@ -49,6 +49,9 @@ fun main(args: Array<String>) {
 
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
 
+  println(
+      "Got the following arguments: runId = $runId, aggregateOnly = $aggregateOnly, bufferProcessors = $bufferProcessors, leadTimes = $leadTimes")
+
   // null (the original single-step behaviour, untouched) plus one pass per requested lead time.
   val passes: List<Double?> = leadTimes ?: listOf(null)
   passes.forEachIndexed { index, leadTimeSeconds ->
