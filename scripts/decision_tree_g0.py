@@ -888,7 +888,10 @@ def main() -> None:
         else:
             n_pos = int(y_train.sum())
             n_neg = len(y_train) - n_pos
-            spw = n_neg / n_pos
+            # A training slice can end up with zero positives (e.g. a mutant subset that never
+            # causes an accident) — there's nothing to upweight, so fall back to no scaling
+            # instead of dividing by zero.
+            spw = n_neg / n_pos if n_pos > 0 else 1.0
             lgb_weight_kwargs = {"scale_pos_weight": spw}
             print(f"Class weighting: scale_pos_weight = {spw:.1f}  (n_neg={n_neg:,} / n_pos={n_pos:,})")
 
@@ -936,6 +939,14 @@ def main() -> None:
             print(f"  |  Test accuracy: {eval_acc:.4f}", end="")
         print("\n")
 
+        if num_leaves <= 1:
+            print(
+                "WARNING: Learned tree has only 1 leaf (no split found) - the tuner could not "
+                "find any usable signal for this mutant/feature selection. Leaf assignments for "
+                "this run will all be leaf 0, and any leaf-based downstream analysis will be "
+                "degenerate.\n"
+            )
+
         feature_names = list(X.columns)
         gain  = booster.feature_importance(importance_type="gain")
         split = booster.feature_importance(importance_type="split")
@@ -960,7 +971,9 @@ def main() -> None:
         leaf_p: dict[int, float] = {}
         def _collect_leaf_p(node: dict) -> None:
             if "split_feature" not in node:
-                leaf_p[node["leaf_index"]] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
+                # A tree with no splits at all (single leaf) omits "leaf_index" on its
+                # root node; pred_leaf always assigns that sole leaf id 0.
+                leaf_p[node.get("leaf_index", 0)] = 1.0 / (1.0 + math.exp(-node["leaf_value"]))
             else:
                 _collect_leaf_p(node["left_child"])
                 _collect_leaf_p(node["right_child"])

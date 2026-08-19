@@ -72,6 +72,14 @@ fun main(args: Array<String>) {
 }
 
 private fun evaluateRun(decisionTreeRunId: EntityID<Int>) {
+  val learnedNumLeaves =
+      DecisionTreeRunsRepository.getById(decisionTreeRunId.value)?.learnedNumLeaves
+  if (learnedNumLeaves != null && learnedNumLeaves <= 1) {
+    println(
+        "WARNING: Decision tree run ${decisionTreeRunId.value} has only $learnedNumLeaves leaf " +
+            "(no split found during training) - every row falls into a single leaf, so leaf-based " +
+            "sampling/significance results for this run are degenerate.")
+  }
   DrawTicksWithDecisionTreeGroupingPostEvaluation.exportSignificance(decisionTreeRunId)
   DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill(decisionTreeRunId)
   DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluate(decisionTreeRunId)
