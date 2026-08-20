@@ -70,4 +70,4 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --db-workers 48 \
 --mutant-numbers 1,2,3,4,6,7,8,9,11,12,13,14,15,16,17,21,22,23 \
 && ./gradlew buildMaterializedViews \
-&& ./gradlew runDrawTicksWithDecisionTreeGrouping --all
+&& ./gradlew runDrawTicksWithDecisionTreeGrouping --args="--all"
