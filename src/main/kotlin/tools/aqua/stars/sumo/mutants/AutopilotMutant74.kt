@@ -152,7 +152,12 @@ class AutopilotMutant74 : Mutant() {
     // Extra safety-ish branch: if too close, bias towards braking
     if (gap < hardBrakeGapFactor * desiredGap) {
       val penalty = absVal(gapError) * 0.3
-      val hardProposal = vLeader - penalty
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 163
+       * Id: d9681f79-539a-4f10-aa93-a2bd4f895ffb, Old Operator: -, New Operator: +
+       */
+      val hardProposal = vLeader + penalty
       if (hardProposal < vTarget) vTarget = hardProposal
     }
 
@@ -189,12 +194,7 @@ class AutopilotMutant74 : Mutant() {
     val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0
 
     // Free space available for ego braking (gap minus desired standstill gap).
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 200 Id:
-     * df79302d-0815-4f1e-af37-d8eeb80de84e, Old Operator: -, New Operator: *
-     */
-    val netGap = gapMeters * minGapToLeadingInMeters
+    val netGap = gapMeters - minGapToLeadingInMeters
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.

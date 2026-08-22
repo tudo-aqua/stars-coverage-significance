@@ -133,9 +133,9 @@ class AutopilotMutant34 : Mutant() {
 
       /**
        * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 141
-       * Id: 6a0ef3e9-ab5e-4b0a-8d84-9b9d9a847fd1, Old Operator: +, New Operator: %
+       * Id: eceec593-50dd-47bb-b0d3-297cd91cab6d, Old Operator: +, New Operator: *
        */
-      minGapToLeadingInMeters % timeHeadwayToLeaderInSeconds * vEgo
+      minGapToLeadingInMeters * timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps

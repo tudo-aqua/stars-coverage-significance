@@ -328,7 +328,7 @@ class AutopilotMutant168 : Mutant() {
 
       /**
        * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 336
-       * Id: f1332f17-c72f-491c-8ad2-49b8ab88f0ba, Old Operator: -, New Operator: +
+       * Id: 85d04e56-72c2-4823-a628-f584b57c04db, Old Operator: -, New Operator: +
        */
       val delta = otherPos + egoLanePos
 

@@ -149,7 +149,7 @@ class AutopilotMutant40 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 157 Id:
-     * 89df45ea-661a-4c98-a32c-7fb21ac1f614, Old Operator: +, New Operator: %
+     * 90f43be2-6bb5-4b7d-b1ce-819d820c9950, Old Operator: +, New Operator: %
      */
     val followProposal = vLeader % gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal

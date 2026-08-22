@@ -270,18 +270,18 @@ class AutopilotMutant4 : Mutant() {
   ): LaneEval {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 281 Id:
-     * 281c2252-5066-4880-ae69-da4e716a24f1, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!wantLeft && wantRight) {
+    if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 
     val targetLaneSafe = isTargetDirectionFree(egoId, dir)
     val sideCorridorSafe = areAllLanesOnSideFree(egoId, dir)
-    if (!targetLaneSafe || !sideCorridorSafe) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 287 Id:
+     * 30f49bea-d822-4316-a414-67a42e40aca9, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (targetLaneSafe || !sideCorridorSafe) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 

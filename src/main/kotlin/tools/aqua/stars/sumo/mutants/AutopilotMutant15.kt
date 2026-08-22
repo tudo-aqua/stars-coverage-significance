@@ -359,7 +359,12 @@ class AutopilotMutant15 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return false // dir == 0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 370 Id:
+     * 01225310-20ae-437f-984c-e0422ff1720f, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (wantLeft && !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)
@@ -391,12 +396,7 @@ class AutopilotMutant15 : Mutant() {
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 402 Id:
-     * 87241793-d69f-4961-bff2-f40c92ff773f, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (wantLeft && !wantRight) return null
+    if (!wantLeft && !wantRight) return null
 
     val bitRight = 1
     val bitAhead = 2

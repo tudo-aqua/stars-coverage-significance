@@ -139,12 +139,13 @@ class AutopilotMutant38 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
+    val gapError = gap - desiredGap
+
     /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 150 Id:
-     * 76e5302b-b84e-4ccf-92c4-dd211d57fb77, Old Operator: -, New Operator: +
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 151 Id:
+     * 7570ddbf-9880-401f-aad6-619216aed453, Old Operator: -, New Operator: +
      */
-    val gapError = gap + desiredGap
-    val relSpeed = vLeader - vEgo
+    val relSpeed = vLeader + vEgo
 
     // Start with cruising, then restrict downwards.
     var vTarget = cruiseSpeedInMps

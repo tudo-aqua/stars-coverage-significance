@@ -130,12 +130,7 @@ class AutopilotMutant46 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 141
-       * Id: b6f1f3b3-1f81-4427-8fc3-8fbf07f2f880, Old Operator: +, New Operator: *
-       */
-      minGapToLeadingInMeters * timeHeadwayToLeaderInSeconds * vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -144,7 +139,11 @@ class AutopilotMutant46 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
-    val gapError = gap - desiredGap
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 150 Id:
+     * f6e1e48b-1fb9-49ba-9f35-d7811fb16e5f, Old Operator: -, New Operator: *
+     */
+    val gapError = gap * desiredGap
     val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.

@@ -211,7 +211,12 @@ class AutopilotMutant5 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 222 Id:
+     * 453c2eae-b5bd-411b-9923-df9d581abe53, Old Operator: -, New Operator: RemoveOperator
+     */
+    val dvMaxDown = maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -330,11 +335,7 @@ class AutopilotMutant5 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 341 Id:
-       * 321d56c0-490f-4a6b-8c30-077364bda7a7, Old Operator: &&, New Operator: ||
-       */
-      if (tooCloseBehind || tooCloseAhead) return false
+      if (tooCloseBehind && tooCloseAhead) return false
     }
 
     return true

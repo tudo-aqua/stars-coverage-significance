@@ -239,12 +239,7 @@ class AutopilotMutant145 : Mutant() {
 
     val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
     val right =
-
-        /**
-         * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 250
-         * Id: 89fe1eea-0c61-4520-b068-6875dbcd3255, Old Operator: -, New Operator: /
-         */
-        evaluateLaneChange(egoId, dir = 0 / 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir =
         chooseDirection(left, right)
@@ -289,7 +284,11 @@ class AutopilotMutant145 : Mutant() {
     val vSideLeader =
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
-    val gain = vSideLeader - curLeaderSpeed
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
+     * 1c73d094-16c4-42d1-a2b2-9f98753ac372, Old Operator: -, New Operator: +
+     */
+    val gain = vSideLeader + curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus

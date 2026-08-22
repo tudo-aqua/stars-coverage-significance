@@ -211,7 +211,12 @@ class AutopilotMutant132 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-    val dvMaxDown = -maxDecelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 222 Id:
+     * e808aad5-29cf-4c9d-aa4c-fabad63e1250, Old Operator: *, New Operator: %
+     */
+    val dvMaxDown = -maxDecelerationInMps2 % dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -254,12 +259,7 @@ class AutopilotMutant132 : Mutant() {
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 265 Id:
-     * 22ff9d54-20eb-43ab-a6e5-22a83c598529, Old Operator: +, New Operator: -
-     */
-    val leaderSlower = (vLeader - stuckSpeedDeltaMps) < vEgo
+    val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }
 

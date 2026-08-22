@@ -345,7 +345,7 @@ class AutopilotMutant13 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 353 Id:
-     * 80beabd5-994b-4c5a-9331-3f7b58f31718, Old Operator: !, New Operator: RemoveOperator
+     * f2b0b699-19e4-4dc1-b03e-771d3057bc53, Old Operator: !, New Operator: RemoveOperator
      */
     if (leftOk && rightOk) return right.dir
 

@@ -286,7 +286,7 @@ class AutopilotMutant152 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
-     * ea16640b-4a46-4d5d-abd6-95a57414dfc9, Old Operator: -, New Operator: *
+     * be9e3ea4-a547-4094-a6fc-32a045d0a272, Old Operator: -, New Operator: *
      */
     val gain = vSideLeader * curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0

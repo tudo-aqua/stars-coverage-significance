@@ -253,7 +253,12 @@ class AutopilotMutant140 : Mutant() {
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
-    val tooClose = gap < stuckGapFactor * desiredGap
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 264 Id:
+     * cd0243a9-ccfc-4ac4-87ae-42037f784bb3, Old Operator: *, New Operator: %
+     */
+    val tooClose = gap < stuckGapFactor % desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }
@@ -284,11 +289,7 @@ class AutopilotMutant140 : Mutant() {
     val vSideLeader =
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
-     * 4e56ef86-3396-46c6-846d-785e95a37716, Old Operator: -, New Operator: %
-     */
-    val gain = vSideLeader % curLeaderSpeed
+    val gain = vSideLeader - curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus

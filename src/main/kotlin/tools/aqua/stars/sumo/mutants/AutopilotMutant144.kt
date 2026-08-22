@@ -245,11 +245,7 @@ class AutopilotMutant144 : Mutant() {
         chooseDirection(left, right)
             ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 256 Id:
-     * 84642d2e-5e4e-4113-8012-cdec24f6aabe, Old Operator: +, New Operator: -
-     */
-    val targetLaneIndex = baseLaneIndex - chosenDir
+    val targetLaneIndex = baseLaneIndex + chosenDir
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
@@ -258,7 +254,12 @@ class AutopilotMutant144 : Mutant() {
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
-    val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 265 Id:
+     * 063eaa58-eee3-4244-a75f-07a1824d7461, Old Operator: +, New Operator: -
+     */
+    val leaderSlower = (vLeader - stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }
 

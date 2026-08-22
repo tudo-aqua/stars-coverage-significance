@@ -210,7 +210,12 @@ class AutopilotMutant129 : Mutant() {
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
-    val dvMaxUp = maxAccelerationInMps2 * dt
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 221 Id:
+     * bd44f192-675e-4034-a2c8-dccc0ee37c4d, Old Operator: *, New Operator: %
+     */
+    val dvMaxUp = maxAccelerationInMps2 % dt
     val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
@@ -284,11 +289,7 @@ class AutopilotMutant129 : Mutant() {
     val vSideLeader =
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
-     * 06a3dda1-c904-46e6-ac99-17be94910974, Old Operator: -, New Operator: +
-     */
-    val gain = vSideLeader + curLeaderSpeed
+    val gain = vSideLeader - curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus

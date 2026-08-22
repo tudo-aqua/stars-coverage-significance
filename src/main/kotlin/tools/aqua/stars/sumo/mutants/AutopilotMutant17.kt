@@ -255,7 +255,12 @@ class AutopilotMutant17 : Mutant() {
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
-    return tooClose && leaderSlower
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 266 Id:
+     * 3b9815ca-b4ec-4f90-a67e-8f73415aaa6e, Old Operator: &&, New Operator: ||
+     */
+    return tooClose || leaderSlower
   }
 
   private data class LaneEval(val dir: Int, val feasible: Boolean, val score: Double)
@@ -270,12 +275,7 @@ class AutopilotMutant17 : Mutant() {
   ): LaneEval {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 281 Id:
-     * a0cbbe84-7045-42cc-966b-c5f8864cf837, Old Operator: &&, New Operator: ||
-     */
-    if (!wantLeft || !wantRight) {
+    if (!wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 

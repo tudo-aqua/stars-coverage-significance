@@ -270,7 +270,12 @@ class AutopilotMutant3 : Mutant() {
   ): LaneEval {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 281 Id:
+     * 172ba2c2-b49d-40f3-9130-971bcdddbfd7, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (wantLeft && !wantRight) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 
@@ -391,12 +396,7 @@ class AutopilotMutant3 : Mutant() {
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 402 Id:
-     * 1fef4207-2358-4f14-ba5c-8a696f49d9b2, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!wantLeft && wantRight) return null
+    if (!wantLeft && !wantRight) return null
 
     val bitRight = 1
     val bitAhead = 2

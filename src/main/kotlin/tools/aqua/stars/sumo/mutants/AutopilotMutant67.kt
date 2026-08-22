@@ -146,12 +146,7 @@ class AutopilotMutant67 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 157 Id:
-     * 85940a5f-f082-41bd-8750-5cb005a3bb65, Old Operator: *, New Operator: /
-     */
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain / relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
@@ -194,7 +189,12 @@ class AutopilotMutant67 : Mutant() {
     val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0
 
     // Free space available for ego braking (gap minus desired standstill gap).
-    val netGap = gapMeters - minGapToLeadingInMeters
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 200 Id:
+     * 0dd8e2e9-9e5d-4d08-b7f5-7adae297b344, Old Operator: -, New Operator: %
+     */
+    val netGap = gapMeters % minGapToLeadingInMeters
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.

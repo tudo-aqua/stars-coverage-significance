@@ -285,14 +285,13 @@ class AutopilotMutant164 : Mutant() {
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
     val gain = vSideLeader - curLeaderSpeed
+    val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 296 Id:
-     * c20301aa-522d-48ab-8807-64e3e7cd4e91, Old Operator: *, New Operator: %
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 298 Id:
+     * e34b9826-fb45-46c6-9a99-2414a910ff49, Old Operator: *, New Operator: -
      */
-    val stuckBonus = if (stuck) 0.5 % laneChangeMinGainInMps else 0.0
-
-    val score = sideLeaderWeight * gain + stuckBonus
+    val score = sideLeaderWeight - gain + stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)

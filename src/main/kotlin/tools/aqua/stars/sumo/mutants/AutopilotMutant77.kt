@@ -189,7 +189,12 @@ class AutopilotMutant77 : Mutant() {
     val tau = if (stepLengthSeconds > 0.0) stepLengthSeconds else 0.0
 
     // Free space available for ego braking (gap minus desired standstill gap).
-    val netGap = gapMeters - minGapToLeadingInMeters
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 200 Id:
+     * f04c61cb-5443-4388-ae37-2e641e7cb513, Old Operator: -, New Operator: +
+     */
+    val netGap = gapMeters + minGapToLeadingInMeters
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
@@ -201,12 +206,7 @@ class AutopilotMutant77 : Mutant() {
     // Solve: v*tau + v^2/(2*bEgo) <= sAvail
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
     val bt = bEgo * tau
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 212 Id:
-     * 10b931b3-065a-409a-985b-79fda9ab4689, Old Operator: *, New Operator: +
-     */
-    val disc = bt + bt + 2.0 * bEgo * sAvail
+    val disc = bt * bt + 2.0 * bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 

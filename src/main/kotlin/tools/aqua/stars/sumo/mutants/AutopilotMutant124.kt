@@ -201,12 +201,7 @@ class AutopilotMutant124 : Mutant() {
     // Solve: v*tau + v^2/(2*bEgo) <= sAvail
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
     val bt = bEgo * tau
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 212 Id:
-     * d02e9f7e-49ec-480d-997c-cee781fbd70b, Old Operator: *, New Operator: +
-     */
-    val disc = bt * bt + 2.0 + bEgo * sAvail
+    val disc = bt * bt + 2.0 * bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 
@@ -221,7 +216,11 @@ class AutopilotMutant124 : Mutant() {
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
 
-    val vNew = vNow + dvApplied
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 227 Id:
+     * 670d7f5a-66eb-4a0b-83c3-19aefb626a78, Old Operator: +, New Operator: -
+     */
+    val vNew = vNow - dvApplied
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 

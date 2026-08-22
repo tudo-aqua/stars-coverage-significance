@@ -245,11 +245,7 @@ class AutopilotMutant147 : Mutant() {
         chooseDirection(left, right)
             ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 256 Id:
-     * 915602c5-689c-4baa-b202-da1dc9752f5d, Old Operator: +, New Operator: *
-     */
-    val targetLaneIndex = baseLaneIndex * chosenDir
+    val targetLaneIndex = baseLaneIndex + chosenDir
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
@@ -288,7 +284,11 @@ class AutopilotMutant147 : Mutant() {
     val vSideLeader =
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
-    val gain = vSideLeader - curLeaderSpeed
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 295 Id:
+     * 25862f36-7ec5-4b03-a965-70bd9e15bcf7, Old Operator: -, New Operator: /
+     */
+    val gain = vSideLeader / curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus

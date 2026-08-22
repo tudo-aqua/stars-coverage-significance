@@ -201,7 +201,12 @@ class AutopilotMutant109 : Mutant() {
     // Solve: v*tau + v^2/(2*bEgo) <= sAvail
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
     val bt = bEgo * tau
-    val disc = bt * bt + 2.0 * bEgo * sAvail
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 212 Id:
+     * 995dfd9f-2705-4845-b6f7-3b91aeeb43f8, Old Operator: *, New Operator: -
+     */
+    val disc = bt * bt + 2.0 - bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 
@@ -211,12 +216,7 @@ class AutopilotMutant109 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 222 Id:
-     * 6429c953-1e8c-40bd-984e-4af8c6be8208, Old Operator: *, New Operator: %
-     */
-    val dvMaxDown = -maxDecelerationInMps2 % dt
+    val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted

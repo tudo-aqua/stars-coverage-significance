@@ -130,12 +130,7 @@ class AutopilotMutant51 : Mutant() {
           ?.takeIf { it.first.isNotEmpty() }
 
   private fun desiredGapMeters(vEgo: Double): Double =
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 141
-       * Id: dc4b461d-fcc9-4edc-991f-3ef7c72a74d1, Old Operator: *, New Operator: +
-       */
-      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds + vEgo
+      minGapToLeadingInMeters + timeHeadwayToLeaderInSeconds * vEgo
 
   private fun desiredSpeedAcc(vEgo: Double, desiredGap: Double, leader: StringDoublePair?): Double {
     if (leader == null) return cruiseSpeedInMps
@@ -151,7 +146,12 @@ class AutopilotMutant51 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 157 Id:
+     * a5d7302d-ae4d-49ef-a0cb-0a81c53746b0, Old Operator: *, New Operator: %
+     */
+    val followProposal = vLeader + gapGain % gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking

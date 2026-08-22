@@ -276,12 +276,7 @@ class AutopilotMutant24 : Mutant() {
 
     val targetLaneSafe = isTargetDirectionFree(egoId, dir)
     val sideCorridorSafe = areAllLanesOnSideFree(egoId, dir)
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 287 Id:
-     * ec9e8164-cffc-4c6c-aaf7-43e3f3814e4a, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (!targetLaneSafe || sideCorridorSafe) {
+    if (!targetLaneSafe || !sideCorridorSafe) {
       return LaneEval(dir, feasible = false, score = Double.NEGATIVE_INFINITY)
     }
 
@@ -293,7 +288,12 @@ class AutopilotMutant24 : Mutant() {
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus
-    val feasible = stuck || (score > laneChangeMinGainInMps)
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 299 Id:
+     * fb6d46a1-6b39-4a26-a6fd-b92ac32d206e, Old Operator: ||, New Operator: &&
+     */
+    val feasible = stuck && (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)
   }

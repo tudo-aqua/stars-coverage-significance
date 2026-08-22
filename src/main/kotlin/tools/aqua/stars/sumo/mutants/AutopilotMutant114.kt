@@ -212,9 +212,9 @@ class AutopilotMutant114 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 220 Id:
-     * 9529614f-8051-4f42-af00-7e3f04a65e0e, Old Operator: -, New Operator: %
+     * 17b31821-8ea4-4b04-ab5f-a77fb5a3f215, Old Operator: -, New Operator: *
      */
-    val dvWanted = vTarget % vNow
+    val dvWanted = vTarget * vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
     val dvMaxDown = -maxDecelerationInMps2 * dt
 

@@ -196,9 +196,9 @@ class AutopilotMutant88 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 204 Id:
-     * 776a5bfc-16e0-4698-8133-8c756bf78f2b, Old Operator: /, New Operator: -
+     * b5328ed7-c268-46e4-b83d-94d7a4c7899f, Old Operator: /, New Operator: *
      */
-    val leaderStopDist = (vLeader * vLeader) - (2.0 * bLead)
+    val leaderStopDist = (vLeader * vLeader) * (2.0 * bLead)
 
     // Total distance ego may spend: net gap + leader stopping distance.
     val sAvail = netGapClamped + leaderStopDist

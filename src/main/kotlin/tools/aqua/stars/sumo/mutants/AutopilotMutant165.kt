@@ -288,9 +288,9 @@ class AutopilotMutant165 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 296 Id:
-     * ca811ff1-4518-4c1b-ae69-690881c40561, Old Operator: *, New Operator: -
+     * fc7bdae7-ffe3-43b2-b83a-6f978365b2f1, Old Operator: *, New Operator: +
      */
-    val stuckBonus = if (stuck) 0.5 - laneChangeMinGainInMps else 0.0
+    val stuckBonus = if (stuck) 0.5 + laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)

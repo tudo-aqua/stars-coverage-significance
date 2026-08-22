@@ -1,4 +1,7 @@
 {
+  "./Mutant200kmh.kt": {
+    "mutations": []
+  },
   "./MutantManeuver.kt": {
     "mutations": [
       {
@@ -12,12 +15,6 @@
     ]
   },
   "./Mutant.kt": {
-    "mutations": []
-  },
-  "./Mutant200kmh.kt": {
-    "mutations": []
-  },
-  "./HighwayLane.kt": {
     "mutations": []
   },
   "./Autopilot.kt": {
@@ -257,15 +254,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 132,
-        "new_op": "-",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 132,
-        "new_op": "%",
+        "new_op": "/",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -281,8 +270,24 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 132,
-        "new_op": "/",
+        "new_op": "%",
         "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 132,
+        "new_op": "-",
+        "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 132,
+        "new_op": "/",
+        "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
@@ -306,14 +311,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 132,
         "new_op": "-",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 132,
-        "new_op": "/",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -329,6 +326,14 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 141,
+        "new_op": "%",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 141,
         "new_op": "+",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -344,8 +349,8 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 141,
-        "new_op": "%",
+        "line_number": 142,
+        "new_op": "+",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -353,7 +358,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 142,
-        "new_op": "+",
+        "new_op": "%",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -376,16 +381,8 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 142,
-        "new_op": "%",
-        "old_op": "-",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "/",
+        "new_op": "%",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -393,7 +390,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "%",
+        "new_op": "/",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -417,7 +414,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "-",
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -425,7 +422,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "+",
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -441,16 +438,8 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "%",
+        "new_op": "+",
         "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 148,
-        "new_op": "%",
-        "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
@@ -465,7 +454,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 148,
-        "new_op": "/",
+        "new_op": "%",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -482,6 +471,22 @@
         "file_name": "./Autopilot.kt",
         "line_number": 148,
         "new_op": "/",
+        "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 148,
+        "new_op": "/",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 148,
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -504,16 +509,8 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 148,
-        "new_op": "-",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
         "line_number": 152,
-        "new_op": "/",
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -529,7 +526,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 152,
-        "new_op": "-",
+        "new_op": "/",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -537,7 +534,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 152,
-        "new_op": "%",
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -545,7 +542,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 153,
-        "new_op": "/",
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -554,14 +551,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 153,
         "new_op": "+",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 153,
-        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -576,8 +565,16 @@
       },
       {
         "file_name": "./Autopilot.kt",
+        "line_number": 153,
+        "new_op": "/",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
         "line_number": 154,
-        "new_op": "*",
+        "new_op": "+",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -593,14 +590,6 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 154,
-        "new_op": "+",
-        "old_op": "-",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 154,
         "new_op": "/",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -608,7 +597,7 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 191,
+        "line_number": 154,
         "new_op": "*",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -634,6 +623,14 @@
         "file_name": "./Autopilot.kt",
         "line_number": 191,
         "new_op": "/",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 191,
+        "new_op": "*",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -641,7 +638,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 195,
-        "new_op": "-",
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -649,7 +646,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 195,
-        "new_op": "%",
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -705,14 +702,6 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 195,
-        "new_op": "+",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 195,
         "new_op": "/",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -721,7 +710,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 195,
-        "new_op": "%",
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -729,7 +718,15 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 195,
-        "new_op": "-",
+        "new_op": "+",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 195,
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -737,7 +734,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 198,
-        "new_op": "-",
+        "new_op": "%",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -745,7 +742,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 198,
-        "new_op": "/",
+        "new_op": "-",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -761,7 +758,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 198,
-        "new_op": "%",
+        "new_op": "/",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -785,7 +782,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 202,
-        "new_op": "%",
+        "new_op": "/",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -793,7 +790,15 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 202,
-        "new_op": "/",
+        "new_op": "%",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 203,
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -826,7 +831,7 @@
         "file_name": "./Autopilot.kt",
         "line_number": 203,
         "new_op": "%",
-        "old_op": "*",
+        "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
@@ -834,6 +839,14 @@
         "file_name": "./Autopilot.kt",
         "line_number": 203,
         "new_op": "/",
+        "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 203,
+        "new_op": "-",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -849,46 +862,6 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 203,
-        "new_op": "-",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 203,
-        "new_op": "%",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 203,
-        "new_op": "+",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 203,
-        "new_op": "%",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 203,
-        "new_op": "-",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 203,
         "new_op": "/",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -921,7 +894,31 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 203,
+        "new_op": "-",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 203,
+        "new_op": "%",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 203,
         "new_op": "/",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 203,
+        "new_op": "+",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -930,14 +927,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 205,
         "new_op": "/",
-        "old_op": "-",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 205,
-        "new_op": "%",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -960,8 +949,8 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 211,
-        "new_op": "/",
+        "line_number": 205,
+        "new_op": "%",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -977,7 +966,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 211,
-        "new_op": "*",
+        "new_op": "+",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -985,7 +974,15 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 211,
-        "new_op": "+",
+        "new_op": "/",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 211,
+        "new_op": "*",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -993,7 +990,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 212,
-        "new_op": "+",
+        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1009,7 +1006,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 212,
-        "new_op": "-",
+        "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1017,6 +1014,30 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 212,
+        "new_op": "+",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 213,
+        "new_op": "-",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 213,
+        "new_op": "/",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 213,
         "new_op": "%",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -1032,32 +1053,24 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 213,
-        "new_op": "%",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 213,
-        "new_op": "/",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 213,
+        "line_number": 218,
         "new_op": "-",
-        "old_op": "*",
+        "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
       {
         "file_name": "./Autopilot.kt",
         "line_number": 218,
-        "new_op": "-",
+        "new_op": "/",
+        "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 218,
+        "new_op": "%",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1066,22 +1079,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 218,
         "new_op": "*",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 218,
-        "new_op": "/",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 218,
-        "new_op": "%",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1097,6 +1094,14 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 241,
+        "new_op": "%",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 241,
         "new_op": "/",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -1106,14 +1111,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 241,
         "new_op": "*",
-        "old_op": "-",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 241,
-        "new_op": "%",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1129,7 +1126,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 247,
-        "new_op": "*",
+        "new_op": "/",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1137,7 +1134,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 247,
-        "new_op": "/",
+        "new_op": "*",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1147,14 +1144,6 @@
         "line_number": 247,
         "new_op": "%",
         "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 255,
-        "new_op": "+",
-        "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
@@ -1178,6 +1167,14 @@
         "file_name": "./Autopilot.kt",
         "line_number": 255,
         "new_op": "-",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 255,
+        "new_op": "+",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1217,6 +1214,14 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 286,
+        "new_op": "%",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 286,
         "new_op": "/",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -1240,14 +1245,6 @@
       },
       {
         "file_name": "./Autopilot.kt",
-        "line_number": 286,
-        "new_op": "%",
-        "old_op": "-",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
         "line_number": 287,
         "new_op": "%",
         "old_op": "*",
@@ -1265,7 +1262,7 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 287,
-        "new_op": "-",
+        "new_op": "+",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1273,6 +1270,14 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 287,
+        "new_op": "-",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 289,
         "new_op": "+",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
@@ -1282,22 +1287,6 @@
         "file_name": "./Autopilot.kt",
         "line_number": 289,
         "new_op": "%",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 289,
-        "new_op": "+",
-        "old_op": "*",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 289,
-        "new_op": "-",
         "old_op": "*",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1313,7 +1302,23 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 289,
-        "new_op": "%",
+        "new_op": "-",
+        "old_op": "*",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 289,
+        "new_op": "-",
+        "old_op": "+",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 289,
+        "new_op": "/",
         "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1329,31 +1334,15 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 289,
-        "new_op": "/",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 289,
-        "new_op": "-",
-        "old_op": "+",
-        "mutation_type": "ArithmeticReplacementOperator",
-        "result": "InProgress"
-      },
-      {
-        "file_name": "./Autopilot.kt",
-        "line_number": 327,
         "new_op": "%",
-        "old_op": "-",
+        "old_op": "+",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       },
       {
         "file_name": "./Autopilot.kt",
         "line_number": 327,
-        "new_op": "+",
+        "new_op": "/",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
@@ -1369,11 +1358,22 @@
       {
         "file_name": "./Autopilot.kt",
         "line_number": 327,
-        "new_op": "/",
+        "new_op": "+",
+        "old_op": "-",
+        "mutation_type": "ArithmeticReplacementOperator",
+        "result": "InProgress"
+      },
+      {
+        "file_name": "./Autopilot.kt",
+        "line_number": 327,
+        "new_op": "%",
         "old_op": "-",
         "mutation_type": "ArithmeticReplacementOperator",
         "result": "InProgress"
       }
     ]
+  },
+  "./HighwayLane.kt": {
+    "mutations": []
   }
 }

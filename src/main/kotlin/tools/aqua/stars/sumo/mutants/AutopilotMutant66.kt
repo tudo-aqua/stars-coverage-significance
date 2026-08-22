@@ -153,7 +153,7 @@ class AutopilotMutant66 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 161 Id:
-     * 7b6f815a-02eb-4c53-b7c9-a7d6662986a0, Old Operator: *, New Operator: %
+     * fb775c8b-8742-4142-b1ba-8ea984b6cb7c, Old Operator: *, New Operator: %
      */
     if (gap < hardBrakeGapFactor % desiredGap) {
       val penalty = absVal(gapError) * 0.3

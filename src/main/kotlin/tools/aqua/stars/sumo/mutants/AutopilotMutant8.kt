@@ -220,11 +220,7 @@ class AutopilotMutant8 : Mutant() {
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
-  /**
-   * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 231 Id:
-   * 453212e0-ce81-4bef-a330-f40530f0885d, Old Operator: -, New Operator: RemoveOperator
-   */
-  private fun absVal(x: Double): Double = if (x < 0.0) x else x
+  private fun absVal(x: Double): Double = if (x < 0.0) -x else x
 
   // -------------------- Lane change --------------------
   private fun maybeLaneChange(
@@ -345,7 +341,12 @@ class AutopilotMutant8 : Mutant() {
     val rightOk = right.feasible
 
     if (!leftOk && !rightOk) return null
-    if (leftOk && !rightOk) return left.dir
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 352 Id:
+     * 6c29cfb9-faa8-47d3-ad2e-2e83792cc351, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (leftOk && rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 
     // both feasible

@@ -289,9 +289,9 @@ class AutopilotMutant158 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 298 Id:
-     * 8ee8a18e-6205-4e34-84eb-4adec9763282, Old Operator: +, New Operator: %
+     * 7122ae92-9117-4dfe-a9b7-a52c53e989fe, Old Operator: +, New Operator: /
      */
-    val score = sideLeaderWeight * gain % stuckBonus
+    val score = sideLeaderWeight * gain / stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)

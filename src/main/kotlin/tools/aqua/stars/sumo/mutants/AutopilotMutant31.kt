@@ -341,13 +341,13 @@ class AutopilotMutant31 : Mutant() {
     val rightOk = right.feasible
 
     if (!leftOk && !rightOk) return null
-    if (leftOk && !rightOk) return left.dir
 
     /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 353 Id:
-     * 57d671bc-1d11-4000-b634-1a4a134933d7, Old Operator: &&, New Operator: ||
+     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 352 Id:
+     * 92a00dd9-486a-4e9e-b4b8-f81c0cdce849, Old Operator: &&, New Operator: ||
      */
-    if (!leftOk || rightOk) return right.dir
+    if (leftOk || !rightOk) return left.dir
+    if (!leftOk && rightOk) return right.dir
 
     // both feasible
     return if (left.score > right.score) left.dir

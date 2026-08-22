@@ -216,7 +216,11 @@ class AutopilotMutant130 : Mutant() {
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
 
-    val vNew = vNow + dvApplied
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 227 Id:
+     * c99848fd-8079-4589-9155-ba78c2ebda19, Old Operator: +, New Operator: %
+     */
+    val vNew = vNow % dvApplied
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
@@ -254,12 +258,7 @@ class AutopilotMutant130 : Mutant() {
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
     val tooClose = gap < stuckGapFactor * desiredGap
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 265 Id:
-     * 071dd650-e7ec-4077-9c45-254307a209fd, Old Operator: +, New Operator: %
-     */
-    val leaderSlower = (vLeader % stuckSpeedDeltaMps) < vEgo
+    val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }
 

@@ -257,7 +257,7 @@ class AutopilotMutant153 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 265 Id:
-     * ee26fd39-8eea-4d75-a666-c5832e862eba, Old Operator: +, New Operator: *
+     * c2952ba4-bbe4-4833-95c5-701fed35edb0, Old Operator: +, New Operator: *
      */
     val leaderSlower = (vLeader * stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower

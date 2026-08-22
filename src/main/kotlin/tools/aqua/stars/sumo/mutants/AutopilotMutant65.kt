@@ -154,9 +154,9 @@ class AutopilotMutant65 : Mutant() {
 
       /**
        * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 162
-       * Id: 78eb2a95-d2a6-47cd-907a-36378e0a6594, Old Operator: *, New Operator: +
+       * Id: f0adc46f-85a5-434e-99c3-2cb9a0984a6c, Old Operator: *, New Operator: %
        */
-      val penalty = absVal(gapError) + 0.3
+      val penalty = absVal(gapError) % 0.3
       val hardProposal = vLeader - penalty
       if (hardProposal < vTarget) vTarget = hardProposal
     }

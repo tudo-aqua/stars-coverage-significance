@@ -330,7 +330,11 @@ class AutopilotMutant25 : Mutant() {
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
-      if (tooCloseBehind && tooCloseAhead) return false
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 341 Id:
+       * fbbad7a5-8e0c-4f20-a174-9ba7530b72c4, Old Operator: &&, New Operator: ||
+       */
+      if (tooCloseBehind || tooCloseAhead) return false
     }
 
     return true
@@ -359,12 +363,7 @@ class AutopilotMutant25 : Mutant() {
   private fun isTargetDirectionFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 370 Id:
-     * 00da19aa-b683-4623-a71e-72a8c9b7db63, Old Operator: &&, New Operator: ||
-     */
-    if (!wantLeft || !wantRight) return false // dir == 0
+    if (!wantLeft && !wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)

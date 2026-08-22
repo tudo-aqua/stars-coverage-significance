@@ -303,12 +303,7 @@ class AutopilotMutant12 : Mutant() {
   private fun areAllLanesOnSideFree(egoId: String, dir: Int): Boolean {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 314 Id:
-     * 7e86273e-79a5-4947-ac93-e130addb101e, Old Operator: !, New Operator: RemoveOperator
-     */
-    if (wantLeft && !wantRight) return false
+    if (!wantLeft && !wantRight) return false
 
     val egoRoadId = SumoVehicle.getRoadID(egoId)
     val egoLaneIndex = SumoVehicle.getLaneIndex(egoId)
@@ -332,7 +327,11 @@ class AutopilotMutant12 : Mutant() {
       val otherPos = SumoVehicle.getLanePosition(otherId)
       val delta = otherPos - egoLanePos
 
-      val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 338 Id:
+       * ce81a027-c767-46d6-8ed3-bd962f7f89bd, Old Operator: -, New Operator: RemoveOperator
+       */
+      val tooCloseBehind = delta >= laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
 
       if (tooCloseBehind && tooCloseAhead) return false

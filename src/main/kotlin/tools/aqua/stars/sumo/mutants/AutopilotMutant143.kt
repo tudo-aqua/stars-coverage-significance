@@ -239,7 +239,12 @@ class AutopilotMutant143 : Mutant() {
 
     val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
     val right =
-        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+
+        /**
+         * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 250
+         * Id: f6dc9407-683b-4379-940e-d580c29cc16c, Old Operator: -, New Operator: %
+         */
+        evaluateLaneChange(egoId, dir = 0 % 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir =
         chooseDirection(left, right)
@@ -253,12 +258,7 @@ class AutopilotMutant143 : Mutant() {
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 264 Id:
-     * 7e1d10b0-2374-4fda-9d46-01321257ae27, Old Operator: *, New Operator: %
-     */
-    val tooClose = gap < stuckGapFactor % desiredGap
+    val tooClose = gap < stuckGapFactor * desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo
     return tooClose && leaderSlower
   }

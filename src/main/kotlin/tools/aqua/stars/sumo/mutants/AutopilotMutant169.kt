@@ -287,11 +287,7 @@ class AutopilotMutant169 : Mutant() {
     val gain = vSideLeader - curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 298 Id:
-     * f1fafec9-891e-4c3b-90c8-3767b6b37a32, Old Operator: +, New Operator: *
-     */
-    val score = sideLeaderWeight * gain * stuckBonus
+    val score = sideLeaderWeight * gain + stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)
@@ -329,7 +325,12 @@ class AutopilotMutant169 : Mutant() {
       if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
-      val delta = otherPos - egoLanePos
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 336
+       * Id: 952328cf-3d23-4342-85e1-520c3e016cf2, Old Operator: -, New Operator: %
+       */
+      val delta = otherPos % egoLanePos
 
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters

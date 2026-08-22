@@ -204,9 +204,9 @@ class AutopilotMutant107 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 212 Id:
-     * 544afa5c-c44c-4b66-94a5-3dc75e33c9f7, Old Operator: +, New Operator: %
+     * 467de960-81f0-4a91-9d58-8c7e7cad66bf, Old Operator: *, New Operator: -
      */
-    val disc = bt * bt % 2.0 * bEgo * sAvail
+    val disc = bt * bt + 2.0 * bEgo - sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
 

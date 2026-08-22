@@ -216,11 +216,7 @@ class AutopilotMutant136 : Mutant() {
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 227 Id:
-     * 358d3bae-427a-4b27-8668-7086f590ad4a, Old Operator: +, New Operator: -
-     */
-    val vNew = vNow - dvApplied
+    val vNew = vNow + dvApplied
     return if (vNew < minTargetSpeedMps) minTargetSpeedMps else vNew
   }
 
@@ -243,7 +239,12 @@ class AutopilotMutant136 : Mutant() {
 
     val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
     val right =
-        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+
+        /**
+         * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 250
+         * Id: 7b640ffc-0451-4830-8aa0-98aa4b3e1fde, Old Operator: -, New Operator: /
+         */
+        evaluateLaneChange(egoId, dir = 0 / 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir =
         chooseDirection(left, right)

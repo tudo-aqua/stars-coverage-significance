@@ -239,17 +239,18 @@ class AutopilotMutant138 : Mutant() {
 
     val left = evaluateLaneChange(egoId, dir = 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
     val right =
-        evaluateLaneChange(egoId, dir = 0 - 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
+
+        /**
+         * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 250
+         * Id: a7444257-6919-49c1-9102-67c3b60c235a, Old Operator: -, New Operator: *
+         */
+        evaluateLaneChange(egoId, dir = 0 * 1, stuck = stuck, curLeaderSpeed = curLeaderSpeed)
 
     val chosenDir =
         chooseDirection(left, right)
             ?: return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 256 Id:
-     * 44c0ffda-29ba-4b3a-8876-b200c29e07f9, Old Operator: +, New Operator: %
-     */
-    val targetLaneIndex = baseLaneIndex % chosenDir
+    val targetLaneIndex = baseLaneIndex + chosenDir
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)

@@ -211,12 +211,7 @@ class AutopilotMutant11 : Mutant() {
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
     val dvWanted = vTarget - vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 222 Id:
-     * 6df63b24-e06b-4132-9153-1fc73d5694b3, Old Operator: -, New Operator: RemoveOperator
-     */
-    val dvMaxDown = maxDecelerationInMps2 * dt
+    val dvMaxDown = -maxDecelerationInMps2 * dt
 
     val dvApplied =
         if (dvWanted > dvMaxUp) dvMaxUp else if (dvWanted < dvMaxDown) dvMaxDown else dvWanted
@@ -345,7 +340,11 @@ class AutopilotMutant11 : Mutant() {
     val leftOk = left.feasible
     val rightOk = right.feasible
 
-    if (!leftOk && !rightOk) return null
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 351 Id:
+     * cdbe0bff-e0aa-42ea-9036-105d2c350810, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (leftOk && !rightOk) return null
     if (leftOk && !rightOk) return left.dir
     if (!leftOk && rightOk) return right.dir
 

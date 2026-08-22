@@ -247,9 +247,9 @@ class AutopilotMutant133 : Mutant() {
 
     /**
      * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 256 Id:
-     * 26a09fec-c848-4a34-b64a-3b29f02b7ff1, Old Operator: +, New Operator: /
+     * 2c6b9ee7-6516-4f50-b14d-5baec602d517, Old Operator: +, New Operator: -
      */
-    val targetLaneIndex = baseLaneIndex / chosenDir
+    val targetLaneIndex = baseLaneIndex - chosenDir
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
