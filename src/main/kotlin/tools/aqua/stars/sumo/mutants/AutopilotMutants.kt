@@ -220,7 +220,8 @@ object AutopilotMutants {
    * Mapping from index to the corresponding mutant class - the union of every operator group above.
    */
   val byIndex: Map<Int, KClass<out Mutant>> =
-      (arithmeticReplacementOperatorMutants +
+      (arithmeticReplacementOperatorMutants.take(
+              logicalReplacementOperatorMutants.size + unaryRemovalOperatorMutants.size) +
               logicalReplacementOperatorMutants +
               unaryRemovalOperatorMutants)
           .toMap()
