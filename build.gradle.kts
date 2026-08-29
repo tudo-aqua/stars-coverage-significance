@@ -39,7 +39,7 @@ dependencies {
   testImplementation(testFixtures("tools.aqua:stars-core"))
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
   implementation(
-      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")
+      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.13.0")
   detektPlugins(
       group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.8")
 
@@ -47,7 +47,7 @@ dependencies {
   implementation("org.jetbrains.exposed:exposed-jdbc:0.53.0")
   implementation("org.jetbrains.exposed:exposed-java-time:0.53.0")
 
-  implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:4.12.0")
+  implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:4.13.0")
   implementation("org.jetbrains.lets-plot:lets-plot-image-export:4.8.1")
 
   runtimeOnly("org.postgresql:postgresql:42.7.3")
