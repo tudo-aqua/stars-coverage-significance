@@ -33,8 +33,8 @@ repositories {
 
 dependencies {
   testImplementation(kotlin("test-junit5"))
-  testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:6.0.3")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.0.3")
   implementation(group = "tools.aqua", name = "stars-core")
   testImplementation(testFixtures("tools.aqua:stars-core"))
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
