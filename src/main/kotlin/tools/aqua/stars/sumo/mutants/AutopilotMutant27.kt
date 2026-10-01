@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant27 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -106,6 +113,8 @@ class AutopilotMutant27 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
+
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
@@ -229,6 +238,10 @@ class AutopilotMutant27 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -249,6 +262,7 @@ class AutopilotMutant27 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
@@ -361,10 +375,10 @@ class AutopilotMutant27 : Mutant() {
     val wantLeft = dir > 0
 
     /**
-     * AUTO GENERATED COMMENT Mutation Operator: LogicalReplacementOperator Line number: 370 Id:
-     * 313272c6-2822-49f5-acca-b677964dcbb5, Old Operator: &&, New Operator: ||
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 384 Id:
+     * c23c8030-d96d-4439-a29e-2e9382485436, Old Operator: !, New Operator: RemoveOperator
      */
-    if (!wantLeft || !wantRight) return false // dir == 0
+    if (!wantLeft && wantRight) return false // dir == 0
 
     // Mode bits (as Int):
     // bit0: right neighbors (else left)

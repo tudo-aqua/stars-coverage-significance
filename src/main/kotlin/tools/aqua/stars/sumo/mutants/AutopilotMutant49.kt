@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant49 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -107,6 +114,8 @@ class AutopilotMutant49 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
+  private var lastLaneChangeSimTimeInSeconds = -1e9
+
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
@@ -146,16 +155,16 @@ class AutopilotMutant49 : Mutant() {
     var vTarget = cruiseSpeedInMps
 
     // vLeader + gapGain * gapError + relSpeedGain * relSpeed
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 157 Id:
-     * 67ab4445-0335-44ed-ae67-6f1cf28401cb, Old Operator: *, New Operator: -
-     */
-    val followProposal = vLeader + gapGain - gapError + relativeSpeedGain * relSpeed
+    val followProposal = vLeader + gapGain * gapError + relativeSpeedGain * relSpeed
     if (followProposal < vTarget) vTarget = followProposal
 
     // Extra safety-ish branch: if too close, bias towards braking
-    if (gap < hardBrakeGapFactor * desiredGap) {
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 170 Id:
+     * 59304f2b-dea1-427c-9bd4-9ac0f4d2c2ce, Old Operator: *, New Operator: /
+     */
+    if (gap < hardBrakeGapFactor / desiredGap) {
       val penalty = absVal(gapError) * 0.3
       val hardProposal = vLeader - penalty
       if (hardProposal < vTarget) vTarget = hardProposal
@@ -234,6 +243,10 @@ class AutopilotMutant49 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -254,6 +267,7 @@ class AutopilotMutant49 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 

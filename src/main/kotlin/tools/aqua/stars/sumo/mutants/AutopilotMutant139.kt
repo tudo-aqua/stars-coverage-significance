@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant139 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -106,6 +113,8 @@ class AutopilotMutant139 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
+
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
@@ -229,6 +238,10 @@ class AutopilotMutant139 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -249,14 +262,15 @@ class AutopilotMutant139 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
   private fun isStuck(vEgo: Double, vLeader: Double, gap: Double, desiredGap: Double): Boolean {
 
     /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 264 Id:
-     * c9cd1a99-9360-4784-9ffb-cb13caea16a5, Old Operator: *, New Operator: /
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 278 Id:
+     * 4af3d5a1-24b9-4439-8f7a-4f4c7df552cf, Old Operator: *, New Operator: /
      */
     val tooClose = gap < stuckGapFactor / desiredGap
     val leaderSlower = (vLeader + stuckSpeedDeltaMps) < vEgo

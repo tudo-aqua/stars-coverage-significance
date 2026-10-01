@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant166 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -106,6 +113,8 @@ class AutopilotMutant166 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
+
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
@@ -229,6 +238,10 @@ class AutopilotMutant166 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -249,6 +262,7 @@ class AutopilotMutant166 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
@@ -285,7 +299,12 @@ class AutopilotMutant166 : Mutant() {
         if (sideLeader != null) SumoVehicle.getSpeed(sideLeader.id) else cruiseSpeedInMps
 
     val gain = vSideLeader - curLeaderSpeed
-    val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 310 Id:
+     * 6ca62bf1-fc81-4b2d-9978-c2b066cdda33, Old Operator: *, New Operator: /
+     */
+    val stuckBonus = if (stuck) 0.5 / laneChangeMinGainInMps else 0.0
 
     val score = sideLeaderWeight * gain + stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
@@ -325,12 +344,7 @@ class AutopilotMutant166 : Mutant() {
       if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
-
-      /**
-       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 336
-       * Id: 584de1fc-14c2-4cb1-bb9c-37e69e3baa94, Old Operator: -, New Operator: /
-       */
-      val delta = otherPos / egoLanePos
+      val delta = otherPos - egoLanePos
 
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters

@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant115 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -106,6 +113,8 @@ class AutopilotMutant115 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
+
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
@@ -203,18 +212,18 @@ class AutopilotMutant115 : Mutant() {
     val bt = bEgo * tau
     val disc = bt * bt + 2.0 * bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 214 Id:
-     * 3527390c-ad96-42f2-a9f2-ed59c3d6ab78, Old Operator: -, New Operator: %
-     */
-    val vSafe = root % bt
+    val vSafe = root - bt
 
     return if (vSafe > 0.0) vSafe else 0.0
   }
 
   private fun clampSpeedWithAccelLimits(vNow: Double, vTarget: Double, dt: Double): Double {
-    val dvWanted = vTarget - vNow
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 229 Id:
+     * ac0fb215-40be-43f8-8b76-f94d1e76a975, Old Operator: -, New Operator: %
+     */
+    val dvWanted = vTarget % vNow
     val dvMaxUp = maxAccelerationInMps2 * dt
     val dvMaxDown = -maxDecelerationInMps2 * dt
 
@@ -234,6 +243,10 @@ class AutopilotMutant115 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -254,6 +267,7 @@ class AutopilotMutant115 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 

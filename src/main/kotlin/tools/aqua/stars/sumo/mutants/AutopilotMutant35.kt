@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant35 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -107,6 +114,8 @@ class AutopilotMutant35 : Mutant() {
    */
   var maxLaneChangeDurationInSeconds = 1.0
 
+  private var lastLaneChangeSimTimeInSeconds = -1e9
+
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
     val vEgo = SumoVehicle.getSpeed(egoId)
@@ -139,11 +148,7 @@ class AutopilotMutant35 : Mutant() {
     val gap = leader.second
     val vLeader = SumoVehicle.getSpeed(leaderId)
 
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 150 Id:
-     * 0888dc86-1893-4fea-850a-4f176b194be2, Old Operator: -, New Operator: /
-     */
-    val gapError = gap / desiredGap
+    val gapError = gap - desiredGap
     val relSpeed = vLeader - vEgo
 
     // Start with cruising, then restrict downwards.
@@ -233,6 +238,10 @@ class AutopilotMutant35 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -253,6 +262,7 @@ class AutopilotMutant35 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 
@@ -395,7 +405,12 @@ class AutopilotMutant35 : Mutant() {
   private fun getSideLeaderAhead(egoId: String, dir: Int): Neighbor? {
     val wantRight = dir < 0
     val wantLeft = dir > 0
-    if (!wantLeft && !wantRight) return null
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: UnaryRemovalOperator Line number: 416 Id:
+     * fa7935ba-87ae-4129-9673-0ab9c66632ea, Old Operator: !, New Operator: RemoveOperator
+     */
+    if (wantLeft && !wantRight) return null
 
     val bitRight = 1
     val bitAhead = 2

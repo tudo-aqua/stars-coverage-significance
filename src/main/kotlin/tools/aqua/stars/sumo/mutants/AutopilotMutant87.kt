@@ -18,6 +18,7 @@
 package tools.aqua.stars.sumo.mutants
 
 import kotlin.math.sqrt
+import org.eclipse.sumo.libsumo.Simulation
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
@@ -63,6 +64,12 @@ class AutopilotMutant87 : Mutant() {
 
   // -------------------- Lane change parameters --------------------
   /**
+   * The lane change cooldown in seconds. If the ego vehicle changed lanes, it will wait this amount
+   * of time before considering lane changes.
+   */
+  var laneChangeCooldownInSeconds = 20.0
+
+  /**
    * The minimum gain in meters per second for lane change. If the gain is below this threshold,
    * lane change will be postponed.
    */
@@ -106,6 +113,8 @@ class AutopilotMutant87 : Mutant() {
    * Duration (s) parameter passed to changeLane (how long the lane-change request should be kept).
    */
   var maxLaneChangeDurationInSeconds = 1.0
+
+  private var lastLaneChangeSimTimeInSeconds = -1e9
 
   // -------------------- Public tick --------------------
   override fun controlTick(egoId: String): tools.aqua.stars.sumo.MutantManeuver {
@@ -193,19 +202,19 @@ class AutopilotMutant87 : Mutant() {
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 204 Id:
-     * a949d0f1-c95a-4f59-a5da-e7c06b30b6e5, Old Operator: *, New Operator: %
-     */
-    val leaderStopDist = (vLeader * vLeader) / (2.0 % bLead)
+    val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)
 
     // Total distance ego may spend: net gap + leader stopping distance.
     val sAvail = netGapClamped + leaderStopDist
 
     // Solve: v*tau + v^2/(2*bEgo) <= sAvail
     // => v <= -bEgo*tau + sqrt((bEgo*tau)^2 + 2*bEgo*sAvail)
-    val bt = bEgo * tau
+
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 220 Id:
+     * ac6e478c-8457-4357-b443-62cc598f5fdb, Old Operator: *, New Operator: %
+     */
+    val bt = bEgo % tau
     val disc = bt * bt + 2.0 * bEgo * sAvail
     val root = if (disc > 0.0) sqrt(disc) else 0.0
     val vSafe = root - bt
@@ -234,6 +243,10 @@ class AutopilotMutant87 : Mutant() {
       desiredGap: Double,
       leader: StringDoublePair?
   ): tools.aqua.stars.sumo.LaneChangeDirection {
+    val now = Simulation.getTime()
+    if (now - lastLaneChangeSimTimeInSeconds < laneChangeCooldownInSeconds)
+        return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
+
     val baseLaneIndex = SumoVehicle.getLaneIndex(egoId)
 
     val curLeaderSpeed =
@@ -254,6 +267,7 @@ class AutopilotMutant87 : Mutant() {
     if (targetLaneIndex < 0) return tools.aqua.stars.sumo.LaneChangeDirection.NO_LANE_CHANGE
 
     SumoVehicle.changeLane(egoId, targetLaneIndex, maxLaneChangeDurationInSeconds)
+    lastLaneChangeSimTimeInSeconds = now
     return tools.aqua.stars.sumo.LaneChangeDirection.fromDirection(chosenDir)
   }
 

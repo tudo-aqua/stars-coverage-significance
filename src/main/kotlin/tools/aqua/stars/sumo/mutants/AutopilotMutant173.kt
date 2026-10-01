@@ -23,8 +23,8 @@ import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
 
-/** Simple AutopilotMutant74 with ACC and Lane Change behavior. Extends [Mutant]. */
-class AutopilotMutant74 : Mutant() {
+/** Simple AutopilotMutant173 with ACC and Lane Change behavior. Extends [Mutant]. */
+class AutopilotMutant173 : Mutant() {
 
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
@@ -202,12 +202,7 @@ class AutopilotMutant74 : Mutant() {
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 213 Id:
-     * 30726540-3ad9-4b8d-8bf1-e03258529267, Old Operator: /, New Operator: -
-     */
-    val leaderStopDist = (vLeader * vLeader) - (2.0 * bLead)
+    val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)
 
     // Total distance ego may spend: net gap + leader stopping distance.
     val sAvail = netGapClamped + leaderStopDist
@@ -306,7 +301,11 @@ class AutopilotMutant74 : Mutant() {
     val gain = vSideLeader - curLeaderSpeed
     val stuckBonus = if (stuck) 0.5 * laneChangeMinGainInMps else 0.0
 
-    val score = sideLeaderWeight * gain + stuckBonus
+    /**
+     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 312 Id:
+     * e42a4e34-8a6d-4f70-9600-5a7524f188a7, Old Operator: *, New Operator: +
+     */
+    val score = sideLeaderWeight + gain + stuckBonus
     val feasible = stuck || (score > laneChangeMinGainInMps)
 
     return LaneEval(dir, feasible = feasible, score = score)

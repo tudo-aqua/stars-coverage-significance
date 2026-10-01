@@ -23,8 +23,8 @@ import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
 import tools.aqua.stars.sumo.Mutant
 
-/** Simple AutopilotMutant74 with ACC and Lane Change behavior. Extends [Mutant]. */
-class AutopilotMutant74 : Mutant() {
+/** Simple AutopilotMutant172 with ACC and Lane Change behavior. Extends [Mutant]. */
+class AutopilotMutant172 : Mutant() {
 
   // -------------------- ACC parameters --------------------
   /** The cruise speed in meters per second. */
@@ -202,12 +202,7 @@ class AutopilotMutant74 : Mutant() {
     val netGapClamped = if (netGap > 0.0) netGap else 0.0
 
     // Leader stopping distance under assumed max braking.
-
-    /**
-     * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 213 Id:
-     * 30726540-3ad9-4b8d-8bf1-e03258529267, Old Operator: /, New Operator: -
-     */
-    val leaderStopDist = (vLeader * vLeader) - (2.0 * bLead)
+    val leaderStopDist = (vLeader * vLeader) / (2.0 * bLead)
 
     // Total distance ego may spend: net gap + leader stopping distance.
     val sAvail = netGapClamped + leaderStopDist
@@ -344,7 +339,12 @@ class AutopilotMutant74 : Mutant() {
       if (!isOnChosenSide) continue
 
       val otherPos = SumoVehicle.getLanePosition(otherId)
-      val delta = otherPos - egoLanePos
+
+      /**
+       * AUTO GENERATED COMMENT Mutation Operator: ArithmeticReplacementOperator Line number: 350
+       * Id: c0c6a9a0-284d-4946-909b-cd8f5156188d, Old Operator: -, New Operator: %
+       */
+      val delta = otherPos % egoLanePos
 
       val tooCloseBehind = delta >= -laneChangeSideBackGapInMeters
       val tooCloseAhead = delta <= laneChangeSideFrontGapInMeters
