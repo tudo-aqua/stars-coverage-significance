@@ -36,7 +36,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.Startin
  */
 data class DcStartingScenarioMutantCombination(
     val decisionTreeRunId: Int,
-    val metricFailedMonitorId: Int,
+    val metricFailedMonitorId: Long,
     val tick: Long,
     val mutantId: MutantId,
     val scenarioConfigId: StartingScenarioId,
@@ -77,7 +77,7 @@ object DcStartingScenarioMutantCombinationView : Table("dc_startingscenario_muta
   val decisionTreeRunId = integer("decision_tree_run_id")
 
   /** Primary key of the underlying [MetricFailedMonitorsTable] row. */
-  val metricFailedMonitorsId = integer("metric_failed_monitors_id")
+  val metricFailedMonitorsId = long("metric_failed_monitors_id")
 
   /** Simulation tick index. */
   val tick = long("tick")

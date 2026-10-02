@@ -219,7 +219,7 @@ object DuplicateTicksAnalysis {
       columns: Array<FloatArray>,
       representativeRow: Int,
       decimals: Int?,
-      rowIds: List<Int>
+      rowIds: List<Long>
   ): String {
     val valuesJson =
         columnNames.indices.joinToString(",") { i ->

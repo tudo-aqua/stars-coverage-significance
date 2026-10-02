@@ -55,7 +55,7 @@ object DecisionTreeLeafAssignmentsRepository {
    * @param metricFailedMonitorId Unique identifier of the annotated metric entry.
    * @return The corresponding [DecisionTreeLeafAssignmentEntry], or `null` if not found.
    */
-  fun getByKey(runId: Int, metricFailedMonitorId: Int): DecisionTreeLeafAssignmentEntry? =
+  fun getByKey(runId: Int, metricFailedMonitorId: Long): DecisionTreeLeafAssignmentEntry? =
       transaction {
         DecisionTreeLeafAssignmentsTable.selectAll()
             .where {

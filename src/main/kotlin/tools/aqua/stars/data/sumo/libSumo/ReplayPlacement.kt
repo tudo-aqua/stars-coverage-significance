@@ -47,9 +47,9 @@ data class ReplayPlacement(
 )
 
 /**
- * Builds placements for every vehicle recorded in [tick]'s `all_vehicles_json` column — i.e. every
- * vehicle actually present in the simulation at that tick, not just the nearest one in each of the
- * 6 `surrounding*` grid cells.
+ * Builds placements for every vehicle recorded in [tick]'s `allVehiclesJson` (stored compressed in
+ * the `all_vehicles_json_deflate` column) — i.e. every vehicle actually present in the simulation
+ * at that tick, not just the nearest one in each of the 6 `surrounding*` grid cells.
  *
  * An earlier version derived placements from the `surrounding*` columns (either as ego-relative
  * offsets, or later directly from their absolute front-bumper positions), which only ever captured

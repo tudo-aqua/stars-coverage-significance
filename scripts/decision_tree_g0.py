@@ -462,7 +462,7 @@ def _ensure_tracking_tables(conn) -> None:
         cur.execute("""
             CREATE TABLE IF NOT EXISTS decision_tree_leaf_assignments (
                 run_id                   INT NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
-                metric_failed_monitor_id INT NOT NULL REFERENCES metric_failed_monitors(id) ON DELETE CASCADE,
+                metric_failed_monitor_id BIGINT NOT NULL REFERENCES metric_failed_monitors(id) ON DELETE CASCADE,
                 leaf_node_id             INT NOT NULL,
                 PRIMARY KEY (run_id, metric_failed_monitor_id)
             )

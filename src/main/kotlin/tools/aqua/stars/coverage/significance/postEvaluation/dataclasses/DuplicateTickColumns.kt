@@ -30,7 +30,7 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
  *   `null` directly.
  */
 class DuplicateTickColumns(
-    val ids: IntArray,
+    val ids: LongArray,
     val columnNames: List<String>,
     val columns: Array<FloatArray>,
 )

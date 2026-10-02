@@ -20,7 +20,7 @@ package tools.aqua.stars.coverage.significance.db.tables
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SortOrder
@@ -43,6 +43,8 @@ import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInst
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toBitmask
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.toMonitorViolations
+import tools.aqua.stars.coverage.significance.utils.compressAllVehiclesJson
+import tools.aqua.stars.coverage.significance.utils.decompressAllVehiclesJson
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.sumo.HighwayLane
 import tools.aqua.stars.sumo.LaneChangeDirection
@@ -186,11 +188,12 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  *   collision time (m).
  * @property collisionVictimBackBumperPosMeters Back bumper position of the victim vehicle at
  *   collision time (m).
- * @property allVehiclesJson JSON array of every vehicle present at this tick (see
+ * @property allVehiclesJsonDeflate Raw-DEFLATE-compressed JSON array of every vehicle present at
+ *   this tick (see [compressAllVehiclesJson] and
  *   [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot]).
  * @property createdAt Timestamp of creation.
  */
-object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
+object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
   val tsc =
       reference(
           name = "tsc_id",
@@ -354,9 +357,12 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
   /**
    * JSON array of
    * [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot] — every
-   * vehicle present at this tick, not just the nearest one in each `surrounding*` cell.
+   * vehicle present at this tick, not just the nearest one in each `surrounding*` cell — compressed
+   * with [compressAllVehiclesJson] (read back with [decompressAllVehiclesJson]). Stored compressed
+   * because it is ~75% of an uncompressed row, and PostgreSQL does not compress rows this small on
+   * its own.
    */
-  val allVehiclesJson = text("all_vehicles_json")
+  val allVehiclesJsonDeflate = binary("all_vehicles_json_deflate")
 
   val createdAt = timestamp("created_at")
 
@@ -459,7 +465,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
       chunkSizeRows: Int = 10_000_000,
       parallelism: Int = 8,
   ): DuplicateTickColumns {
-    data class IdBounds(val rowCount: Int, val minId: Int, val maxId: Int)
+    data class IdBounds(val rowCount: Int, val minId: Long, val maxId: Long)
 
     // Own short-lived transaction (rather than relying on an ambient one from the caller): if a
     // caller wrapped this whole call in `db { }`/`transaction { }`, that outer transaction would
@@ -471,14 +477,18 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
               "SELECT COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM metric_failed_monitors",
               explicitStatementType = StatementType.SELECT) { rs ->
                 rs.next()
+                val rowCount = rs.getLong("row_count")
+                check(rowCount <= Int.MAX_VALUE) {
+                  "$rowCount rows exceed the capacity of the in-memory column arrays"
+                }
                 IdBounds(
-                    rowCount = rs.getInt("row_count"),
-                    minId = rs.getInt("min_id"),
-                    maxId = rs.getInt("max_id"))
+                    rowCount = rowCount.toInt(),
+                    minId = rs.getLong("min_id"),
+                    maxId = rs.getLong("max_id"))
               }
         } ?: error("Failed to read id bounds from metric_failed_monitors")
 
-    val ids = IntArray(bounds.rowCount)
+    val ids = LongArray(bounds.rowCount)
     val columns = Array(duplicateTickCompareColumns.size) { FloatArray(bounds.rowCount) }
 
     if (bounds.rowCount == 0) {
@@ -486,7 +496,7 @@ object MetricFailedMonitorsTable : IntIdTable("metric_failed_monitors") {
           ids = ids, columnNames = duplicateTickCompareColumnNames, columns = columns)
     }
 
-    val chunkStarts = (bounds.minId..bounds.maxId step chunkSizeRows).toList()
+    val chunkStarts = (bounds.minId..bounds.maxId step chunkSizeRows.toLong()).toList()
     val totalChunks = chunkStarts.size
     val completedChunks = AtomicInteger(0)
     val nextIndex = AtomicInteger(0)

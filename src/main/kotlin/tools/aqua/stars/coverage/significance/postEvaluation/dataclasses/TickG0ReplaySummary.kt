@@ -58,7 +58,7 @@ data class TickMutantG0ReplayResult(
  */
 @Serializable
 data class TickG0ReplaySummary(
-    val tickId: Int,
+    val tickId: Long,
     val originalTick: Long,
     val runId: Int,
     val scenarioConfigId: Int,

@@ -32,7 +32,7 @@ fun main(args: Array<String>) {
   require(args.isNotEmpty()) {
     "Usage: RunTickReplay <tickId>[,<tickId>...] [--leadTimeSeconds=<comma separated values>]"
   }
-  val tickIds = args[0].split(",").map { it.trim().toInt() }
+  val tickIds = args[0].split(",").map { it.trim().toLong() }
   val leadTimes = CliArgs.optionalDoubleList(args, "leadTimeSeconds")
 
   DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))

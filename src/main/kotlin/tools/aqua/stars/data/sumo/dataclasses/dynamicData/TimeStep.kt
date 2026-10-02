@@ -61,8 +61,8 @@ class TimeStep(
 
   /**
    * Debug-only: the same JSON string
-   * [tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric] stores as
-   * `metric_failed_monitors.all_vehicles_json` for this tick, for pasting directly into
+   * [tools.aqua.stars.coverage.significance.metrics.FailedMonitorsMetric] stores (compressed) as
+   * `metric_failed_monitors.all_vehicles_json_deflate` for this tick, for pasting directly into
    * `tools/tick_visualizer/index.html`. Computed lazily so it's never built unless actually
    * accessed (it's not needed outside debugging).
    */

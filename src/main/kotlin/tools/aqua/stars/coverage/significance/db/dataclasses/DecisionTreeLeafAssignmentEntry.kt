@@ -26,6 +26,6 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
  */
 data class DecisionTreeLeafAssignmentEntry(
     val runId: Int,
-    val metricFailedMonitorId: Int,
+    val metricFailedMonitorId: Long,
     val leafNodeId: Int,
 )

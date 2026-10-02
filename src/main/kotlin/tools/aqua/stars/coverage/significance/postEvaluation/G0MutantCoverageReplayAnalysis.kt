@@ -287,10 +287,10 @@ object G0MutantCoverageReplayAnalysis {
     val mutants = MutantsRepository.listAll()
     val originalTickCount = mutableMapOf<Int, Int>()
     val originalTickReproducedCount = mutableMapOf<Int, Int>()
-    val originalTickReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
-    val originalTickNotReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
-    val originalTickInconclusiveTickIdsByMutant = mutableMapOf<Int, MutableList<Int>>()
-    val newKillTickIds = mutableMapOf<Int, MutableList<Int>>()
+    val originalTickReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Long>>()
+    val originalTickNotReproducedTickIdsByMutant = mutableMapOf<Int, MutableList<Long>>()
+    val originalTickInconclusiveTickIdsByMutant = mutableMapOf<Int, MutableList<Long>>()
+    val newKillTickIds = mutableMapOf<Int, MutableList<Long>>()
     mutants.forEach { mutant ->
       val mutantId = checkNotNull(mutant.id)
       originalTickCount[mutantId] = 0
@@ -305,15 +305,15 @@ object G0MutantCoverageReplayAnalysis {
     var originalMutantReproducedCount = 0
     var originalMutantNotReproducedCount = 0
     var originalMutantInconclusiveCount = 0
-    val originalMutantReproducedTickIds = mutableListOf<Int>()
-    val originalMutantNotReproducedTickIds = mutableListOf<Int>()
-    val originalMutantInconclusiveTickIds = mutableListOf<Int>()
-    val unavoidableTickIds = mutableListOf<Int>()
+    val originalMutantReproducedTickIds = mutableListOf<Long>()
+    val originalMutantNotReproducedTickIds = mutableListOf<Long>()
+    val originalMutantInconclusiveTickIds = mutableListOf<Long>()
+    val unavoidableTickIds = mutableListOf<Long>()
     // Exact tiers one step short of fully unavoidable: exactly 1, 2, or 3 of the other mutants
     // avoided the failure. Non-cumulative - a tick appears in at most one of these (or in
     // unavoidableTickIds, or in neither if more than 3 other mutants avoided it).
     val almostUnavoidableTickIds =
-        mutableMapOf(1 to mutableListOf<Int>(), 2 to mutableListOf(), 3 to mutableListOf())
+        mutableMapOf(1 to mutableListOf<Long>(), 2 to mutableListOf(), 3 to mutableListOf())
 
     val detailFiles = discoverDetailFiles(runId, leadTimeSeconds)
     println(

@@ -293,7 +293,7 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runAnalyzeDuplicateTick
 
 `RunTickReplay.kt` takes a comma-separated list of `metric_failed_monitors.id` values, reconstructs each tick's local traffic scene in a fresh SUMO/libsumo simulation, and lets every known mutant separately take control of the ego vehicle for exactly one simulated step, to compare what each mutant actually does when faced with that exact scene.
 
-Every vehicle recorded present at the tick is placed at its own recorded position/speed/acceleration/type, read from the `all_vehicles_json` column (`metric_failed_monitors`, a non-nullable JSON array of `TickVehicleSnapshot` populated by `FailedMonitorsMetric` for every tick written by the live evaluation pipeline) rather than from the 6 nearest-neighbour `surrounding*` columns — a vehicle "blocked" from being nearest (e.g. two cars ahead in the same lane) used to be silently missing from the reconstruction. See `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements` for the placement logic and `LibsumoDynamicDataCollector.replayTickForMutant` for the one-step replay itself.
+Every vehicle recorded present at the tick is placed at its own recorded position/speed/acceleration/type, read from the `all_vehicles_json_deflate` column (`metric_failed_monitors`, a non-nullable, raw-DEFLATE-compressed JSON array of `TickVehicleSnapshot` populated by `FailedMonitorsMetric` for every tick written by the live evaluation pipeline) rather than from the 6 nearest-neighbour `surrounding*` columns — a vehicle "blocked" from being nearest (e.g. two cars ahead in the same lane) used to be silently missing from the reconstruction. See `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements` for the placement logic and `LibsumoDynamicDataCollector.replayTickForMutant` for the one-step replay itself.
 
 Scope: this reports the mutant's maneuver command, the resulting next-tick kinematics, and whether a collision occurs. It does **not** re-evaluate TSC monitors (G0–G4/I1/I2) — that requires the full `TSCEvaluation` framework running across a longer window of ticks.
 
@@ -352,7 +352,7 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageRepl
 
 A self-contained static page (no server, build step, or Gradle task needed — just open it) that draws a top-down view of every vehicle in one tick: lanes as horizontal bands (lane 0 at the bottom, per SUMO's 0=rightmost convention), vehicles as colored rectangles sized/positioned by their `front`/`back` (m), with a shaded stripe marking the front edge. Scroll/pinch to zoom, drag to pan; hover a vehicle for its full data, or read it from the table below the scene.
 
-Paste or upload any JSON array shaped like `all_vehicles_json` / `TickVehicleSnapshot[]` — e.g. the value of a `metric_failed_monitors.all_vehicles_json` cell, or a tick's vehicle list from the tick-replay/G0 mutant coverage detail files. Opens with a small example scene pre-filled so it's immediately usable without pasting anything first.
+Paste or upload any JSON array shaped like `TickVehicleSnapshot[]` — e.g. a tick's vehicle list from the tick-replay/G0 mutant coverage detail files. You can also paste a `metric_failed_monitors.all_vehicles_json_deflate` cell exactly as `psql` prints it (`ae56…`); the page decompresses it in the browser. Opens with a small example scene pre-filled so it's immediately usable without pasting anything first.
 
 ---
 
@@ -370,14 +370,14 @@ pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz ps
 
 Exports the `metric_failed_monitors` table from PostgreSQL to a Parquet file using parallel reads via [connectorx](https://github.com/sfu-db/connector-x). On a server with many cores this is significantly faster than a single-threaded CSV export.
 
-Excludes the `all_vehicles_json` column by default — it's the single heaviest column (a per-row JSON array of every vehicle present at that tick, added for the tick-replay feature) and isn't read by any current consumer of this export (`decision_tree_g0.py`, `analyze_duplicate_ticks.py`). Column names are discovered at runtime via `information_schema`, so excluding it doesn't require hardcoding/maintaining the rest of the column list.
+Excludes the `all_vehicles_json_deflate` column by default — it's the single heaviest column (a per-row JSON array of every vehicle present at that tick, added for the tick-replay feature) and isn't read by any current consumer of this export (`decision_tree_g0.py`, `analyze_duplicate_ticks.py`). Column names are discovered at runtime via `information_schema`, so excluding it doesn't require hardcoding/maintaining the rest of the column list.
 
 | Argument | Default | Description |
 |---|---|---|
 | `--uri` | *(required)* | PostgreSQL connection URI: `postgresql://user:pass@host:port/db` |
 | `--output` | `metric_failed_monitors.parquet` | Output Parquet file path |
 | `--partitions` | `96` | Number of parallel read partitions; set to match available CPU cores |
-| `--include-all-vehicles-json` | off | Include the `all_vehicles_json` column anyway |
+| `--include-all-vehicles-json` | off | Include the `all_vehicles_json_deflate` column anyway (raw-DEFLATE bytes; decode a value with `zlib.decompress(value, -15).decode()`) |
 
 ```bash
 python3 scripts/export_parquet.py \

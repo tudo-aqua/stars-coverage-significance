@@ -166,7 +166,7 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property createdAt Timestamp of when the metric entry was created.
  */
 data class MetricFailedMonitorsEntry(
-    val id: Int? = null,
+    val id: Long? = null,
     val runId: Int,
     val tscId: Int,
     val mutantId: Int,

@@ -20,10 +20,10 @@ package tools.aqua.stars.coverage.significance.postEvaluation.dataclasses
 import kotlinx.serialization.Serializable
 
 /**
- * Snapshot of one vehicle present at a tick, as recorded in
- * `metric_failed_monitors.all_vehicles_json` (a JSON array of these, one per vehicle present at
- * that tick — unlike the table's `surrounding*` columns, which only record the *nearest* vehicle in
- * each of 6 relative grid cells around the ego).
+ * Snapshot of one vehicle present at a tick, as recorded (compressed) in
+ * `metric_failed_monitors.all_vehicles_json_deflate` (a JSON array of these, one per vehicle
+ * present at that tick — unlike the table's `surrounding*` columns, which only record the *nearest*
+ * vehicle in each of 6 relative grid cells around the ego).
  *
  * @property id The vehicle's live SUMO vehicle id — identical to
  *   `tools.aqua.stars.data.sumo.dataclasses.dynamicData.Vehicle.vehicleId` in the `TimeStep` this

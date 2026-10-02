@@ -5,11 +5,13 @@ Uses connectorx to read the table in parallel partitions across all available
 cores, then writes a snappy-compressed Parquet file that polars and the
 decision-tree script can load in seconds.
 
-Excludes `all_vehicles_json` by default: a per-row JSON array of every vehicle present at that
-tick, added for the tick-replay feature. It's the single heaviest column in the table (everything
-else is compact floats/ints/bools/short text) and isn't read by any current consumer of this
-export (decision_tree_g0.py and analyze_duplicate_ticks.py both select specific named feature
-columns). Pass --include-all-vehicles-json to include it anyway.
+Excludes `all_vehicles_json_deflate` by default: a per-row JSON array of every vehicle present at
+that tick, added for the tick-replay feature. It's the single heaviest column in the table
+(everything else is compact floats/ints/bools/short text) and isn't read by any current consumer
+of this export (decision_tree_g0.py and analyze_duplicate_ticks.py both select specific named
+feature columns). Pass --include-all-vehicles-json to include it anyway. It is exported as the
+raw-DEFLATE-compressed bytes stored in the database; decode one value with
+`zlib.decompress(value, -15).decode()`.
 
 Usage:
     python export_parquet.py --uri postgresql://user:pass@host:5432/db
@@ -27,7 +29,7 @@ from pathlib import Path
 import polars as pl
 
 
-EXCLUDED_COLUMNS_BY_DEFAULT = ["all_vehicles_json"]
+EXCLUDED_COLUMNS_BY_DEFAULT = ["all_vehicles_json_deflate"]
 
 
 def _build_query(uri: str, exclude: list[str], run_id: "int | None" = None) -> str:
@@ -98,7 +100,7 @@ def main() -> None:
     parser.add_argument(
         "--include-all-vehicles-json",
         action="store_true",
-        help="Include the all_vehicles_json column (excluded by default; see module docstring)",
+        help="Include the all_vehicles_json_deflate column (excluded by default; see module docstring)",
     )
     parser.add_argument(
         "--run-id",

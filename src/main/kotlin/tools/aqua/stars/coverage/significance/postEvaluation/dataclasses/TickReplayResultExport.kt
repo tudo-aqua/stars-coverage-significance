@@ -53,7 +53,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class TickReplayResultExport(
-    val tickId: Int,
+    val tickId: Long,
     val originalTick: Long,
     val mutantId: Int,
     val mutantNumber: Int,

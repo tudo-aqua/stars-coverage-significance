@@ -45,10 +45,10 @@ data class MutantG0ReplayStats(
     val className: String,
     val originalTickCount: Int,
     val originalTickReproducedCount: Int,
-    val originalTickReproducedTickIds: List<Int>,
-    val originalTickNotReproducedTickIds: List<Int>,
-    val originalTickInconclusiveTickIds: List<Int>,
-    val newKillTickIds: List<Int>,
+    val originalTickReproducedTickIds: List<Long>,
+    val originalTickNotReproducedTickIds: List<Long>,
+    val originalTickInconclusiveTickIds: List<Long>,
+    val newKillTickIds: List<Long>,
 )
 
 /**
@@ -66,7 +66,7 @@ data class MutantG0ReplayStats(
 data class NearUnavoidableTierStats(
     val otherMutantsAvoidedCount: Int,
     val tickCount: Int,
-    val tickIds: List<Int>,
+    val tickIds: List<Long>,
 )
 
 /**
@@ -104,13 +104,13 @@ data class G0MutantCoverageReplaySummary(
     val totalTicksAnalyzed: Int,
     val totalMutants: Int,
     val originalMutantReproducedCount: Int,
-    val originalMutantReproducedTickIds: List<Int>,
+    val originalMutantReproducedTickIds: List<Long>,
     val originalMutantNotReproducedCount: Int,
-    val originalMutantNotReproducedTickIds: List<Int>,
+    val originalMutantNotReproducedTickIds: List<Long>,
     val originalMutantInconclusiveCount: Int,
-    val originalMutantInconclusiveTickIds: List<Int>,
+    val originalMutantInconclusiveTickIds: List<Long>,
     val unavoidableTickCount: Int,
-    val unavoidableTickIds: List<Int>,
+    val unavoidableTickIds: List<Long>,
     val almostUnavoidableTicks: List<NearUnavoidableTierStats>,
     val mutantsWithNewKillsCount: Int,
     val mutantStats: List<MutantG0ReplayStats>,

@@ -72,7 +72,7 @@ object TickReplayAnalysis {
    *   many seconds earlier instead, stepping forward through to one step past the original moment —
    *   see this object's "Lead time" docs.
    */
-  fun evaluate(tickIds: List<Int>, leadTimeSeconds: Double? = null) {
+  fun evaluate(tickIds: List<Long>, leadTimeSeconds: Double? = null) {
     println(
         "Starting TickReplayAnalysis for ticks: $tickIds" +
             (leadTimeSeconds?.let { " with leadTimeSeconds=$it" } ?: ""))

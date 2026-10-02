@@ -30,6 +30,8 @@ import org.jetbrains.exposed.sql.upsertReturning
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
+import tools.aqua.stars.coverage.significance.utils.compressAllVehiclesJson
+import tools.aqua.stars.coverage.significance.utils.decompressAllVehiclesJson
 
 /** Repository for managing [MetricFailedMonitorsEntry] in the [MetricFailedMonitorsTable]. */
 object MetricFailedMonitorsRepository {
@@ -40,7 +42,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry.
    * @return The corresponding [MetricFailedMonitorsEntry] or null if not found.
    */
-  fun getById(id: Int): MetricFailedMonitorsEntry? = db {
+  fun getById(id: Long): MetricFailedMonitorsEntry? = db {
     MetricFailedMonitorsTable.selectAll()
         .where { MetricFailedMonitorsTable.id eq id }
         .limit(1)
@@ -310,7 +312,8 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters] =
           e.collisionVictimBackBumperPosMeters
 
-      this[MetricFailedMonitorsTable.allVehiclesJson] = e.allVehiclesJson
+      this[MetricFailedMonitorsTable.allVehiclesJsonDeflate] =
+          compressAllVehiclesJson(e.allVehiclesJson)
 
       this[MetricFailedMonitorsTable.createdAt] = e.createdAt
     }
@@ -447,7 +450,7 @@ object MetricFailedMonitorsRepository {
               row[collisionVictimFrontBumperPosMeters] = entry.collisionVictimFrontBumperPosMeters
               row[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
-              row[allVehiclesJson] = entry.allVehiclesJson
+              row[allVehiclesJsonDeflate] = compressAllVehiclesJson(entry.allVehiclesJson)
 
               row[createdAt] = entry.createdAt
             }
@@ -602,7 +605,7 @@ object MetricFailedMonitorsRepository {
                       entry.collisionVictimFrontBumperPosMeters
                   st[collisionVictimBackBumperPosMeters] = entry.collisionVictimBackBumperPosMeters
 
-                  st[allVehiclesJson] = entry.allVehiclesJson
+                  st[allVehiclesJsonDeflate] = compressAllVehiclesJson(entry.allVehiclesJson)
 
                   st[createdAt] = entry.createdAt
                 }
@@ -617,7 +620,7 @@ object MetricFailedMonitorsRepository {
    * @param id Unique identifier of the metric entry to delete.
    * @return The number of rows deleted (0 or 1).
    */
-  fun deleteById(id: Int): Int = db {
+  fun deleteById(id: Long): Int = db {
     MetricFailedMonitorsTable.deleteWhere { MetricFailedMonitorsTable.id eq id }
   }
 
@@ -784,7 +787,8 @@ object MetricFailedMonitorsRepository {
               this[MetricFailedMonitorsTable.collisionVictimFrontBumperPosMeters],
           collisionVictimBackBumperPosMeters =
               this[MetricFailedMonitorsTable.collisionVictimBackBumperPosMeters],
-          allVehiclesJson = this[MetricFailedMonitorsTable.allVehiclesJson],
+          allVehiclesJson =
+              decompressAllVehiclesJson(this[MetricFailedMonitorsTable.allVehiclesJsonDeflate]),
           createdAt = this[MetricFailedMonitorsTable.createdAt],
       )
 }
