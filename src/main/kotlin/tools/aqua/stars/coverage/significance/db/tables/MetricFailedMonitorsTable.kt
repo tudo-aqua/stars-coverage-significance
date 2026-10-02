@@ -31,6 +31,7 @@ import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.core.tsc.TSC
+import tools.aqua.stars.coverage.significance.db.hexBytea
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DuplicateTickColumns
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantFailure
@@ -362,7 +363,7 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
    * because it is ~75% of an uncompressed row, and PostgreSQL does not compress rows this small on
    * its own.
    */
-  val allVehiclesJsonDeflate = binary("all_vehicles_json_deflate")
+  val allVehiclesJsonDeflate = hexBytea("all_vehicles_json_deflate")
 
   val createdAt = timestamp("created_at")
 
