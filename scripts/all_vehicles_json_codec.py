@@ -9,8 +9,9 @@ Usage as a library:
     from all_vehicles_json_codec import decompress
     vehicles_json = decompress(row["all_vehicles_json_deflate"])
 
-Usage on the command line, with a value as printed by psql:
+Usage on the command line, with a value as printed by psql or a database IDE:
     python all_vehicles_json_codec.py '\\x01ab12...'
+    python all_vehicles_json_codec.py '0x01AB12...'
 
 No dependencies beyond the standard library.
 """
@@ -44,7 +45,8 @@ def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     text = sys.argv[1].strip()
-    if text.startswith("\\x"):
+    # psql prints bytea as "\x0123...", database IDEs (IntelliJ/DataGrip) as "0x0123...".
+    if text[:2] in ("\\x", "0x", "0X"):
         text = text[2:]
     print(decompress(bytes.fromhex(text)))
 
