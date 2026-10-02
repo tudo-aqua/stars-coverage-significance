@@ -368,15 +368,20 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
   val createdAt = timestamp("created_at")
 
   init {
+    // Also serves lookups by tsc alone, since tsc is its leading column.
     index(true, tsc, run, startingScenarioConfiguration, mutant, tick)
 
-    index(false, tsc)
     index(false, run)
     index(false, startingScenarioConfiguration)
     index(false, mutant)
     index(false, tick)
-    index(false, monitorG0Failed)
-    index(false, nextTickMonitorG0Failed)
+
+    // Partial indexes: only the rare `true` rows are ever looked up, so indexing all ~10⁹ rows
+    // would waste gigabytes.
+    index("mfm_monitor_g0_failed_true", false, monitorG0Failed) { monitorG0Failed eq true }
+    index("mfm_next_tick_monitor_g0_failed_true", false, nextTickMonitorG0Failed) {
+      nextTickMonitorG0Failed eq true
+    }
   }
 
   /**
