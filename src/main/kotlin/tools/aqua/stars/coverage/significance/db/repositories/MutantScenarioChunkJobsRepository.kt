@@ -76,12 +76,20 @@ object MutantScenarioChunkJobsRepository {
     val failed = byStatus[JobStatus.FAILED] ?: 0L
     val total = pending + running + done + failed
 
+    val minStartedAt = MutantScenarioChunkJobsTable.startedAt.min()
+    val firstStartedAt =
+        MutantScenarioChunkJobsTable.select(minStartedAt)
+            .where { MutantScenarioChunkJobsTable.run eq runId }
+            .firstOrNull()
+            ?.get(minStartedAt)
+
     ChunkJobsProgress(
         total = total,
         pending = pending,
         running = running,
         done = done,
         failed = failed,
+        firstStartedAt = firstStartedAt,
     )
   }
 

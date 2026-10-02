@@ -24,6 +24,7 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.min
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.vendors.ForUpdateOption
@@ -77,12 +78,20 @@ object HighwayTrafficAnalysisJobsRepository {
     val failed = byStatus[JobStatus.FAILED] ?: 0L
     val total = pending + running + done + failed
 
+    val minStartedAt = HighwayTrafficAnalysisJobsTable.startedAt.min()
+    val firstStartedAt =
+        HighwayTrafficAnalysisJobsTable.select(minStartedAt)
+            .where { HighwayTrafficAnalysisJobsTable.run eq runId }
+            .firstOrNull()
+            ?.get(minStartedAt)
+
     ChunkJobsProgress(
         total = total,
         pending = pending,
         running = running,
         done = done,
         failed = failed,
+        firstStartedAt = firstStartedAt,
     )
   }
 

@@ -17,6 +17,8 @@
 
 package tools.aqua.stars.coverage.significance.db.dataclasses
 
+import java.time.Instant
+
 /**
  * Data class representing the progress of chunk jobs.
  *
@@ -25,6 +27,8 @@ package tools.aqua.stars.coverage.significance.db.dataclasses
  * @property running Number of running chunk jobs.
  * @property done Number of completed chunk jobs.
  * @property failed Number of failed chunk jobs.
+ * @property firstStartedAt Earliest start timestamp of any chunk job of the run, or null if no job
+ *   has been started yet.
  */
 data class ChunkJobsProgress(
     val total: Long,
@@ -32,6 +36,7 @@ data class ChunkJobsProgress(
     val running: Long,
     val done: Long,
     val failed: Long,
+    val firstStartedAt: Instant?,
 ) {
   /** Total number of completed chunk jobs (done + failed). */
   val completed: Long

@@ -58,11 +58,6 @@ fun main() {
     println("Progress monitor thread started (pid=$pidT, thread=${tcur.name}#${tcur.threadId()}).")
 
     var last = ""
-    val startedAtMs = System.currentTimeMillis()
-
-    // We start estimating only once we observe the first completion (done+failed > 0).
-    var firstCompletionAtMs: Long? = null
-    var completedAtFirstCompletion: Long = 0L
 
     fun formatDuration(secondsTotal: Long): String {
       val s = secondsTotal.coerceAtLeast(0)
@@ -83,11 +78,6 @@ fun main() {
       val total = p.total
       val nowMs = System.currentTimeMillis()
 
-      if (firstCompletionAtMs == null && completed > 0L) {
-        firstCompletionAtMs = nowMs
-        completedAtFirstCompletion = completed
-      }
-
       val pct =
           if (total == 0L) 1.0 else (completed.toDouble() / total.toDouble()).coerceIn(0.0, 1.0)
 
@@ -100,26 +90,24 @@ fun main() {
               "done=${p.done} failed=${p.failed} running=${p.running} pending=${p.pending} total=$total"
 
       val line = run {
-        val fcMs = firstCompletionAtMs
-        if (fcMs == null || total <= 0L) {
-          // No estimates until at least one job has completed.
+        val firstStartedAt = p.firstStartedAt
+        if (firstStartedAt == null || total <= 0L) {
+          // No estimates until at least one job has been started.
           base
         } else {
-          val elapsedSec = ((nowMs - startedAtMs) / 1000.0).roundToInt().toLong()
+          // Elapsed time is measured from the first job start stored in the database, so it does
+          // not reset when the monitor is restarted.
+          val elapsedMs = (nowMs - firstStartedAt.toEpochMilli()).coerceAtLeast(0L)
+          val elapsedSec = (elapsedMs / 1000.0).roundToInt().toLong()
 
-          // Throughput since first completion, using completions gained since that moment.
-          val dtSec = ((nowMs - fcMs) / 1000.0).coerceAtLeast(1.0)
-          val dCompleted = (completed - completedAtFirstCompletion).coerceAtLeast(0L)
-
-          // If dCompleted is still 0 (e.g., exactly one job finished and nothing else yet),
-          // keep waiting rather than printing unstable ETAs.
-          if (dCompleted == 0L) {
+          // Keep waiting until the first job has completed rather than printing unstable ETAs.
+          if (completed == 0L) {
             base + "  elapsed=${formatDuration(elapsedSec)}  eta=estimating..."
           } else {
-            val rate = dCompleted.toDouble() / dtSec // jobs per second
+            // Average throughput since the first job was started.
+            val rate = completed.toDouble() / (elapsedMs / 1000.0).coerceAtLeast(1.0)
             val remaining = (total - completed).coerceAtLeast(0L)
-            val remainingSec =
-                if (rate > 0.0) (remaining / rate).roundToInt().toLong() else Long.MAX_VALUE
+            val remainingSec = (remaining / rate).roundToInt().toLong()
             val totalSec = elapsedSec + remainingSec
 
             base +
