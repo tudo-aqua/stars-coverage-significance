@@ -36,7 +36,10 @@ class LeafAssignmentScriptsConsistencyTest {
     val pythonValue = "%,d".format(LEAF_ASSIGNMENT_CHUNK_SIZE).replace(",", "_")
     for (script in listOf("scripts/decision_tree_g0.py", "scripts/label_new_ticks.py")) {
       assertTrue(
-          File(script).readText().contains("LEAF_ASSIGNMENT_CHUNK_SIZE = $pythonValue\n"),
+          File(script)
+              .readText()
+              .replace("\r\n", "\n")
+              .contains("LEAF_ASSIGNMENT_CHUNK_SIZE = $pythonValue\n"),
           "$script does not use LEAF_ASSIGNMENT_CHUNK_SIZE = $pythonValue")
     }
   }
