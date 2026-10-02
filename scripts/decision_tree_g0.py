@@ -42,6 +42,7 @@ import contextlib
 import io
 import math
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import lightgbm as lgb
@@ -249,61 +250,93 @@ def _actual_tree_depth(node: dict) -> int:
     )
 
 
+# Must match LEAF_ASSIGNMENT_CHUNK_SIZE in DecisionTreeLeafAssignmentChunksTable.kt.
+LEAF_ASSIGNMENT_CHUNK_SIZE = 10_000
+
+
 def _write_leaf_ids_to_db(
     uri: str,
     run_id: int,
     row_ids: np.ndarray,
     leaf_ids: np.ndarray,
     workers: int = 48,
-    page_size: int = 100_000,
+    page_size: int = 50,
 ) -> None:
-    """Insert leaf node assignments into decision_tree_leaf_assignments in parallel.
+    """Write leaf node assignments into decision_tree_leaf_assignment_chunks in parallel.
 
-    Each worker opens its own connection and inserts a non-overlapping slice of
-    (run_id, metric_failed_monitor_id, leaf_node_id) rows. psycopg2 releases the
-    GIL during network I/O so threads provide real parallelism.
-    ON CONFLICT DO NOTHING makes re-runs safe.
+    Assignments are stored as one SMALLINT[] per block of LEAF_ASSIGNMENT_CHUNK_SIZE consecutive
+    metric_failed_monitors ids (NULL where an id has no assignment) instead of one row per tick,
+    which cuts a run from ~130 GB to a few GB; see DecisionTreeLeafAssignmentChunksTable.kt. The
+    decision_tree_leaf_assignments view expands them back into one row per tick.
+
+    A chunk that already exists for this run is merged: ids it already assigns keep their leaf, so
+    re-runs are safe. Each worker opens its own connection and writes a non-overlapping set of
+    chunks; psycopg2 releases the GIL during network I/O so threads provide real parallelism.
     """
-    import math
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
     import psycopg2
     import psycopg2.extras
 
-    pairs = list(zip(row_ids.tolist(), leaf_ids.tolist()))
-    n = len(pairs)
+    row_ids = np.asarray(row_ids, dtype=np.int64)
+    leaf_ids = np.asarray(leaf_ids)
+    if leaf_ids.size and (leaf_ids.min() < 0 or leaf_ids.max() > np.iinfo(np.int16).max):
+        raise ValueError("Leaf ids must fit into SMALLINT (0..32767).")
 
-    slice_size = math.ceil(n / workers)
-    slices = [pairs[i : i + slice_size] for i in range(0, n, slice_size)]
+    order = np.argsort(row_ids, kind="stable")
+    row_ids = row_ids[order]
+    leaf_ids = leaf_ids[order].astype(np.int16)
+    firsts = row_ids - row_ids % LEAF_ASSIGNMENT_CHUNK_SIZE
+    boundaries = np.flatnonzero(np.diff(firsts)) + 1
+    chunk_bounds = list(zip(
+        np.concatenate(([0], boundaries)).tolist(),
+        np.concatenate((boundaries, [len(row_ids)])).tolist(),
+    ))
+    n_chunks = len(chunk_bounds) if len(row_ids) else 0
+
+    def _chunk_record(start: int, end: int) -> tuple:
+        first = int(firsts[start])
+        leaves = np.full(LEAF_ASSIGNMENT_CHUNK_SIZE, -1, dtype=np.int16)
+        leaves[row_ids[start:end] - first] = leaf_ids[start:end]
+        return run_id, first, [None if leaf < 0 else leaf for leaf in leaves.tolist()]
+
+    slice_size = max(1, math.ceil(n_chunks / workers))
+    slices = [chunk_bounds[i : i + slice_size] for i in range(0, n_chunks, slice_size)]
 
     completed = 0
 
-    def _insert_slice(chunk: list) -> int:
-        records = [(run_id, row_id, leaf) for row_id, leaf in chunk]
+    def _insert_slice(chunk_slice: list) -> int:
         c = psycopg2.connect(uri)
         try:
             with c.cursor() as cur:
-                psycopg2.extras.execute_values(
-                    cur,
-                    "INSERT INTO decision_tree_leaf_assignments"
-                    " (run_id, metric_failed_monitor_id, leaf_node_id)"
-                    " VALUES %s ON CONFLICT DO NOTHING",
-                    records,
-                    page_size=page_size,
-                )
+                for i in range(0, len(chunk_slice), page_size):
+                    psycopg2.extras.execute_values(
+                        cur,
+                        "INSERT INTO decision_tree_leaf_assignment_chunks AS c"
+                        " (run_id, first_metric_failed_monitor_id, leaf_node_ids)"
+                        " VALUES %s"
+                        " ON CONFLICT (run_id, first_metric_failed_monitor_id) DO UPDATE"
+                        " SET leaf_node_ids = ARRAY("
+                        "   SELECT COALESCE(t.prev, t.cur)"
+                        "   FROM unnest(c.leaf_node_ids, EXCLUDED.leaf_node_ids)"
+                        "        WITH ORDINALITY AS t(prev, cur, i)"
+                        "   ORDER BY t.i)",
+                        [_chunk_record(start, end) for start, end in chunk_slice[i : i + page_size]],
+                        template="(%s, %s, %s::smallint[])",
+                        page_size=page_size,
+                    )
             c.commit()
         finally:
             c.close()
-        return len(chunk)
+        return len(chunk_slice)
 
-    print(f"\nInserting leaf assignments into DB (run {run_id}, {n:,} rows, {len(slices)} workers) ...")
+    print(f"\nInserting leaf assignments into DB (run {run_id}, {len(row_ids):,} rows in "
+          f"{n_chunks:,} chunks, {len(slices)} workers) ...")
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(_insert_slice, s): s for s in slices}
         for fut in as_completed(futures):
             completed += fut.result()
-            print(f"  {completed:,} / {n:,} rows inserted", end="\r", flush=True)
+            print(f"  {completed:,} / {n_chunks:,} chunks written", end="\r", flush=True)
 
-    print(f"\nDone. {completed:,} leaf assignments inserted for run {run_id}.")
+    print(f"\nDone. {len(row_ids):,} leaf assignments written for run {run_id}.")
 
 
 @contextlib.contextmanager
@@ -390,6 +423,15 @@ def _resolve_mutant_numbers(uri: str, mutant_numbers: "set[int]") -> "dict[int, 
         conn.close()
 
 
+# Verbatim copy of DecisionTreeLeafAssignmentsTable.VIEW_QUERY (a Kotlin test checks this).
+LEAF_ASSIGNMENTS_VIEW_QUERY = """SELECT c.run_id,
+       c.first_metric_failed_monitor_id + a.idx - 1 AS metric_failed_monitor_id,
+       a.leaf_node_id::integer                      AS leaf_node_id
+FROM decision_tree_leaf_assignment_chunks c
+     CROSS JOIN LATERAL unnest(c.leaf_node_ids) WITH ORDINALITY AS a(leaf_node_id, idx)
+WHERE a.leaf_node_id IS NOT NULL"""
+
+
 def _ensure_tracking_tables(conn) -> None:
     """Create or migrate decision tree tracking tables."""
     with conn.cursor() as cur:
@@ -459,22 +501,19 @@ def _ensure_tracking_tables(conn) -> None:
                 PRIMARY KEY (run_id, mutant_id)
             )
         """)
+        # Leaf assignments, one SMALLINT[] per block of LEAF_ASSIGNMENT_CHUNK_SIZE consecutive
+        # metric_failed_monitors ids (see _write_leaf_ids_to_db), plus the view expanding them back
+        # into one row per tick. Same DDL as DecisionTreeLeafAssignmentChunksTable.kt and
+        # DecisionTreeLeafAssignmentsTable.kt, which also create them.
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS decision_tree_leaf_assignments (
-                run_id                   INT NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
-                metric_failed_monitor_id BIGINT NOT NULL REFERENCES metric_failed_monitors(id) ON DELETE CASCADE,
-                leaf_node_id             INT NOT NULL,
-                PRIMARY KEY (run_id, metric_failed_monitor_id)
+            CREATE TABLE IF NOT EXISTS decision_tree_leaf_assignment_chunks (
+                run_id                         INT        NOT NULL REFERENCES decision_tree_runs(id) ON DELETE CASCADE,
+                first_metric_failed_monitor_id BIGINT     NOT NULL,
+                leaf_node_ids                  SMALLINT[] NOT NULL,
+                PRIMARY KEY (run_id, first_metric_failed_monitor_id)
             )
         """)
-        # metric_failed_monitor_id is only the trailing column of the primary key above, which
-        # can't serve an efficient "find rows referencing this id" lookup. Without a leading index,
-        # every row deleted from metric_failed_monitors forces a full scan of this table to check
-        # its ON DELETE CASCADE, turning bulk deletes into an O(N*M) operation.
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_decision_tree_leaf_assignments_metric_failed_monitor_id
-                ON decision_tree_leaf_assignments (metric_failed_monitor_id)
-        """)
+        cur.execute("CREATE OR REPLACE VIEW decision_tree_leaf_assignments AS " + LEAF_ASSIGNMENTS_VIEW_QUERY)
     conn.commit()
 
 

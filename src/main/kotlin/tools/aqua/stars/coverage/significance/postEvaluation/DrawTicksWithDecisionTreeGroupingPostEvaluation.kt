@@ -32,7 +32,7 @@ import tools.aqua.stars.coverage.significance.REPETITIONS
 import tools.aqua.stars.coverage.significance.db.db
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
-import tools.aqua.stars.coverage.significance.db.tables.DtMonitorFailuresCombinationView
+import tools.aqua.stars.coverage.significance.db.tables.DtLeafMutantTickCountsView
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DecisionTreeLeafId
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.MutantId
@@ -269,9 +269,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * [evaluateTimeToKill] strategies above - the database-wide total tick count (N), the run's
    * learned leaf count (L), and per-leaf `{totalTicks, failingTicks, mutantKillingAmount}` (from
    * which every per-mutant p_lm, p_l and w_l used by the estimators is derived). Both aggregates
-   * are computed entirely in SQL via [DtMonitorFailuresCombinationView], so no per-tick rows are
-   * loaded into the JVM - unlike [evaluate]/[evaluateTimeToKill], this runs in seconds regardless
-   * of table size.
+   * are computed entirely in SQL via [DtLeafMutantTickCountsView], so no per-tick rows are loaded
+   * into the JVM - unlike [evaluate]/[evaluateTimeToKill], this runs in seconds regardless of table
+   * size.
    *
    * Written to `draw_ticks_with_decision_tree_grouping/run_<runId>/significance.json`, alongside
    * that run's `size_<n>/` and `time_to_kill/` output, so a single run folder is self-sufficient
@@ -296,9 +296,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     println("  Learned leaves for this run: ${learnedNumLeaves ?: "unknown"}.")
 
     println("  Aggregating per-leaf bucket totals in SQL...")
-    val leafTotals = DtMonitorFailuresCombinationView.getLeafBucketTotalsForRunId(resolvedRunId)
+    val leafTotals = DtLeafMutantTickCountsView.getLeafBucketTotalsForRunId(resolvedRunId)
     val mutantKillingAmountByLeafId =
-        DtMonitorFailuresCombinationView.getLeafMutantFailureCountsForRunId(resolvedRunId)
+        DtLeafMutantTickCountsView.getLeafMutantFailureCountsForRunId(resolvedRunId)
             .groupBy { it.leafNodeId }
             .mapValues { (_, counts) -> counts.associate { it.mutantId to it.failingTicks } }
     val buckets =

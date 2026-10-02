@@ -32,16 +32,11 @@ import polars as pl
 EXCLUDED_COLUMNS_BY_DEFAULT = ["all_vehicles_json_deflate"]
 
 
-def _build_query(uri: str, exclude: list[str], run_id: "int | None" = None) -> str:
+def _build_query(uri: str, exclude: list[str]) -> str:
     """Builds a SELECT of every metric_failed_monitors column except those in `exclude`.
 
     Column names are discovered at runtime via information_schema rather than hardcoded, so this
     doesn't need updating whenever the table schema changes.
-
-    When `run_id` is given, also LEFT JOINs in that run's existing leaf assignment as a
-    `leaf_node_id` column (NULL for rows not yet labeled under that run) — lets a downstream
-    labeling pass identify "which ticks still need labeling for this run" from the Parquet file
-    alone, without a live anti-join against the full metric_failed_monitors table.
     """
     import psycopg2
 
@@ -64,15 +59,24 @@ def _build_query(uri: str, exclude: list[str], run_id: "int | None" = None) -> s
     # uppercase letters that Postgres would otherwise fold to lowercase.
     columns_sql = ", ".join(f'm."{c}"' for c in selected)
 
-    if run_id is None:
-        return f"SELECT {columns_sql} FROM metric_failed_monitors m"
+    return f"SELECT {columns_sql} FROM metric_failed_monitors m"
 
+
+def _read_leaf_assignments(uri: str, run_id: int) -> pl.DataFrame:
+    """Reads run `run_id`'s leaf assignments as (id, leaf_node_id) rows.
+
+    Read in one query and joined in polars rather than joined in SQL: the parallel partition
+    queries of the main export would each have to expand all of the run's
+    decision_tree_leaf_assignment_chunks again.
+    """
     # run_id comes from argparse(type=int), so this is never an untrusted string.
-    return (
-        f"SELECT {columns_sql}, dtla.leaf_node_id "
-        f"FROM metric_failed_monitors m "
-        f"LEFT JOIN decision_tree_leaf_assignments dtla "
-        f"  ON dtla.metric_failed_monitor_id = m.id AND dtla.run_id = {run_id}"
+    return pl.read_database_uri(
+        query=(
+            "SELECT metric_failed_monitor_id AS id, leaf_node_id "
+            f"FROM decision_tree_leaf_assignments WHERE run_id = {run_id}"
+        ),
+        uri=uri,
+        engine="connectorx",
     )
 
 
@@ -114,7 +118,7 @@ def main() -> None:
     args = parser.parse_args()
 
     exclude = [] if args.include_all_vehicles_json else EXCLUDED_COLUMNS_BY_DEFAULT
-    query = _build_query(args.uri, exclude, run_id=args.run_id)
+    query = _build_query(args.uri, exclude)
 
     print(f"Reading metric_failed_monitors with {args.partitions} parallel partitions ...")
     if exclude:
@@ -131,6 +135,11 @@ def main() -> None:
             partition_num=args.partitions,
             engine="connectorx",
         )
+        if args.run_id is not None:
+            # Adds that run's leaf assignment as a `leaf_node_id` column (null for rows not yet
+            # labeled under that run), so a later labeling pass can find "which ticks still need
+            # labeling for this run" from the Parquet file alone.
+            df = df.join(_read_leaf_assignments(args.uri, args.run_id), on="id", how="left")
     except Exception as exc:
         sys.exit(f"Database read failed: {exc}")
 

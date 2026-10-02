@@ -17,40 +17,48 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
-import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
 
 /**
- * Table for storing the leaf node assignment of each [MetricFailedMonitorsTable] row for a given
- * decision tree run.
+ * Exposed mapping for the `decision_tree_leaf_assignments` view: the leaf node assignment of each
+ * [MetricFailedMonitorsTable] row for a given decision tree run, one row per (run, tick).
  *
- * Replacing the `leaf_node_id` column that previously lived on [MetricFailedMonitorsTable], this
- * table allows multiple decision tree runs to coexist in the database without overwriting each
- * other's annotations.
+ * The data lives compactly in [DecisionTreeLeafAssignmentChunksTable]; this view expands it back
+ * into the row-per-tick shape that queries join against (`metric_failed_monitors.id =
+ * decision_tree_leaf_assignments.metric_failed_monitor_id AND run_id = ...`). Always filter by
+ * [runId]: the view then only expands that run's chunks.
  *
- * The composite primary key `(run_id, metric_failed_monitor_id)` ensures every row in
- * [MetricFailedMonitorsTable] is assigned at most one leaf node per run.
+ * This is a view, not a table — it is created by
+ * [tools.aqua.stars.coverage.significance.db.DbBootstrap.createSchema] via [CREATE_VIEW_SQL] and
+ * must not be passed to Exposed's schema creation. The `reference` columns only give joins the same
+ * column types as the referenced ids; no foreign keys exist.
  *
  * @property runId Reference to the [DecisionTreeRunsTable] entry this assignment belongs to.
  * @property metricFailedMonitorId Reference to the annotated [MetricFailedMonitorsTable] row.
  * @property leafNodeId Leaf node index assigned by the decision tree classifier for this row.
  */
 object DecisionTreeLeafAssignmentsTable : Table("decision_tree_leaf_assignments") {
-  val runId = reference("run_id", DecisionTreeRunsTable, onDelete = ReferenceOption.CASCADE)
-  val metricFailedMonitorId =
-      reference(
-          "metric_failed_monitor_id", MetricFailedMonitorsTable, onDelete = ReferenceOption.CASCADE)
+  val runId = reference("run_id", DecisionTreeRunsTable)
+  val metricFailedMonitorId = reference("metric_failed_monitor_id", MetricFailedMonitorsTable)
   val leafNodeId = integer("leaf_node_id")
 
-  override val primaryKey = PrimaryKey(runId, metricFailedMonitorId)
+  /** Query defining the view. `scripts/decision_tree_g0.py` keeps a verbatim copy. */
+  const val VIEW_QUERY =
+      """SELECT c.run_id,
+       c.first_metric_failed_monitor_id + a.idx - 1 AS metric_failed_monitor_id,
+       a.leaf_node_id::integer                      AS leaf_node_id
+FROM decision_tree_leaf_assignment_chunks c
+     CROSS JOIN LATERAL unnest(c.leaf_node_ids) WITH ORDINALITY AS a(leaf_node_id, idx)
+WHERE a.leaf_node_id IS NOT NULL"""
 
-  init {
-    // metricFailedMonitorId is only the *trailing* column of the composite primary key above, so
-    // it's unusable for an efficient "find rows referencing this metric_failed_monitor_id" lookup
-    // — exactly what every row of a `DELETE FROM metric_failed_monitors` triggers via this
-    // column's ON DELETE CASCADE. Without a leading index on it, each parent-row delete forces a
-    // full scan of this (potentially equally huge) table, turning a bulk delete into an O(N×M)
-    // operation that can take hours. This index makes that cascade check an O(log N) lookup.
-    index(false, metricFailedMonitorId)
-  }
+  /**
+   * Creates the view unless it exists. Every evaluation worker runs this at startup, often many at
+   * once; a concurrent creation by another worker is therefore expected and ignored.
+   */
+  const val CREATE_VIEW_SQL =
+      """DO $$
+BEGIN
+  CREATE VIEW decision_tree_leaf_assignments AS $VIEW_QUERY;
+EXCEPTION WHEN duplicate_table OR unique_violation THEN NULL;
+END $$"""
 }

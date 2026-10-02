@@ -1,7 +1,8 @@
 SELECT leaf_node_id,
-       array_agg(DISTINCT scenario_config_id)                                          AS scenarios,
-       count(DISTINCT scenario_config_id)                                              AS scenario_count,
-       count(DISTINCT CASE WHEN any_g0_violation THEN scenario_config_id END)          AS killing_scenario_count
-FROM dc_startingscenario_mutant_combination
+       array_agg(scenario_config_id)                                     AS scenarios,
+       count(*)                                                          AS scenario_count,
+       count(*) FILTER (WHERE any_g0_violation)                          AS killing_scenario_count
+FROM dc_leaf_scenarios
+WHERE decision_tree_run_id = 3
 GROUP BY leaf_node_id
 ORDER BY scenario_count

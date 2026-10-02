@@ -24,6 +24,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentChunksTable
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentsTable
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeMutantSplitsTable
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
@@ -193,67 +194,85 @@ object DbBootstrap {
           HighwayTrafficLongTailTable,
           DecisionTreeRunsTable,
           DecisionTreeMutantSplitsTable,
-          DecisionTreeLeafAssignmentsTable)
+          DecisionTreeLeafAssignmentChunksTable)
+      exec(DecisionTreeLeafAssignmentsTable.CREATE_VIEW_SQL)
     }
   }
 
+  /**
+   * Materialized views, in dependency order, as (name, defining query).
+   *
+   * The per-leaf views are aggregates, not per-tick copies: a per-tick view repeats a row for every
+   * (decision tree run, tick) pair, ~1.3 billion rows per run.
+   */
+  private val materializedViews: List<Pair<String, String>> =
+      listOf(
+          "mutant_scenario_g0_violations" to
+              """
+              SELECT "mutant_id",
+                     "scenario_config_id",
+                     COALESCE(BOOL_OR("next_tick_monitor_g0_Accidents_failed"), false) AS any_g0_violation
+              FROM metric_failed_monitors
+              GROUP BY "mutant_id", "scenario_config_id"
+              """,
+          "scenario_mutant_kill_count" to
+              """
+              SELECT scenario_config_id,
+                     SUM(CASE WHEN any_g0_violation THEN 1 ELSE 0 END) AS mutants_killed
+              FROM mutant_scenario_g0_violations
+              GROUP BY scenario_config_id
+              """,
+          // One row per (decision tree run, leaf, scenario): whether any mutant that has a tick of
+          // that scenario in that leaf violated G0 in that scenario.
+          "dc_leaf_scenarios" to
+              """
+              SELECT d.run_id                    AS decision_tree_run_id,
+                     d.leaf_node_id,
+                     m.scenario_config_id,
+                     COUNT(*)                    AS tick_count,
+                     BOOL_OR(v.any_g0_violation) AS any_g0_violation
+              FROM metric_failed_monitors m
+                   JOIN decision_tree_leaf_assignments d
+                        ON m.id = d.metric_failed_monitor_id
+                   JOIN mutant_scenario_g0_violations v
+                        ON m.mutant_id = v.mutant_id
+                       AND m.scenario_config_id = v.scenario_config_id
+              GROUP BY d.run_id, d.leaf_node_id, m.scenario_config_id
+              """,
+          // One row per (decision tree run, leaf, mutant): ticks in that leaf, and how many of them
+          // are followed by a G0 violation. See DtLeafMutantTickCountsView.
+          "dt_leaf_mutant_tick_counts" to
+              """
+              SELECT d.run_id     AS decision_tree_run_id,
+                     d.leaf_node_id,
+                     m.mutant_id,
+                     COUNT(*)     AS total_ticks,
+                     COUNT(*) FILTER (WHERE m."next_tick_monitor_g0_Accidents_failed") AS failing_ticks
+              FROM metric_failed_monitors m
+                   JOIN decision_tree_leaf_assignments d
+                        ON m.id = d.metric_failed_monitor_id
+              GROUP BY d.run_id, d.leaf_node_id, m.mutant_id
+              """,
+      )
+
+  /**
+   * Creates the [materializedViews] that don't exist yet and refreshes those that do, so the views
+   * pick up ticks and decision tree runs added since they were built.
+   */
   fun buildMaterializedViews() {
     connect()
     transaction {
-      exec(
-          """
-          CREATE MATERIALIZED VIEW IF NOT EXISTS mutant_scenario_g0_violations AS
-          SELECT "mutant_id",
-                 "scenario_config_id",
-                 COALESCE(BOOL_OR("next_tick_monitor_g0_Accidents_failed"), false) AS any_g0_violation
-          FROM metric_failed_monitors
-          GROUP BY "mutant_id", "scenario_config_id"
-          """
-              .trimIndent())
-
-      exec(
-          """
-          CREATE MATERIALIZED VIEW IF NOT EXISTS scenario_mutant_kill_count AS
-          SELECT scenario_config_id,
-                 SUM(CASE WHEN any_g0_violation THEN 1 ELSE 0 END) AS mutants_killed
-          FROM mutant_scenario_g0_violations
-          GROUP BY scenario_config_id
-          """
-              .trimIndent())
-
-      exec(
-          """
-          CREATE MATERIALIZED VIEW IF NOT EXISTS dc_startingscenario_mutant_combination AS
-          SELECT metric_failed_monitors.id,
-                 metric_failed_monitors.tick,
-                 metric_failed_monitors.mutant_id,
-                 metric_failed_monitors.scenario_config_id,
-                 decision_tree_leaf_assignments.leaf_node_id,
-                 mutant_scenario_g0_violations.any_g0_violation
-          FROM metric_failed_monitors
-                   JOIN decision_tree_leaf_assignments
-                        ON metric_failed_monitors.id = decision_tree_leaf_assignments.metric_failed_monitor_id
-                   JOIN mutant_scenario_g0_violations
-                        ON metric_failed_monitors.mutant_id = mutant_scenario_g0_violations.mutant_id
-                       AND metric_failed_monitors.scenario_config_id = mutant_scenario_g0_violations.scenario_config_id
-          """
-              .trimIndent())
-
-      exec(
-          """
-        CREATE MATERIALIZED VIEW IF NOT EXISTS dt_monitor_failures_combination AS          
-        SELECT decision_tree_leaf_assignments.run_id AS decision_tree_run_id,
-           metric_failed_monitors.id             AS metric_failed_monitors_id,
-           metric_failed_monitors.tick,
-           metric_failed_monitors.mutant_id,
-           metric_failed_monitors.scenario_config_id,
-           metric_failed_monitors."next_tick_monitor_g0_Accidents_failed",
-           decision_tree_leaf_assignments.leaf_node_id
-        FROM metric_failed_monitors
-         JOIN decision_tree_leaf_assignments
-              ON metric_failed_monitors.id = decision_tree_leaf_assignments.metric_failed_monitor_id
-      """
-              .trimIndent())
+      for ((name, query) in materializedViews) {
+        val exists =
+            exec("SELECT 1 FROM pg_matviews WHERE matviewname = '$name'") { it.next() } == true
+        if (exists) {
+          println("Refreshing materialized view $name ...")
+          exec("REFRESH MATERIALIZED VIEW $name")
+        } else {
+          println("Creating materialized view $name ...")
+          exec("CREATE MATERIALIZED VIEW $name AS ${query.trimIndent()}")
+        }
+      }
     }
   }
 

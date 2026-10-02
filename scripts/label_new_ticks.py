@@ -5,7 +5,8 @@ without retraining.
 Reads a Parquet export produced by `export_parquet.py --run-id <ID>` (which carries each row's
 existing `leaf_node_id` for that run, NULL where not yet labeled), reloads that run's serialized
 LightGBM booster from `decision_tree_runs.model_text`, predicts leaf ids for just the rows still
-missing a `leaf_node_id`, and writes them into `decision_tree_leaf_assignments`.
+missing a `leaf_node_id`, and writes them into `decision_tree_leaf_assignment_chunks` (read
+through the `decision_tree_leaf_assignments` view).
 
 Usage:
     python export_parquet.py --uri postgresql://user:pass@host:5432/db --run-id 8 --output run_8.parquet
@@ -92,60 +93,93 @@ def _load_unlabeled(path: str, feature_columns: list[str]) -> tuple[pd.DataFrame
     return X, row_ids
 
 
+# Must match LEAF_ASSIGNMENT_CHUNK_SIZE in DecisionTreeLeafAssignmentChunksTable.kt.
+LEAF_ASSIGNMENT_CHUNK_SIZE = 10_000
+
+
 def _write_leaf_ids_to_db(
     uri: str,
     run_id: int,
     row_ids: np.ndarray,
     leaf_ids: np.ndarray,
     workers: int = 48,
-    page_size: int = 100_000,
+    page_size: int = 50,
 ) -> None:
-    """Insert leaf node assignments into decision_tree_leaf_assignments in parallel.
+    """Write leaf node assignments into decision_tree_leaf_assignment_chunks in parallel.
 
-    Each worker opens its own connection and inserts a non-overlapping slice of
-    (run_id, metric_failed_monitor_id, leaf_node_id) rows. psycopg2 releases the GIL during
-    network I/O so threads provide real parallelism. ON CONFLICT DO NOTHING makes re-runs safe.
+    Assignments are stored as one SMALLINT[] per block of LEAF_ASSIGNMENT_CHUNK_SIZE consecutive
+    metric_failed_monitors ids (NULL where an id has no assignment) instead of one row per tick,
+    which cuts a run from ~130 GB to a few GB; see DecisionTreeLeafAssignmentChunksTable.kt. The
+    decision_tree_leaf_assignments view expands them back into one row per tick.
 
-    Mirrors decision_tree_g0.py's helper of the same name (duplicated rather than imported -
-    every script in this directory is self-contained; see its module docstring for deps).
+    A chunk that already exists for this run is merged: ids it already assigns keep their leaf, so
+    re-runs are safe. Each worker opens its own connection and writes a non-overlapping set of
+    chunks; psycopg2 releases the GIL during network I/O so threads provide real parallelism.
     """
     import psycopg2
     import psycopg2.extras
 
-    pairs = list(zip(row_ids.tolist(), leaf_ids.tolist()))
-    n = len(pairs)
+    row_ids = np.asarray(row_ids, dtype=np.int64)
+    leaf_ids = np.asarray(leaf_ids)
+    if leaf_ids.size and (leaf_ids.min() < 0 or leaf_ids.max() > np.iinfo(np.int16).max):
+        raise ValueError("Leaf ids must fit into SMALLINT (0..32767).")
 
-    slice_size = math.ceil(n / workers)
-    slices = [pairs[i : i + slice_size] for i in range(0, n, slice_size)]
+    order = np.argsort(row_ids, kind="stable")
+    row_ids = row_ids[order]
+    leaf_ids = leaf_ids[order].astype(np.int16)
+    firsts = row_ids - row_ids % LEAF_ASSIGNMENT_CHUNK_SIZE
+    boundaries = np.flatnonzero(np.diff(firsts)) + 1
+    chunk_bounds = list(zip(
+        np.concatenate(([0], boundaries)).tolist(),
+        np.concatenate((boundaries, [len(row_ids)])).tolist(),
+    ))
+    n_chunks = len(chunk_bounds) if len(row_ids) else 0
+
+    def _chunk_record(start: int, end: int) -> tuple:
+        first = int(firsts[start])
+        leaves = np.full(LEAF_ASSIGNMENT_CHUNK_SIZE, -1, dtype=np.int16)
+        leaves[row_ids[start:end] - first] = leaf_ids[start:end]
+        return run_id, first, [None if leaf < 0 else leaf for leaf in leaves.tolist()]
+
+    slice_size = max(1, math.ceil(n_chunks / workers))
+    slices = [chunk_bounds[i : i + slice_size] for i in range(0, n_chunks, slice_size)]
 
     completed = 0
 
-    def _insert_slice(chunk: list) -> int:
-        records = [(run_id, row_id, leaf) for row_id, leaf in chunk]
+    def _insert_slice(chunk_slice: list) -> int:
         c = psycopg2.connect(uri)
         try:
             with c.cursor() as cur:
-                psycopg2.extras.execute_values(
-                    cur,
-                    "INSERT INTO decision_tree_leaf_assignments"
-                    " (run_id, metric_failed_monitor_id, leaf_node_id)"
-                    " VALUES %s ON CONFLICT DO NOTHING",
-                    records,
-                    page_size=page_size,
-                )
+                for i in range(0, len(chunk_slice), page_size):
+                    psycopg2.extras.execute_values(
+                        cur,
+                        "INSERT INTO decision_tree_leaf_assignment_chunks AS c"
+                        " (run_id, first_metric_failed_monitor_id, leaf_node_ids)"
+                        " VALUES %s"
+                        " ON CONFLICT (run_id, first_metric_failed_monitor_id) DO UPDATE"
+                        " SET leaf_node_ids = ARRAY("
+                        "   SELECT COALESCE(t.prev, t.cur)"
+                        "   FROM unnest(c.leaf_node_ids, EXCLUDED.leaf_node_ids)"
+                        "        WITH ORDINALITY AS t(prev, cur, i)"
+                        "   ORDER BY t.i)",
+                        [_chunk_record(start, end) for start, end in chunk_slice[i : i + page_size]],
+                        template="(%s, %s, %s::smallint[])",
+                        page_size=page_size,
+                    )
             c.commit()
         finally:
             c.close()
-        return len(chunk)
+        return len(chunk_slice)
 
-    print(f"\nInserting leaf assignments into DB (run {run_id}, {n:,} rows, {len(slices)} workers) ...")
+    print(f"\nInserting leaf assignments into DB (run {run_id}, {len(row_ids):,} rows in "
+          f"{n_chunks:,} chunks, {len(slices)} workers) ...")
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(_insert_slice, s): s for s in slices}
         for fut in as_completed(futures):
             completed += fut.result()
-            print(f"  {completed:,} / {n:,} rows inserted", end="\r", flush=True)
+            print(f"  {completed:,} / {n_chunks:,} chunks written", end="\r", flush=True)
 
-    print(f"\nDone. {completed:,} leaf assignments inserted for run {run_id}.")
+    print(f"\nDone. {len(row_ids):,} leaf assignments written for run {run_id}.")
 
 
 def main() -> None:

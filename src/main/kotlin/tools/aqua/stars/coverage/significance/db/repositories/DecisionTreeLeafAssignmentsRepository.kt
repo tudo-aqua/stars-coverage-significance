@@ -22,7 +22,9 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import tools.aqua.stars.coverage.significance.db.dataclasses.DecisionTreeLeafAssignmentEntry
+import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentChunksTable
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentsTable
+import tools.aqua.stars.coverage.significance.db.tables.LEAF_ASSIGNMENT_CHUNK_SIZE
 
 /** Repository for querying [DecisionTreeLeafAssignmentsTable]. */
 object DecisionTreeLeafAssignmentsRepository {
@@ -57,14 +59,23 @@ object DecisionTreeLeafAssignmentsRepository {
    */
   fun getByKey(runId: Int, metricFailedMonitorId: Long): DecisionTreeLeafAssignmentEntry? =
       transaction {
-        DecisionTreeLeafAssignmentsTable.selectAll()
+        // Reads the one chunk holding this id directly: filtering the view by id would expand every
+        // chunk of the run first.
+        val firstId = metricFailedMonitorId - metricFailedMonitorId % LEAF_ASSIGNMENT_CHUNK_SIZE
+        DecisionTreeLeafAssignmentChunksTable.selectAll()
             .where {
-              (DecisionTreeLeafAssignmentsTable.runId eq runId) and
-                  (DecisionTreeLeafAssignmentsTable.metricFailedMonitorId eq metricFailedMonitorId)
+              (DecisionTreeLeafAssignmentChunksTable.runId eq runId) and
+                  (DecisionTreeLeafAssignmentChunksTable.firstMetricFailedMonitorId eq firstId)
             }
-            .limit(1)
             .singleOrNull()
-            ?.toEntry()
+            ?.get(DecisionTreeLeafAssignmentChunksTable.leafNodeIds)
+            ?.getOrNull((metricFailedMonitorId - firstId).toInt())
+            ?.let { leafNodeId ->
+              DecisionTreeLeafAssignmentEntry(
+                  runId = runId,
+                  metricFailedMonitorId = metricFailedMonitorId,
+                  leafNodeId = leafNodeId.toInt())
+            }
       }
 
   /**
