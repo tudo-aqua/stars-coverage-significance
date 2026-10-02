@@ -90,11 +90,9 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
     if (laneDiff == 0) {
       // ── Same lane: only front / rear ──────────────────────────────────────────────────────────
       if (gapAhead >= 0.0)
-          snapFront =
-              nearer(snapFront, NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel))
+          snapFront = nearer(snapFront, NeighborSnapshot(gapAhead, vehSpeed, vehAccel))
       else if (gapBehind >= 0.0)
-          snapRear =
-              nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel))
+          snapRear = nearer(snapRear, NeighborSnapshot(gapBehind, vehSpeed, vehAccel))
       // Both negative = same-lane collision; ignore for distance purposes.
     } else {
       // ── Adjacent lane: assign to front or rear cell; ignore longitudinal overlaps ─────────────
@@ -103,13 +101,13 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
       when {
         gapAhead >= 0.0 -> {
           // Vehicle is (at least partially) ahead of ego on the adjacent lane.
-          val snap = NeighborSnapshot(gapAhead, vehSpeed, vehFront, vehRear, vehAccel)
+          val snap = NeighborSnapshot(gapAhead, vehSpeed, vehAccel)
           if (isLeft) snapFrontLeft = nearer(snapFrontLeft, snap)
           else snapFrontRight = nearer(snapFrontRight, snap)
         }
         gapBehind >= 0.0 -> {
           // Vehicle is (at least partially) behind ego on the adjacent lane.
-          val snap = NeighborSnapshot(gapBehind, vehSpeed, vehFront, vehRear, vehAccel)
+          val snap = NeighborSnapshot(gapBehind, vehSpeed, vehAccel)
           if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
           else snapRearRight = nearer(snapRearRight, snap)
         }
@@ -117,7 +115,7 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
           // Both gaps negative: bounding boxes overlap longitudinally (vehicle is directly beside
           // ego). Distance is 0. Assign to the cell whose gap is closer to zero — i.e. whichever
           // end of the ego the vehicle is nearer to determines front vs rear.
-          val snap = NeighborSnapshot(0.0, vehSpeed, vehFront, vehRear, vehAccel)
+          val snap = NeighborSnapshot(0.0, vehSpeed, vehAccel)
           if (gapBehind >= gapAhead) {
             // Vehicle centre is behind ego centre → rear cell.
             if (isLeft) snapRearLeft = nearer(snapRearLeft, snap)
@@ -140,28 +138,16 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
       rearLeftMeters = snapRearLeft?.distMeters,
       rearRightMeters = snapRearRight?.distMeters,
       frontSpeedMps = snapFront?.speedMps,
-      frontFrontBumperPositionMeters = snapFront?.frontBumperPositionMeters,
-      frontBackBumperPositionMeters = snapFront?.backBumperPositionMeters,
       frontAccelMps2 = snapFront?.accelMps2,
       rearSpeedMps = snapRear?.speedMps,
-      rearFrontBumperPositionMeters = snapRear?.frontBumperPositionMeters,
-      rearBackBumperPositionMeters = snapRear?.backBumperPositionMeters,
       rearAccelMps2 = snapRear?.accelMps2,
       frontLeftSpeedMps = snapFrontLeft?.speedMps,
-      frontLeftFrontBumperPositionMeters = snapFrontLeft?.frontBumperPositionMeters,
-      frontLeftBackBumperPositionMeters = snapFrontLeft?.backBumperPositionMeters,
       frontLeftAccelMps2 = snapFrontLeft?.accelMps2,
       frontRightSpeedMps = snapFrontRight?.speedMps,
-      frontRightFrontBumperPositionMeters = snapFrontRight?.frontBumperPositionMeters,
-      frontRightBackBumperPositionMeters = snapFrontRight?.backBumperPositionMeters,
       frontRightAccelMps2 = snapFrontRight?.accelMps2,
       rearLeftSpeedMps = snapRearLeft?.speedMps,
-      rearLeftFrontBumperPositionMeters = snapRearLeft?.frontBumperPositionMeters,
-      rearLeftBackBumperPositionMeters = snapRearLeft?.backBumperPositionMeters,
       rearLeftAccelMps2 = snapRearLeft?.accelMps2,
       rearRightSpeedMps = snapRearRight?.speedMps,
-      rearRightFrontBumperPositionMeters = snapRearRight?.frontBumperPositionMeters,
-      rearRightBackBumperPositionMeters = snapRearRight?.backBumperPositionMeters,
       rearRightAccelMps2 = snapRearRight?.accelMps2,
   )
 }
@@ -170,8 +156,6 @@ fun sampleEgoSurroundingDistances(egoId: String): SurroundingVehicleDistances {
 private data class NeighborSnapshot(
     val distMeters: Double,
     val speedMps: Double,
-    val frontBumperPositionMeters: Double,
-    val backBumperPositionMeters: Double,
     val accelMps2: Double,
 )
 

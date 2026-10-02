@@ -352,7 +352,7 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runG0MutantCoverageRepl
 
 A self-contained static page (no server, build step, or Gradle task needed — just open it) that draws a top-down view of every vehicle in one tick: lanes as horizontal bands (lane 0 at the bottom, per SUMO's 0=rightmost convention), vehicles as colored rectangles sized/positioned by their `front`/`back` (m), with a shaded stripe marking the front edge. Scroll/pinch to zoom, drag to pan; hover a vehicle for its full data, or read it from the table below the scene.
 
-Paste or upload any JSON array shaped like `TickVehicleSnapshot[]` — e.g. a tick's vehicle list from the tick-replay/G0 mutant coverage detail files. You can also paste a `metric_failed_monitors.all_vehicles_json_deflate` cell exactly as `psql` prints it (`ae56…`); the page decompresses it in the browser. Opens with a small example scene pre-filled so it's immediately usable without pasting anything first.
+Paste or upload any JSON array shaped like `TickVehicleSnapshot[]` — e.g. a tick's vehicle list from the tick-replay/G0 mutant coverage detail files. You can also paste a `metric_failed_monitors.all_vehicles_json_deflate` cell exactly as `psql` prints it (`\x01ad94…`); the page decompresses it in the browser. Opens with a small example scene pre-filled so it's immediately usable without pasting anything first.
 
 ---
 
@@ -445,10 +445,9 @@ All feature groups are enabled by default. Disable any group with `--no-<group>`
 | `--ego-maneuver` / `--no-ego-maneuver` | 2 | Ego planned maneuver: `ego_maneuver_speed`, `ego_maneuver_lane_change` |
 | `--ego-speed` / `--no-ego-speed` | 1 | Ego speed: `ego_speed_mps` |
 | `--ego-accel` / `--no-ego-accel` | 1 | Ego acceleration: `ego_accel_mps2` |
-| `--ego-position` / `--no-ego-position` | 2 | Ego lane position: `ego_front_bumper_pos_meters`, `ego_back_bumper_pos_meters` |
-| `--distances` / `--no-distances` | 8 | Bumper-to-bumper distance to nearest neighbour per grid cell (`surrounding_dist_*`) |
-| `--neighbor-kinematics` / `--no-neighbor-kinematics` | 48 | Per-neighbour speed, acceleration, bumper positions, and diffs |
-| `--time-gaps` / `--no-time-gaps` | 16 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |
+| `--distances` / `--no-distances` | 6 | Bumper-to-bumper distance to nearest neighbour per grid cell (`surrounding_dist_*`) |
+| `--neighbor-kinematics` / `--no-neighbor-kinematics` | 24 | Per-neighbour speed, acceleration, and their differences to the ego |
+| `--time-gaps` / `--no-time-gaps` | 12 | Per-neighbour time-to-collision (`*_ttc_s`) and time gap (`*_tg_s`) |
 
 ```bash
 # Basic run — all feature groups, no DB write (50 Optuna trials for tuning)
@@ -458,7 +457,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet --output t
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
   --no-ego-maneuver \
-  --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
@@ -484,7 +482,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --train-fraction 0.5 \
   --seed 4 \
   --no-ego-maneuver \
-  --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
@@ -501,7 +498,6 @@ dot -Tpng run_42.dot -o run_42.png
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
   --no-ego-maneuver \
-  --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \
@@ -515,7 +511,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 && python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
   --n-trials 200 \
   --no-ego-maneuver \
-  --no-ego-position \
   --no-ego-accel \
   --no-distances \
   --no-neighbor-kinematics \

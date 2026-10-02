@@ -31,18 +31,12 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property scenarioConfigId Unique identifier of the scenario starting configuration.
  * @property currentTSCInstanceId Unique identifier of the TSC instance at the current tick.
  * @property lastTickTSCInstanceId Unique identifier of the TSC instance at the last tick.
- * @property previousTSCInstanceId Unique identifier of the TSC instance that changed to the current
- *   TSC instance.
- * @property previousTSCInstanceTick The tick at which the TSC instance changed to the current TSC
- *   instance.
  * @property tick The current tick.
  * @property egoManeuverSpeed The ego maneuver speed.
  * @property egoManeuverLangeChange The ego maneuver lane change.
  * @property egoLane The lane the ego vehicle is currently on.
  * @property egoSpeedMps Ego vehicle speed (m/s).
  * @property egoAccelMps2 Ego vehicle acceleration (m/s²).
- * @property egoFrontBumperPosMeters Ego front bumper lane position (m).
- * @property egoBackBumperPosMeters Ego back bumper lane position (m).
  * @property monitorG0Failed Whether monitor G0 failed.
  * @property monitorG1Failed Whether monitor G1 failed.
  * @property monitorG2Failed Whether monitor G2 failed.
@@ -59,8 +53,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property nextTickMonitorI2Failed Whether monitor I2 failed in the next tick (null = last tick).
  * @property surroundingDistFront Distance to nearest vehicle ahead on the same lane (m).
  * @property surroundingFrontSpeedMps Speed of the front neighbour (m/s).
- * @property surroundingFrontFrontBumperPosMeters Front bumper position of the front neighbour (m).
- * @property surroundingFrontBackBumperPosMeters Back bumper position of the front neighbour (m).
  * @property surroundingFrontAccelMps2 Acceleration of the front neighbour (m/s²).
  * @property surroundingFrontSpeedDiffMps Speed difference to the front neighbour (m/s).
  * @property surroundingFrontAccelDiffMps2 Acceleration difference to the front neighbour (m/s²).
@@ -68,8 +60,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingFrontTgSeconds Time gap to the front neighbour (s).
  * @property surroundingDistRear Distance to nearest vehicle behind on the same lane (m).
  * @property surroundingRearSpeedMps Speed of the rear neighbour (m/s).
- * @property surroundingRearFrontBumperPosMeters Front bumper position of the rear neighbour (m).
- * @property surroundingRearBackBumperPosMeters Back bumper position of the rear neighbour (m).
  * @property surroundingRearAccelMps2 Acceleration of the rear neighbour (m/s²).
  * @property surroundingRearSpeedDiffMps Speed difference to the rear neighbour (m/s).
  * @property surroundingRearAccelDiffMps2 Acceleration difference to the rear neighbour (m/s²).
@@ -78,10 +68,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingDistFrontLeft Bumper-to-bumper distance to the nearest vehicle on the left
  *   lane whose rear bumper is at or ahead of the ego's front bumper (m; 0 when touching).
  * @property surroundingFrontLeftSpeedMps Speed of the front-left neighbour (m/s).
- * @property surroundingFrontLeftFrontBumperPosMeters Front bumper position of the front-left
- *   neighbour (m).
- * @property surroundingFrontLeftBackBumperPosMeters Back bumper position of the front-left
- *   neighbour (m).
  * @property surroundingFrontLeftAccelMps2 Acceleration of the front-left neighbour (m/s²).
  * @property surroundingFrontLeftSpeedDiffMps Speed difference to the front-left neighbour (m/s).
  * @property surroundingFrontLeftAccelDiffMps2 Acceleration difference to the front-left neighbour
@@ -93,10 +79,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingDistFrontRight Bumper-to-bumper distance to the nearest vehicle on the right
  *   lane whose rear bumper is at or ahead of the ego's front bumper (m; 0 when touching).
  * @property surroundingFrontRightSpeedMps Speed of the front-right neighbour (m/s).
- * @property surroundingFrontRightFrontBumperPosMeters Front bumper position of the front-right
- *   neighbour (m).
- * @property surroundingFrontRightBackBumperPosMeters Back bumper position of the front-right
- *   neighbour (m).
  * @property surroundingFrontRightAccelMps2 Acceleration of the front-right neighbour (m/s²).
  * @property surroundingFrontRightSpeedDiffMps Speed difference to the front-right neighbour (m/s).
  * @property surroundingFrontRightAccelDiffMps2 Acceleration difference to the front-right neighbour
@@ -108,10 +90,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingDistRearLeft Bumper-to-bumper distance to the nearest vehicle on the left
  *   lane whose front bumper is at or behind the ego's rear bumper (m; 0 when touching).
  * @property surroundingRearLeftSpeedMps Speed of the rear-left neighbour (m/s).
- * @property surroundingRearLeftFrontBumperPosMeters Front bumper position of the rear-left
- *   neighbour (m).
- * @property surroundingRearLeftBackBumperPosMeters Back bumper position of the rear-left neighbour
- *   (m).
  * @property surroundingRearLeftAccelMps2 Acceleration of the rear-left neighbour (m/s²).
  * @property surroundingRearLeftSpeedDiffMps Speed difference to the rear-left neighbour (m/s).
  * @property surroundingRearLeftAccelDiffMps2 Acceleration difference to the rear-left neighbour
@@ -122,10 +100,6 @@ import tools.aqua.stars.sumo.LaneChangeDirection
  * @property surroundingDistRearRight Bumper-to-bumper distance to the nearest vehicle on the right
  *   lane whose front bumper is at or behind the ego's rear bumper (m; 0 when touching).
  * @property surroundingRearRightSpeedMps Speed of the rear-right neighbour (m/s).
- * @property surroundingRearRightFrontBumperPosMeters Front bumper position of the rear-right
- *   neighbour (m).
- * @property surroundingRearRightBackBumperPosMeters Back bumper position of the rear-right
- *   neighbour (m).
  * @property surroundingRearRightAccelMps2 Acceleration of the rear-right neighbour (m/s²).
  * @property surroundingRearRightSpeedDiffMps Speed difference to the rear-right neighbour (m/s).
  * @property surroundingRearRightAccelDiffMps2 Acceleration difference to the rear-right neighbour
@@ -173,16 +147,12 @@ data class MetricFailedMonitorsEntry(
     val scenarioConfigId: Int,
     val currentTSCInstanceId: Int,
     val lastTickTSCInstanceId: Int?,
-    val previousTSCInstanceId: Int?,
-    val previousTSCInstanceTick: Long?,
     val tick: Long,
     val egoManeuverSpeed: Float?,
     val egoManeuverLangeChange: LaneChangeDirection?,
     val egoLane: HighwayLane? = null,
     val egoSpeedMps: Float? = null,
     val egoAccelMps2: Float? = null,
-    val egoFrontBumperPosMeters: Float? = null,
-    val egoBackBumperPosMeters: Float? = null,
     var monitorG0Failed: Boolean,
     var monitorG1Failed: Boolean,
     var monitorG2Failed: Boolean,
@@ -199,8 +169,6 @@ data class MetricFailedMonitorsEntry(
     var nextTickMonitorI2Failed: Boolean? = null,
     val surroundingDistFront: Float? = null,
     val surroundingFrontSpeedMps: Float? = null,
-    val surroundingFrontFrontBumperPosMeters: Float? = null,
-    val surroundingFrontBackBumperPosMeters: Float? = null,
     val surroundingFrontAccelMps2: Float? = null,
     val surroundingFrontSpeedDiffMps: Float? = null,
     val surroundingFrontAccelDiffMps2: Float? = null,
@@ -208,8 +176,6 @@ data class MetricFailedMonitorsEntry(
     val surroundingFrontTgSeconds: Float? = null,
     val surroundingDistRear: Float? = null,
     val surroundingRearSpeedMps: Float? = null,
-    val surroundingRearFrontBumperPosMeters: Float? = null,
-    val surroundingRearBackBumperPosMeters: Float? = null,
     val surroundingRearAccelMps2: Float? = null,
     val surroundingRearSpeedDiffMps: Float? = null,
     val surroundingRearAccelDiffMps2: Float? = null,
@@ -217,8 +183,6 @@ data class MetricFailedMonitorsEntry(
     val surroundingRearTgSeconds: Float? = null,
     val surroundingDistFrontLeft: Float? = null,
     val surroundingFrontLeftSpeedMps: Float? = null,
-    val surroundingFrontLeftFrontBumperPosMeters: Float? = null,
-    val surroundingFrontLeftBackBumperPosMeters: Float? = null,
     val surroundingFrontLeftAccelMps2: Float? = null,
     val surroundingFrontLeftSpeedDiffMps: Float? = null,
     val surroundingFrontLeftAccelDiffMps2: Float? = null,
@@ -226,8 +190,6 @@ data class MetricFailedMonitorsEntry(
     val surroundingFrontLeftTgSeconds: Float? = null,
     val surroundingDistFrontRight: Float? = null,
     val surroundingFrontRightSpeedMps: Float? = null,
-    val surroundingFrontRightFrontBumperPosMeters: Float? = null,
-    val surroundingFrontRightBackBumperPosMeters: Float? = null,
     val surroundingFrontRightAccelMps2: Float? = null,
     val surroundingFrontRightSpeedDiffMps: Float? = null,
     val surroundingFrontRightAccelDiffMps2: Float? = null,
@@ -235,8 +197,6 @@ data class MetricFailedMonitorsEntry(
     val surroundingFrontRightTgSeconds: Float? = null,
     val surroundingDistRearLeft: Float? = null,
     val surroundingRearLeftSpeedMps: Float? = null,
-    val surroundingRearLeftFrontBumperPosMeters: Float? = null,
-    val surroundingRearLeftBackBumperPosMeters: Float? = null,
     val surroundingRearLeftAccelMps2: Float? = null,
     val surroundingRearLeftSpeedDiffMps: Float? = null,
     val surroundingRearLeftAccelDiffMps2: Float? = null,
@@ -244,8 +204,6 @@ data class MetricFailedMonitorsEntry(
     val surroundingRearLeftTgSeconds: Float? = null,
     val surroundingDistRearRight: Float? = null,
     val surroundingRearRightSpeedMps: Float? = null,
-    val surroundingRearRightFrontBumperPosMeters: Float? = null,
-    val surroundingRearRightBackBumperPosMeters: Float? = null,
     val surroundingRearRightAccelMps2: Float? = null,
     val surroundingRearRightSpeedDiffMps: Float? = null,
     val surroundingRearRightAccelDiffMps2: Float? = null,

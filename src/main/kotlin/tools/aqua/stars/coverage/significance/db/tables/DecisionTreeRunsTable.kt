@@ -63,7 +63,6 @@ import org.jetbrains.exposed.sql.javatime.timestamp
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
- * @property featEgoPosition Whether the ego-position feature group was enabled.
  * @property featDistances Whether the distances feature group was enabled.
  * @property featNeighborKinematics Whether the neighbor-kinematics feature group was enabled.
  * @property featTimeGaps Whether the time-gaps feature group was enabled.
@@ -114,7 +113,6 @@ object DecisionTreeRunsTable : IntIdTable("decision_tree_runs") {
   val featEgoManeuver = bool("feat_ego_maneuver").nullable()
   val featEgoSpeed = bool("feat_ego_speed").nullable()
   val featEgoAccel = bool("feat_ego_accel").nullable()
-  val featEgoPosition = bool("feat_ego_position").nullable()
   val featDistances = bool("feat_distances").nullable()
   val featNeighborKinematics = bool("feat_neighbor_kinematics").nullable()
   val featTimeGaps = bool("feat_time_gaps").nullable()

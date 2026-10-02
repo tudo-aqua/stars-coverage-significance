@@ -7,7 +7,6 @@
 #python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 #--n-trials 200 \
 #--no-ego-maneuver \
-#--no-ego-position \
 #--no-ego-accel \
 #--no-distances \
 #--no-neighbor-kinematics \
@@ -20,7 +19,6 @@
 #python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 #--n-trials 200 \
 #--no-ego-maneuver \
-#--no-ego-position \
 #--no-ego-accel \
 #--no-distances \
 #--no-neighbor-kinematics \
@@ -35,7 +33,6 @@
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --n-trials 200 \
 --no-ego-maneuver \
---no-ego-position \
 --no-ego-accel \
 --no-distances \
 --no-neighbor-kinematics \
@@ -50,7 +47,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --n-trials 200 \
 --no-ego-maneuver \
---no-ego-position \
 --no-ego-accel \
 --no-distances \
 --no-neighbor-kinematics \
@@ -64,7 +60,6 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --n-trials 200 \
 --no-ego-maneuver \
---no-ego-position \
 --no-ego-accel \
 --no-distances \
 --no-neighbor-kinematics \

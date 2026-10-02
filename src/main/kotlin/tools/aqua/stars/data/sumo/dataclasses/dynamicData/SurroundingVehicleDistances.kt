@@ -36,46 +36,26 @@ package tools.aqua.stars.data.sumo.dataclasses.dynamicData
  * @property frontMeters Bumper-to-bumper gap to the nearest vehicle fully ahead on the same lane
  *   (m).
  * @property frontSpeedMps Speed of the front neighbour (m/s).
- * @property frontFrontBumperPositionMeters Front-bumper lane position of the front neighbour (m).
- * @property frontBackBumperPositionMeters Back-bumper lane position of the front neighbour (m).
  * @property frontAccelMps2 Acceleration of the front neighbour (m/s²).
  * @property rearMeters Bumper-to-bumper gap to the nearest vehicle fully behind on the same lane
  *   (m).
  * @property rearSpeedMps Speed of the rear neighbour (m/s).
- * @property rearFrontBumperPositionMeters Front-bumper lane position of the rear neighbour (m).
- * @property rearBackBumperPositionMeters Back-bumper lane position of the rear neighbour (m).
  * @property rearAccelMps2 Acceleration of the rear neighbour (m/s²).
  * @property frontLeftMeters Bumper-to-bumper gap to the nearest vehicle whose rear bumper is at or
  *   ahead of the ego's front bumper on the left lane (m; 0 when touching).
  * @property frontLeftSpeedMps Speed of the front-left neighbour (m/s).
- * @property frontLeftFrontBumperPositionMeters Front-bumper lane position of the front-left
- *   neighbour (m).
- * @property frontLeftBackBumperPositionMeters Back-bumper lane position of the front-left neighbour
- *   (m).
  * @property frontLeftAccelMps2 Acceleration of the front-left neighbour (m/s²).
  * @property frontRightMeters Bumper-to-bumper gap to the nearest vehicle whose rear bumper is at or
  *   ahead of the ego's front bumper on the right lane (m; 0 when touching).
  * @property frontRightSpeedMps Speed of the front-right neighbour (m/s).
- * @property frontRightFrontBumperPositionMeters Front-bumper lane position of the front-right
- *   neighbour (m).
- * @property frontRightBackBumperPositionMeters Back-bumper lane position of the front-right
- *   neighbour (m).
  * @property frontRightAccelMps2 Acceleration of the front-right neighbour (m/s²).
  * @property rearLeftMeters Bumper-to-bumper gap to the nearest vehicle whose front bumper is at or
  *   behind the ego's rear bumper on the left lane (m; 0 when touching).
  * @property rearLeftSpeedMps Speed of the rear-left neighbour (m/s).
- * @property rearLeftFrontBumperPositionMeters Front-bumper lane position of the rear-left neighbour
- *   (m).
- * @property rearLeftBackBumperPositionMeters Back-bumper lane position of the rear-left neighbour
- *   (m).
  * @property rearLeftAccelMps2 Acceleration of the rear-left neighbour (m/s²).
  * @property rearRightMeters Bumper-to-bumper gap to the nearest vehicle whose front bumper is at or
  *   behind the ego's rear bumper on the right lane (m; 0 when touching).
  * @property rearRightSpeedMps Speed of the rear-right neighbour (m/s).
- * @property rearRightFrontBumperPositionMeters Front-bumper lane position of the rear-right
- *   neighbour (m).
- * @property rearRightBackBumperPositionMeters Back-bumper lane position of the rear-right neighbour
- *   (m).
  * @property rearRightAccelMps2 Acceleration of the rear-right neighbour (m/s²).
  */
 data class SurroundingVehicleDistances(
@@ -86,27 +66,15 @@ data class SurroundingVehicleDistances(
     val rearLeftMeters: Double?,
     val rearRightMeters: Double?,
     val frontSpeedMps: Double? = null,
-    val frontFrontBumperPositionMeters: Double? = null,
-    val frontBackBumperPositionMeters: Double? = null,
     val frontAccelMps2: Double? = null,
     val rearSpeedMps: Double? = null,
-    val rearFrontBumperPositionMeters: Double? = null,
-    val rearBackBumperPositionMeters: Double? = null,
     val rearAccelMps2: Double? = null,
     val frontLeftSpeedMps: Double? = null,
-    val frontLeftFrontBumperPositionMeters: Double? = null,
-    val frontLeftBackBumperPositionMeters: Double? = null,
     val frontLeftAccelMps2: Double? = null,
     val frontRightSpeedMps: Double? = null,
-    val frontRightFrontBumperPositionMeters: Double? = null,
-    val frontRightBackBumperPositionMeters: Double? = null,
     val frontRightAccelMps2: Double? = null,
     val rearLeftSpeedMps: Double? = null,
-    val rearLeftFrontBumperPositionMeters: Double? = null,
-    val rearLeftBackBumperPositionMeters: Double? = null,
     val rearLeftAccelMps2: Double? = null,
     val rearRightSpeedMps: Double? = null,
-    val rearRightFrontBumperPositionMeters: Double? = null,
-    val rearRightBackBumperPositionMeters: Double? = null,
     val rearRightAccelMps2: Double? = null,
 )

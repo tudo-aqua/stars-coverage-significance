@@ -26,10 +26,9 @@ Feature groups (all enabled by default, disable with --no-<group>):
     --ego-maneuver        Ego maneuver: speed, lane change (2 cols)
     --ego-speed           Ego speed (1 col)
     --ego-accel           Ego acceleration (1 col)
-    --ego-position        Ego front/back bumper lane position (2 cols)
     --distances           Bumper-to-bumper distances per grid cell (6 cols)
-    --neighbor-kinematics Per-neighbour speed, accel, position, diffs (48 cols)
-    --time-gaps           Per-neighbour TTC and time gap (16 cols)
+    --neighbor-kinematics Per-neighbour speed, accel, diffs (24 cols)
+    --time-gaps           Per-neighbour TTC and time gap (12 cols)
 
 Dependencies:
     pip install polars lightgbm numpy pandas optuna scikit-learn
@@ -68,18 +67,12 @@ FEATURE_GROUPS: dict[str, list[str]] = {
     "ego-accel": [
         "ego_accel_mps2",
     ],
-    "ego-position": [
-        "ego_front_bumper_pos_meters",
-        "ego_back_bumper_pos_meters",
-    ],
     "distances": [f"surrounding_dist_{d}" for d in _NEIGHBORS],
     "neighbor-kinematics": [
         f"surrounding_{d}_{attr}"
         for d in _NEIGHBORS
         for attr in [
             "speed_mps",
-            "front_bumper_pos_meters",
-            "back_bumper_pos_meters",
             "accel_mps2",
             "speed_diff_mps",
             "accel_diff_mps2",
@@ -463,7 +456,7 @@ def _ensure_tracking_tables(conn) -> None:
         cur.execute("ALTER TABLE decision_tree_runs ALTER COLUMN train_fraction DROP NOT NULL")
         # Feature group flags
         for col in (
-            "feat_ego_maneuver", "feat_ego_speed", "feat_ego_accel", "feat_ego_position",
+            "feat_ego_maneuver", "feat_ego_speed", "feat_ego_accel",
             "feat_distances", "feat_neighbor_kinematics", "feat_time_gaps",
         ):
             cur.execute(f"ALTER TABLE decision_tree_runs ADD COLUMN IF NOT EXISTS {col} BOOL")
@@ -546,7 +539,7 @@ def _insert_run(
         cur.execute(
             "INSERT INTO decision_tree_runs ("
             "  train_fraction, manual_mutant_selection, seed, n_train_mutants, n_test_mutants,"
-            "  feat_ego_maneuver, feat_ego_speed, feat_ego_accel, feat_ego_position,"
+            "  feat_ego_maneuver, feat_ego_speed, feat_ego_accel,"
             "  feat_distances, feat_neighbor_kinematics, feat_time_gaps,"
             "  n_trials, max_leaves_bound, class_weight, scale_pos_weight,"
             "  hp_num_leaves, hp_max_depth, hp_min_child_samples, hp_min_split_gain,"
@@ -555,7 +548,7 @@ def _insert_run(
             "  used_mutants, model_text, feature_columns"
             ") VALUES ("
             "  %s, %s, %s, %s, %s,"
-            "  %s, %s, %s, %s,"
+            "  %s, %s, %s,"
             "  %s, %s, %s,"
             "  %s, %s, %s, %s,"
             "  %s, %s, %s, %s,"
@@ -566,7 +559,7 @@ def _insert_run(
             (
                 train_fraction, manual_mutant_selection, seed, len(train_mutants), len(test_mutants),
                 feature_flags["ego-maneuver"], feature_flags["ego-speed"],
-                feature_flags["ego-accel"], feature_flags["ego-position"],
+                feature_flags["ego-accel"],
                 feature_flags["distances"], feature_flags["neighbor-kinematics"],
                 feature_flags["time-gaps"],
                 n_trials, max_leaves_bound, class_weight, scale_pos_weight,
@@ -766,20 +759,16 @@ def main() -> None:
         help="Ego acceleration: ego_accel_mps2 (1 col)",
     )
     group_args.add_argument(
-        "--ego-position", default=True, action=argparse.BooleanOptionalAction,
-        help="Ego front/back bumper lane position (2 cols)",
-    )
-    group_args.add_argument(
         "--distances", default=True, action=argparse.BooleanOptionalAction,
-        help="Bumper-to-bumper distances to nearest neighbour per grid cell (8 cols)",
+        help="Bumper-to-bumper distances to nearest neighbour per grid cell (6 cols)",
     )
     group_args.add_argument(
         "--neighbor-kinematics", default=True, action=argparse.BooleanOptionalAction,
-        help="Per-neighbour speed, accel, bumper positions, diffs (48 cols)",
+        help="Per-neighbour speed, accel, diffs (24 cols)",
     )
     group_args.add_argument(
         "--time-gaps", default=True, action=argparse.BooleanOptionalAction,
-        help="Per-neighbour time-to-collision and time gap (16 cols)",
+        help="Per-neighbour time-to-collision and time gap (12 cols)",
     )
 
     args = parser.parse_args()
@@ -788,7 +777,6 @@ def main() -> None:
         "ego-maneuver":        args.ego_maneuver,
         "ego-speed":           args.ego_speed,
         "ego-accel":           args.ego_accel,
-        "ego-position":        args.ego_position,
         "distances":           args.distances,
         "neighbor-kinematics": args.neighbor_kinematics,
         "time-gaps":           args.time_gaps,

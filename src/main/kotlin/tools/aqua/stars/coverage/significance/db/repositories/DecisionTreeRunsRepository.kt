@@ -162,7 +162,6 @@ object DecisionTreeRunsRepository {
           featEgoManeuver = this[DecisionTreeRunsTable.featEgoManeuver],
           featEgoSpeed = this[DecisionTreeRunsTable.featEgoSpeed],
           featEgoAccel = this[DecisionTreeRunsTable.featEgoAccel],
-          featEgoPosition = this[DecisionTreeRunsTable.featEgoPosition],
           featDistances = this[DecisionTreeRunsTable.featDistances],
           featNeighborKinematics = this[DecisionTreeRunsTable.featNeighborKinematics],
           featTimeGaps = this[DecisionTreeRunsTable.featTimeGaps],

@@ -45,7 +45,6 @@ import kotlinx.serialization.Serializable
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
- * @property featEgoPosition Whether the ego-position feature group was enabled.
  * @property featDistances Whether the distances feature group was enabled.
  * @property featNeighborKinematics Whether the neighbor-kinematics feature group was enabled.
  * @property featTimeGaps Whether the time-gaps feature group was enabled.
@@ -84,7 +83,6 @@ data class DecisionTreeRunEntry(
     val featEgoManeuver: Boolean? = null,
     val featEgoSpeed: Boolean? = null,
     val featEgoAccel: Boolean? = null,
-    val featEgoPosition: Boolean? = null,
     val featDistances: Boolean? = null,
     val featNeighborKinematics: Boolean? = null,
     val featTimeGaps: Boolean? = null,
@@ -124,7 +122,6 @@ data class DecisionTreeRunEntry(
           featEgoManeuver = featEgoManeuver,
           featEgoSpeed = featEgoSpeed,
           featEgoAccel = featEgoAccel,
-          featEgoPosition = featEgoPosition,
           featDistances = featDistances,
           featNeighborKinematics = featNeighborKinematics,
           featTimeGaps = featTimeGaps,
@@ -166,7 +163,6 @@ data class DecisionTreeRunEntry(
  * @property featEgoManeuver Whether the ego-maneuver feature group was enabled.
  * @property featEgoSpeed Whether the ego-speed feature group was enabled.
  * @property featEgoAccel Whether the ego-accel feature group was enabled.
- * @property featEgoPosition Whether the ego-position feature group was enabled.
  * @property featDistances Whether the distances feature group was enabled.
  * @property featNeighborKinematics Whether the neighbor-kinematics feature group was enabled.
  * @property featTimeGaps Whether the time-gaps feature group was enabled.
@@ -205,7 +201,6 @@ data class DecisionTreeRunMetadata(
     val featEgoManeuver: Boolean?,
     val featEgoSpeed: Boolean?,
     val featEgoAccel: Boolean?,
-    val featEgoPosition: Boolean?,
     val featDistances: Boolean?,
     val featNeighborKinematics: Boolean?,
     val featTimeGaps: Boolean?,

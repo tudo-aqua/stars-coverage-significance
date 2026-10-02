@@ -171,16 +171,12 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.currentTSCInstance] = e.currentTSCInstanceId
       this[MetricFailedMonitorsTable.lastTickTSCInstance] = e.lastTickTSCInstanceId
-      this[MetricFailedMonitorsTable.previouslyChangedTSCInstance] = e.previousTSCInstanceId
-      this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick] = e.previousTSCInstanceTick
       this[MetricFailedMonitorsTable.tick] = e.tick
       this[MetricFailedMonitorsTable.egoManeuverSpeed] = e.egoManeuverSpeed
       this[MetricFailedMonitorsTable.egoManeuverLaneChange] = e.egoManeuverLangeChange
       this[MetricFailedMonitorsTable.egoLane] = e.egoLane
       this[MetricFailedMonitorsTable.egoSpeedMps] = e.egoSpeedMps
       this[MetricFailedMonitorsTable.egoAccelMps2] = e.egoAccelMps2
-      this[MetricFailedMonitorsTable.egoFrontBumperPosMeters] = e.egoFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.egoBackBumperPosMeters] = e.egoBackBumperPosMeters
 
       this[MetricFailedMonitorsTable.monitorG0Failed] = e.monitorG0Failed
       this[MetricFailedMonitorsTable.monitorG1Failed] = e.monitorG1Failed
@@ -200,10 +196,6 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.surroundingDistFront] = e.surroundingDistFront
       this[MetricFailedMonitorsTable.surroundingFrontSpeedMps] = e.surroundingFrontSpeedMps
-      this[MetricFailedMonitorsTable.surroundingFrontFrontBumperPosMeters] =
-          e.surroundingFrontFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingFrontBackBumperPosMeters] =
-          e.surroundingFrontBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingFrontAccelMps2] = e.surroundingFrontAccelMps2
       this[MetricFailedMonitorsTable.surroundingFrontSpeedDiffMps] = e.surroundingFrontSpeedDiffMps
       this[MetricFailedMonitorsTable.surroundingFrontAccelDiffMps2] =
@@ -213,10 +205,6 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.surroundingDistRear] = e.surroundingDistRear
       this[MetricFailedMonitorsTable.surroundingRearSpeedMps] = e.surroundingRearSpeedMps
-      this[MetricFailedMonitorsTable.surroundingRearFrontBumperPosMeters] =
-          e.surroundingRearFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingRearBackBumperPosMeters] =
-          e.surroundingRearBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingRearAccelMps2] = e.surroundingRearAccelMps2
       this[MetricFailedMonitorsTable.surroundingRearSpeedDiffMps] = e.surroundingRearSpeedDiffMps
       this[MetricFailedMonitorsTable.surroundingRearAccelDiffMps2] = e.surroundingRearAccelDiffMps2
@@ -225,10 +213,6 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.surroundingDistFrontLeft] = e.surroundingDistFrontLeft
       this[MetricFailedMonitorsTable.surroundingFrontLeftSpeedMps] = e.surroundingFrontLeftSpeedMps
-      this[MetricFailedMonitorsTable.surroundingFrontLeftFrontBumperPosMeters] =
-          e.surroundingFrontLeftFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingFrontLeftBackBumperPosMeters] =
-          e.surroundingFrontLeftBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingFrontLeftAccelMps2] =
           e.surroundingFrontLeftAccelMps2
       this[MetricFailedMonitorsTable.surroundingFrontLeftSpeedDiffMps] =
@@ -243,10 +227,6 @@ object MetricFailedMonitorsRepository {
       this[MetricFailedMonitorsTable.surroundingDistFrontRight] = e.surroundingDistFrontRight
       this[MetricFailedMonitorsTable.surroundingFrontRightSpeedMps] =
           e.surroundingFrontRightSpeedMps
-      this[MetricFailedMonitorsTable.surroundingFrontRightFrontBumperPosMeters] =
-          e.surroundingFrontRightFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingFrontRightBackBumperPosMeters] =
-          e.surroundingFrontRightBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingFrontRightAccelMps2] =
           e.surroundingFrontRightAccelMps2
       this[MetricFailedMonitorsTable.surroundingFrontRightSpeedDiffMps] =
@@ -260,10 +240,6 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.surroundingDistRearLeft] = e.surroundingDistRearLeft
       this[MetricFailedMonitorsTable.surroundingRearLeftSpeedMps] = e.surroundingRearLeftSpeedMps
-      this[MetricFailedMonitorsTable.surroundingRearLeftFrontBumperPosMeters] =
-          e.surroundingRearLeftFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingRearLeftBackBumperPosMeters] =
-          e.surroundingRearLeftBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingRearLeftAccelMps2] = e.surroundingRearLeftAccelMps2
       this[MetricFailedMonitorsTable.surroundingRearLeftSpeedDiffMps] =
           e.surroundingRearLeftSpeedDiffMps
@@ -275,10 +251,6 @@ object MetricFailedMonitorsRepository {
 
       this[MetricFailedMonitorsTable.surroundingDistRearRight] = e.surroundingDistRearRight
       this[MetricFailedMonitorsTable.surroundingRearRightSpeedMps] = e.surroundingRearRightSpeedMps
-      this[MetricFailedMonitorsTable.surroundingRearRightFrontBumperPosMeters] =
-          e.surroundingRearRightFrontBumperPosMeters
-      this[MetricFailedMonitorsTable.surroundingRearRightBackBumperPosMeters] =
-          e.surroundingRearRightBackBumperPosMeters
       this[MetricFailedMonitorsTable.surroundingRearRightAccelMps2] =
           e.surroundingRearRightAccelMps2
       this[MetricFailedMonitorsTable.surroundingRearRightSpeedDiffMps] =
@@ -337,16 +309,12 @@ object MetricFailedMonitorsRepository {
 
               row[currentTSCInstance] = entry.currentTSCInstanceId
               row[lastTickTSCInstance] = entry.lastTickTSCInstanceId
-              row[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
-              row[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
               row[tick] = entry.tick
               row[egoManeuverSpeed] = entry.egoManeuverSpeed
               row[egoManeuverLaneChange] = entry.egoManeuverLangeChange
               row[egoLane] = entry.egoLane
               row[egoSpeedMps] = entry.egoSpeedMps
               row[egoAccelMps2] = entry.egoAccelMps2
-              row[egoFrontBumperPosMeters] = entry.egoFrontBumperPosMeters
-              row[egoBackBumperPosMeters] = entry.egoBackBumperPosMeters
 
               row[monitorG0Failed] = entry.monitorG0Failed
               row[monitorG1Failed] = entry.monitorG1Failed
@@ -366,8 +334,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistFront] = entry.surroundingDistFront
               row[surroundingFrontSpeedMps] = entry.surroundingFrontSpeedMps
-              row[surroundingFrontFrontBumperPosMeters] = entry.surroundingFrontFrontBumperPosMeters
-              row[surroundingFrontBackBumperPosMeters] = entry.surroundingFrontBackBumperPosMeters
               row[surroundingFrontAccelMps2] = entry.surroundingFrontAccelMps2
               row[surroundingFrontSpeedDiffMps] = entry.surroundingFrontSpeedDiffMps
               row[surroundingFrontAccelDiffMps2] = entry.surroundingFrontAccelDiffMps2
@@ -376,8 +342,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistRear] = entry.surroundingDistRear
               row[surroundingRearSpeedMps] = entry.surroundingRearSpeedMps
-              row[surroundingRearFrontBumperPosMeters] = entry.surroundingRearFrontBumperPosMeters
-              row[surroundingRearBackBumperPosMeters] = entry.surroundingRearBackBumperPosMeters
               row[surroundingRearAccelMps2] = entry.surroundingRearAccelMps2
               row[surroundingRearSpeedDiffMps] = entry.surroundingRearSpeedDiffMps
               row[surroundingRearAccelDiffMps2] = entry.surroundingRearAccelDiffMps2
@@ -386,10 +350,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistFrontLeft] = entry.surroundingDistFrontLeft
               row[surroundingFrontLeftSpeedMps] = entry.surroundingFrontLeftSpeedMps
-              row[surroundingFrontLeftFrontBumperPosMeters] =
-                  entry.surroundingFrontLeftFrontBumperPosMeters
-              row[surroundingFrontLeftBackBumperPosMeters] =
-                  entry.surroundingFrontLeftBackBumperPosMeters
               row[surroundingFrontLeftAccelMps2] = entry.surroundingFrontLeftAccelMps2
               row[surroundingFrontLeftSpeedDiffMps] = entry.surroundingFrontLeftSpeedDiffMps
               row[surroundingFrontLeftAccelDiffMps2] = entry.surroundingFrontLeftAccelDiffMps2
@@ -398,10 +358,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistFrontRight] = entry.surroundingDistFrontRight
               row[surroundingFrontRightSpeedMps] = entry.surroundingFrontRightSpeedMps
-              row[surroundingFrontRightFrontBumperPosMeters] =
-                  entry.surroundingFrontRightFrontBumperPosMeters
-              row[surroundingFrontRightBackBumperPosMeters] =
-                  entry.surroundingFrontRightBackBumperPosMeters
               row[surroundingFrontRightAccelMps2] = entry.surroundingFrontRightAccelMps2
               row[surroundingFrontRightSpeedDiffMps] = entry.surroundingFrontRightSpeedDiffMps
               row[surroundingFrontRightAccelDiffMps2] = entry.surroundingFrontRightAccelDiffMps2
@@ -410,10 +366,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistRearLeft] = entry.surroundingDistRearLeft
               row[surroundingRearLeftSpeedMps] = entry.surroundingRearLeftSpeedMps
-              row[surroundingRearLeftFrontBumperPosMeters] =
-                  entry.surroundingRearLeftFrontBumperPosMeters
-              row[surroundingRearLeftBackBumperPosMeters] =
-                  entry.surroundingRearLeftBackBumperPosMeters
               row[surroundingRearLeftAccelMps2] = entry.surroundingRearLeftAccelMps2
               row[surroundingRearLeftSpeedDiffMps] = entry.surroundingRearLeftSpeedDiffMps
               row[surroundingRearLeftAccelDiffMps2] = entry.surroundingRearLeftAccelDiffMps2
@@ -422,10 +374,6 @@ object MetricFailedMonitorsRepository {
 
               row[surroundingDistRearRight] = entry.surroundingDistRearRight
               row[surroundingRearRightSpeedMps] = entry.surroundingRearRightSpeedMps
-              row[surroundingRearRightFrontBumperPosMeters] =
-                  entry.surroundingRearRightFrontBumperPosMeters
-              row[surroundingRearRightBackBumperPosMeters] =
-                  entry.surroundingRearRightBackBumperPosMeters
               row[surroundingRearRightAccelMps2] = entry.surroundingRearRightAccelMps2
               row[surroundingRearRightSpeedDiffMps] = entry.surroundingRearRightSpeedDiffMps
               row[surroundingRearRightAccelDiffMps2] = entry.surroundingRearRightAccelDiffMps2
@@ -487,16 +435,12 @@ object MetricFailedMonitorsRepository {
 
                   st[currentTSCInstance] = entry.currentTSCInstanceId
                   st[lastTickTSCInstance] = entry.lastTickTSCInstanceId
-                  st[previouslyChangedTSCInstance] = entry.previousTSCInstanceId
-                  st[previouslyChangedTSCInstanceTick] = entry.previousTSCInstanceTick
                   st[tick] = entry.tick
                   st[egoManeuverSpeed] = entry.egoManeuverSpeed
                   st[egoManeuverLaneChange] = entry.egoManeuverLangeChange
                   st[egoLane] = entry.egoLane
                   st[egoSpeedMps] = entry.egoSpeedMps
                   st[egoAccelMps2] = entry.egoAccelMps2
-                  st[egoFrontBumperPosMeters] = entry.egoFrontBumperPosMeters
-                  st[egoBackBumperPosMeters] = entry.egoBackBumperPosMeters
 
                   st[monitorG0Failed] = entry.monitorG0Failed
                   st[monitorG1Failed] = entry.monitorG1Failed
@@ -516,10 +460,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistFront] = entry.surroundingDistFront
                   st[surroundingFrontSpeedMps] = entry.surroundingFrontSpeedMps
-                  st[surroundingFrontFrontBumperPosMeters] =
-                      entry.surroundingFrontFrontBumperPosMeters
-                  st[surroundingFrontBackBumperPosMeters] =
-                      entry.surroundingFrontBackBumperPosMeters
                   st[surroundingFrontAccelMps2] = entry.surroundingFrontAccelMps2
                   st[surroundingFrontSpeedDiffMps] = entry.surroundingFrontSpeedDiffMps
                   st[surroundingFrontAccelDiffMps2] = entry.surroundingFrontAccelDiffMps2
@@ -528,9 +468,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistRear] = entry.surroundingDistRear
                   st[surroundingRearSpeedMps] = entry.surroundingRearSpeedMps
-                  st[surroundingRearFrontBumperPosMeters] =
-                      entry.surroundingRearFrontBumperPosMeters
-                  st[surroundingRearBackBumperPosMeters] = entry.surroundingRearBackBumperPosMeters
                   st[surroundingRearAccelMps2] = entry.surroundingRearAccelMps2
                   st[surroundingRearSpeedDiffMps] = entry.surroundingRearSpeedDiffMps
                   st[surroundingRearAccelDiffMps2] = entry.surroundingRearAccelDiffMps2
@@ -539,10 +476,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistFrontLeft] = entry.surroundingDistFrontLeft
                   st[surroundingFrontLeftSpeedMps] = entry.surroundingFrontLeftSpeedMps
-                  st[surroundingFrontLeftFrontBumperPosMeters] =
-                      entry.surroundingFrontLeftFrontBumperPosMeters
-                  st[surroundingFrontLeftBackBumperPosMeters] =
-                      entry.surroundingFrontLeftBackBumperPosMeters
                   st[surroundingFrontLeftAccelMps2] = entry.surroundingFrontLeftAccelMps2
                   st[surroundingFrontLeftSpeedDiffMps] = entry.surroundingFrontLeftSpeedDiffMps
                   st[surroundingFrontLeftAccelDiffMps2] = entry.surroundingFrontLeftAccelDiffMps2
@@ -551,10 +484,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistFrontRight] = entry.surroundingDistFrontRight
                   st[surroundingFrontRightSpeedMps] = entry.surroundingFrontRightSpeedMps
-                  st[surroundingFrontRightFrontBumperPosMeters] =
-                      entry.surroundingFrontRightFrontBumperPosMeters
-                  st[surroundingFrontRightBackBumperPosMeters] =
-                      entry.surroundingFrontRightBackBumperPosMeters
                   st[surroundingFrontRightAccelMps2] = entry.surroundingFrontRightAccelMps2
                   st[surroundingFrontRightSpeedDiffMps] = entry.surroundingFrontRightSpeedDiffMps
                   st[surroundingFrontRightAccelDiffMps2] = entry.surroundingFrontRightAccelDiffMps2
@@ -563,10 +492,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistRearLeft] = entry.surroundingDistRearLeft
                   st[surroundingRearLeftSpeedMps] = entry.surroundingRearLeftSpeedMps
-                  st[surroundingRearLeftFrontBumperPosMeters] =
-                      entry.surroundingRearLeftFrontBumperPosMeters
-                  st[surroundingRearLeftBackBumperPosMeters] =
-                      entry.surroundingRearLeftBackBumperPosMeters
                   st[surroundingRearLeftAccelMps2] = entry.surroundingRearLeftAccelMps2
                   st[surroundingRearLeftSpeedDiffMps] = entry.surroundingRearLeftSpeedDiffMps
                   st[surroundingRearLeftAccelDiffMps2] = entry.surroundingRearLeftAccelDiffMps2
@@ -575,10 +500,6 @@ object MetricFailedMonitorsRepository {
 
                   st[surroundingDistRearRight] = entry.surroundingDistRearRight
                   st[surroundingRearRightSpeedMps] = entry.surroundingRearRightSpeedMps
-                  st[surroundingRearRightFrontBumperPosMeters] =
-                      entry.surroundingRearRightFrontBumperPosMeters
-                  st[surroundingRearRightBackBumperPosMeters] =
-                      entry.surroundingRearRightBackBumperPosMeters
                   st[surroundingRearRightAccelMps2] = entry.surroundingRearRightAccelMps2
                   st[surroundingRearRightSpeedDiffMps] = entry.surroundingRearRightSpeedDiffMps
                   st[surroundingRearRightAccelDiffMps2] = entry.surroundingRearRightAccelDiffMps2
@@ -648,18 +569,12 @@ object MetricFailedMonitorsRepository {
           scenarioConfigId = this[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
           currentTSCInstanceId = this[MetricFailedMonitorsTable.currentTSCInstance].value,
           lastTickTSCInstanceId = this[MetricFailedMonitorsTable.lastTickTSCInstance]?.value,
-          previousTSCInstanceId =
-              this[MetricFailedMonitorsTable.previouslyChangedTSCInstance]?.value,
-          previousTSCInstanceTick =
-              this[MetricFailedMonitorsTable.previouslyChangedTSCInstanceTick],
           tick = this[MetricFailedMonitorsTable.tick],
           egoManeuverSpeed = this[MetricFailedMonitorsTable.egoManeuverSpeed],
           egoManeuverLangeChange = this[MetricFailedMonitorsTable.egoManeuverLaneChange],
           egoLane = this[MetricFailedMonitorsTable.egoLane],
           egoSpeedMps = this[MetricFailedMonitorsTable.egoSpeedMps],
           egoAccelMps2 = this[MetricFailedMonitorsTable.egoAccelMps2],
-          egoFrontBumperPosMeters = this[MetricFailedMonitorsTable.egoFrontBumperPosMeters],
-          egoBackBumperPosMeters = this[MetricFailedMonitorsTable.egoBackBumperPosMeters],
           monitorG0Failed = this[MetricFailedMonitorsTable.monitorG0Failed],
           monitorG1Failed = this[MetricFailedMonitorsTable.monitorG1Failed],
           monitorG2Failed = this[MetricFailedMonitorsTable.monitorG2Failed],
@@ -676,10 +591,6 @@ object MetricFailedMonitorsRepository {
           nextTickMonitorI2Failed = this[MetricFailedMonitorsTable.nextTickMonitorI2Failed],
           surroundingDistFront = this[MetricFailedMonitorsTable.surroundingDistFront],
           surroundingFrontSpeedMps = this[MetricFailedMonitorsTable.surroundingFrontSpeedMps],
-          surroundingFrontFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontFrontBumperPosMeters],
-          surroundingFrontBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontBackBumperPosMeters],
           surroundingFrontAccelMps2 = this[MetricFailedMonitorsTable.surroundingFrontAccelMps2],
           surroundingFrontSpeedDiffMps =
               this[MetricFailedMonitorsTable.surroundingFrontSpeedDiffMps],
@@ -689,10 +600,6 @@ object MetricFailedMonitorsRepository {
           surroundingFrontTgSeconds = this[MetricFailedMonitorsTable.surroundingFrontTgSeconds],
           surroundingDistRear = this[MetricFailedMonitorsTable.surroundingDistRear],
           surroundingRearSpeedMps = this[MetricFailedMonitorsTable.surroundingRearSpeedMps],
-          surroundingRearFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearFrontBumperPosMeters],
-          surroundingRearBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearBackBumperPosMeters],
           surroundingRearAccelMps2 = this[MetricFailedMonitorsTable.surroundingRearAccelMps2],
           surroundingRearSpeedDiffMps = this[MetricFailedMonitorsTable.surroundingRearSpeedDiffMps],
           surroundingRearAccelDiffMps2 =
@@ -702,10 +609,6 @@ object MetricFailedMonitorsRepository {
           surroundingDistFrontLeft = this[MetricFailedMonitorsTable.surroundingDistFrontLeft],
           surroundingFrontLeftSpeedMps =
               this[MetricFailedMonitorsTable.surroundingFrontLeftSpeedMps],
-          surroundingFrontLeftFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontLeftFrontBumperPosMeters],
-          surroundingFrontLeftBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontLeftBackBumperPosMeters],
           surroundingFrontLeftAccelMps2 =
               this[MetricFailedMonitorsTable.surroundingFrontLeftAccelMps2],
           surroundingFrontLeftSpeedDiffMps =
@@ -719,10 +622,6 @@ object MetricFailedMonitorsRepository {
           surroundingDistFrontRight = this[MetricFailedMonitorsTable.surroundingDistFrontRight],
           surroundingFrontRightSpeedMps =
               this[MetricFailedMonitorsTable.surroundingFrontRightSpeedMps],
-          surroundingFrontRightFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontRightFrontBumperPosMeters],
-          surroundingFrontRightBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingFrontRightBackBumperPosMeters],
           surroundingFrontRightAccelMps2 =
               this[MetricFailedMonitorsTable.surroundingFrontRightAccelMps2],
           surroundingFrontRightSpeedDiffMps =
@@ -735,10 +634,6 @@ object MetricFailedMonitorsRepository {
               this[MetricFailedMonitorsTable.surroundingFrontRightTgSeconds],
           surroundingDistRearLeft = this[MetricFailedMonitorsTable.surroundingDistRearLeft],
           surroundingRearLeftSpeedMps = this[MetricFailedMonitorsTable.surroundingRearLeftSpeedMps],
-          surroundingRearLeftFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearLeftFrontBumperPosMeters],
-          surroundingRearLeftBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearLeftBackBumperPosMeters],
           surroundingRearLeftAccelMps2 =
               this[MetricFailedMonitorsTable.surroundingRearLeftAccelMps2],
           surroundingRearLeftSpeedDiffMps =
@@ -752,10 +647,6 @@ object MetricFailedMonitorsRepository {
           surroundingDistRearRight = this[MetricFailedMonitorsTable.surroundingDistRearRight],
           surroundingRearRightSpeedMps =
               this[MetricFailedMonitorsTable.surroundingRearRightSpeedMps],
-          surroundingRearRightFrontBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearRightFrontBumperPosMeters],
-          surroundingRearRightBackBumperPosMeters =
-              this[MetricFailedMonitorsTable.surroundingRearRightBackBumperPosMeters],
           surroundingRearRightAccelMps2 =
               this[MetricFailedMonitorsTable.surroundingRearRightAccelMps2],
           surroundingRearRightSpeedDiffMps =
