@@ -20,6 +20,7 @@ package tools.aqua.stars.coverage.significance.db
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.Connection
+import java.util.TimeZone
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.createMissingTablesAndColumns
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -101,6 +102,13 @@ object DbBootstrap {
       exposedDb?.let {
         return it
       }
+
+      // Exposed's timestamp() columns are PostgreSQL `timestamp` (without time zone): an Instant is
+      // stored as the writing JVM's local wall-clock time and read back in the reading JVM's local
+      // time zone. Workers (Docker, UTC) and tools run on a host in another zone (e.g. the progress
+      // monitor in CEST) therefore disagreed by the zone offset. Running every database client in
+      // UTC makes stored timestamps consistent regardless of where it runs.
+      TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
       val jdbcUrlBase = "jdbc:postgresql://${cfg.host}:${cfg.port}/${cfg.database}"
       // Ensure a schema is selected (Postgres requires a schema to create tables in).
