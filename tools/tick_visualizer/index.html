@@ -245,15 +245,33 @@
 
   // -------------------------------------------------------------- data load
 
-  // Inflates a raw-DEFLATE bytea value in psql's hex output format ("\x8bae56…"), as stored in
-  // metric_failed_monitors.all_vehicles_json_deflate, back into its JSON text.
+  // Preset DEFLATE dictionary of format version 1 — must stay identical to
+  // ALL_VEHICLES_JSON_DICTIONARY in AllVehiclesJsonCompression.kt (a Kotlin test checks this).
+  const ALL_VEHICLES_JSON_DICTIONARY = '"lane":2,"front":"lane":1,"front":"lane":0,"front":{"id":"slow_3","type":"car_calm",{"id":"normal_3","type":"car_normal",{"id":"fast_3","type":"car_speedy",[{"id":"ego","ego":true,"type":"mutant","lane":[{"id":"ego","ego":true,"type":"ego","lane":,"speed":16.666666,"accel":0.0},{"id":"slow_2","type":"car_calm","lane":,"speed":33.333332,"accel":0.0},{"id":"fast_2","type":"car_speedy","lane":,"speed":25.0,"accel":0.0},{"id":"normal_2","type":"car_normal","lane":,"speed":16.666666,"accel":0.0},{"id":"slow_1","type":"car_calm","lane":,"speed":33.333332,"accel":0.0},{"id":"fast_1","type":"car_speedy","lane":,"speed":25.0,"accel":0.0},{"id":"normal_1","type":"car_normal","lane":,"back":,"speed":,"accel":.0,"back":';
+
+  // Decodes a metric_failed_monitors.all_vehicles_json_deflate value in psql's hex output format
+  // ("\x01…": a format-version byte, then raw DEFLATE with the preset dictionary above) back into
+  // its JSON text. DecompressionStream cannot take a preset dictionary, so the dictionary is put in
+  // front of the data as an uncompressed (stored) DEFLATE block — the compressed data's
+  // back-references into the dictionary then point into that block's output — and cut off the
+  // result again.
   async function inflateBytea(hexText) {
     const hex = hexText.trim().slice(2);
     if (hex.length % 2 !== 0 || /[^0-9a-fA-F]/.test(hex)) throw new Error("not a hex bytea value");
     const bytes = new Uint8Array(hex.length / 2);
     for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(2 * i, 2), 16);
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-    return await new Response(stream).text();
+    if (bytes[0] !== 1) throw new Error("unknown format version " + bytes[0]);
+
+    const dict = new TextEncoder().encode(ALL_VEHICLES_JSON_DICTIONARY);
+    const deflate = new Uint8Array(5 + dict.length + bytes.length - 1);
+    // Stored block header: BFINAL=0, BTYPE=00, then LEN and its one's complement (little endian).
+    deflate.set([0, dict.length & 0xff, dict.length >> 8, ~dict.length & 0xff, (~dict.length >> 8) & 0xff]);
+    deflate.set(dict, 5);
+    deflate.set(bytes.subarray(1), 5 + dict.length);
+
+    const stream = new Blob([deflate]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    const inflated = new Uint8Array(await new Response(stream).arrayBuffer());
+    return new TextDecoder().decode(inflated.subarray(dict.length));
   }
 
   async function parseAndRender(text) {

@@ -17,10 +17,12 @@
 
 package tools.aqua.stars.coverage.validation.utils
 
+import java.io.File
 import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import tools.aqua.stars.coverage.significance.utils.ALL_VEHICLES_JSON_DICTIONARY
 import tools.aqua.stars.coverage.significance.utils.compressAllVehiclesJson
 import tools.aqua.stars.coverage.significance.utils.decompressAllVehiclesJson
 
@@ -36,22 +38,33 @@ class AllVehiclesJsonCompressionTest {
     val compressed = compressAllVehiclesJson(tickJson)
 
     assertEquals(tickJson, decompressAllVehiclesJson(compressed))
-    assertTrue(compressed.size < tickJson.length / 2, "compressed to ${compressed.size} bytes")
+    assertTrue(compressed.size < tickJson.length / 4, "compressed to ${compressed.size} bytes")
   }
 
   /**
-   * Bytes produced by Python's `zlib.compressobj(9, zlib.DEFLATED, -15)` decode correctly, i.e. the
-   * column format is plain raw DEFLATE that the Python scripts can read and write as well.
+   * A value produced by `scripts/all_vehicles_json_codec.py` decodes correctly, i.e. the Python
+   * codec writes exactly the format the Kotlin side reads.
    */
   @Test
-  fun `Test decoding raw DEFLATE produced by Python`() {
+  fun `Test decoding a value produced by the Python codec`() {
     val pythonBytes =
         Base64.getDecoder()
             .decode(
-                "i65WykxRslJKTc9X0gGTViVFpak6SiWVBalw8ZzEPCDHQEcprSg/r0TJytDYWM/E2MjCSEcpKTE5GyhgZAETKC5ITQWaaGSuZ2BiYWhpqKOUmJycmgMU0TMC8g0sTGtjAQ==")
+                "Aa2UQRIDIQgEXxQKRhF8TP7/jZhUId5Wd3PEg80wAycJyDzLkFgLHPGNwOMhWjfi6tJlQkEYNbuejCK3TCpn21J+k/lXkpICXil9n7LlSJ4IY/Jm8EA1jTrmhzHQaj5hL6bubsxqZ/lebOsgneLcvsVm0sqmrjuIy81KBU3TncaLOQ+P0iIAC0JwzXh/AA==")
 
-    assertEquals(
-        """[{"id":"ego","ego":true,"type":"ego","lane":0,"front":133.43282,"back":128.43282,"speed":27.048191,"accel":2.2819085}]""",
-        decompressAllVehiclesJson(pythonBytes))
+    assertEquals(tickJson, decompressAllVehiclesJson(pythonBytes))
+  }
+
+  /**
+   * The Python codec and the tick visualizer keep verbatim copies of the preset dictionary; if one
+   * of them drifts from [ALL_VEHICLES_JSON_DICTIONARY], they can no longer decode stored values.
+   */
+  @Test
+  fun `Test dictionary copies match the Kotlin dictionary`() {
+    for (copy in listOf("scripts/all_vehicles_json_codec.py", "tools/tick_visualizer/index.html")) {
+      assertTrue(
+          File(copy).readText().contains("'$ALL_VEHICLES_JSON_DICTIONARY'"),
+          "$copy does not contain the current ALL_VEHICLES_JSON_DICTIONARY")
+    }
   }
 }

@@ -293,7 +293,7 @@ docker run stars-evaluation:latest ./gradlew --no-daemon runAnalyzeDuplicateTick
 
 `RunTickReplay.kt` takes a comma-separated list of `metric_failed_monitors.id` values, reconstructs each tick's local traffic scene in a fresh SUMO/libsumo simulation, and lets every known mutant separately take control of the ego vehicle for exactly one simulated step, to compare what each mutant actually does when faced with that exact scene.
 
-Every vehicle recorded present at the tick is placed at its own recorded position/speed/acceleration/type, read from the `all_vehicles_json_deflate` column (`metric_failed_monitors`, a non-nullable, raw-DEFLATE-compressed JSON array of `TickVehicleSnapshot` populated by `FailedMonitorsMetric` for every tick written by the live evaluation pipeline) rather than from the 6 nearest-neighbour `surrounding*` columns — a vehicle "blocked" from being nearest (e.g. two cars ahead in the same lane) used to be silently missing from the reconstruction. See `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements` for the placement logic and `LibsumoDynamicDataCollector.replayTickForMutant` for the one-step replay itself.
+Every vehicle recorded present at the tick is placed at its own recorded position/speed/acceleration/type, read from the `all_vehicles_json_deflate` column (`metric_failed_monitors`, a non-nullable, compressed JSON array of `TickVehicleSnapshot` populated by `FailedMonitorsMetric` for every tick written by the live evaluation pipeline) rather than from the 6 nearest-neighbour `surrounding*` columns — a vehicle "blocked" from being nearest (e.g. two cars ahead in the same lane) used to be silently missing from the reconstruction. See `tools.aqua.stars.data.sumo.libSumo.computeReplayPlacements` for the placement logic and `LibsumoDynamicDataCollector.replayTickForMutant` for the one-step replay itself.
 
 Scope: this reports the mutant's maneuver command, the resulting next-tick kinematics, and whether a collision occurs. It does **not** re-evaluate TSC monitors (G0–G4/I1/I2) — that requires the full `TSCEvaluation` framework running across a longer window of ticks.
 
@@ -366,6 +366,16 @@ pip install matplotlib numpy pandas scipy lightgbm polars connectorx graphviz ps
 
 ---
 
+### `scripts/all_vehicles_json_codec.py` — Decode `all_vehicles_json_deflate`
+
+`metric_failed_monitors.all_vehicles_json_deflate` stores each tick's vehicle JSON compressed (a format-version byte, then raw DEFLATE with a preset dictionary; see `AllVehiclesJsonCompression.kt`), which cuts it to roughly a fifth of its size. This script decodes such a value, either as a library (`decompress(value)`) or from the command line with a value copied from `psql`:
+
+```bash
+python3 scripts/all_vehicles_json_codec.py '\x01ad9441...'
+```
+
+---
+
 ### `scripts/export_parquet.py` — Export PostgreSQL table to Parquet
 
 Exports the `metric_failed_monitors` table from PostgreSQL to a Parquet file using parallel reads via [connectorx](https://github.com/sfu-db/connector-x). On a server with many cores this is significantly faster than a single-threaded CSV export.
@@ -377,7 +387,7 @@ Excludes the `all_vehicles_json_deflate` column by default — it's the single h
 | `--uri` | *(required)* | PostgreSQL connection URI: `postgresql://user:pass@host:port/db` |
 | `--output` | `metric_failed_monitors.parquet` | Output Parquet file path |
 | `--partitions` | `96` | Number of parallel read partitions; set to match available CPU cores |
-| `--include-all-vehicles-json` | off | Include the `all_vehicles_json_deflate` column anyway (raw-DEFLATE bytes; decode a value with `zlib.decompress(value, -15).decode()`) |
+| `--include-all-vehicles-json` | off | Include the `all_vehicles_json_deflate` column anyway (compressed bytes; decode a value with `scripts/all_vehicles_json_codec.py`) |
 
 ```bash
 python3 scripts/export_parquet.py \

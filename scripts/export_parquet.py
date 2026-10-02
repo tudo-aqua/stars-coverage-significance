@@ -10,8 +10,8 @@ that tick, added for the tick-replay feature. It's the single heaviest column in
 (everything else is compact floats/ints/bools/short text) and isn't read by any current consumer
 of this export (decision_tree_g0.py and analyze_duplicate_ticks.py both select specific named
 feature columns). Pass --include-all-vehicles-json to include it anyway. It is exported as the
-raw-DEFLATE-compressed bytes stored in the database; decode one value with
-`zlib.decompress(value, -15).decode()`.
+compressed bytes stored in the database; decode one value with
+`all_vehicles_json_codec.decompress(value)` (see all_vehicles_json_codec.py in this directory).
 
 Usage:
     python export_parquet.py --uri postgresql://user:pass@host:5432/db

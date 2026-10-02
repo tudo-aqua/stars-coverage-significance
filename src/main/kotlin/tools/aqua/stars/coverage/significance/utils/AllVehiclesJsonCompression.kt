@@ -21,27 +21,60 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 
+/** First byte of every `all_vehicles_json_deflate` value written by [compressAllVehiclesJson]. */
+const val ALL_VEHICLES_JSON_FORMAT_VERSION: Byte = 1
+
+/**
+ * Preset DEFLATE dictionary for format version [ALL_VEHICLES_JSON_FORMAT_VERSION]: text that occurs
+ * in almost every tick's vehicle JSON (keys, vehicle ids, type ids, and the departure speeds of the
+ * background vehicle types). DEFLATE can then encode those parts as back-references into the
+ * dictionary instead of spelling them out once per row. Most frequent text comes last, because
+ * nearer back-references are cheaper to encode.
+ *
+ * Must never change for format version 1, or every stored value becomes unreadable — add a new
+ * version instead. `scripts/all_vehicles_json_codec.py` and `tools/tick_visualizer/index.html` keep
+ * verbatim copies; `AllVehiclesJsonCompressionTest` checks that they match.
+ */
+const val ALL_VEHICLES_JSON_DICTIONARY: String =
+    """"lane":2,"front":"lane":1,"front":"lane":0,"front":""" +
+        """{"id":"slow_3","type":"car_calm",{"id":"normal_3","type":"car_normal",""" +
+        """{"id":"fast_3","type":"car_speedy",""" +
+        """[{"id":"ego","ego":true,"type":"mutant","lane":""" +
+        """[{"id":"ego","ego":true,"type":"ego","lane":""" +
+        ""","speed":16.666666,"accel":0.0},{"id":"slow_2","type":"car_calm","lane":""" +
+        ""","speed":33.333332,"accel":0.0},{"id":"fast_2","type":"car_speedy","lane":""" +
+        ""","speed":25.0,"accel":0.0},{"id":"normal_2","type":"car_normal","lane":""" +
+        ""","speed":16.666666,"accel":0.0},{"id":"slow_1","type":"car_calm","lane":""" +
+        ""","speed":33.333332,"accel":0.0},{"id":"fast_1","type":"car_speedy","lane":""" +
+        ""","speed":25.0,"accel":0.0},{"id":"normal_1","type":"car_normal","lane":""" +
+        ""","back":,"speed":,"accel":.0,"back":"""
+
+private val dictionaryBytes = ALL_VEHICLES_JSON_DICTIONARY.toByteArray(Charsets.UTF_8)
+
 /**
  * Compresses the vehicle JSON of a `metric_failed_monitors` row (a JSON array of
  * [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickVehicleSnapshot]) into the
  * bytes stored in the `all_vehicles_json_deflate` column.
  *
- * Uses raw DEFLATE (no zlib/gzip header, which would add 6–18 bytes to every one of the ~10⁹ rows).
- * PostgreSQL's own TOAST compression never kicks in for this table: it only compresses values once
- * a row exceeds ~2 KB, and a row here is ~1 KB, so the JSON (~75% of the row) used to be stored
- * uncompressed. Raw DEFLATE shrinks it to roughly a third.
+ * Format: one version byte ([ALL_VEHICLES_JSON_FORMAT_VERSION]), followed by raw DEFLATE (no
+ * zlib/gzip header, which would add 6–18 bytes to every one of the ~10⁹ rows) using the preset
+ * dictionary [ALL_VEHICLES_JSON_DICTIONARY]. PostgreSQL's own TOAST compression never kicks in for
+ * this table: it only compresses values once a row exceeds ~2 KB, and a row here is ~1 KB, so the
+ * JSON (~75% of the row) used to be stored uncompressed. This shrinks it to roughly a fifth.
  *
- * Decode outside the JVM with Python's standard library: `zlib.decompress(data, -15).decode()`.
+ * Decode outside the JVM with `scripts/all_vehicles_json_codec.py`.
  *
  * @param json JSON string to compress.
- * @return Raw-DEFLATE-compressed UTF-8 bytes of [json].
+ * @return The bytes to store in `all_vehicles_json_deflate`.
  */
 fun compressAllVehiclesJson(json: String): ByteArray {
   val deflater = Deflater(Deflater.BEST_COMPRESSION, /* nowrap= */ true)
   try {
+    deflater.setDictionary(dictionaryBytes)
     deflater.setInput(json.toByteArray(Charsets.UTF_8))
     deflater.finish()
-    val out = ByteArrayOutputStream(json.length / 2)
+    val out = ByteArrayOutputStream(json.length / 3)
+    out.write(ALL_VEHICLES_JSON_FORMAT_VERSION.toInt())
     val buffer = ByteArray(1024)
     while (!deflater.finished()) {
       out.write(buffer, 0, deflater.deflate(buffer))
@@ -55,14 +88,18 @@ fun compressAllVehiclesJson(json: String): ByteArray {
 /**
  * Inverse of [compressAllVehiclesJson].
  *
- * @param bytes Raw-DEFLATE-compressed bytes as stored in `all_vehicles_json_deflate`.
+ * @param bytes Value of the `all_vehicles_json_deflate` column.
  * @return The original JSON string.
  */
 fun decompressAllVehiclesJson(bytes: ByteArray): String {
+  require(bytes.isNotEmpty() && bytes[0] == ALL_VEHICLES_JSON_FORMAT_VERSION) {
+    "Unknown all_vehicles_json_deflate format version ${bytes.firstOrNull()}"
+  }
   val inflater = Inflater(/* nowrap= */ true)
   try {
-    inflater.setInput(bytes)
-    val out = ByteArrayOutputStream(bytes.size * 4)
+    inflater.setDictionary(dictionaryBytes)
+    inflater.setInput(bytes, 1, bytes.size - 1)
+    val out = ByteArrayOutputStream(bytes.size * 6)
     val buffer = ByteArray(4096)
     while (!inflater.finished()) {
       val n = inflater.inflate(buffer)
