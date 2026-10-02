@@ -26,12 +26,10 @@ import tools.aqua.stars.coverage.significance.db.repositories.MutantsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
-import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioG0ViolationsView
 import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceChangeData
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
 import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
@@ -90,13 +88,6 @@ val longtailDistribution by lazy {
 /** Mapping of scenario failures to monitors. */
 val failedMonitorMapping: List<ScenarioFailure> by lazy { db { buildFailedMonitorMapping() } }
 
-/**
- * Per-(mutant, scenarioConfiguration) TSC instance change times and accumulated monitor failures.
- */
-val tscInstanceChangeData: List<TSCInstanceChangeData> by lazy {
-  db { buildTSCInstanceChangeData(tsc()) }
-}
-
 /** Aggregated (from → to) TSC-instance transition counts, with per-monitor breakdown. */
 val tscInstanceTransitions: List<TSCInstanceTransition> by lazy {
   db { buildTSCInstanceTransitions(tsc()) }
@@ -137,12 +128,6 @@ fun main() {
   //  LongTailDistributionPostEvaluation.evaluate()
 
   //  MutantKillingByLeafNodePostEvaluation.evaluate()
-
-  /**
-   * Calculate the time until a TSCInstance changes for each mutant x scenario pair. Calculate the
-   * failed monitors in the time spans from above.
-   */
-  //  TSCInstanceChangeAnalysis.evaluate()
 
   /** Build transition automaton between TSC instances and render heatmaps. */
   //  TSCInstanceTransitionAnalysis.evaluate()

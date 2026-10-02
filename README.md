@@ -557,14 +557,6 @@ python3 scripts/analyze_duplicate_ticks.py \
 
 Each script reads CSV files from its own directory and writes PNG and PDF plots alongside them.
 
-#### `tsc_instance_change_analysis/tsc_instance_change_barplot.py`
-
-Histogram of time-until-first-TSC-instance-change. Reads all `*.csv` files in its directory.
-
-```bash
-python postEvaluation/tsc_instance_change_analysis/tsc_instance_change_barplot.py
-```
-
 #### `baseline_next_tick/baseline_next_tick_scatter.py` and `baseline_next_tick/baseline_next_tick_scatter.py`
 
 Scatter plots of mutants killed from randomly drawing vs TSC-based vs learned Decision tree.

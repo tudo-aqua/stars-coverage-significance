@@ -32,11 +32,8 @@ import tools.aqua.stars.coverage.significance.NETWORK_FILE_NAME
 import tools.aqua.stars.coverage.significance.SCENARIO_DIR
 import tools.aqua.stars.coverage.significance.TAKE_ONLY_TICKS_AT_X_MILLIS
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.db.dataclasses.EvaluationRunEntry
-import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.generateGridTrafficScenarios
-import tools.aqua.stars.coverage.significance.metrics.FirstTSCInstanceChangeMetric
 import tools.aqua.stars.coverage.significance.metrics.StartingValidTSCInstancesPerTSCMetric
 import tools.aqua.stars.coverage.significance.parallelism
 import tools.aqua.stars.coverage.significance.tsc.tsc
@@ -53,8 +50,6 @@ import tools.aqua.stars.data.sumo.xml.SumoImporter
  */
 fun generationWorkflowWithFiles() {
   DbBootstrap.connect()
-
-  val evaluationRunEntryId = EvaluationRunsRepository.insertAndGetId(EvaluationRunEntry())
 
   generateGridTrafficScenarios(seed = 2)
 
@@ -75,7 +70,8 @@ fun generationWorkflowWithFiles() {
   require(collisionByKey.isNotEmpty()) { "No collision files found." }
 
   val staticTsc = tsc()
-  val tscEntryId = TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
+  // StartingValidTSCInstancesPerTSCMetric looks the TSC up in the database.
+  TSCsRepository.upsertAndGetId(entry = staticTsc.toTSCEntry())
 
   val bucketCount = minOf(parallelism, scenarioFiles.size.coerceAtLeast(1))
   val buckets = scenarioFiles.buckets(bucketCount)
@@ -124,9 +120,7 @@ fun generationWorkflowWithFiles() {
                 tscEvaluation.registerMetricProviders(
                     InvalidTSCInstancesPerTSCMetric(),
                     StartingValidTSCInstancesPerTSCMetric(),
-                    TickCountMetric(),
-                    FirstTSCInstanceChangeMetric(
-                        evaluationRunEntryId = evaluationRunEntryId, tscEntryId = tscEntryId))
+                    TickCountMetric())
 
                 tscEvaluation.runEvaluation(tickSequence)
               })

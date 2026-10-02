@@ -34,7 +34,6 @@ import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficAnalysisJo
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficLongTailTable
 import tools.aqua.stars.coverage.significance.db.tables.HighwayTrafficScenariosTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable
-import tools.aqua.stars.coverage.significance.db.tables.MetricFirstTSCInstanceChangeTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricStartingValidTSCInstancesTable
 import tools.aqua.stars.coverage.significance.db.tables.MetricTotalTickDifferenceTable
 import tools.aqua.stars.coverage.significance.db.tables.MutantScenarioChunkJobsTable
@@ -185,7 +184,6 @@ object DbBootstrap {
           MutantsTable,
           ScenarioStartingConfigurationTable,
           TSCInstancesTable,
-          MetricFirstTSCInstanceChangeTable,
           MetricStartingValidTSCInstancesTable,
           MetricFailedMonitorsTable,
           MutantScenarioChunkJobsTable,
