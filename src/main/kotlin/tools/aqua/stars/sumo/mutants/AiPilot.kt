@@ -17,11 +17,9 @@
 
 package tools.aqua.stars.sumo
 
-import java.io.File
 import kotlin.math.tanh
 import org.eclipse.sumo.libsumo.StringDoublePair
 import org.eclipse.sumo.libsumo.Vehicle as SumoVehicle
-import tools.aqua.stars.sumo.Autopilot.Neighbor
 
 class AiPilot : Mutant() {
 
@@ -29,8 +27,8 @@ class AiPilot : Mutant() {
   var neighborLookAheadInMeters = 150.0
   var leaderLookAheadInMeters = 150.0
 
-  val weights: Array<Array<Array<Double>>> = loadWeights()
-  val bias: Array<Array<Double>> = loadBias()
+  val weights: Array<Array<Array<Double>>> = sharedWeights
+  val bias: Array<Array<Double>> = sharedBias
 
   override fun controlTick(egoId: String): MutantManeuver {
     val speedNow = SumoVehicle.getSpeed(egoId)
@@ -121,56 +119,6 @@ class AiPilot : Mutant() {
     return best
   }
 
-  private fun loadWeights(): Array<Array<Array<Double>>> {
-    val lines = File("NeuralNetwork.txt").readLines()
-    val layerCount = lines[0].toInt()
-    val loadedWeights = Array<Array<Array<Double>>>(layerCount) { emptyArray() }
-    var index = -1
-    for (i in 1..layerCount * 3) {
-      if (i % 3 == 1) {
-        index++
-        val currentLine = lines[i].split(";")
-        val inSize = currentLine[0].toInt()
-        val outSize = currentLine[1].toInt()
-        loadedWeights[index] = Array<Array<Double>>(outSize) { Array<Double>(inSize) { 0.0 } }
-      } else if (i % 3 == 2) {
-        val currentLine = lines[i].split(";")
-        var x = 0
-        var y = 0
-        for (weight in currentLine) {
-          loadedWeights[index][x][y++] = weight.toDouble()
-          if (y >= loadedWeights[index][x].size) {
-            x++
-            y = 0
-          }
-        }
-      }
-    }
-    return loadedWeights
-  }
-
-  private fun loadBias(): Array<Array<Double>> {
-    val lines = File("NeuralNetwork.txt").readLines()
-    val layerCount = lines[0].toInt()
-    val loadedBias = Array<Array<Double>>(layerCount) { emptyArray() }
-    var index = -1
-    for (i in 1..layerCount * 3) {
-      if (i % 3 == 1) {
-        index++
-        val currentLine = lines[i].split(";")
-        val outSize = currentLine[1].toInt()
-        loadedBias[index] = Array<Double>(outSize) { 0.0 }
-      } else if (i % 3 == 0) {
-        val currentLine = lines[i].split(";")
-        var x = 0
-        for (b in currentLine) {
-          loadedBias[index][x++] = b.toDouble()
-        }
-      }
-    }
-    return loadedBias
-  }
-
   private fun forward(
       speed: Double,
       laneIndex: Double,
@@ -216,5 +164,76 @@ class AiPilot : Mutant() {
     }
 
     return currentValues
+  }
+
+  /** Network parameters shared by all [AiPilot] instances. */
+  companion object {
+    /** Classpath location of the trained network (layer sizes, weights and biases). */
+    private const val NETWORK_RESOURCE = "/NeuralNetwork.txt"
+
+    /**
+     * Lines of [NETWORK_RESOURCE]. The file is large and every [AiPilot] instance uses the same
+     * network, so it is read once per JVM instead of once per instance.
+     */
+    private val networkLines: List<String> by lazy {
+      val stream =
+          checkNotNull(AiPilot::class.java.getResourceAsStream(NETWORK_RESOURCE)) {
+            "Neural network resource $NETWORK_RESOURCE not found on the classpath."
+          }
+      stream.bufferedReader().use { it.readLines() }
+    }
+
+    private val sharedWeights: Array<Array<Array<Double>>> by lazy { loadWeights(networkLines) }
+    private val sharedBias: Array<Array<Double>> by lazy { loadBias(networkLines) }
+
+    /** Parses the per-layer weight matrices from the [lines] of the network file. */
+    private fun loadWeights(lines: List<String>): Array<Array<Array<Double>>> {
+      val layerCount = lines[0].toInt()
+      val loadedWeights = Array<Array<Array<Double>>>(layerCount) { emptyArray() }
+      var index = -1
+      for (i in 1..layerCount * 3) {
+        if (i % 3 == 1) {
+          index++
+          val currentLine = lines[i].split(";")
+          val inSize = currentLine[0].toInt()
+          val outSize = currentLine[1].toInt()
+          loadedWeights[index] = Array<Array<Double>>(outSize) { Array<Double>(inSize) { 0.0 } }
+        } else if (i % 3 == 2) {
+          val currentLine = lines[i].split(";")
+          var x = 0
+          var y = 0
+          for (weight in currentLine) {
+            loadedWeights[index][x][y++] = weight.toDouble()
+            if (y >= loadedWeights[index][x].size) {
+              x++
+              y = 0
+            }
+          }
+        }
+      }
+      return loadedWeights
+    }
+
+    /** Parses the per-layer bias vectors from the [lines] of the network file. */
+    private fun loadBias(lines: List<String>): Array<Array<Double>> {
+      val layerCount = lines[0].toInt()
+      val loadedBias = Array<Array<Double>>(layerCount) { emptyArray() }
+      var index = -1
+      for (i in 1..layerCount * 3) {
+        if (i % 3 == 1) {
+          index++
+          val currentLine = lines[i].split(";")
+          val outSize = currentLine[1].toInt()
+          loadedBias[index] = Array<Double>(outSize) { 0.0 }
+        } else if (i % 3 == 0) {
+          val currentLine = lines[i].split(";")
+          var x = 0
+          for (b in currentLine) {
+            loadedBias[index][x++] = b.toDouble()
+          }
+        }
+      }
+      return loadedBias
+    }
   }
 }
