@@ -1,8 +1,8 @@
 #!/bin/bash
-#python3 scripts/export_parquet.py \
-#  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
-#  --output metric_failed_monitors.parquet \
-#  --partitions 4 \
+python3 scripts/export_parquet.py \
+  --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars \
+  --output metric_failed_monitors.parquet \
+  --partitions 4
 #&&
 #python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 #--n-trials 200 \
