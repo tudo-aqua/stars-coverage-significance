@@ -64,13 +64,16 @@ import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
  *    other policy instead of being skipped, so the alternation only truly stops once the pool
  *    itself is exhausted.
  *
- * All tick data is loaded from the database exactly once per evaluation call, then all groupings
- * and repetitions operate on that same in-memory list (or, for leaf-based strategies, that same
- * per-leaf grouping of it) - shared, read-only, across every repetition and every leaf. No
- * repetition ever copies it: [SharedDrawPool] draws real ticks from it without replacement by
- * replaying a swap-remove shuffle through a small per-pool overlay instead of an actual copy, so
- * [REPETITIONS] repetitions running in parallel cost [REPETITIONS] times the *draws*, not
- * [REPETITIONS] times the pool size.
+ * All tick data is loaded from the database exactly once per [evaluate]/[evaluateTimeToKill] call,
+ * then all groupings and repetitions operate on that same in-memory list (or, for leaf-based
+ * strategies, that same per-leaf grouping of it) - shared, read-only, across every repetition and
+ * every leaf. No repetition ever copies it: [SharedDrawPool] draws real ticks from it without
+ * replacement by replaying a swap-remove shuffle through a small per-pool overlay instead of an
+ * actual copy, so [REPETITIONS] repetitions running in parallel cost [REPETITIONS] times the
+ * *draws*, not [REPETITIONS] times the pool size. Calling [evaluate] and [evaluateTimeToKill]
+ * separately for the same run still means two loads, though - [evaluateAll] is the one-load
+ * entry point that runs both (plus [exportSignificance]) against a single shared load, and is
+ * what [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] uses.
  */
 object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
@@ -101,13 +104,11 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   }
 
   /**
-   * For each suite size in [NEXT_TICK_SUITE_SIZES], measures how many distinct mutants each
-   * sampling strategy kills across [REPETITIONS] repetitions, and writes one CSV per strategy/suite
-   * size to `draw_ticks_with_decision_tree_grouping/run_<runId>/size_<suiteSize>/`.
+   * Resolves [decisionTreeRunId] (or, if `null`, the latest full run) to the `(resolvedRunId,
+   * fullRunId)` pair every public function here needs, logging which one was picked exactly as
+   * each used to inline. Shared so [evaluateAll] can resolve it once instead of twice.
    */
-  fun evaluate(decisionTreeRunId: EntityID<Int>? = null) {
-    println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation.")
-
+  private fun resolveRunId(decisionTreeRunId: EntityID<Int>?): Pair<Int, EntityID<Int>?> {
     val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
     val resolvedRunId: Int =
         fullRunId?.value
@@ -117,16 +118,50 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     } else {
       println("  Using leaf assignments from full run $resolvedRunId.")
     }
+    return resolvedRunId to fullRunId
+  }
 
+  /**
+   * Loads every tick for [fullRunId] and groups it, exactly once - the single expensive step
+   * [evaluate] and [evaluateTimeToKill] used to each perform independently, even when
+   * [evaluateAll] calls both for the very same run against the very same underlying rows.
+   */
+  private fun loadTicksAndSamplingData(
+      fullRunId: EntityID<Int>?
+  ): Pair<List<NextTickPostEvaluationDatabaseEntry>, SamplingDataTickDrawing> {
     println("  Loading tick data into memory (this may take several minutes)...")
     val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
     println("  Loaded ${allTicks.size} ticks.")
+    return allTicks to buildSamplingData(allTicks)
+  }
 
+  /**
+   * For each suite size in [NEXT_TICK_SUITE_SIZES], measures how many distinct mutants each
+   * sampling strategy kills across [REPETITIONS] repetitions, and writes one CSV per strategy/suite
+   * size to `draw_ticks_with_decision_tree_grouping/run_<runId>/size_<suiteSize>/`.
+   */
+  fun evaluate(decisionTreeRunId: EntityID<Int>? = null) {
+    println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation.")
+    val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
+    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
+    evaluateCore(resolvedRunId, allTicks, data)
+    println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation.")
+  }
+
+  /**
+   * Suite-size sweep body shared by [evaluate] (which loads [allTicks]/[data] itself) and
+   * [evaluateAll] (which loads them once and passes them to both this and
+   * [evaluateTimeToKillCore]).
+   */
+  private fun evaluateCore(
+      resolvedRunId: Int,
+      allTicks: List<NextTickPostEvaluationDatabaseEntry>,
+      data: SamplingDataTickDrawing,
+  ) {
     println("  Calculating rare mutants from all ticks")
     val rareMutantIds = buildRareMutantIds(allTicks)
     println("  Found ${rareMutantIds.size} rare mutants (<= $MAX_RARE_MUTANT_FAILURES violations).")
 
-    val data = buildSamplingData(allTicks)
     val leafGroups = data.dtLeafGroups.values.toList()
 
     for (suiteSize in NEXT_TICK_SUITE_SIZES) {
@@ -197,8 +232,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
         }
       }
     }
-
-    println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation.")
   }
 
   /**
@@ -210,22 +243,21 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    */
   fun evaluateTimeToKill(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
+    val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
+    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
+    evaluateTimeToKillCore(resolvedRunId, allTicks, data)
+    println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
+  }
 
-    val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
-    val resolvedRunId: Int =
-        fullRunId?.value
-            ?: error("  No full run (train_fraction=1.0) found - leaf strategies will be skipped.")
-    if (decisionTreeRunId != null) {
-      println("  Using given decision tree run $resolvedRunId.")
-    } else {
-      println("  Using leaf assignments from full run $resolvedRunId.")
-    }
-
-    println("  Loading tick data into memory (this may take several minutes)...")
-    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
-    println("  Loaded ${allTicks.size} ticks.")
-
-    val data = buildSamplingData(allTicks)
+  /**
+   * Time-to-kill body shared by [evaluateTimeToKill] (which loads [allTicks]/[data] itself) and
+   * [evaluateAll] (which loads them once and passes them to both this and [evaluateCore]).
+   */
+  private fun evaluateTimeToKillCore(
+      resolvedRunId: Int,
+      allTicks: List<NextTickPostEvaluationDatabaseEntry>,
+      data: SamplingDataTickDrawing,
+  ) {
     val leafGroups = data.dtLeafGroups.values.toList()
 
     val accidentMutantIds =
@@ -264,8 +296,28 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             resolvedRunId)
       }
     }
+  }
 
-    println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
+  /**
+   * Runs [exportSignificance], [evaluateTimeToKill] and [evaluate] against the same decision tree
+   * run while loading and grouping the tick table only **once** and sharing it between the latter
+   * two - unlike calling all three separately (as
+   * [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] used to), which
+   * reloaded and regrouped the exact same multi-hundred-million-row table twice, once per call,
+   * even though both read identical rows for the same run.
+   */
+  fun evaluateAll(decisionTreeRunId: EntityID<Int>? = null) {
+    println(
+        "Starting DrawTicksWithDecisionTreeGroupingPostEvaluation (significance + time-to-kill + suite-size sweep).")
+    exportSignificance(decisionTreeRunId)
+
+    val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
+    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
+    evaluateTimeToKillCore(resolvedRunId, allTicks, data)
+    evaluateCore(resolvedRunId, allTicks, data)
+
+    println(
+        "Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (significance + time-to-kill + suite-size sweep).")
   }
 
   /**

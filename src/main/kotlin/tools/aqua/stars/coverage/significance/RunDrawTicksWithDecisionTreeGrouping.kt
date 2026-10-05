@@ -31,9 +31,9 @@ import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisi
  *   `--latest`.
  * - `--latest-split`: the latest *split* run (`train_fraction != 1.0`, i.e. a train/test split).
  * - `--all`: every decision tree run currently in `decision_tree_runs`, evaluated one after another
- *   (ascending ID order). Since [DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluate]/
- *   `evaluateTimeToKill` each reload the full tick table, this multiplies the runtime by the number
- *   of runs.
+ *   (ascending ID order). [DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateAll] reloads the
+ *   full tick table once per run, so this still multiplies the runtime by the number of runs - just
+ *   not by twice that, the way calling `evaluate`/`evaluateTimeToKill` separately used to.
  * - One or more run IDs (`decision_tree_runs.id`), comma- and/or space-separated, e.g. `8`,
  *   `1,2,3`, or `1 2 3` - evaluated one after another in the given order.
  *
@@ -80,7 +80,5 @@ private fun evaluateRun(decisionTreeRunId: EntityID<Int>) {
             "(no split found during training) - every row falls into a single leaf, so leaf-based " +
             "sampling/significance results for this run are degenerate.")
   }
-  DrawTicksWithDecisionTreeGroupingPostEvaluation.exportSignificance(decisionTreeRunId)
-  DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill(decisionTreeRunId)
-  DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluate(decisionTreeRunId)
+  DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateAll(decisionTreeRunId)
 }
