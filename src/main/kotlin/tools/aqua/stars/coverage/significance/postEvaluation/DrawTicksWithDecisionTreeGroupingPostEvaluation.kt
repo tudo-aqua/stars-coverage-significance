@@ -65,7 +65,12 @@ import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
  *    itself is exhausted.
  *
  * All tick data is loaded from the database exactly once per evaluation call, then all groupings
- * and repetitions operate on the in-memory list.
+ * and repetitions operate on that same in-memory list (or, for leaf-based strategies, that same
+ * per-leaf grouping of it) - shared, read-only, across every repetition and every leaf. No
+ * repetition ever copies it: [SharedDrawPool] draws real ticks from it without replacement by
+ * replaying a swap-remove shuffle through a small per-pool overlay instead of an actual copy, so
+ * [REPETITIONS] repetitions running in parallel cost [REPETITIONS] times the *draws*, not
+ * [REPETITIONS] times the pool size.
  */
 object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
@@ -400,10 +405,10 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * Only the leaf-group *order* is shuffled up front (a few hundred entries at most - cheap). Each
-   * leaf's own tick list is kept unshuffled and drawn from via
-   * [MutableList.drawAndRemoveRandomTick] instead, since `it.shuffled(rng)` per leaf would permute
-   * the full tick pool (hundreds of millions of entries, summed across leaves) even though a suite
-   * draws only [suiteSize] of them.
+   * leaf's own tick list is never copied: every repetition wraps the same shared, unmutated list in
+   * a fresh [SharedDrawPool] (which draws from it via [SharedDrawPool.drawAndRemoveRandomTick]
+   * without ever copying or shuffling it), so a suite of [suiteSize] draws costs [suiteSize] work -
+   * not the hundreds of millions of entries the full tick pool may hold, summed across leaves.
    */
   private fun evaluateRoundRobinTicks(
       ticksPerLeaf: List<List<NextTickPostEvaluationDatabaseEntry>>,
@@ -415,23 +420,23 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.map { it.toMutableList() }.shuffled(rng).toMutableList()
+            val workingPools = ticksPerLeaf.map { SharedDrawPool(it) }.shuffled(rng).toMutableList()
             val killed = mutableSetOf<MutantId>()
             var drawn = 0
             var pos = 0
-            while (workingLists.isNotEmpty() && drawn < suiteSize) {
-              val currentGroup = workingLists[pos]
-              val tick = currentGroup.drawAndRemoveRandomTick(rng)
+            while (workingPools.isNotEmpty() && drawn < suiteSize) {
+              val currentPool = workingPools[pos]
+              val tick = currentPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (currentGroup.isEmpty()) {
-                workingLists.removeAt(pos)
-                // removeAt(pos) shifts every later group left by one, so pos already points at
-                // the next group "for free" - unless pos was the last index, in which case pos
-                // now equals the new size (one past the end). Wrapping via modulo is a no-op in
-                // the first case and correctly wraps to 0 in the second.
-                if (workingLists.isNotEmpty()) pos %= workingLists.size
+              if (currentPool.isEmpty()) {
+                workingPools.removeAt(pos)
+                // removeAt(pos) shifts every later pool left by one, so pos already points at the
+                // next pool "for free" - unless pos was the last index, in which case pos now
+                // equals the new size (one past the end). Wrapping via modulo is a no-op in the
+                // first case and correctly wraps to 0 in the second.
+                if (workingPools.isNotEmpty()) pos %= workingPools.size
               } else {
-                pos = (pos + 1) % workingLists.size
+                pos = (pos + 1) % workingPools.size
               }
               tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
             }
@@ -442,8 +447,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   /**
    * Weighted-leaf variant of [evaluateRoundRobinTicks]: instead of cycling leaves in a fixed order,
    * each draw picks a leaf via [weightedPickLeaf] (probability proportional to [leafWeights],
-   * renormalized over leaves that still have ticks left), then draws one random tick from that leaf
-   * via [MutableList.drawAndRemoveRandomTick] (no per-leaf `shuffled()` - same reasoning as
+   * renormalized over leaves that still have ticks left), then draws one random tick from that
+   * leaf's [SharedDrawPool] (no per-leaf copy or shuffle - same reasoning as
    * [evaluateRoundRobinTicks]). This is the sampling process the significance card's E(weight) = 1
    * / Σ(p_l·w_l) estimator assumes.
    */
@@ -458,17 +463,17 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
+            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
             val candidateLeafIds =
-                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+                workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
             val killed = mutableSetOf<MutantId>()
             var drawn = 0
             while (candidateLeafIds.isNotEmpty() && drawn < suiteSize) {
               val leafId = weightedPickLeaf(candidateLeafIds, leafWeights, rng)
-              val leafTicks = workingLists.getValue(leafId)
-              val tick = leafTicks.drawAndRemoveRandomTick(rng)
+              val leafPool = workingPools.getValue(leafId)
+              val tick = leafPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (leafTicks.isEmpty()) candidateLeafIds.remove(leafId)
+              if (leafPool.isEmpty()) candidateLeafIds.remove(leafId)
               tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
             }
             killed.size
@@ -495,15 +500,15 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
-            val roundRobinOrder = workingLists.keys.shuffled(rng).toMutableList()
+            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
+            val roundRobinOrder = workingPools.keys.shuffled(rng).toMutableList()
             var rrPos = 0
             val candidateLeafIds =
-                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+                workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
 
             fun nextEqualLeafOrNull(): DecisionTreeLeafId? {
               while (roundRobinOrder.isNotEmpty() &&
-                  workingLists.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
+                  workingPools.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
                 roundRobinOrder.removeAt(rrPos % roundRobinOrder.size)
               }
               if (roundRobinOrder.isEmpty()) return null
@@ -513,7 +518,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             }
 
             fun nextWeightedLeafOrNull(): DecisionTreeLeafId? {
-              candidateLeafIds.removeAll { workingLists.getValue(it).isEmpty() }
+              candidateLeafIds.removeAll { workingPools.getValue(it).isEmpty() }
               return if (candidateLeafIds.isEmpty()) null
               else weightedPickLeaf(candidateLeafIds, leafWeights, rng)
             }
@@ -531,7 +536,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             var drawn = 0
             while (drawn < suiteSize) {
               val leafId = nextLeafId() ?: break
-              val tick = workingLists.getValue(leafId).drawAndRemoveRandomTick(rng)
+              val tick = workingPools.getValue(leafId).drawAndRemoveRandomTick(rng)
               drawn++
               tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
             }
@@ -541,7 +546,11 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   // ------------------------------------------------------------------- time-to-kill strategies
 
-  /** Draws ticks one at a time without replacement until [mutantId] is killed. */
+  /**
+   * Draws ticks one at a time without replacement until [mutantId] is killed. [tickPool] is the
+   * same shared, unmutated list every repetition reads from - see [SharedDrawPool] - so a kill
+   * found after a handful of draws costs a handful of draws, not a copy of the full pool.
+   */
   private fun evaluateTimeToKillRandomTicks(
       tickPool: List<NextTickPostEvaluationDatabaseEntry>,
       mutantId: MutantId,
@@ -551,10 +560,10 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val remaining = tickPool.toMutableList()
+            val pool = SharedDrawPool(tickPool)
             var seen = 0
-            while (remaining.isNotEmpty()) {
-              val tick = remaining.drawAndRemoveRandomTick(rng)
+            while (!pool.isEmpty()) {
+              val tick = pool.drawAndRemoveRandomTick(rng)
               seen++
               if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map seen
             }
@@ -563,7 +572,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .collect(Collectors.toList())
 
   /**
-   * Round-robin variant of [evaluateTimeToKillWeightedTicks]'s no-inner-shuffle approach - see
+   * Round-robin variant of [evaluateTimeToKillWeightedTicks]'s no-copy approach - see
    * [evaluateRoundRobinTicks].
    */
   private fun evaluateTimeToKillRoundRobinTicks(
@@ -575,18 +584,18 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.map { it.toMutableList() }.shuffled(rng).toMutableList()
+            val workingPools = ticksPerLeaf.map { SharedDrawPool(it) }.shuffled(rng).toMutableList()
             var pos = 0
             var drawn = 0
-            while (workingLists.isNotEmpty()) {
-              val currentGroup = workingLists[pos]
-              val tick = currentGroup.drawAndRemoveRandomTick(rng)
+            while (workingPools.isNotEmpty()) {
+              val currentPool = workingPools[pos]
+              val tick = currentPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (currentGroup.isEmpty()) {
-                workingLists.removeAt(pos)
-                if (workingLists.isNotEmpty()) pos %= workingLists.size
+              if (currentPool.isEmpty()) {
+                workingPools.removeAt(pos)
+                if (workingPools.isNotEmpty()) pos %= workingPools.size
               } else {
-                pos = (pos + 1) % workingLists.size
+                pos = (pos + 1) % workingPools.size
               }
               if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
             }
@@ -595,10 +604,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .collect(Collectors.toList())
 
   /**
-   * Weighted-leaf variant of [evaluateTimeToKillRandomTicks]: no per-leaf `shuffled()` either -
-   * each leaf's list is copied as-is and [MutableList.drawAndRemoveRandomTick] draws one random
-   * element from it on demand, so a kill found early doesn't pay for permuting leaves that were
-   * never visited.
+   * Weighted-leaf variant of [evaluateTimeToKillRandomTicks]: no per-leaf copy or shuffle either -
+   * each leaf's list is wrapped as-is in a [SharedDrawPool], which draws one random element from it
+   * on demand, so a kill found early doesn't pay for touching leaves that were never visited.
    */
   private fun evaluateTimeToKillWeightedTicks(
       ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
@@ -610,16 +618,16 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
+            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
             val candidateLeafIds =
-                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+                workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
             var drawn = 0
             while (candidateLeafIds.isNotEmpty()) {
               val leafId = weightedPickLeaf(candidateLeafIds, leafWeights, rng)
-              val leafTicks = workingLists.getValue(leafId)
-              val tick = leafTicks.drawAndRemoveRandomTick(rng)
+              val leafPool = workingPools.getValue(leafId)
+              val tick = leafPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (leafTicks.isEmpty()) candidateLeafIds.remove(leafId)
+              if (leafPool.isEmpty()) candidateLeafIds.remove(leafId)
               if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
             }
             -1
@@ -640,15 +648,15 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingLists = ticksPerLeaf.mapValues { (_, ticks) -> ticks.toMutableList() }
-            val roundRobinOrder = workingLists.keys.shuffled(rng).toMutableList()
+            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
+            val roundRobinOrder = workingPools.keys.shuffled(rng).toMutableList()
             var rrPos = 0
             val candidateLeafIds =
-                workingLists.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
+                workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
 
             fun nextEqualLeafOrNull(): DecisionTreeLeafId? {
               while (roundRobinOrder.isNotEmpty() &&
-                  workingLists.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
+                  workingPools.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
                 roundRobinOrder.removeAt(rrPos % roundRobinOrder.size)
               }
               if (roundRobinOrder.isEmpty()) return null
@@ -658,7 +666,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             }
 
             fun nextWeightedLeafOrNull(): DecisionTreeLeafId? {
-              candidateLeafIds.removeAll { workingLists.getValue(it).isEmpty() }
+              candidateLeafIds.removeAll { workingPools.getValue(it).isEmpty() }
               return if (candidateLeafIds.isEmpty()) null
               else weightedPickLeaf(candidateLeafIds, leafWeights, rng)
             }
@@ -675,7 +683,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             var drawn = 0
             var leafId = nextLeafId()
             while (leafId != null) {
-              val tick = workingLists.getValue(leafId).drawAndRemoveRandomTick(rng)
+              val tick = workingPools.getValue(leafId).drawAndRemoveRandomTick(rng)
               drawn++
               if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
               leafId = nextLeafId()
@@ -705,17 +713,42 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   }
 
   /**
-   * Removes and returns one uniformly random element from this list, via swap-remove (overwrite the
-   * drawn slot with the last element, then drop the last slot) - O(1), unlike
-   * `removeAt(randomIndex)`, which would shift every following element on every draw. Order doesn't
-   * matter for the swap since the draw itself is already uniformly random.
+   * Draws distinct elements without replacement from [source] - the very same shared, read-only
+   * list every repetition (and, for the leaf-based strategies, every leaf) reads from - without
+   * ever copying it. [source] can hold hundreds of millions of entries, but a pool only ever
+   * touches the handful of positions *it itself* has drawn so far: [drawAndRemoveRandomTick]
+   * simulates one step of an in-place swap-remove shuffle of [source] (the same swap-remove
+   * [evaluateRandomDrawTicks] used to do directly on a private copy), but records the swap in a
+   * small per-pool overlay map instead of writing it back into [source] - so [source] itself is
+   * never mutated and stays safe to share, completely unchanged, across every concurrently running
+   * repetition and pool. A suite of `k` draws (or `k` draws until a kill) therefore costs `k` hash
+   * lookups, never a copy of the leaf or pool it draws from.
    */
-  private fun <T> MutableList<T>.drawAndRemoveRandomTick(rng: Random): T {
-    val idx = rng.nextInt(size)
-    val value = this[idx]
-    this[idx] = this[size - 1]
-    removeAt(size - 1)
-    return value
+  internal class SharedDrawPool<T>(private val source: List<T>) {
+    private val overlay = HashMap<Int, T>()
+    private var remaining = source.size
+
+    private fun at(position: Int): T = overlay[position] ?: source[position]
+
+    /** Whether every element of [source] has been drawn from this pool. */
+    fun isEmpty(): Boolean = remaining <= 0
+
+    /**
+     * Removes and returns one uniformly random remaining element, via the same swap-remove
+     * [evaluateRandomDrawTicks] et al. used to perform in place (overwrite the drawn slot with the
+     * last remaining slot, then shrink the remaining range by one) - just replayed against [source]
+     * through [overlay] instead of mutating an actual copy.
+     */
+    fun drawAndRemoveRandomTick(rng: Random): T {
+      check(remaining > 0) { "drawAndRemoveRandomTick() called on an exhausted pool" }
+      val drawnPos = rng.nextInt(remaining)
+      val value = at(drawnPos)
+      val lastPos = remaining - 1
+      if (drawnPos != lastPos) overlay[drawnPos] = at(lastPos)
+      overlay.remove(lastPos)
+      remaining--
+      return value
+    }
   }
 
   /**
