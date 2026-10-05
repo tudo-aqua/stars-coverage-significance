@@ -28,7 +28,9 @@ import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDra
  * Results are written to `baseline_next_tick/time_to_kill/mutant_<id>/ttk_<strategy>.csv`.
  */
 fun main() {
-  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
+  // maxPoolSize = 9: buildTickWiseNextTickMonitorViolations loads ticks via 8 concurrent chunk
+  // queries (see its KDoc) - the pool needs at least that many connections free.
+  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432, maxPoolSize = 9))
   BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill()
   println("Finished!")
 }

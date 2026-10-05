@@ -603,59 +603,151 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
 
   /**
    * All rows from [MetricFailedMonitorsTable] projected to the four columns needed for sampling,
-   * joined with leaf node assignments from the most recent decision tree run.
+   * joined with leaf node assignments from [forRunId] (or the most recent decision tree run, if
+   * `null`).
    *
    * If no decision tree run exists yet, all [NextTickPostEvaluationDatabaseEntry.leafNodeId] values
    * will be `null` (leaf-stratified sampling will produce empty groups).
    *
+   * Splits the read into [parallelism] concurrent queries, each bounded to a [chunkSizeRows]-wide
+   * `id` range, instead of one `SELECT` over the whole table - see
+   * [buildDuplicateTickCompareColumns] for why an unchunked read of a table this size is both
+   * single-threaded-slow *and* memory-dangerous: the configured Postgres connection has no
+   * server-side cursor, so the JDBC driver buffers the *entire* result client-side before
+   * returning any of it, regardless of parallelism. Each chunk writes its
+   * [NextTickPostEvaluationDatabaseEntry] rows into a pre-sized array via a shared atomic index, so
+   * the (arbitrary) order chunks complete in doesn't matter.
+   *
+   * Manages its own transactions rather than relying on an ambient one from the caller - like
+   * [buildDuplicateTickCompareColumns], it must **not** be wrapped in `db {}`/`transaction {}` at
+   * the call site, or that outer transaction would hold one connection idle for the entire parallel
+   * load, on top of the [parallelism] worker connections below.
+   *
+   * @param chunkSizeRows Number of ids covered by each partitioned query.
+   * @param parallelism Number of chunk queries to run concurrently. Must not exceed the configured
+   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`) - see [buildDuplicateTickCompareColumns].
+   *
    * Loaded once and reused across all sampling strategies.
    */
   fun buildTickWiseNextTickMonitorViolations(
-      forRunId: EntityID<Int>? = null
+      forRunId: EntityID<Int>? = null,
+      chunkSizeRows: Int = 10_000_000,
+      parallelism: Int = 8,
   ): List<NextTickPostEvaluationDatabaseEntry> {
-    val latestRunId =
-        forRunId
-            ?: DecisionTreeRunsTable.selectAll()
-                .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
-                .limit(1)
-                .firstOrNull()
-                ?.get(DecisionTreeRunsTable.id)
+    data class IdBounds(val rowCount: Int, val minId: Long, val maxId: Long)
 
-    if (latestRunId == null) {
-      return MetricFailedMonitorsTable.select(
-              mutant, nextTickMonitorG0Failed, currentTSCInstance, startingScenarioConfiguration)
-          .map { row ->
-            NextTickPostEvaluationDatabaseEntry(
-                leafNodeId = null,
-                mutantId = row[mutant].value,
-                nextTickG0Failed = row[nextTickMonitorG0Failed],
-                tscInstanceId = row[currentTSCInstance].value,
-                scenarioConfigId = row[startingScenarioConfiguration].value,
-            )
+    // Resolving the run id and reading the id bounds are both quick metadata-only reads, done up
+    // front in one short-lived transaction - same reasoning as buildDuplicateTickCompareColumns.
+    val (latestRunId, bounds) =
+        transaction {
+          val runId =
+              forRunId
+                  ?: DecisionTreeRunsTable.selectAll()
+                      .orderBy(DecisionTreeRunsTable.id to SortOrder.DESC)
+                      .limit(1)
+                      .firstOrNull()
+                      ?.get(DecisionTreeRunsTable.id)
+          val idBounds =
+              TransactionManager.current().exec(
+                  "SELECT COUNT(*) AS row_count, MIN(id) AS min_id, MAX(id) AS max_id FROM metric_failed_monitors",
+                  explicitStatementType = StatementType.SELECT) { rs ->
+                    rs.next()
+                    val rowCount = rs.getLong("row_count")
+                    check(rowCount <= Int.MAX_VALUE) {
+                      "$rowCount rows exceed the capacity of the in-memory result array"
+                    }
+                    IdBounds(
+                        rowCount = rowCount.toInt(),
+                        minId = rs.getLong("min_id"),
+                        maxId = rs.getLong("max_id"))
+                  } ?: error("Failed to read id bounds from metric_failed_monitors")
+          runId to idBounds
+        }
+
+    // Physically holds nulls until every chunk below has written its slot, but is never read from
+    // before that - same "claim non-null, fill before read" idiom as the final cast/return.
+    @Suppress("UNCHECKED_CAST")
+    val entries =
+        arrayOfNulls<NextTickPostEvaluationDatabaseEntry>(bounds.rowCount)
+            as Array<NextTickPostEvaluationDatabaseEntry>
+
+    if (bounds.rowCount == 0) return entries.asList()
+
+    val chunkStarts = (bounds.minId..bounds.maxId step chunkSizeRows.toLong()).toList()
+    val totalChunks = chunkStarts.size
+    val completedChunks = AtomicInteger(0)
+    val nextIndex = AtomicInteger(0)
+
+    println(
+        "  Loading ${bounds.rowCount} ticks in $totalChunks chunks ($parallelism at a time) ...")
+
+    val pool = Executors.newFixedThreadPool(parallelism)
+    try {
+      val futures =
+          chunkStarts.map { chunkStart ->
+            val chunkEnd = minOf(chunkStart + chunkSizeRows - 1, bounds.maxId)
+            pool.submit {
+              transaction {
+                val rows =
+                    if (latestRunId == null) {
+                      MetricFailedMonitorsTable.select(
+                              mutant,
+                              nextTickMonitorG0Failed,
+                              currentTSCInstance,
+                              startingScenarioConfiguration)
+                          .where {
+                            (MetricFailedMonitorsTable.id greaterEq chunkStart) and
+                                (MetricFailedMonitorsTable.id lessEq chunkEnd)
+                          }
+                    } else {
+                      MetricFailedMonitorsTable.join(
+                              DecisionTreeLeafAssignmentsTable,
+                              JoinType.LEFT,
+                              onColumn = MetricFailedMonitorsTable.id,
+                              otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
+                              additionalConstraint = {
+                                DecisionTreeLeafAssignmentsTable.runId eq latestRunId
+                              })
+                          .select(
+                              DecisionTreeLeafAssignmentsTable.leafNodeId,
+                              mutant,
+                              nextTickMonitorG0Failed,
+                              currentTSCInstance,
+                              startingScenarioConfiguration)
+                          .where {
+                            (MetricFailedMonitorsTable.id greaterEq chunkStart) and
+                                (MetricFailedMonitorsTable.id lessEq chunkEnd)
+                          }
+                    }
+                rows.forEach { row ->
+                  val i = nextIndex.getAndIncrement()
+                  entries[i] =
+                      NextTickPostEvaluationDatabaseEntry(
+                          leafNodeId =
+                              if (latestRunId == null) null
+                              else row[DecisionTreeLeafAssignmentsTable.leafNodeId],
+                          mutantId = row[mutant].value,
+                          nextTickG0Failed = row[nextTickMonitorG0Failed],
+                          tscInstanceId = row[currentTSCInstance].value,
+                          scenarioConfigId = row[startingScenarioConfiguration].value,
+                      )
+                }
+              }
+              val done = completedChunks.incrementAndGet()
+              println("  Loaded chunk $done/$totalChunks (ids $chunkStart..$chunkEnd)")
+            }
           }
+      futures.forEach { it.get() }
+    } finally {
+      pool.shutdown()
     }
 
-    return MetricFailedMonitorsTable.join(
-            DecisionTreeLeafAssignmentsTable,
-            JoinType.LEFT,
-            onColumn = MetricFailedMonitorsTable.id,
-            otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
-            additionalConstraint = { DecisionTreeLeafAssignmentsTable.runId eq latestRunId })
-        .select(
-            DecisionTreeLeafAssignmentsTable.leafNodeId,
-            MetricFailedMonitorsTable.mutant,
-            MetricFailedMonitorsTable.nextTickMonitorG0Failed,
-            MetricFailedMonitorsTable.currentTSCInstance,
-            MetricFailedMonitorsTable.startingScenarioConfiguration)
-        .map { row ->
-          NextTickPostEvaluationDatabaseEntry(
-              leafNodeId = row[DecisionTreeLeafAssignmentsTable.leafNodeId],
-              mutantId = row[MetricFailedMonitorsTable.mutant].value,
-              nextTickG0Failed = row[MetricFailedMonitorsTable.nextTickMonitorG0Failed],
-              tscInstanceId = row[MetricFailedMonitorsTable.currentTSCInstance].value,
-              scenarioConfigId = row[MetricFailedMonitorsTable.startingScenarioConfiguration].value,
-          )
-        }
+    check(nextIndex.get() == bounds.rowCount) {
+      "Expected ${bounds.rowCount} ticks but loaded ${nextIndex.get()} — was the table modified " +
+          "concurrently while loading?"
+    }
+
+    return entries.asList()
   }
 
   /**

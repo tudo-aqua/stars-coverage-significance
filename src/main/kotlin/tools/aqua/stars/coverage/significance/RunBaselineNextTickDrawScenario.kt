@@ -30,7 +30,9 @@ import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDra
 fun main(args: Array<String>) {
   val decisionTreeRunId = args.firstOrNull()?.toInt()?.let { EntityID(it, DecisionTreeRunsTable) }
 
-  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
+  // maxPoolSize = 9: buildTickWiseNextTickMonitorViolations loads ticks via 8 concurrent chunk
+  // queries (see its KDoc) - the pool needs at least that many connections free.
+  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432, maxPoolSize = 9))
   BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill(decisionTreeRunId)
   BaselineNextTickDrawScenariosPostEvaluation.evaluateWithStartingScenario(decisionTreeRunId)
   println("Finished!")

@@ -40,7 +40,10 @@ import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisi
  * @param args See above.
  */
 fun main(args: Array<String>) {
-  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
+  // maxPoolSize = 9: buildTickWiseNextTickMonitorViolations loads ticks via 8 concurrent chunk
+  // queries (see its KDoc) - the pool needs at least that many connections free, since it manages
+  // its own transactions rather than borrowing an ambient one from here.
+  DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432, maxPoolSize = 9))
 
   val runIds: List<Int> =
       when {

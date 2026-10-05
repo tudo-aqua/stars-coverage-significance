@@ -130,7 +130,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       fullRunId: EntityID<Int>?
   ): Pair<List<NextTickPostEvaluationDatabaseEntry>, SamplingDataTickDrawing> {
     println("  Loading tick data into memory (this may take several minutes)...")
-    val allTicks = db { buildTickWiseNextTickMonitorViolations(forRunId = fullRunId) }
+    // Not wrapped in db {}/transaction {}: buildTickWiseNextTickMonitorViolations manages its own
+    // transactions (parallel chunked load - see its KDoc).
+    val allTicks = buildTickWiseNextTickMonitorViolations(forRunId = fullRunId)
     println("  Loaded ${allTicks.size} ticks.")
     return allTicks to buildSamplingData(allTicks)
   }
