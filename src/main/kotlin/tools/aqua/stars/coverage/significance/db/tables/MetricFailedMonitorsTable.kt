@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.coverage.significance.db.tables
 
+import java.sql.SQLException
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import org.jetbrains.exposed.dao.id.EntityID
@@ -602,9 +603,120 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
   }
 
   /**
+   * The first [SQLException.getSQLState] found by walking this [Throwable]'s cause chain (Exposed
+   * and the connection pool both wrap the original driver exception), or `null` if none is found.
+   */
+  internal tailrec fun Throwable?.sqlState(): String? =
+      when {
+        this == null -> null
+        this is SQLException && this.sqlState != null -> this.sqlState
+        else -> this.cause.sqlState()
+      }
+
+  /**
+   * Whether [this] looks like the connection was severed by something *other* than the query
+   * itself - PostgreSQL's "Operator Intervention" error class (SQLSTATE `57*`: e.g. `57P01`
+   * admin_shutdown, `57P02` crash_shutdown, `57P03` cannot_connect_now). Seen in practice as the
+   * `db` container (`docker-compose.yml`) being restarted mid-load: every connection open at that
+   * moment gets `57P01` at once, not just one targeted backend - nothing a retry on a *new*
+   * connection, made once the container is back up, can't recover from, unlike a genuine query
+   * error.
+   */
+  internal fun Throwable.isTransientConnectionTermination(): Boolean =
+      sqlState()?.startsWith("57") == true
+
+  /**
+   * Runs [block], retrying up to [maxAttempts] times (with an exponentially increasing
+   * `[baseDelayMs] * 2^(attempt-1)` backoff) if it fails with [isTransientConnectionTermination].
+   * Any other failure, or exhausting the retries, propagates immediately. Used per chunk in
+   * [buildTickWiseNextTickMonitorViolations] so a `db` container restart doesn't fail a load that
+   * may otherwise be most of the way done.
+   *
+   * The default budget (6 attempts, 5s doubling up to 80s - roughly 2.5 minutes total across all
+   * waits) is sized for a *container* restart, not just a single severed connection: Postgres
+   * shutting down, Docker recreating the container, and Postgres accepting connections again can
+   * together take tens of seconds, during which every one of [parallelism]'s chunks will be
+   * retrying/waiting at once.
+   *
+   * @param baseDelayMs Exposed as a parameter only so tests can shrink the backoff - production
+   *   call sites should leave it at its default.
+   */
+  internal fun <T> withTransientConnectionRetry(
+      chunkDescription: String,
+      maxAttempts: Int = 6,
+      baseDelayMs: Long = 5_000L,
+      block: () -> T,
+  ): T {
+    var attempt = 1
+    while (true) {
+      try {
+        return block()
+      } catch (e: Exception) {
+        if (!e.isTransientConnectionTermination() || attempt >= maxAttempts) throw e
+        val delayMs = baseDelayMs * (1L shl (attempt - 1))
+        println(
+            "  WARNING: $chunkDescription lost its connection (SQLSTATE ${e.sqlState()}, attempt " +
+                "$attempt/$maxAttempts) - retrying on a new connection in ${delayMs}ms: ${e.message}")
+        Thread.sleep(delayMs)
+        attempt++
+      }
+    }
+  }
+
+  /**
+   * A run's [DecisionTreeLeafAssignmentChunksTable] rows, loaded once and indexed for O(1)
+   * per-tick lookup - the in-memory alternative to joining against the
+   * [DecisionTreeLeafAssignmentsTable] view per [buildTickWiseNextTickMonitorViolations] chunk.
+   *
+   * That view expands [DecisionTreeLeafAssignmentChunksTable] via `unnest(...) WITH ORDINALITY`,
+   * computing its `metric_failed_monitor_id` join key on the fly - Postgres cannot use an index to
+   * filter a computed column, so joining it with an `id BETWEEN ...` predicate (as each chunk
+   * needs to) forces it to expand *every* chunk of the run first, same as documented on
+   * [DecisionTreeLeafAssignmentsRepository.getByKey]. Paid once, that's fine; paid once per
+   * [buildTickWiseNextTickMonitorViolations] chunk (141 times, in one real run), it turned a ~1
+   * hour unchunked load into 7+ hours for 111 of those 141 chunks - the *chunking* was working as
+   * intended, but every chunk was separately re-doing the full run's worth of unnest work.
+   *
+   * [DecisionTreeLeafAssignmentChunksTable] itself is tiny by comparison - one row per
+   * [LEAF_ASSIGNMENT_CHUNK_SIZE] ids (~140K rows for 1.4 billion ticks) - so loading it whole,
+   * once, costs nothing next to that.
+   */
+  internal class LeafAssignmentLookup(private val chunksByFirstId: Map<Long, ShortArray>) {
+
+    /** The leaf node id assigned to [metricFailedMonitorId], or `null` if it has none. */
+    fun leafNodeIdOrNull(metricFailedMonitorId: Long): Int? {
+      val firstId = metricFailedMonitorId - metricFailedMonitorId % LEAF_ASSIGNMENT_CHUNK_SIZE
+      val chunk = chunksByFirstId[firstId] ?: return null
+      val leaf = chunk[(metricFailedMonitorId - firstId).toInt()]
+      return if (leaf == NO_LEAF) null else leaf.toInt()
+    }
+
+    companion object {
+      /** Sentinel for "no assignment" in the primitive [ShortArray]s - avoids boxing 1.4 billion
+       * nullable shorts just to represent what's usually a small number of id gaps. Internal
+       * (rather than private) solely so tests can build [LeafAssignmentLookup] fixtures with it
+       * without duplicating the magic number. */
+      internal const val NO_LEAF: Short = Short.MIN_VALUE
+
+      /** Loads every chunk recorded for [runId]. */
+      fun load(runId: Int): LeafAssignmentLookup = transaction {
+        val chunksByFirstId = HashMap<Long, ShortArray>()
+        DecisionTreeLeafAssignmentChunksTable.selectAll()
+            .where { DecisionTreeLeafAssignmentChunksTable.runId eq runId }
+            .forEach { row ->
+              val firstId = row[DecisionTreeLeafAssignmentChunksTable.firstMetricFailedMonitorId]
+              val boxed = row[DecisionTreeLeafAssignmentChunksTable.leafNodeIds]
+              chunksByFirstId[firstId] = ShortArray(boxed.size) { i -> boxed[i] ?: NO_LEAF }
+            }
+        LeafAssignmentLookup(chunksByFirstId)
+      }
+    }
+  }
+
+  /**
    * All rows from [MetricFailedMonitorsTable] projected to the four columns needed for sampling,
-   * joined with leaf node assignments from [forRunId] (or the most recent decision tree run, if
-   * `null`).
+   * with leaf node assignments from [forRunId] (or the most recent decision tree run, if `null`)
+   * attached via [LeafAssignmentLookup] - see its KDoc for why that, and not a SQL join, is used.
    *
    * If no decision tree run exists yet, all [NextTickPostEvaluationDatabaseEntry.leafNodeId] values
    * will be `null` (leaf-stratified sampling will produce empty groups).
@@ -664,6 +776,10 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
           runId to idBounds
         }
 
+    // One cheap, un-chunked load of the run's leaf assignments (see LeafAssignmentLookup's KDoc
+    // for why this - not a per-chunk SQL join - is what makes leaf-node lookups below O(1)).
+    val leafAssignmentLookup = latestRunId?.let { LeafAssignmentLookup.load(it.value) }
+
     // Physically holds nulls until every chunk below has written its slot, but is never read from
     // before that - same "claim non-null, fill before read" idiom as the final cast/return.
     @Suppress("UNCHECKED_CAST")
@@ -687,10 +803,18 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
           chunkStarts.map { chunkStart ->
             val chunkEnd = minOf(chunkStart + chunkSizeRows - 1, bounds.maxId)
             pool.submit {
-              transaction {
-                val rows =
-                    if (latestRunId == null) {
+              // Collected into a chunk-local list first, entirely inside the retried block: if the
+              // connection dies partway through (see withTransientConnectionRetry) the retry simply
+              // re-runs this whole query into a fresh local list, which is discarded on failure and
+              // never touches `entries`/`nextIndex` - so a retried chunk can never double-write.
+              // No join against DecisionTreeLeafAssignmentsTable here - see LeafAssignmentLookup's
+              // KDoc: this is a plain, single-table, indexed-id-range SELECT, exactly the kind of
+              // query chunking is supposed to speed up.
+              val localRows =
+                  withTransientConnectionRetry("chunk ids $chunkStart..$chunkEnd") {
+                    transaction {
                       MetricFailedMonitorsTable.select(
+                              MetricFailedMonitorsTable.id,
                               mutant,
                               nextTickMonitorG0Failed,
                               currentTSCInstance,
@@ -699,40 +823,28 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
                             (MetricFailedMonitorsTable.id greaterEq chunkStart) and
                                 (MetricFailedMonitorsTable.id lessEq chunkEnd)
                           }
-                    } else {
-                      MetricFailedMonitorsTable.join(
-                              DecisionTreeLeafAssignmentsTable,
-                              JoinType.LEFT,
-                              onColumn = MetricFailedMonitorsTable.id,
-                              otherColumn = DecisionTreeLeafAssignmentsTable.metricFailedMonitorId,
-                              additionalConstraint = {
-                                DecisionTreeLeafAssignmentsTable.runId eq latestRunId
-                              })
-                          .select(
-                              DecisionTreeLeafAssignmentsTable.leafNodeId,
-                              mutant,
-                              nextTickMonitorG0Failed,
-                              currentTSCInstance,
-                              startingScenarioConfiguration)
-                          .where {
-                            (MetricFailedMonitorsTable.id greaterEq chunkStart) and
-                                (MetricFailedMonitorsTable.id lessEq chunkEnd)
+                          .map { row ->
+                            NextTickPostEvaluationDatabaseEntry(
+                                leafNodeId =
+                                    leafAssignmentLookup?.leafNodeIdOrNull(
+                                        row[MetricFailedMonitorsTable.id].value),
+                                mutantId = row[mutant].value,
+                                nextTickG0Failed = row[nextTickMonitorG0Failed],
+                                tscInstanceId = row[currentTSCInstance].value,
+                                scenarioConfigId = row[startingScenarioConfiguration].value,
+                            )
                           }
                     }
-                rows.forEach { row ->
-                  val i = nextIndex.getAndIncrement()
-                  entries[i] =
-                      NextTickPostEvaluationDatabaseEntry(
-                          leafNodeId =
-                              if (latestRunId == null) null
-                              else row[DecisionTreeLeafAssignmentsTable.leafNodeId],
-                          mutantId = row[mutant].value,
-                          nextTickG0Failed = row[nextTickMonitorG0Failed],
-                          tscInstanceId = row[currentTSCInstance].value,
-                          scenarioConfigId = row[startingScenarioConfiguration].value,
-                      )
-                }
+                  }
+
+              // Reserves a disjoint block of exactly localRows.size slots - done once, after the
+              // chunk has already fully and successfully completed, so concurrent chunks (and any
+              // retries of this one) can never collide or double-count.
+              val startIndex = nextIndex.getAndAdd(localRows.size)
+              for (j in localRows.indices) {
+                entries[startIndex + j] = localRows[j]
               }
+
               val done = completedChunks.incrementAndGet()
               println("  Loaded chunk $done/$totalChunks (ids $chunkStart..$chunkEnd)")
             }
