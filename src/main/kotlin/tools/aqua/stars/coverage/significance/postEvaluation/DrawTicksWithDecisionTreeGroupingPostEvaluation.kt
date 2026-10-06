@@ -67,13 +67,17 @@ import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
  * All tick data is loaded from the database exactly once per [evaluate]/[evaluateTimeToKill] call,
  * then all groupings and repetitions operate on that same in-memory list (or, for leaf-based
  * strategies, that same per-leaf grouping of it) - shared, read-only, across every repetition and
- * every leaf. No repetition ever copies it: [SharedDrawPool] draws real ticks from it without
- * replacement by replaying a swap-remove shuffle through a small per-pool overlay instead of an
- * actual copy, so [REPETITIONS] repetitions running in parallel cost [REPETITIONS] times the
- * *draws*, not [REPETITIONS] times the pool size. Calling [evaluate] and [evaluateTimeToKill]
- * separately for the same run still means two loads, though - [evaluateAll] is the one-load
- * entry point that runs both (plus [exportSignificance]) against a single shared load, and is
- * what [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] uses.
+ * every leaf. No repetition ever copies it: [evaluate]'s suite-size sweep draws real ticks from it
+ * without replacement via [SharedDrawPool], which replays a swap-remove shuffle through a small
+ * per-pool overlay instead of an actual copy - cheap because a suite size is capped at a few
+ * thousand draws. [evaluateTimeToKill] cannot afford that same overlay (draws-until-first-kill can
+ * approach the size of the *entire* pool for a mutant with few kills, and up to [REPETITIONS] of
+ * those overlays can be alive at once), so it instead counts via [HitCountingPool] - see that
+ * class's KDoc for why this remains an exact, not approximate, replay of a real draw. Calling
+ * [evaluate] and [evaluateTimeToKill] separately for the same run still means two loads, though -
+ * [evaluateAll] is the one-load entry point that runs both (plus [exportSignificance]) against a
+ * single shared load, and is what
+ * [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] uses.
  */
 object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
@@ -260,31 +264,59 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       allTicks: List<NextTickPostEvaluationDatabaseEntry>,
       data: SamplingDataTickDrawing,
   ) {
-    val leafGroups = data.dtLeafGroups.values.toList()
+    val leafTotals = data.dtLeafGroups.mapValues { (_, ticks) -> ticks.size.toLong() }
 
     val accidentMutantIds =
         allTicks.filter { it.nextTickG0Failed == true }.map { it.mutantId }.toSortedSet()
     println("  Found ${accidentMutantIds.size} mutants that cause accidents.")
 
+    // Computed once, up front - not per mutant, and not per repetition - so every
+    // evaluateTimeToKill*Ticks() call below only ever needs counts, never a real per-tick scan.
+    // See HitCountingPool's KDoc for why a per-draw count replaces the real per-tick draw here.
+    println("  Pre-counting each mutant's kills, globally and per leaf...")
+    val globalKillCountsByMutant: Map<MutantId, Long> =
+        allTicks
+            .asSequence()
+            .filter { it.nextTickG0Failed == true }
+            .groupingBy { it.mutantId }
+            .eachCount()
+            .mapValues { (_, count) -> count.toLong() }
+    val killCountsByLeafByMutant: Map<DecisionTreeLeafId, Map<MutantId, Long>> =
+        data.dtLeafGroups.mapValues { (_, ticks) ->
+          ticks
+              .asSequence()
+              .filter { it.nextTickG0Failed == true }
+              .groupingBy { it.mutantId }
+              .eachCount()
+              .mapValues { (_, count) -> count.toLong() }
+        }
+
     for (mutantId in accidentMutantIds) {
+      val leafCountsForMutant: Map<DecisionTreeLeafId, LeafTickCounts> =
+          leafTotals.mapValues { (leafId, total) ->
+            LeafTickCounts(
+                total = total, hits = killCountsByLeafByMutant[leafId]?.get(mutantId) ?: 0L)
+          }
+
       println("    Evaluating random time-to-kill for mutant $mutantId.")
       saveTimeToKill(
-          evaluateTimeToKillRandomTicks(data.allTicks, mutantId),
+          evaluateTimeToKillRandomTicks(
+              allTicks.size.toLong(), globalKillCountsByMutant[mutantId] ?: 0L),
           "random_tick",
           mutantId,
           resolvedRunId)
 
-      if (leafGroups.isNotEmpty()) {
+      if (leafCountsForMutant.isNotEmpty()) {
         println("    Evaluating DC-leaf round-robin time-to-kill for mutant $mutantId.")
         saveTimeToKill(
-            evaluateTimeToKillRoundRobinTicks(leafGroups, mutantId),
+            evaluateTimeToKillRoundRobinTicks(leafCountsForMutant.values.toList()),
             "leaf_tick",
             mutantId,
             resolvedRunId)
 
         println("    Evaluating DC-leaf weighted time-to-kill for mutant $mutantId.")
         saveTimeToKill(
-            evaluateTimeToKillWeightedTicks(data.dtLeafGroups, data.leafWeights, mutantId),
+            evaluateTimeToKillWeightedTicks(leafCountsForMutant, data.leafWeights),
             "leaf_tick_weighted",
             mutantId,
             resolvedRunId)
@@ -292,7 +324,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
         println(
             "    Evaluating DC-leaf alternating (equal/weighted) time-to-kill for mutant $mutantId.")
         saveTimeToKill(
-            evaluateTimeToKillAlternatingTicks(data.dtLeafGroups, data.leafWeights, mutantId),
+            evaluateTimeToKillAlternatingTicks(leafCountsForMutant, data.leafWeights),
             "leaf_tick_alternating",
             mutantId,
             resolvedRunId)
@@ -601,88 +633,79 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   // ------------------------------------------------------------------- time-to-kill strategies
 
   /**
-   * Draws ticks one at a time without replacement until [mutantId] is killed. [tickPool] is the
-   * same shared, unmutated list every repetition reads from - see [SharedDrawPool] - so a kill
-   * found after a handful of draws costs a handful of draws, not a copy of the full pool.
+   * Draws ticks one at a time without replacement until the mutant [HitCountingPool] was built for
+   * is killed. See [HitCountingPool]'s KDoc for why this tracks counts instead of drawing real
+   * ticks via [SharedDrawPool] - the two are distributionally identical for this single-mutant
+   * question, but only one of them is safe to run for a mutant whose kills are rare.
    */
-  private fun evaluateTimeToKillRandomTicks(
-      tickPool: List<NextTickPostEvaluationDatabaseEntry>,
-      mutantId: MutantId,
-  ): List<Int> =
+  private fun evaluateTimeToKillRandomTicks(poolSize: Long, killCount: Long): List<Int> =
       (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val pool = SharedDrawPool(tickPool)
+            val pool = HitCountingPool(poolSize, killCount)
             var seen = 0
-            while (!pool.isEmpty()) {
-              val tick = pool.drawAndRemoveRandomTick(rng)
+            while (!pool.isEmpty) {
               seen++
-              if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map seen
+              if (pool.drawIsHit(rng)) return@map seen
             }
             -1
           }
           .collect(Collectors.toList())
 
-  /**
-   * Round-robin variant of [evaluateTimeToKillWeightedTicks]'s no-copy approach - see
-   * [evaluateRoundRobinTicks].
-   */
-  private fun evaluateTimeToKillRoundRobinTicks(
-      ticksPerLeaf: List<List<NextTickPostEvaluationDatabaseEntry>>,
-      mutantId: MutantId,
-  ): List<Int> =
+  /** Round-robin variant of [evaluateTimeToKillRandomTicks] - see [evaluateRoundRobinTicks]. */
+  private fun evaluateTimeToKillRoundRobinTicks(leafCounts: List<LeafTickCounts>): List<Int> =
       (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingPools = ticksPerLeaf.map { SharedDrawPool(it) }.shuffled(rng).toMutableList()
+            val workingPools =
+                leafCounts
+                    .map { HitCountingPool(it.total, it.hits) }
+                    .shuffled(rng)
+                    .toMutableList()
             var pos = 0
             var drawn = 0
             while (workingPools.isNotEmpty()) {
               val currentPool = workingPools[pos]
-              val tick = currentPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (currentPool.isEmpty()) {
+              val hit = currentPool.drawIsHit(rng)
+              if (currentPool.isEmpty) {
                 workingPools.removeAt(pos)
                 if (workingPools.isNotEmpty()) pos %= workingPools.size
               } else {
                 pos = (pos + 1) % workingPools.size
               }
-              if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
+              if (hit) return@map drawn
             }
             -1
           }
           .collect(Collectors.toList())
 
-  /**
-   * Weighted-leaf variant of [evaluateTimeToKillRandomTicks]: no per-leaf copy or shuffle either -
-   * each leaf's list is wrapped as-is in a [SharedDrawPool], which draws one random element from it
-   * on demand, so a kill found early doesn't pay for touching leaves that were never visited.
-   */
+  /** Weighted-leaf variant of [evaluateTimeToKillRandomTicks] - see [evaluateWeightedDrawTicks]. */
   private fun evaluateTimeToKillWeightedTicks(
-      ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
+      leafCounts: Map<DecisionTreeLeafId, LeafTickCounts>,
       leafWeights: Map<DecisionTreeLeafId, Double>,
-      mutantId: MutantId,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
+            val workingPools =
+                leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
             val candidateLeafIds =
                 workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
             var drawn = 0
             while (candidateLeafIds.isNotEmpty()) {
               val leafId = weightedPickLeaf(candidateLeafIds, leafWeights, rng)
               val leafPool = workingPools.getValue(leafId)
-              val tick = leafPool.drawAndRemoveRandomTick(rng)
               drawn++
-              if (leafPool.isEmpty()) candidateLeafIds.remove(leafId)
-              if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
+              val hit = leafPool.drawIsHit(rng)
+              if (leafPool.isEmpty) candidateLeafIds.remove(leafId)
+              if (hit) return@map drawn
             }
             -1
           }
@@ -693,16 +716,16 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * alternation/fallback rules.
    */
   private fun evaluateTimeToKillAlternatingTicks(
-      ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
+      leafCounts: Map<DecisionTreeLeafId, LeafTickCounts>,
       leafWeights: Map<DecisionTreeLeafId, Double>,
-      mutantId: MutantId,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingPools = ticksPerLeaf.mapValues { (_, ticks) -> SharedDrawPool(ticks) }
+            val workingPools =
+                leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
             val roundRobinOrder = workingPools.keys.shuffled(rng).toMutableList()
             var rrPos = 0
             val candidateLeafIds =
@@ -710,7 +733,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
             fun nextEqualLeafOrNull(): DecisionTreeLeafId? {
               while (roundRobinOrder.isNotEmpty() &&
-                  workingPools.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty()) {
+                  workingPools.getValue(roundRobinOrder[rrPos % roundRobinOrder.size]).isEmpty) {
                 roundRobinOrder.removeAt(rrPos % roundRobinOrder.size)
               }
               if (roundRobinOrder.isEmpty()) return null
@@ -720,7 +743,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             }
 
             fun nextWeightedLeafOrNull(): DecisionTreeLeafId? {
-              candidateLeafIds.removeAll { workingPools.getValue(it).isEmpty() }
+              candidateLeafIds.removeAll { workingPools.getValue(it).isEmpty }
               return if (candidateLeafIds.isEmpty()) null
               else weightedPickLeaf(candidateLeafIds, leafWeights, rng)
             }
@@ -737,9 +760,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             var drawn = 0
             var leafId = nextLeafId()
             while (leafId != null) {
-              val tick = workingPools.getValue(leafId).drawAndRemoveRandomTick(rng)
               drawn++
-              if (tick.mutantId == mutantId && tick.nextTickG0Failed == true) return@map drawn
+              val hit = workingPools.getValue(leafId).drawIsHit(rng)
+              if (hit) return@map drawn
               leafId = nextLeafId()
             }
             -1
@@ -804,6 +827,48 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       return value
     }
   }
+
+  /**
+   * O(1)-per-draw replacement for drawing real ticks via [SharedDrawPool] when all a time-to-kill
+   * strategy ever asks of a draw is "was *this one* mutant's kill tick drawn, yes or no" -
+   * [SharedDrawPool]'s overlay is unaffordable here because draws-until-first-kill is, on average,
+   * `(poolSize + 1) / (killCount + 1)`: for a mutant with few kills out of up to ~1.4 billion
+   * ticks, that can be hundreds of millions of draws, and with [REPETITIONS] repetitions running
+   * concurrently, several such overlays coexisting is exactly what turned an OOM into a process
+   * getting SIGKILLed partway through the mutant loop.
+   *
+   * This is *not* the aggregate-across-categories shortcut rejected earlier for the suite-size
+   * strategies (which needed to know, per draw, *which of several* mutants it hit - a question
+   * [SharedDrawPool] still answers by drawing a real tick, since suite sizes are capped at a few
+   * thousand draws and never see this blow-up). Here there is only ever one mutant in question, so
+   * tracking "[hitsRemaining] of [remaining] slots are this mutant's kill" is the exact same
+   * draw-without-replacement process as drawing a real tick and checking `(mutantId ==
+   * targetMutant) && nextTickG0Failed` - just without retaining which specific *other*, irrelevant
+   * tick any non-hit draw happened to be, since nothing downstream ever asks.
+   */
+  internal class HitCountingPool(poolSize: Long, hitCount: Long) {
+    private var remaining = poolSize
+    private var hitsRemaining = hitCount
+
+    /** Whether every item in the pool has been drawn. */
+    val isEmpty: Boolean
+      get() = remaining <= 0L
+
+    /** Draws one uniformly random remaining item and reports whether it was a hit. */
+    fun drawIsHit(rng: Random): Boolean {
+      check(remaining > 0L) { "drawIsHit() called on an exhausted pool" }
+      val hit = rng.nextLong(remaining) < hitsRemaining
+      if (hit) hitsRemaining--
+      remaining--
+      return hit
+    }
+  }
+
+  /**
+   * @property total n_l: total ticks in this leaf.
+   * @property hits k_lm: of those, how many are the target mutant's own kill tick.
+   */
+  private data class LeafTickCounts(val total: Long, val hits: Long)
 
   /**
    * The mutant a single tick killed, or `null` if it wasn't a failing tick (or [rareMutantIds]

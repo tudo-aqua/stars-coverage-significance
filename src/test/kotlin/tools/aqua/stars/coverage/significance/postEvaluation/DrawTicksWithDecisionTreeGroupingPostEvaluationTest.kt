@@ -22,6 +22,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisionTreeGroupingPostEvaluation.HitCountingPool
 
 /**
  * Tests for [DrawTicksWithDecisionTreeGroupingPostEvaluation.SharedDrawPool]: the replacement for
@@ -123,5 +124,101 @@ class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
 
       assertEquals(expected, actual, "seed $seed")
     }
+  }
+
+  // --------------------------------------------------------------------------- HitCountingPool
+
+  /**
+   * Unlike [SharedDrawPool] (compared against [bruteForceDraw] above), [HitCountingPool] is *not*
+   * expected to reproduce the same hit/no-hit sequence, draw for draw, as a literal swap-remove on
+   * a concrete marked/unmarked array for the same seed: a literal swap-remove's notion of "which
+   * index holds a marked item" is path-dependent (it depends on exactly which concrete values
+   * previous draws happened to swap into which slot), whereas [HitCountingPool] always compares
+   * the raw draw against a canonical "marked items occupy the front" view. Both are unbiased,
+   * correct ways to sample the same hypergeometric process - confirmed by hand-tracing a small
+   * example (N=4, K=2: the two diverge by the third draw even though every intermediate hit count
+   * stays correct in both) - but they are only *distributionally* equivalent, not bit-for-bit
+   * reproducible from shared randomness. So unlike [SharedDrawPool], [HitCountingPool] is checked
+   * here via its distribution (single-draw hit rate, and the closed-form time-to-first-hit mean)
+   * and via the one property that *is* exact regardless of path: the total hit count over a full
+   * drain.
+   */
+  @Test
+  fun `single-draw hit rate matches hitCount over poolSize`() {
+    val poolSize = 1_000L
+    val hitCount = 37L
+    val trials = 50_000
+    var hits = 0
+    for (seed in 1..trials) {
+      if (HitCountingPool(poolSize, hitCount).drawIsHit(Random(seed))) hits++
+    }
+    val rate = hits.toDouble() / trials
+    val expected = hitCount.toDouble() / poolSize
+    assertTrue(
+        kotlin.math.abs(rate - expected) < 0.01, "empirical rate $rate, expected ~$expected")
+  }
+
+  /**
+   * The expected number of draws until a pool of [n] items with [k] hits first reports a hit has
+   * the closed form `(n + 1) / (k + 1)` - the expected rank of the first "success" in a uniformly
+   * random permutation. Checked empirically over many seeds.
+   */
+  @Test
+  fun `expected draws-until-first-hit matches the closed-form negative-hypergeometric mean`() {
+    val n = 2_000L
+    val k = 40L
+    val expected = (n + 1).toDouble() / (k + 1).toDouble()
+    val trials = 20_000
+
+    var totalDraws = 0L
+    for (seed in 1..trials) {
+      val pool = HitCountingPool(n, k)
+      val rng = Random(seed)
+      var draws = 0L
+      while (true) {
+        draws++
+        if (pool.drawIsHit(rng)) break
+      }
+      totalDraws += draws
+    }
+    val sampleMean = totalDraws.toDouble() / trials
+
+    val tolerance = expected * 0.10
+    assertTrue(
+        kotlin.math.abs(sampleMean - expected) < tolerance,
+        "sample mean $sampleMean was not within $tolerance of expected $expected")
+  }
+
+  /** Over a full drain, exactly [hitCount] draws report a hit - no more, no fewer. */
+  @Test
+  fun `draining a HitCountingPool reports exactly hitCount hits in total`() {
+    for ((poolSize, hitCount) in listOf(0 to 0, 1 to 1, 50 to 0, 50 to 50, 500 to 13)) {
+      val pool = HitCountingPool(poolSize.toLong(), hitCount.toLong())
+      val rng = Random(42)
+      var hits = 0
+      var draws = 0
+      while (!pool.isEmpty) {
+        draws++
+        if (pool.drawIsHit(rng)) hits++
+      }
+      assertEquals(poolSize, draws, "poolSize $poolSize, hitCount $hitCount")
+      assertEquals(hitCount, hits, "poolSize $poolSize, hitCount $hitCount")
+    }
+  }
+
+  /** Drawing from an exhausted pool is a programming error, not a silent no-op. */
+  @Test
+  fun `drawIsHit throws once the pool is exhausted`() {
+    val pool = HitCountingPool(1L, 1L)
+    val rng = Random(1)
+    assertTrue(pool.drawIsHit(rng))
+    assertTrue(pool.isEmpty)
+    assertFailsWith<IllegalStateException> { pool.drawIsHit(rng) }
+  }
+
+  /** A zero-size pool starts out exhausted. */
+  @Test
+  fun `a zero-size HitCountingPool is immediately exhausted`() {
+    assertTrue(HitCountingPool(0L, 0L).isEmpty)
   }
 }
