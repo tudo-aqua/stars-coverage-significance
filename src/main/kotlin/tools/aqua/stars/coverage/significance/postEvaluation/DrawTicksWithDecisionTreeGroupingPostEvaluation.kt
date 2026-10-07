@@ -108,8 +108,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * Resolves [decisionTreeRunId] (or, if `null`, the latest full run) to the `(resolvedRunId,
-   * fullRunId)` pair every public function here needs, logging which one was picked exactly as each
-   * used to inline. Shared so [evaluateAll] can resolve it once instead of twice.
+   * fullRunId)` pair every public function here needs, logging which one was picked. Shared by
+   * [evaluate], [evaluateTimeToKill], and [evaluateAll] so the resolution happens only once per
+   * call.
    */
   private fun resolveRunId(decisionTreeRunId: EntityID<Int>?): Pair<Int, EntityID<Int>?> {
     val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
@@ -125,9 +126,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   }
 
   /**
-   * Loads every tick for [fullRunId] and groups it, exactly once - the single expensive step
-   * [evaluate] and [evaluateTimeToKill] used to each perform independently, even when [evaluateAll]
-   * calls both for the very same run against the very same underlying rows.
+   * Loads every tick for [fullRunId] and groups it by leaf. Called once per [evaluate] or
+   * [evaluateTimeToKill] invocation, or once by [evaluateAll], which shares the result between
+   * both.
    */
   private fun loadTicksAndSamplingData(fullRunId: EntityID<Int>?): SamplingDataTickDrawing {
     println("  Loading tick data into memory (this may take several minutes)...")
@@ -225,9 +226,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
         data.allTicks.filter { it.nextTickG0Failed == true }.map { it.mutantId }.toSortedSet()
     println("  Found ${accidentMutantIds.size} mutants that cause accidents.")
 
-    // Computed once, up front - not per mutant, and not per repetition - so every
-    // evaluateTimeToKill*Ticks() call below only ever needs counts, never a real per-tick scan.
-    // See HitCountingPool's KDoc for why a per-draw count replaces the real per-tick draw here.
+    // Computed once, up front - not per mutant, and not per repetition - since these counts are
+    // all every evaluateTimeToKill*Ticks() call below needs; see HitCountingPool's KDoc.
     println("  Pre-counting each mutant's kills, globally and per leaf...")
     val globalKillCountsByMutant: Map<MutantId, Long> =
         data.allTicks
@@ -289,11 +289,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * Runs [exportSignificance], [evaluateTimeToKill] and [evaluate] against the same decision tree
-   * run while loading and grouping the tick table only **once** and sharing it between the latter
-   * two - unlike calling all three separately (as
-   * [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] used to), which
-   * reloaded and regrouped the exact same multi-hundred-million-row table twice, once per call,
-   * even though both read identical rows for the same run.
+   * run, loading and grouping the tick table only once and sharing it between the latter two. The
+   * entry point used by
+   * [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping].
    */
   fun evaluateAll(decisionTreeRunId: EntityID<Int>? = null) {
     println(
@@ -574,10 +572,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   // ------------------------------------------------------------------- time-to-kill strategies
 
   /**
-   * Draws ticks one at a time without replacement until the mutant [HitCountingPool] was built for
-   * is killed. See [HitCountingPool]'s KDoc for why this tracks counts instead of drawing real
-   * ticks via [SharedDrawPool] - the two are distributionally identical for this single-mutant
-   * question, but only one of them is safe to run for a mutant whose kills are rare.
+   * Draws items one at a time without replacement, via [HitCountingPool], until the target
+   * mutant's kill is drawn. See [HitCountingPool]'s KDoc for why it tracks only counts rather than
+   * drawing real ticks.
    */
   private fun evaluateTimeToKillRandomTicks(poolSize: Long, killCount: Long): List<Int> =
       (1..REPETITIONS)
@@ -730,8 +727,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * list every repetition (and, for the leaf-based strategies, every leaf) reads from - without
    * ever copying it. [source] can hold hundreds of millions of entries, but a pool only ever
    * touches the handful of positions *it itself* has drawn so far: [drawAndRemoveRandomTick]
-   * simulates one step of an in-place swap-remove shuffle of [source] (the same swap-remove
-   * [evaluateRandomDrawTicks] used to do directly on a private copy), but records the swap in a
+   * performs one step of an in-place swap-remove shuffle of [source], recording the swap in a
    * small per-pool overlay map instead of writing it back into [source] - so [source] itself is
    * never mutated and stays safe to share, completely unchanged, across every concurrently running
    * repetition and pool. A suite of `k` draws (or `k` draws until a kill) therefore costs `k` hash
@@ -747,10 +743,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     fun isEmpty(): Boolean = remaining <= 0
 
     /**
-     * Removes and returns one uniformly random remaining element, via the same swap-remove
-     * [evaluateRandomDrawTicks] et al. used to perform in place (overwrite the drawn slot with the
-     * last remaining slot, then shrink the remaining range by one) - just replayed against [source]
-     * through [overlay] instead of mutating an actual copy.
+     * Removes and returns one uniformly random remaining element, by simulating a swap-remove
+     * (overwrite the drawn slot with the last remaining slot, then shrink the remaining range by
+     * one) against [source] through [overlay], instead of mutating an actual copy.
      */
     fun drawAndRemoveRandomTick(rng: Random): T {
       check(remaining > 0) { "drawAndRemoveRandomTick() called on an exhausted pool" }
@@ -765,22 +760,19 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   }
 
   /**
-   * O(1)-per-draw replacement for drawing real ticks via [SharedDrawPool] when all a time-to-kill
-   * strategy ever asks of a draw is "was *this one* mutant's kill tick drawn, yes or
-   * no" - [SharedDrawPool]'s overlay is unaffordable here because draws-until-first-kill is, on
-   * average, `(poolSize + 1) / (killCount + 1)`: for a mutant with few kills out of up to ~1.4
-   * billion ticks, that can be hundreds of millions of draws, and with [REPETITIONS] repetitions
-   * running concurrently, several such overlays coexisting is exactly what turned an OOM into a
-   * process getting SIGKILLed partway through the mutant loop.
+   * O(1)-memory alternative to drawing real ticks via [SharedDrawPool], for the single yes/no
+   * question a time-to-kill draw needs answered: "was this one mutant's kill tick drawn?"
+   * [SharedDrawPool]'s per-draw overlay costs memory proportional to the number of draws made,
+   * which is unaffordable here: draws-until-first-kill averages `(poolSize + 1) / (killCount +
+   * 1)`, which for a mutant with few kills among up to ~1.4 billion ticks can be hundreds of
+   * millions of draws, and [REPETITIONS] repetitions may run this concurrently.
    *
-   * This is *not* the aggregate-across-categories shortcut rejected earlier for the suite-size
-   * strategies (which needed to know, per draw, *which of several* mutants it hit - a question
-   * [SharedDrawPool] still answers by drawing a real tick, since suite sizes are capped at a few
-   * thousand draws and never see this blow-up). Here there is only ever one mutant in question, so
-   * tracking "[hitsRemaining] of [remaining] slots are this mutant's kill" is the exact same
-   * draw-without-replacement process as drawing a real tick and checking `(mutantId ==
-   * targetMutant) && nextTickG0Failed` - just without retaining which specific *other*, irrelevant
-   * tick any non-hit draw happened to be, since nothing downstream ever asks.
+   * Since only one mutant is ever in question here (unlike the suite-size strategies in
+   * [SharedDrawPool], which must track real tick identities because a draw can matter for
+   * *several* mutants at once), tracking "[hitsRemaining] of [remaining] slots are this mutant's
+   * kill" reproduces the same draw-without-replacement process as drawing a real tick and checking
+   * `(mutantId == targetMutant) && nextTickG0Failed`, without ever recording which specific
+   * *other* tick a non-hit draw happened to be - nothing here needs that information.
    */
   internal class HitCountingPool(poolSize: Long, hitCount: Long) {
     private var remaining = poolSize

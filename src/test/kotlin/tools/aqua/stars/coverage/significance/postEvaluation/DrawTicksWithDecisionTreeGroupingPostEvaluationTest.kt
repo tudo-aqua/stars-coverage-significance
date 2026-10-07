@@ -25,20 +25,17 @@ import kotlin.test.assertTrue
 import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisionTreeGroupingPostEvaluation.HitCountingPool
 
 /**
- * Tests for [DrawTicksWithDecisionTreeGroupingPostEvaluation.SharedDrawPool]: the replacement for
- * copying a leaf's (or the full pool's) tick list into a private `MutableList` per repetition
- * before swap-removing from it. The whole point of [SharedDrawPool] is that it must draw *the same
- * real ticks, in the same order*, as that literal copy-and-swap-remove approach did - just without
- * paying for the copy. [bruteForceDraw] is that literal original approach, kept here as the
- * reference it's being compared against.
+ * Tests for [DrawTicksWithDecisionTreeGroupingPostEvaluation.SharedDrawPool], which draws distinct
+ * elements without replacement from a shared list without copying it. [bruteForceDraw] is a
+ * literal copy-and-swap-remove implementation of the same draw-without-replacement process, used
+ * here as the reference [SharedDrawPool] must reproduce exactly, draw for draw, for the same seed.
  */
 class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
 
   /**
-   * The original, pre-optimization approach: copy [source] into a private list, then repeatedly
-   * swap-remove a uniformly random element from it. `O(n)` space per call - exactly the cost
-   * [SharedDrawPool] exists to avoid - but a faithful, obviously-correct reference for what "really
-   * drawing ticks without replacement" means.
+   * Copies [source] into a private list, then repeatedly swap-removes a uniformly random element
+   * from it - `O(n)` space per call, but a faithful, obviously-correct reference for what drawing
+   * without replacement means.
    */
   private fun <T> bruteForceDraw(source: List<T>, draws: Int, rng: Random): List<T> {
     val remaining = source.toMutableList()
@@ -129,19 +126,16 @@ class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
   // --------------------------------------------------------------------------- HitCountingPool
 
   /**
-   * Unlike [SharedDrawPool] (compared against [bruteForceDraw] above), [HitCountingPool] is *not*
-   * expected to reproduce the same hit/no-hit sequence, draw for draw, as a literal swap-remove on
-   * a concrete marked/unmarked array for the same seed: a literal swap-remove's notion of "which
-   * index holds a marked item" is path-dependent (it depends on exactly which concrete values
-   * previous draws happened to swap into which slot), whereas [HitCountingPool] always compares the
-   * raw draw against a canonical "marked items occupy the front" view. Both are unbiased, correct
-   * ways to sample the same hypergeometric process - confirmed by hand-tracing a small example
-   * (N=4, K=2: the two diverge by the third draw even though every intermediate hit count stays
-   * correct in both) - but they are only *distributionally* equivalent, not bit-for-bit
-   * reproducible from shared randomness. So unlike [SharedDrawPool], [HitCountingPool] is checked
-   * here via its distribution (single-draw hit rate, and the closed-form time-to-first-hit mean)
-   * and via the one property that *is* exact regardless of path: the total hit count over a full
-   * drain.
+   * Unlike [SharedDrawPool] (checked against [bruteForceDraw] above via exact draw-sequence
+   * equality), [HitCountingPool] is not held to that same bar: a literal swap-remove's notion of
+   * "which index holds a marked item" is path-dependent (it depends on exactly which concrete
+   * values previous draws happened to swap into which slot), whereas [HitCountingPool] always
+   * compares the raw draw against a canonical "marked items occupy the front" view. Both are
+   * unbiased, correct ways to sample the same hypergeometric process, but only *distributionally*
+   * equivalent - not bit-for-bit reproducible from shared randomness. So [HitCountingPool] is
+   * checked here via its distribution (single-draw hit rate, and the closed-form
+   * time-to-first-hit mean) and via the one property that *is* exact regardless of path: the total
+   * hit count over a full drain.
    */
   @Test
   fun `single-draw hit rate matches hitCount over poolSize`() {

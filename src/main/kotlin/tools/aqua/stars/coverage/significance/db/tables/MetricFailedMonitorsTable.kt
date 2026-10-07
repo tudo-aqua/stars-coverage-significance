@@ -616,10 +616,10 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
   /**
    * Whether [this] looks like the connection was severed by something *other* than the query
    * itself - PostgreSQL's "Operator Intervention" error class (SQLSTATE `57*`: e.g. `57P01`
-   * admin_shutdown, `57P02` crash_shutdown, `57P03` cannot_connect_now). Seen in practice as the
-   * `db` container (`docker-compose.yml`) being restarted mid-load: every connection open at that
-   * moment gets `57P01` at once, not just one targeted backend - nothing a retry on a *new*
-   * connection, made once the container is back up, can't recover from, unlike a genuine query
+   * admin_shutdown, `57P02` crash_shutdown, `57P03` cannot_connect_now). Typically caused by the
+   * `db` container (`docker-compose.yml`) being restarted while a load is in progress: every
+   * connection open at that moment gets `57P01` at once, not just one targeted backend. Retrying on
+   * a new connection, once the container is back up, recovers from this - unlike a genuine query
    * error.
    */
   internal fun Throwable.isTransientConnectionTermination(): Boolean =
@@ -672,10 +672,9 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
    * computing its `metric_failed_monitor_id` join key on the fly - Postgres cannot use an index to
    * filter a computed column, so joining it with an `id BETWEEN ...` predicate (as each chunk needs
    * to) forces it to expand *every* chunk of the run first, same as documented on
-   * [DecisionTreeLeafAssignmentsRepository.getByKey]. Paid once, that's fine; paid once per
-   * [buildTickWiseNextTickMonitorViolations] chunk (141 times, in one real run), it turned a ~1
-   * hour unchunked load into 7+ hours for 111 of those 141 chunks - the *chunking* was working as
-   * intended, but every chunk was separately re-doing the full run's worth of unnest work.
+   * [DecisionTreeLeafAssignmentsRepository.getByKey]. Paying that cost once per load is fine;
+   * paying it once per [buildTickWiseNextTickMonitorViolations] *chunk* would multiply it by the
+   * number of chunks, since each chunk would separately redo the full run's worth of unnest work.
    *
    * [DecisionTreeLeafAssignmentChunksTable] itself is tiny by comparison - one row per
    * [LEAF_ASSIGNMENT_CHUNK_SIZE] ids (~140K rows for 1.4 billion ticks) - so loading it whole,

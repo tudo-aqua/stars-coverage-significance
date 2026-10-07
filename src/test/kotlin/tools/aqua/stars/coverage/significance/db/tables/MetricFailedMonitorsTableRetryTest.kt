@@ -31,8 +31,9 @@ import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTabl
 /**
  * Tests for the cause-chain SQLSTATE lookup and retry-on-transient-disconnect logic that
  * [MetricFailedMonitorsTable.buildTickWiseNextTickMonitorViolations] uses to survive a connection
- * being severed by something other than the query itself (e.g. the `SQLSTATE 57P01` seen in
- * practice: "FATAL: terminating connection due to administrator command").
+ * being severed by something other than the query itself (e.g. `SQLSTATE 57P01`, PostgreSQL's
+ * admin_shutdown code, raised when the server closes every open connection on an administrative
+ * command such as a container restart).
  */
 class MetricFailedMonitorsTableRetryTest {
 

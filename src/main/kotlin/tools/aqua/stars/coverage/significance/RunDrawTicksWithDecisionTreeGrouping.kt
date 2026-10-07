@@ -32,8 +32,7 @@ import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisi
  * - `--latest-split`: the latest *split* run (`train_fraction != 1.0`, i.e. a train/test split).
  * - `--all`: every decision tree run currently in `decision_tree_runs`, evaluated one after another
  *   (ascending ID order). [DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateAll] reloads the
- *   full tick table once per run, so this still multiplies the runtime by the number of runs - just
- *   not by twice that, the way calling `evaluate`/`evaluateTimeToKill` separately used to.
+ *   full tick table once per run, so this multiplies the runtime by the number of runs.
  * - One or more run IDs (`decision_tree_runs.id`), comma- and/or space-separated, e.g. `8`,
  *   `1,2,3`, or `1 2 3` - evaluated one after another in the given order.
  *
