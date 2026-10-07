@@ -664,14 +664,14 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
   }
 
   /**
-   * A run's [DecisionTreeLeafAssignmentChunksTable] rows, loaded once and indexed for O(1)
-   * per-tick lookup - the in-memory alternative to joining against the
-   * [DecisionTreeLeafAssignmentsTable] view per [buildTickWiseNextTickMonitorViolations] chunk.
+   * A run's [DecisionTreeLeafAssignmentChunksTable] rows, loaded once and indexed for O(1) per-tick
+   * lookup - the in-memory alternative to joining against the [DecisionTreeLeafAssignmentsTable]
+   * view per [buildTickWiseNextTickMonitorViolations] chunk.
    *
    * That view expands [DecisionTreeLeafAssignmentChunksTable] via `unnest(...) WITH ORDINALITY`,
    * computing its `metric_failed_monitor_id` join key on the fly - Postgres cannot use an index to
-   * filter a computed column, so joining it with an `id BETWEEN ...` predicate (as each chunk
-   * needs to) forces it to expand *every* chunk of the run first, same as documented on
+   * filter a computed column, so joining it with an `id BETWEEN ...` predicate (as each chunk needs
+   * to) forces it to expand *every* chunk of the run first, same as documented on
    * [DecisionTreeLeafAssignmentsRepository.getByKey]. Paid once, that's fine; paid once per
    * [buildTickWiseNextTickMonitorViolations] chunk (141 times, in one real run), it turned a ~1
    * hour unchunked load into 7+ hours for 111 of those 141 chunks - the *chunking* was working as
@@ -692,10 +692,12 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
     }
 
     companion object {
-      /** Sentinel for "no assignment" in the primitive [ShortArray]s - avoids boxing 1.4 billion
+      /**
+       * Sentinel for "no assignment" in the primitive [ShortArray]s - avoids boxing 1.4 billion
        * nullable shorts just to represent what's usually a small number of id gaps. Internal
        * (rather than private) solely so tests can build [LeafAssignmentLookup] fixtures with it
-       * without duplicating the magic number. */
+       * without duplicating the magic number.
+       */
       internal const val NO_LEAF: Short = Short.MIN_VALUE
 
       /** Loads every chunk recorded for [runId]. */
@@ -725,8 +727,8 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
    * `id` range, instead of one `SELECT` over the whole table - see
    * [buildDuplicateTickCompareColumns] for why an unchunked read of a table this size is both
    * single-threaded-slow *and* memory-dangerous: the configured Postgres connection has no
-   * server-side cursor, so the JDBC driver buffers the *entire* result client-side before
-   * returning any of it, regardless of parallelism. Each chunk writes its
+   * server-side cursor, so the JDBC driver buffers the *entire* result client-side before returning
+   * any of it, regardless of parallelism. Each chunk writes its
    * [NextTickPostEvaluationDatabaseEntry] rows into a pre-sized array via a shared atomic index, so
    * the (arbitrary) order chunks complete in doesn't matter.
    *
@@ -737,7 +739,8 @@ object MetricFailedMonitorsTable : LongIdTable("metric_failed_monitors") {
    *
    * @param chunkSizeRows Number of ids covered by each partitioned query.
    * @param parallelism Number of chunk queries to run concurrently. Must not exceed the configured
-   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`) - see [buildDuplicateTickCompareColumns].
+   *   HikariCP pool size (`DbBootstrap.DbConfig.maxPoolSize`) - see
+   *   [buildDuplicateTickCompareColumns].
    *
    * Loaded once and reused across all sampling strategies.
    */

@@ -133,11 +133,11 @@ class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
    * expected to reproduce the same hit/no-hit sequence, draw for draw, as a literal swap-remove on
    * a concrete marked/unmarked array for the same seed: a literal swap-remove's notion of "which
    * index holds a marked item" is path-dependent (it depends on exactly which concrete values
-   * previous draws happened to swap into which slot), whereas [HitCountingPool] always compares
-   * the raw draw against a canonical "marked items occupy the front" view. Both are unbiased,
-   * correct ways to sample the same hypergeometric process - confirmed by hand-tracing a small
-   * example (N=4, K=2: the two diverge by the third draw even though every intermediate hit count
-   * stays correct in both) - but they are only *distributionally* equivalent, not bit-for-bit
+   * previous draws happened to swap into which slot), whereas [HitCountingPool] always compares the
+   * raw draw against a canonical "marked items occupy the front" view. Both are unbiased, correct
+   * ways to sample the same hypergeometric process - confirmed by hand-tracing a small example
+   * (N=4, K=2: the two diverge by the third draw even though every intermediate hit count stays
+   * correct in both) - but they are only *distributionally* equivalent, not bit-for-bit
    * reproducible from shared randomness. So unlike [SharedDrawPool], [HitCountingPool] is checked
    * here via its distribution (single-draw hit rate, and the closed-form time-to-first-hit mean)
    * and via the one property that *is* exact regardless of path: the total hit count over a full
@@ -154,8 +154,7 @@ class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
     }
     val rate = hits.toDouble() / trials
     val expected = hitCount.toDouble() / poolSize
-    assertTrue(
-        kotlin.math.abs(rate - expected) < 0.01, "empirical rate $rate, expected ~$expected")
+    assertTrue(kotlin.math.abs(rate - expected) < 0.01, "empirical rate $rate, expected ~$expected")
   }
 
   /**

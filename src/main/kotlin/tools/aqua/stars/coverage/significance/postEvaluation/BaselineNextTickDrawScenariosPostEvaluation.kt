@@ -23,7 +23,6 @@ import java.util.stream.Collectors
 import kotlin.io.path.writeText
 import kotlin.random.Random
 import org.jetbrains.exposed.dao.id.EntityID
-import tools.aqua.stars.coverage.significance.MAX_RARE_MUTANT_FAILURES
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
@@ -163,9 +162,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
     println("  Loading scenario kill map from view...")
     val allViolations = MutantScenarioG0ViolationsView.getAll()
     val scenarioKills = buildScenarioKillMap(allViolations)
-    val rareMutantIds = buildRareMutantIds(allViolations)
     println("  Loaded kill data for ${scenarioKills.size} scenario configs.")
-    println("  Found ${rareMutantIds.size} rare mutants (<= $MAX_RARE_MUTANT_FAILURES violations).")
 
     val data = buildSamplingData(allTicks, hasLeaf = fullRunId != null)
 
@@ -227,72 +224,6 @@ object BaselineNextTickDrawScenariosPostEvaluation {
                 data.accidentStartingScenarioIdsPerAccidentDCLeafId, scenarioKills, suiteSize),
             "leaf_accident-scenario_accidents",
             suiteSize)
-      }
-
-      if (rareMutantIds.isNotEmpty()) {
-        println("    Evaluating uniform-random scenario sampling (rare mutants).")
-        println("      Scenario Pool: ${data.allScenarioIds.size} entries.")
-        save(
-            evaluateRandomDrawScenario(
-                data.allScenarioIds, scenarioKills, suiteSize, rareMutantIds),
-            "random_scenario_rare",
-            suiteSize)
-
-        println(
-            "    Evaluating uniform-random scenario sampling (rare mutants only accident scenarios).")
-        println("      Scenario Pool: ${data.accidentScenarioIds.size} entries.")
-        save(
-            evaluateRandomDrawScenario(
-                data.accidentScenarioIds, scenarioKills, suiteSize, rareMutantIds),
-            "random_accident-scenarios_rare",
-            suiteSize)
-
-        if (data.startingScenarioIdsPerDCLeafId.isNotEmpty()) {
-          println("    Evaluating decision-tree-leaf-stratified scenario sampling (rare mutants).")
-          data.startingScenarioIdsPerDCLeafId.forEachIndexed { index, ticks ->
-            println("      DC Leaf Group '$index': ${ticks.size} entries.")
-          }
-          save(
-              evaluateRoundRobinScenario(
-                  data.startingScenarioIdsPerDCLeafId, scenarioKills, suiteSize, rareMutantIds),
-              "leaf_scenario_rare",
-              suiteSize)
-        }
-
-        if (data.startingScenarioIdsPerAccidentDCLeafId.isNotEmpty()) {
-          println(
-              "    Evaluating decision-tree-leaf-stratified scenario sampling (accident leaf groups, rare mutants).")
-          data.startingScenarioIdsPerAccidentDCLeafId.forEachIndexed { index, ticks ->
-            println("      Accident DC Leaf Group '$index': ${ticks.size} entries.")
-          }
-          save(
-              evaluateRoundRobinScenario(
-                  data.startingScenarioIdsPerAccidentDCLeafId,
-                  scenarioKills,
-                  suiteSize,
-                  rareMutantIds),
-              "leaf_scenario_accidents_rare",
-              suiteSize)
-        }
-
-        if (data.accidentStartingScenarioIdsPerAccidentDCLeafId.isNotEmpty()) {
-          println(
-              "    Evaluating decision-tree-leaf-stratified accident scenario sampling (accident leaf groups, only accident-scenarios, rare mutants).")
-          println(
-              "      Accident DC Leaf Accident Scenario Pool: ${data.accidentStartingScenarioIdsPerAccidentDCLeafId.size} entries.")
-          data.accidentStartingScenarioIdsPerAccidentDCLeafId.forEachIndexed { index, ticks ->
-            println(
-                "      Accident DC Leaf Accident-Scenario Group '$index': ${ticks.size} entries.")
-          }
-          save(
-              evaluateRoundRobinScenario(
-                  data.accidentStartingScenarioIdsPerAccidentDCLeafId,
-                  scenarioKills,
-                  suiteSize,
-                  rareMutantIds),
-              "leaf_accident-scenario_accidents_rare",
-              suiteSize)
-        }
       }
     }
 
@@ -412,24 +343,10 @@ object BaselineNextTickDrawScenariosPostEvaluation {
           .groupBy { it.scenarioConfigId }
           .mapValues { (_, vs) -> vs.map { it.mutantId }.toSet() }
 
-  /**
-   * Returns the set of mutant IDs that are considered "rare": mutants for which the number of
-   * scenario configs with [MutantScenarioG0Violation.anyG0Violation] = `true` is at most
-   * [MAX_RARE_MUTANT_FAILURES].
-   *
-   * @param allViolations Pre-loaded rows from [MutantScenarioG0ViolationsView].
-   */
-  private fun buildRareMutantIds(allViolations: List<MutantScenarioG0Violation>): Set<Int> =
-      allViolations
-          .groupBy { it.mutantId }
-          .filterValues { rows -> rows.count { it.anyG0Violation } in 1..MAX_RARE_MUTANT_FAILURES }
-          .keys
-
   private fun evaluateRandomDrawScenario(
       pool: Set<StartingScenarioId>,
       scenarioKills: Map<StartingScenarioId, Set<MutantId>>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
@@ -438,12 +355,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
             pool
                 .shuffled(Random(42L + rep))
                 .subList(0, suiteSize)
-                .flatMap {
-                  scenarioKills[it]?.let { kills ->
-                    if (rareMutantIds != null) kills.filter { kill -> kill in rareMutantIds }
-                    else kills
-                  } ?: emptyList()
-                }
+                .flatMap { scenarioKills[it] ?: emptyList() }
                 .toSet()
                 .size
           }
@@ -453,7 +365,6 @@ object BaselineNextTickDrawScenariosPostEvaluation {
       scenarioIdSetsPerGroup: List<Set<StartingScenarioId>>,
       scenarioKills: Map<StartingScenarioId, Set<MutantId>>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> {
     return (1..REPETITIONS)
         .toList()
@@ -478,10 +389,7 @@ object BaselineNextTickDrawScenariosPostEvaluation {
             val emptyBeforeAndUntilPos = (0..pos).count { workingLists[it].isEmpty() }
             // Remove all empty groups
             workingLists.removeAll { it.isEmpty() }
-            scenarioKills[scenarioId]?.let { kills ->
-              killed.addAll(
-                  if (rareMutantIds != null) kills.filter { it in rareMutantIds } else kills)
-            }
+            scenarioKills[scenarioId]?.let { kills -> killed.addAll(kills) }
             if (workingLists.isEmpty()) break
             pos = (pos - emptyBeforeAndUntilPos + 1) % workingLists.size
           }

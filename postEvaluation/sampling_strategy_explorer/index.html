@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Time To Kill Explorer</title>
+<title>Sampling Strategy Explorer</title>
 <style>
   :root {
     --surface-1:      #fcfcfb;
@@ -192,8 +192,8 @@
 <body>
 
 <header>
-  <h1>Time To Kill Explorer</h1>
-  <p class="subtitle">Reads CSVs and JSON directly from <code>baseline_next_tick/time_to_kill/</code> and <code>draw_ticks_with_decision_tree_grouping/run_&lt;id&gt;/</code> (one folder per decision tree run, holding that run's <code>time_to_kill/</code> draws alongside its <code>significance.json</code> for the expected-value comparison) &mdash; no build/generation step. Serve the <code>postEvaluation</code> folder over HTTP (e.g. <code>python -m http.server 8000</code> run <em>there</em>, not in this subfolder) so relative fetches and directory listings work.</p>
+  <h1>Sampling Strategy Explorer</h1>
+  <p class="subtitle">Reads CSVs and JSON directly from <code>baseline_next_tick/</code> and <code>draw_ticks_with_decision_tree_grouping/run_&lt;id&gt;/</code> (one folder per decision tree run) &mdash; both their <code>time_to_kill/</code> draws (how many draws until a mutant is first killed), their <code>size_&lt;n&gt;/</code> draws (how many distinct mutants a suite of that size kills), and the run's <code>significance.json</code> for the expected-value comparison &mdash; no build/generation step. Serve the <code>postEvaluation</code> folder over HTTP (e.g. <code>python -m http.server 8000</code> run <em>there</em>, not in this subfolder) so relative fetches and directory listings work.</p>
   <div class="summary-row" id="summaryRow"></div>
 </header>
 
@@ -203,7 +203,7 @@
 
   <section class="card" id="mutantToggleCard">
     <h2>Mutants</h2>
-    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison below (on both tabs).</p>
+    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison on the Overview, Compare Runs, and All Runs tabs. The Kills per Size tab isn't affected &mdash; its data isn't broken down per mutant.</p>
     <div class="controls-row">
       <input type="text" id="mutantFilterInput" placeholder="Filter by ID…" style="max-width:160px" />
       <button id="mutantsAllBtn" type="button">All</button>
@@ -216,6 +216,7 @@
 
   <div class="controls-row" id="tabBar">
     <button class="active" id="tabOverviewBtn" type="button">Overview</button>
+    <button id="tabSizesBtn" type="button">Kills per Size</button>
     <button id="tabCompareBtn" type="button">Compare Runs</button>
     <button id="tabAllRunsBtn" type="button">All Runs</button>
   </div>
@@ -234,6 +235,19 @@
     </section>
 
     <div id="datasetSections"></div>
+
+  </div>
+
+  <div class="tab-panel hidden" id="tabPanelSizes">
+
+    <section class="card">
+      <h2>Kills per suite size</h2>
+      <p class="legend-note">
+        How many <em>distinct</em> mutants a suite of a given size kills, per strategy &mdash; from each dataset's <code>size_&lt;n&gt;/</code> CSVs (<code>REPETITIONS</code> suites drawn per size/strategy). For run-scoped datasets this uses whichever run is selected in the Overview tab's "Run" dropdown. Unlike time-to-kill's draws-to-kill, <strong>0 is a valid, often-dominant outcome</strong> here (a suite simply killed nothing) and is included in every mean/median/line below.
+      </p>
+    </section>
+
+    <div id="sizeSections"></div>
 
   </div>
 
@@ -289,6 +303,7 @@
       title: "Draw Ticks (Decision Tree Grouping)",
       note: "Tick-level sampling &mdash; DrawTicksWithDecisionTreeGroupingPostEvaluation.evaluateTimeToKill(). Each decision tree run's output lives in its own run_&lt;id&gt;/ folder.",
       runsDir: "draw_ticks_with_decision_tree_grouping/",
+      baseDirForRun: (runId) => "draw_ticks_with_decision_tree_grouping/run_" + runId + "/",
       dirForRun: (runId) => "draw_ticks_with_decision_tree_grouping/run_" + runId + "/time_to_kill/",
       significancePathForRun: (runId) => "draw_ticks_with_decision_tree_grouping/run_" + runId + "/significance.json",
       unit: "ticks",
@@ -304,12 +319,20 @@
         eWeight: "leaf_tick_weighted",
         eAlternating: "leaf_tick_alternating",
       },
+      sizeFilePrefix: "draw_ticks_",
+      sizeStrategies: [
+        { key: "random_tick", label: "Random" },
+        { key: "leaf_tick", label: "Leaf" },
+        { key: "leaf_tick_weighted", label: "Leaf (Weighted)" },
+        { key: "leaf_tick_alternating", label: "Leaf (Alternating)" },
+      ],
     },
     {
       id: "baseline_next_tick",
       title: "Baseline Next Tick (Scenario)",
       note: "Scenario-level sampling &mdash; BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill().",
       dir: "baseline_next_tick/time_to_kill/",
+      baseDir: "baseline_next_tick/",
       unit: "scenarios",
       strategies: [
         { key: "random", label: "Random" },
@@ -319,6 +342,14 @@
         { key: "leaf_accidents_accident-scenarios", label: "Leaf (Accidents, Accident Scenarios)" },
       ],
       expectedMap: { ek: "random", eEqual: "leaf", eWeight: null, eAlternating: null },
+      sizeFilePrefix: "baseline_next_tick_",
+      sizeStrategies: [
+        { key: "random_scenario", label: "Random" },
+        { key: "random_accident_scenario", label: "Random (Accident Scenarios)" },
+        { key: "leaf_scenario", label: "Leaf" },
+        { key: "leaf_scenario_accidents", label: "Leaf (Accidents)" },
+        { key: "leaf_accident-scenario_accidents", label: "Leaf (Accidents, Accident Scenarios)" },
+      ],
     },
   ];
 
@@ -670,10 +701,81 @@
     });
   }
 
+  // ------------------------------------------------------ size-sweep loading
+
+  /**
+   * Parses a `size_<n>/*.csv` (kills-per-suite-size) file: unlike [parseCsv] (time-to-kill, where
+   * `-1` means "not killed" and is excluded), every row here is a meaningful non-negative count -
+   * including `0` ("this suite killed nothing"), which is often the single most common outcome for
+   * uniform-random sampling at small suite sizes, so it must stay in the returned values.
+   */
+  function parseCountCsv(text) {
+    const lines = text.split(/\r?\n/);
+    const values = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const val = parseInt(line, 10);
+      if (!isNaN(val)) values.push(val);
+    }
+    return values;
+  }
+
+  /** `baseDir` must end with "/". Returns sorted numeric suite sizes of `size_<n>/` subdirectories. */
+  function discoverSizes(baseDir) {
+    return listDir(baseDir)
+      .then((names) =>
+        names
+          .map((n) => /^size_(\d+)$/.exec(n))
+          .filter(Boolean)
+          .map((m) => parseInt(m[1], 10))
+          .sort((a, b) => a - b)
+      )
+      .catch(() => []);
+  }
+
+  /** Discovers `size_<n>/` folders under `baseDir` and fetches every strategy's CSV for each size, computing stats. Never rejects - failures surface as `available: false`. */
+  function loadSizeSweepData(baseDir, filePrefix, strategies) {
+    return discoverSizes(baseDir).then((sizes) => {
+      const data = {}; // size -> strategyKey -> stats
+      const fetches = [];
+      sizes.forEach((size) => {
+        data[size] = {};
+        strategies.forEach((strat) => {
+          const path = baseDir + "size_" + size + "/" + filePrefix + strat.key + ".csv";
+          fetches.push(
+            readText(path).then((text) => {
+              if (!text) return;
+              const stats = computeStats(parseCountCsv(text));
+              if (stats) data[size][strat.key] = stats;
+            })
+          );
+        });
+      });
+      return Promise.all(fetches).then(() => ({ available: sizes.length > 0, sizes, data }));
+    }).catch((e) => ({ available: false, error: e.message, sizes: [], data: {} }));
+  }
+
+  /** The current base directory to read `size_<n>/` folders from for `ds` - `ds.selectedRunId`-scoped for run-scoped datasets, static otherwise. */
+  function sizeBaseDirFor(ds) {
+    return ds.baseDirForRun ? ds.baseDirForRun(ds.selectedRunId) : ds.baseDir;
+  }
+
+  /** No-op for datasets without `sizeStrategies` configured. */
+  function loadSizeDataset(ds) {
+    if (!ds.sizeStrategies) return Promise.resolve();
+    return loadSizeSweepData(sizeBaseDirFor(ds), ds.sizeFilePrefix, ds.sizeStrategies).then((result) => {
+      ds.sizesAvailable = result.available;
+      ds.sizesError = result.error;
+      ds.sizes = result.sizes;
+      ds.sizeData = result.data;
+    });
+  }
+
   function boot() {
     document.getElementById("errorBanner").style.display = "none";
-    Promise.all(DATASETS.map(resolveDatasetDir)).then(() => {
-      const anyAvailable = DATASETS.some((ds) => ds.available);
+    Promise.all(DATASETS.map((ds) => resolveDatasetDir(ds).then(() => loadSizeDataset(ds)))).then(() => {
+      const anyAvailable = DATASETS.some((ds) => ds.available || ds.sizesAvailable);
       if (!anyAvailable) {
         showError(
           dataSource.mode === "folder"
@@ -692,6 +794,7 @@
       renderMutantToggle();
       renderComparisonSection();
       renderDatasetSections();
+      renderSizesTab();
       initCompareTab();
       initAllRunsTab();
     });
@@ -963,14 +1066,20 @@
 
   // -------------------------------------------------------------- charts
 
-  /** Builds one [drawBoxplot] group per mutant, one box per strategy, colored by strategy index (fixed across mutants/runs). */
-  function buildCombinedGroups(dsData, strategies, mids) {
-    return mids.map((mid) => ({
-      label: "Mutant " + mid,
+  /**
+   * Builds one [drawBoxplot] group per entry in `ids` (a mutant id, a suite size, ...), one box
+   * per strategy, colored by strategy index (fixed across groups/runs). `labelFn` defaults to
+   * "Mutant <id>" for the original (per-mutant) call sites; pass one explicitly for any other kind
+   * of id (e.g. a suite size).
+   */
+  function buildCombinedGroups(dsData, strategies, ids, labelFn) {
+    labelFn = labelFn || ((id) => "Mutant " + id);
+    return ids.map((id) => ({
+      label: labelFn(id),
       boxes: strategies.map((s, i) => ({
         label: s.label,
         color: SERIES_COLORS[i % SERIES_COLORS.length],
-        stats: (dsData[mid] || {})[s.key] || null,
+        stats: (dsData[id] || {})[s.key] || null,
       })),
     }));
   }
@@ -1120,23 +1229,167 @@
     }
   }
 
+  /**
+   * Line chart for "how does a mean outcome scale with suite size" - the kills-per-size tab's
+   * primary view. X axis is log-scaled (suite sizes span 1..2000, unevenly spaced) with a
+   * gridline/label at every actual size rather than evenly-spaced ticks, since the sizes
+   * themselves are the only x-values that exist. Y axis is linear (outcome values here are small -
+   * at most the number of mutants). `series` is `[{label, color, points: [{x, y}, ...]}, ...]`;
+   * points with `y === null` are skipped (gaps in the line) rather than plotted as 0.
+   */
+  function drawLineChart(canvas, series, opts) {
+    opts = opts || {};
+    const c = baseScaleColors();
+    const dpr = window.devicePixelRatio || 1;
+    const height = opts.height || 300;
+    const marginLeft = 50, marginBottom = 40, marginTop = 12, marginRight = 16;
+
+    const xSet = new Set();
+    series.forEach((s) => s.points.forEach((p) => xSet.add(p.x)));
+    const xs = Array.from(xSet).sort((a, b) => a - b);
+    const width = Math.max(opts.minWidth || 360, xs.length * (opts.xStep || 60) + marginLeft + marginRight);
+
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    if (!xs.length) { canvas._lineMarkers = []; return; }
+
+    const plotW = width - marginLeft - marginRight;
+    const plotH = height - marginTop - marginBottom;
+
+    let yMax = opts.yMax;
+    if (yMax === undefined) {
+      yMax = 1;
+      series.forEach((s) => s.points.forEach((p) => { if (p.y !== null && isFinite(p.y)) yMax = Math.max(yMax, p.y); }));
+    }
+    const yScale = (v) => marginTop + plotH - (v / yMax) * plotH;
+
+    const logMin = Math.log(xs[0]), logMax = Math.log(xs[xs.length - 1]);
+    const xScale = (v) => logMax === logMin ? marginLeft + plotW / 2 : marginLeft + ((Math.log(v) - logMin) / (logMax - logMin)) * plotW;
+
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.lineWidth = 1;
+
+    // y gridlines
+    ctx.strokeStyle = c.grid;
+    ctx.fillStyle = c.tick;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const yTicks = 5;
+    for (let i = 0; i <= yTicks; i++) {
+      const v = (yMax * i) / yTicks;
+      const y = yScale(v);
+      ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+      ctx.fillText(fmtFloat(v, v < 10 ? 1 : 0), marginLeft - 8, y);
+    }
+
+    // x gridlines/labels - one per actual suite size, not evenly spaced ticks
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    xs.forEach((v) => {
+      const x = xScale(v);
+      ctx.strokeStyle = c.grid;
+      ctx.beginPath(); ctx.moveTo(x, marginTop); ctx.lineTo(x, marginTop + plotH); ctx.stroke();
+      ctx.fillStyle = c.tick;
+      ctx.fillText(String(v), x, marginTop + plotH + 8);
+    });
+
+    ctx.strokeStyle = c.border;
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, marginTop);
+    ctx.lineTo(marginLeft, marginTop + plotH);
+    ctx.lineTo(width - marginRight, marginTop + plotH);
+    ctx.stroke();
+
+    const markers = [];
+    series.forEach((s) => {
+      const color = cssVar(s.color);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      let started = false;
+      s.points.forEach((p) => {
+        if (p.y === null || !isFinite(p.y)) { started = false; return; }
+        const x = xScale(p.x), y = yScale(p.y);
+        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+      });
+      ctx.stroke();
+      s.points.forEach((p) => {
+        if (p.y === null || !isFinite(p.y)) return;
+        const x = xScale(p.x), y = yScale(p.y);
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+        markers.push({ x, y, series: s, point: p });
+      });
+    });
+
+    canvas._lineMarkers = markers;
+  }
+
+  /** Hover tooltip for [drawLineChart]: shows the nearest marker within a small pixel radius. */
+  function wireLineTooltip(canvas, unit) {
+    const tooltip = document.getElementById("chartTooltip");
+    canvas.addEventListener("mousemove", (e) => {
+      const markers = canvas._lineMarkers || [];
+      const canvasRect = canvas.getBoundingClientRect();
+      const x = e.clientX - canvasRect.left;
+      const y = e.clientY - canvasRect.top;
+      let best = null, bestDist = 14;
+      markers.forEach((m) => {
+        const d = Math.hypot(m.x - x, m.y - y);
+        if (d < bestDist) { bestDist = d; best = m; }
+      });
+      if (!best) { tooltip.style.display = "none"; return; }
+      tooltip.innerHTML =
+        "<div style='font-weight:600;margin-bottom:4px'>" + best.series.label + " — n=" + best.point.x + "</div>" +
+        "<div class='row'><span>mean</span><b>" + fmtFloat(best.point.y, 2) + " " + unit + "</b></div>";
+      tooltip.style.display = "block";
+      tooltip.style.left = e.clientX + 14 + "px";
+      tooltip.style.top = e.clientY + 14 + "px";
+    });
+    canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+  }
+
   // ---------------------------------------------------------- summary table
 
-  function renderSummaryTable(ds, container, mids) {
-    const sortState = ds._sortState || (ds._sortState = { key: "mutant", dir: "asc" });
+  /**
+   * Sortable mean/median/min/max/n table, one row per entry in `rowIds` (a mutant id, a suite
+   * size, ...), one 5-column group per strategy. Generic over what a "row" is so both the
+   * per-mutant time-to-kill table and the per-size kills-per-size table share this instead of
+   * duplicating it.
+   *
+   * @param rowIds The row ids, in their natural (unsorted) order.
+   * @param rowLabel `(rowId) => display text` for the row header cell.
+   * @param rowHeaderText Column header for the row-id column (e.g. "Mutant", "Suite size").
+   * @param strategies `[{key, label}, ...]`.
+   * @param statsFor `(rowId) => { strategyKey: stats }` - stats as returned by [computeStats].
+   * @param sortStateHolder Object to stash the (persistent, per-table) sort state on.
+   * @param sortStateKey Property name to use on `sortStateHolder` - lets two tables share a holder
+   *   (e.g. the same `ds`) without clobbering each other's sort state.
+   * @param csvName Download filename for the CSV export button.
+   */
+  function renderGenericSummaryTable({
+    container, rowIds, rowLabel, rowHeaderText, strategies, statsFor, sortStateHolder, sortStateKey, csvName,
+  }) {
+    const sortState = sortStateHolder[sortStateKey] || (sortStateHolder[sortStateKey] = { key: "__row", dir: "asc" });
 
-    function sortValue(mid, key) {
-      if (key === "mutant") return mid;
+    function sortValue(rowId, key) {
+      if (key === "__row") return rowId;
       const [stratKey, field] = key.split(":");
-      const s = (ds.data[mid] || {})[stratKey];
+      const s = statsFor(rowId)[stratKey];
       if (!s) return null;
       if (field === "median") return s.median;
       if (field === "min") return s.min;
       if (field === "max") return s.max;
       return s.mean;
     }
-    function sortedMids() {
-      const copy = mids.slice();
+    function sortedRowIds() {
+      const copy = rowIds.slice();
       const dir = sortState.dir === "asc" ? 1 : -1;
       copy.sort((a, b) => {
         const av = sortValue(a, sortState.key), bv = sortValue(b, sortState.key);
@@ -1151,11 +1404,11 @@
     const table = document.createElement("table");
     const thead = document.createElement("thead");
     const headTr = document.createElement("tr");
-    const mutantTh = document.createElement("th");
-    mutantTh.textContent = "Mutant";
-    mutantTh.dataset.sortKey = "mutant";
-    headTr.appendChild(mutantTh);
-    ds.strategies.forEach((strat) => {
+    const rowTh = document.createElement("th");
+    rowTh.textContent = rowHeaderText;
+    rowTh.dataset.sortKey = "__row";
+    headTr.appendChild(rowTh);
+    strategies.forEach((strat) => {
       const meanTh = document.createElement("th");
       meanTh.className = "num group-sep";
       meanTh.dataset.sortKey = strat.key + ":mean";
@@ -1188,13 +1441,13 @@
 
     function draw() {
       tbody.innerHTML = "";
-      sortedMids().forEach((mid) => {
+      sortedRowIds().forEach((rowId) => {
         const tr = document.createElement("tr");
-        const mtd = document.createElement("td");
-        mtd.textContent = "Mutant " + mid;
-        tr.appendChild(mtd);
-        ds.strategies.forEach((strat) => {
-          const s = (ds.data[mid] || {})[strat.key];
+        const rtd = document.createElement("td");
+        rtd.textContent = rowLabel(rowId);
+        tr.appendChild(rtd);
+        strategies.forEach((strat) => {
+          const s = statsFor(rowId)[strat.key];
           const meanTd = document.createElement("td"); meanTd.className = "num group-sep"; meanTd.textContent = s ? fmtFloat(s.mean, 1) : "—";
           const medianTd = document.createElement("td"); medianTd.className = "num"; medianTd.textContent = s ? fmtFloat(s.median, 1) : "—";
           const minTd = document.createElement("td"); minTd.className = "num"; minTd.textContent = s ? fmtNum(s.min) : "—";
@@ -1231,21 +1484,35 @@
     const btn = document.createElement("button");
     btn.type = "button"; btn.textContent = "Download CSV";
     btn.onclick = () => {
-      const header = ["Mutant"];
-      ds.strategies.forEach((s) => header.push(s.label + " mean", s.label + " median", s.label + " min", s.label + " max", s.label + " n"));
+      const header = [rowHeaderText];
+      strategies.forEach((s) => header.push(s.label + " mean", s.label + " median", s.label + " min", s.label + " max", s.label + " n"));
       const rows = [header];
-      sortedMids().forEach((mid) => {
-        const row = [mid];
-        ds.strategies.forEach((s) => {
-          const st = (ds.data[mid] || {})[s.key];
+      sortedRowIds().forEach((rowId) => {
+        const row = [rowLabel(rowId)];
+        strategies.forEach((s) => {
+          const st = statsFor(rowId)[s.key];
           row.push(st ? st.mean : "", st ? st.median : "", st ? st.min : "", st ? st.max : "", st ? st.n : "");
         });
         rows.push(row);
       });
-      downloadCsv("time_to_kill_summary_" + ds.id + ".csv", rows);
+      downloadCsv(csvName, rows);
     };
     btnRow.appendChild(spacer); btnRow.appendChild(btn);
     container.appendChild(btnRow);
+  }
+
+  function renderSummaryTable(ds, container, mids) {
+    renderGenericSummaryTable({
+      container,
+      rowIds: mids,
+      rowLabel: (mid) => "Mutant " + mid,
+      rowHeaderText: "Mutant",
+      strategies: ds.strategies,
+      statsFor: (mid) => ds.data[mid] || {},
+      sortStateHolder: ds,
+      sortStateKey: "_sortState",
+      csvName: "time_to_kill_summary_" + ds.id + ".csv",
+    });
   }
 
   // --------------------------------------------------------- dataset section
@@ -1288,9 +1555,10 @@
         ds.selectedRunId = parseInt(select.value, 10);
         ds.dir = ds.dirForRun(ds.selectedRunId);
         select.disabled = true;
-        Promise.all([loadDataset(ds), loadSignificance(ds)]).then(() => {
+        Promise.all([loadDataset(ds), loadSignificance(ds), loadSizeDataset(ds)]).then(() => {
           renderDatasetSections();
           renderComparisonSection();
+          renderSizesTab();
         });
       });
       runRow.appendChild(label);
@@ -1412,11 +1680,139 @@
     return card;
   }
 
+  // ------------------------------------------------------- kills-per-size tab
+
+  function renderSizesTab() {
+    const root = document.getElementById("sizeSections");
+    if (!root) return; // boot() can run before the DOM is ready in some load orders
+    root.innerHTML = "";
+    DATASETS.filter((ds) => ds.sizeStrategies).forEach((ds) => root.appendChild(renderDatasetSizeSection(ds)));
+  }
+
+  function renderDatasetSizeSection(ds) {
+    const card = document.createElement("section");
+    card.className = "card";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = ds.title;
+    card.appendChild(h2);
+
+    const note = document.createElement("p");
+    note.className = "legend-note";
+    note.textContent = ds.runsDir
+      ? "Using Run " + ds.selectedRunId + " (change it in the Overview tab)."
+      : "";
+    if (note.textContent) card.appendChild(note);
+
+    if (!ds.sizesAvailable) {
+      const p = document.createElement("p");
+      p.className = "status-note warn";
+      p.textContent = "Couldn't load suite-size data" + (ds.sizesError ? " (" + ds.sizesError + ")" : "") +
+        ". Folder: " + sizeBaseDirFor(ds);
+      card.appendChild(p);
+      return card;
+    }
+
+    const sizes = ds.sizes;
+    if (!sizes.length) {
+      const p = document.createElement("p");
+      p.className = "status-note";
+      p.textContent = "No size_<n>/ folders found under " + sizeBaseDirFor(ds);
+      card.appendChild(p);
+      return card;
+    }
+
+    // legend
+    const legend = document.createElement("div");
+    legend.className = "legend-row";
+    ds.sizeStrategies.forEach((strat, i) => {
+      const item = document.createElement("span");
+      item.className = "item";
+      const sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = cssVar(SERIES_COLORS[i % SERIES_COLORS.length]);
+      item.appendChild(sw);
+      item.appendChild(document.createTextNode(strat.label));
+      legend.appendChild(item);
+    });
+    card.appendChild(legend);
+
+    // line chart: mean distinct mutants killed vs. suite size
+    const lineTitle = document.createElement("h3");
+    lineTitle.textContent = "Mean mutants killed vs. suite size";
+    card.appendChild(lineTitle);
+    const lineWrap = document.createElement("div");
+    lineWrap.className = "chart-scroll";
+    const lineInner = document.createElement("div");
+    lineInner.className = "chart-inner";
+    const lineCanvas = document.createElement("canvas");
+    lineInner.appendChild(lineCanvas);
+    lineWrap.appendChild(lineInner);
+    card.appendChild(lineWrap);
+
+    const series = ds.sizeStrategies.map((s, i) => ({
+      label: s.label,
+      color: SERIES_COLORS[i % SERIES_COLORS.length],
+      points: sizes
+        .map((n) => ({ n, stats: (ds.sizeData[n] || {})[s.key] || null }))
+        .map(({ n, stats }) => ({ x: n, y: stats ? stats.mean : null })),
+    }));
+    requestAnimationFrame(() => {
+      drawLineChart(lineCanvas, series, { height: 320 });
+      wireLineTooltip(lineCanvas, "mutants killed");
+    });
+
+    // combined box plot, one group per suite size
+    const boxTitle = document.createElement("h3");
+    boxTitle.style.marginTop = "16px";
+    boxTitle.textContent = "Distribution per suite size";
+    card.appendChild(boxTitle);
+    const combinedWrap = document.createElement("div");
+    combinedWrap.className = "chart-scroll";
+    const combinedInner = document.createElement("div");
+    combinedInner.className = "chart-inner";
+    const combinedCanvas = document.createElement("canvas");
+    combinedInner.appendChild(combinedCanvas);
+    combinedWrap.appendChild(combinedInner);
+    card.appendChild(combinedWrap);
+
+    const globalMax = maxStat(ds.sizeData, ds.sizeStrategies, sizes);
+    const groups = buildCombinedGroups(ds.sizeData, ds.sizeStrategies, sizes, (n) => "n = " + n);
+    requestAnimationFrame(() => {
+      drawBoxplot(combinedCanvas, groups, {
+        yMax: globalMax,
+        height: 300,
+        groupWidth: Math.max(140, ds.sizeStrategies.length * 34),
+      });
+      wireTooltip(combinedCanvas, "mutants killed");
+    });
+
+    // summary table
+    const tableTitle = document.createElement("h3");
+    tableTitle.style.marginTop = "16px";
+    tableTitle.textContent = "Mean / median mutants killed";
+    card.appendChild(tableTitle);
+    renderGenericSummaryTable({
+      container: card,
+      rowIds: sizes,
+      rowLabel: (n) => "n = " + n,
+      rowHeaderText: "Suite size",
+      strategies: ds.sizeStrategies,
+      statsFor: (n) => ds.sizeData[n] || {},
+      sortStateHolder: ds,
+      sortStateKey: "_sizeSortState",
+      csvName: "kills_per_size_" + ds.id + ".csv",
+    });
+
+    return card;
+  }
+
   // -------------------------------------------------------------- tabs
 
   function wireTabs() {
     const tabs = [
       { btn: "tabOverviewBtn", panel: "tabPanelOverview" },
+      { btn: "tabSizesBtn", panel: "tabPanelSizes" },
       { btn: "tabCompareBtn", panel: "tabPanelCompare" },
       { btn: "tabAllRunsBtn", panel: "tabPanelAllRuns" },
     ];

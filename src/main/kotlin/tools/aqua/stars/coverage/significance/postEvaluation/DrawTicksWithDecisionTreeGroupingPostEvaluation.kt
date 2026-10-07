@@ -25,7 +25,6 @@ import kotlin.random.Random
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.dao.id.EntityID
-import tools.aqua.stars.coverage.significance.MAX_RARE_MUTANT_FAILURES
 import tools.aqua.stars.coverage.significance.NEXT_TICK_SUITE_SIZES
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.REPETITIONS
@@ -48,8 +47,8 @@ import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
  *
  * Four sampling strategies are evaluated by [evaluate]/[evaluateTimeToKill]. The first three match
  * the three estimators [exportSignificance] computes (see that function and `computeSignificance`
- * in `time_to_kill_comparison/index.html`, which consumes its output, for the reference definitions
- * these mirror):
+ * in `sampling_strategy_explorer/index.html`, which consumes its output, for the reference
+ * definitions these mirror):
  * 1. **Uniform random** from the full tick pool — corresponds to E(k/N).
  * 2. **DC-leaf round-robin**, cycling leaf groups with equal probability regardless of leaf size —
  *    corresponds to E(equal).
@@ -74,9 +73,9 @@ import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
  * approach the size of the *entire* pool for a mutant with few kills, and up to [REPETITIONS] of
  * those overlays can be alive at once), so it instead counts via [HitCountingPool] - see that
  * class's KDoc for why this remains an exact, not approximate, replay of a real draw. Calling
- * [evaluate] and [evaluateTimeToKill] separately for the same run still means two loads, though -
- * [evaluateAll] is the one-load entry point that runs both (plus [exportSignificance]) against a
- * single shared load, and is what
+ * [evaluate] and [evaluateTimeToKill] separately for the same run still means two loads,
+ * though - [evaluateAll] is the one-load entry point that runs both (plus [exportSignificance])
+ * against a single shared load, and is what
  * [tools.aqua.stars.coverage.significance.RunDrawTicksWithDecisionTreeGrouping] uses.
  */
 object DrawTicksWithDecisionTreeGroupingPostEvaluation {
@@ -109,8 +108,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * Resolves [decisionTreeRunId] (or, if `null`, the latest full run) to the `(resolvedRunId,
-   * fullRunId)` pair every public function here needs, logging which one was picked exactly as
-   * each used to inline. Shared so [evaluateAll] can resolve it once instead of twice.
+   * fullRunId)` pair every public function here needs, logging which one was picked exactly as each
+   * used to inline. Shared so [evaluateAll] can resolve it once instead of twice.
    */
   private fun resolveRunId(decisionTreeRunId: EntityID<Int>?): Pair<Int, EntityID<Int>?> {
     val fullRunId = decisionTreeRunId ?: db { DecisionTreeRunsRepository.getLatestFullRunId() }
@@ -127,18 +126,16 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * Loads every tick for [fullRunId] and groups it, exactly once - the single expensive step
-   * [evaluate] and [evaluateTimeToKill] used to each perform independently, even when
-   * [evaluateAll] calls both for the very same run against the very same underlying rows.
+   * [evaluate] and [evaluateTimeToKill] used to each perform independently, even when [evaluateAll]
+   * calls both for the very same run against the very same underlying rows.
    */
-  private fun loadTicksAndSamplingData(
-      fullRunId: EntityID<Int>?
-  ): Pair<List<NextTickPostEvaluationDatabaseEntry>, SamplingDataTickDrawing> {
+  private fun loadTicksAndSamplingData(fullRunId: EntityID<Int>?): SamplingDataTickDrawing {
     println("  Loading tick data into memory (this may take several minutes)...")
     // Not wrapped in db {}/transaction {}: buildTickWiseNextTickMonitorViolations manages its own
     // transactions (parallel chunked load - see its KDoc).
     val allTicks = buildTickWiseNextTickMonitorViolations(forRunId = fullRunId)
     println("  Loaded ${allTicks.size} ticks.")
-    return allTicks to buildSamplingData(allTicks)
+    return buildSamplingData(allTicks)
   }
 
   /**
@@ -149,25 +146,19 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   fun evaluate(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation.")
     val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
-    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
-    evaluateCore(resolvedRunId, allTicks, data)
+    val data = loadTicksAndSamplingData(fullRunId)
+    evaluateCore(resolvedRunId, data)
     println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation.")
   }
 
   /**
-   * Suite-size sweep body shared by [evaluate] (which loads [allTicks]/[data] itself) and
-   * [evaluateAll] (which loads them once and passes them to both this and
-   * [evaluateTimeToKillCore]).
+   * Suite-size sweep body shared by [evaluate] (which loads [data] itself) and [evaluateAll] (which
+   * loads it once and passes it to both this and [evaluateTimeToKillCore]).
    */
   private fun evaluateCore(
       resolvedRunId: Int,
-      allTicks: List<NextTickPostEvaluationDatabaseEntry>,
       data: SamplingDataTickDrawing,
   ) {
-    println("  Calculating rare mutants from all ticks")
-    val rareMutantIds = buildRareMutantIds(allTicks)
-    println("  Found ${rareMutantIds.size} rare mutants (<= $MAX_RARE_MUTANT_FAILURES violations).")
-
     val leafGroups = data.dtLeafGroups.values.toList()
 
     for (suiteSize in NEXT_TICK_SUITE_SIZES) {
@@ -202,41 +193,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             suiteSize,
             resolvedRunId)
       }
-
-      if (rareMutantIds.isNotEmpty()) {
-        println("    Evaluating uniform-random tick sampling (rare mutants).")
-        save(
-            evaluateRandomDrawTicks(data.allTicks, suiteSize, rareMutantIds),
-            "random_tick_rare",
-            suiteSize,
-            resolvedRunId)
-
-        if (leafGroups.isNotEmpty()) {
-          println("    Evaluating DC-leaf round-robin tick sampling (rare mutants).")
-          save(
-              evaluateRoundRobinTicks(leafGroups, suiteSize, rareMutantIds),
-              "leaf_tick_rare",
-              suiteSize,
-              resolvedRunId)
-
-          println("    Evaluating DC-leaf weighted tick sampling (rare mutants).")
-          save(
-              evaluateWeightedDrawTicks(
-                  data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
-              "leaf_tick_weighted_rare",
-              suiteSize,
-              resolvedRunId)
-
-          println(
-              "    Evaluating DC-leaf alternating (equal/weighted) tick sampling (rare mutants).")
-          save(
-              evaluateAlternatingDrawTicks(
-                  data.dtLeafGroups, data.leafWeights, suiteSize, rareMutantIds),
-              "leaf_tick_alternating_rare",
-              suiteSize,
-              resolvedRunId)
-        }
-      }
     }
   }
 
@@ -250,24 +206,23 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   fun evaluateTimeToKill(decisionTreeRunId: EntityID<Int>? = null) {
     println("Starting DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
     val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
-    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
-    evaluateTimeToKillCore(resolvedRunId, allTicks, data)
+    val data = loadTicksAndSamplingData(fullRunId)
+    evaluateTimeToKillCore(resolvedRunId, data)
     println("Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (time to kill).")
   }
 
   /**
-   * Time-to-kill body shared by [evaluateTimeToKill] (which loads [allTicks]/[data] itself) and
-   * [evaluateAll] (which loads them once and passes them to both this and [evaluateCore]).
+   * Time-to-kill body shared by [evaluateTimeToKill] (which loads [data] itself) and [evaluateAll]
+   * (which loads it once and passes it to both this and [evaluateCore]).
    */
   private fun evaluateTimeToKillCore(
       resolvedRunId: Int,
-      allTicks: List<NextTickPostEvaluationDatabaseEntry>,
       data: SamplingDataTickDrawing,
   ) {
     val leafTotals = data.dtLeafGroups.mapValues { (_, ticks) -> ticks.size.toLong() }
 
     val accidentMutantIds =
-        allTicks.filter { it.nextTickG0Failed == true }.map { it.mutantId }.toSortedSet()
+        data.allTicks.filter { it.nextTickG0Failed == true }.map { it.mutantId }.toSortedSet()
     println("  Found ${accidentMutantIds.size} mutants that cause accidents.")
 
     // Computed once, up front - not per mutant, and not per repetition - so every
@@ -275,7 +230,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     // See HitCountingPool's KDoc for why a per-draw count replaces the real per-tick draw here.
     println("  Pre-counting each mutant's kills, globally and per leaf...")
     val globalKillCountsByMutant: Map<MutantId, Long> =
-        allTicks
+        data.allTicks
             .asSequence()
             .filter { it.nextTickG0Failed == true }
             .groupingBy { it.mutantId }
@@ -301,7 +256,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       println("    Evaluating random time-to-kill for mutant $mutantId.")
       saveTimeToKill(
           evaluateTimeToKillRandomTicks(
-              allTicks.size.toLong(), globalKillCountsByMutant[mutantId] ?: 0L),
+              data.allTicks.size.toLong(), globalKillCountsByMutant[mutantId] ?: 0L),
           "random_tick",
           mutantId,
           resolvedRunId)
@@ -346,9 +301,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     exportSignificance(decisionTreeRunId)
 
     val (resolvedRunId, fullRunId) = resolveRunId(decisionTreeRunId)
-    val (allTicks, data) = loadTicksAndSamplingData(fullRunId)
-    evaluateTimeToKillCore(resolvedRunId, allTicks, data)
-    evaluateCore(resolvedRunId, allTicks, data)
+    val data = loadTicksAndSamplingData(fullRunId)
+    evaluateTimeToKillCore(resolvedRunId, data)
+    evaluateCore(resolvedRunId, data)
 
     println(
         "Finished DrawTicksWithDecisionTreeGroupingPostEvaluation (significance + time-to-kill + suite-size sweep).")
@@ -448,22 +403,11 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       val buckets: List<SignificanceLeafBucket>,
   )
 
-  private fun buildRareMutantIds(
-      allTicks: List<NextTickPostEvaluationDatabaseEntry>
-  ): Set<MutantId> =
-      allTicks
-          .filter { it.nextTickG0Failed ?: false }
-          .groupBy { it.mutantId }
-          .filterValues { it.size in 1..MAX_RARE_MUTANT_FAILURES }
-          .keys
-          .toSet()
-
   // ------------------------------------------------------- suite-size sweep strategies
 
   private fun evaluateRandomDrawTicks(
       ticks: List<NextTickPostEvaluationDatabaseEntry>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
@@ -471,7 +415,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .map { rep ->
             randomIndices(ticks.size, suiteSize, Random(42L + rep))
                 .map { ticks[it] }
-                .killedMutants(rareMutantIds)
+                .killedMutants()
                 .size
           }
           .collect(Collectors.toList())
@@ -499,7 +443,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   private fun evaluateRoundRobinTicks(
       ticksPerLeaf: List<List<NextTickPostEvaluationDatabaseEntry>>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
@@ -524,7 +467,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               } else {
                 pos = (pos + 1) % workingPools.size
               }
-              tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
+              tick.killingMutantOrNull()?.let { killed.add(it) }
             }
             killed.size
           }
@@ -542,7 +485,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
       leafWeights: Map<DecisionTreeLeafId, Double>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
@@ -560,7 +502,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               val tick = leafPool.drawAndRemoveRandomTick(rng)
               drawn++
               if (leafPool.isEmpty()) candidateLeafIds.remove(leafId)
-              tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
+              tick.killingMutantOrNull()?.let { killed.add(it) }
             }
             killed.size
           }
@@ -579,7 +521,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       ticksPerLeaf: Map<DecisionTreeLeafId, List<NextTickPostEvaluationDatabaseEntry>>,
       leafWeights: Map<DecisionTreeLeafId, Double>,
       suiteSize: Int,
-      rareMutantIds: Set<MutantId>? = null,
   ): List<Int> =
       (1..REPETITIONS)
           .toList()
@@ -624,7 +565,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
               val leafId = nextLeafId() ?: break
               val tick = workingPools.getValue(leafId).drawAndRemoveRandomTick(rng)
               drawn++
-              tick.killingMutantOrNull(rareMutantIds)?.let { killed.add(it) }
+              tick.killingMutantOrNull()?.let { killed.add(it) }
             }
             killed.size
           }
@@ -662,10 +603,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .map { rep ->
             val rng = Random(42L + rep)
             val workingPools =
-                leafCounts
-                    .map { HitCountingPool(it.total, it.hits) }
-                    .shuffled(rng)
-                    .toMutableList()
+                leafCounts.map { HitCountingPool(it.total, it.hits) }.shuffled(rng).toMutableList()
             var pos = 0
             var drawn = 0
             while (workingPools.isNotEmpty()) {
@@ -694,8 +632,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingPools =
-                leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
+            val workingPools = leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
             val candidateLeafIds =
                 workingPools.keys.filter { (leafWeights[it] ?: 0.0) > 0.0 }.toMutableList()
             var drawn = 0
@@ -724,8 +661,7 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
           .parallelStream()
           .map { rep ->
             val rng = Random(42L + rep)
-            val workingPools =
-                leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
+            val workingPools = leafCounts.mapValues { (_, c) -> HitCountingPool(c.total, c.hits) }
             val roundRobinOrder = workingPools.keys.shuffled(rng).toMutableList()
             var rrPos = 0
             val candidateLeafIds =
@@ -830,12 +766,12 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
   /**
    * O(1)-per-draw replacement for drawing real ticks via [SharedDrawPool] when all a time-to-kill
-   * strategy ever asks of a draw is "was *this one* mutant's kill tick drawn, yes or no" -
-   * [SharedDrawPool]'s overlay is unaffordable here because draws-until-first-kill is, on average,
-   * `(poolSize + 1) / (killCount + 1)`: for a mutant with few kills out of up to ~1.4 billion
-   * ticks, that can be hundreds of millions of draws, and with [REPETITIONS] repetitions running
-   * concurrently, several such overlays coexisting is exactly what turned an OOM into a process
-   * getting SIGKILLed partway through the mutant loop.
+   * strategy ever asks of a draw is "was *this one* mutant's kill tick drawn, yes or
+   * no" - [SharedDrawPool]'s overlay is unaffordable here because draws-until-first-kill is, on
+   * average, `(poolSize + 1) / (killCount + 1)`: for a mutant with few kills out of up to ~1.4
+   * billion ticks, that can be hundreds of millions of draws, and with [REPETITIONS] repetitions
+   * running concurrently, several such overlays coexisting is exactly what turned an OOM into a
+   * process getting SIGKILLed partway through the mutant loop.
    *
    * This is *not* the aggregate-across-categories shortcut rejected earlier for the suite-size
    * strategies (which needed to know, per draw, *which of several* mutants it hit - a question
@@ -870,20 +806,12 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    */
   private data class LeafTickCounts(val total: Long, val hits: Long)
 
-  /**
-   * The mutant a single tick killed, or `null` if it wasn't a failing tick (or [rareMutantIds]
-   * excludes it).
-   */
-  private fun NextTickPostEvaluationDatabaseEntry.killingMutantOrNull(
-      rareMutantIds: Set<MutantId>?
-  ): MutantId? =
-      mutantId.takeIf {
-        nextTickG0Failed == true && (rareMutantIds == null || mutantId in rareMutantIds)
-      }
+  /** The mutant a single tick killed, or `null` if it wasn't a failing tick. */
+  private fun NextTickPostEvaluationDatabaseEntry.killingMutantOrNull(): MutantId? =
+      mutantId.takeIf { nextTickG0Failed == true }
 
-  private fun List<NextTickPostEvaluationDatabaseEntry>.killedMutants(
-      rareMutantIds: Set<MutantId>?
-  ): Set<MutantId> = mapNotNull { it.killingMutantOrNull(rareMutantIds) }.toSet()
+  private fun List<NextTickPostEvaluationDatabaseEntry>.killedMutants(): Set<MutantId> =
+      mapNotNull { it.killingMutantOrNull() }.toSet()
 
   /**
    * Saves [results] as a single-column CSV under `[basePath]/run_<runId>/size_<suiteSize>/`.

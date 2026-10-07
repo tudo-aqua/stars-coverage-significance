@@ -97,7 +97,8 @@ class MetricFailedMonitorsTableRetryTest {
     assertFalse(RuntimeException("unrelated").isTransientConnectionTermination())
   }
 
-  // --------------------------------------------------------------------- withTransientConnectionRetry
+  // ---------------------------------------------------------------------
+  // withTransientConnectionRetry
 
   @Test
   fun `succeeds immediately without retrying when the block succeeds on the first try`() {
