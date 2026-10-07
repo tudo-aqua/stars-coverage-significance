@@ -15,7 +15,7 @@ python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 --out-dir /results/runs \
 --uri postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:6432/stars \
 --db-workers 48 \
---mutant-numbers 146,132,152,147,18,9,157,154,6,111,125,128 \
+--mutant-numbers 146,132,152,147,18,9,157,154,6,111,115,128 \
 &&
 #python3 -u scripts/decision_tree_g0.py metric_failed_monitors.parquet \
 #--n-trials 200 \

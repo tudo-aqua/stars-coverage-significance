@@ -26,9 +26,9 @@ import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisi
 
 /**
  * Tests for [DrawTicksWithDecisionTreeGroupingPostEvaluation.SharedDrawPool], which draws distinct
- * elements without replacement from a shared list without copying it. [bruteForceDraw] is a
- * literal copy-and-swap-remove implementation of the same draw-without-replacement process, used
- * here as the reference [SharedDrawPool] must reproduce exactly, draw for draw, for the same seed.
+ * elements without replacement from a shared list without copying it. [bruteForceDraw] is a literal
+ * copy-and-swap-remove implementation of the same draw-without-replacement process, used here as
+ * the reference [SharedDrawPool] must reproduce exactly, draw for draw, for the same seed.
  */
 class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
 
@@ -133,9 +133,9 @@ class DrawTicksWithDecisionTreeGroupingPostEvaluationTest {
    * compares the raw draw against a canonical "marked items occupy the front" view. Both are
    * unbiased, correct ways to sample the same hypergeometric process, but only *distributionally*
    * equivalent - not bit-for-bit reproducible from shared randomness. So [HitCountingPool] is
-   * checked here via its distribution (single-draw hit rate, and the closed-form
-   * time-to-first-hit mean) and via the one property that *is* exact regardless of path: the total
-   * hit count over a full drain.
+   * checked here via its distribution (single-draw hit rate, and the closed-form time-to-first-hit
+   * mean) and via the one property that *is* exact regardless of path: the total hit count over a
+   * full drain.
    */
   @Test
   fun `single-draw hit rate matches hitCount over poolSize`() {

@@ -175,9 +175,6 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
 
       if (leafGroups.isNotEmpty()) {
         println("    Evaluating DC-leaf round-robin tick sampling.")
-        leafGroups.forEachIndexed { index, ticks ->
-          println("      DC Leaf Group '$index': ${ticks.size} entries.")
-        }
         save(evaluateRoundRobinTicks(leafGroups, suiteSize), "leaf_tick", suiteSize, resolvedRunId)
 
         println("    Evaluating DC-leaf weighted tick sampling.")
@@ -312,10 +309,11 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * E(alternating) significance estimators for [decisionTreeRunId] against the [evaluate]/
    * [evaluateTimeToKill] strategies above - the database-wide total tick count (N), the run's
    * learned leaf count (L), and per-leaf `{totalTicks, failingTicks, mutantKillingAmount}` (from
-   * which every per-mutant p_lm, p_l and w_l used by the estimators is derived). Both aggregates
-   * are computed entirely in SQL via [DtLeafMutantTickCountsView], so no per-tick rows are loaded
-   * into the JVM - unlike [evaluate]/[evaluateTimeToKill], this runs in seconds regardless of table
-   * size.
+   * which every per-mutant p_lm, p_l and w_l used by the estimators is derived) - together with
+   * which mutants that run's decision tree was trained on versus held out as its test set. The leaf
+   * buckets are computed entirely in SQL via [DtLeafMutantTickCountsView], so no per-tick rows are
+   * loaded into the JVM - unlike [evaluate]/[evaluateTimeToKill], this runs in seconds regardless
+   * of table size.
    *
    * Written to `draw_ticks_with_decision_tree_grouping/run_<runId>/significance.json`, alongside
    * that run's `size_<n>/` and `time_to_kill/` output, so a single run folder is self-sufficient
@@ -339,6 +337,12 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
     val learnedNumLeaves = DecisionTreeRunsRepository.getById(resolvedRunId)?.learnedNumLeaves
     println("  Learned leaves for this run: ${learnedNumLeaves ?: "unknown"}.")
 
+    val mutantSplits = DecisionTreeRunsRepository.getSplitsForRun(resolvedRunId)
+    val trainedMutantIds = mutantSplits.filter { it.trainedOn }.map { it.mutantId }.sorted()
+    val testMutantIds = mutantSplits.filter { !it.trainedOn }.map { it.mutantId }.sorted()
+    println(
+        "  Mutant split: ${trainedMutantIds.size} trained on, ${testMutantIds.size} held out as test.")
+
     println("  Aggregating per-leaf bucket totals in SQL...")
     val leafTotals = DtLeafMutantTickCountsView.getLeafBucketTotalsForRunId(resolvedRunId)
     val mutantKillingAmountByLeafId =
@@ -360,6 +364,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
             runId = resolvedRunId,
             totalTicks = totalTicks,
             learnedNumLeaves = learnedNumLeaves,
+            trainedMutantIds = trainedMutantIds,
+            testMutantIds = testMutantIds,
             buckets = buckets)
     val path = basePath(resolvedRunId).resolve("significance.json")
     Files.createDirectories(path.parent)
@@ -391,6 +397,10 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    *   database-wide (not scoped to [runId]).
    * @property learnedNumLeaves L: the actual number of leaves LightGBM produced for this run (not
    *   the Optuna-tuned target), or `null` if the run has no recorded value.
+   * @property trainedMutantIds IDs of the mutants [runId]'s decision tree was trained on, from
+   *   `decision_tree_mutant_splits` (`trained_on = true`).
+   * @property testMutantIds IDs of the mutants held out of training for [runId] (`trained_on =
+   *   false`) - these are the mutants whose risk the tree never saw during learning.
    * @property buckets Per-leaf bucket information for [runId].
    */
   @Serializable
@@ -398,6 +408,8 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
       val runId: Int,
       val totalTicks: Long,
       val learnedNumLeaves: Int?,
+      val trainedMutantIds: List<Int>,
+      val testMutantIds: List<Int>,
       val buckets: List<SignificanceLeafBucket>,
   )
 
@@ -572,9 +584,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
   // ------------------------------------------------------------------- time-to-kill strategies
 
   /**
-   * Draws items one at a time without replacement, via [HitCountingPool], until the target
-   * mutant's kill is drawn. See [HitCountingPool]'s KDoc for why it tracks only counts rather than
-   * drawing real ticks.
+   * Draws items one at a time without replacement, via [HitCountingPool], until the target mutant's
+   * kill is drawn. See [HitCountingPool]'s KDoc for why it tracks only counts rather than drawing
+   * real ticks.
    */
   private fun evaluateTimeToKillRandomTicks(poolSize: Long, killCount: Long): List<Int> =
       (1..REPETITIONS)
@@ -727,9 +739,9 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * list every repetition (and, for the leaf-based strategies, every leaf) reads from - without
    * ever copying it. [source] can hold hundreds of millions of entries, but a pool only ever
    * touches the handful of positions *it itself* has drawn so far: [drawAndRemoveRandomTick]
-   * performs one step of an in-place swap-remove shuffle of [source], recording the swap in a
-   * small per-pool overlay map instead of writing it back into [source] - so [source] itself is
-   * never mutated and stays safe to share, completely unchanged, across every concurrently running
+   * performs one step of an in-place swap-remove shuffle of [source], recording the swap in a small
+   * per-pool overlay map instead of writing it back into [source] - so [source] itself is never
+   * mutated and stays safe to share, completely unchanged, across every concurrently running
    * repetition and pool. A suite of `k` draws (or `k` draws until a kill) therefore costs `k` hash
    * lookups, never a copy of the leaf or pool it draws from.
    */
@@ -763,16 +775,16 @@ object DrawTicksWithDecisionTreeGroupingPostEvaluation {
    * O(1)-memory alternative to drawing real ticks via [SharedDrawPool], for the single yes/no
    * question a time-to-kill draw needs answered: "was this one mutant's kill tick drawn?"
    * [SharedDrawPool]'s per-draw overlay costs memory proportional to the number of draws made,
-   * which is unaffordable here: draws-until-first-kill averages `(poolSize + 1) / (killCount +
-   * 1)`, which for a mutant with few kills among up to ~1.4 billion ticks can be hundreds of
-   * millions of draws, and [REPETITIONS] repetitions may run this concurrently.
+   * which is unaffordable here: draws-until-first-kill averages `(poolSize + 1) / (killCount + 1)`,
+   * which for a mutant with few kills among up to ~1.4 billion ticks can be hundreds of millions of
+   * draws, and [REPETITIONS] repetitions may run this concurrently.
    *
    * Since only one mutant is ever in question here (unlike the suite-size strategies in
-   * [SharedDrawPool], which must track real tick identities because a draw can matter for
-   * *several* mutants at once), tracking "[hitsRemaining] of [remaining] slots are this mutant's
-   * kill" reproduces the same draw-without-replacement process as drawing a real tick and checking
-   * `(mutantId == targetMutant) && nextTickG0Failed`, without ever recording which specific
-   * *other* tick a non-hit draw happened to be - nothing here needs that information.
+   * [SharedDrawPool], which must track real tick identities because a draw can matter for *several*
+   * mutants at once), tracking "[hitsRemaining] of [remaining] slots are this mutant's kill"
+   * reproduces the same draw-without-replacement process as drawing a real tick and checking
+   * `(mutantId == targetMutant) && nextTickG0Failed`, without ever recording which specific *other*
+   * tick a non-hit draw happened to be - nothing here needs that information.
    */
   internal class HitCountingPool(poolSize: Long, hitCount: Long) {
     private var remaining = poolSize
