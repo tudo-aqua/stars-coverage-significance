@@ -18,6 +18,9 @@
     --status-good:     #0ca30c;
     --status-critical: #d03b3b;
 
+    --group-train: #2a78d6;  /* blue  */
+    --group-test:  #c98500;  /* amber */
+
     --series-1: #2a78d6;  /* blue    */
     --series-2: #1baf7a;  /* aqua    */
     --series-3: #eda100;  /* yellow  */
@@ -35,6 +38,9 @@
       --gridline:       #2c2c2a;
       --baseline:       #383835;
       --border:         rgba(255,255,255,0.10);
+
+      --group-train: #3987e5;
+      --group-test:  #f0b429;
 
       --series-1: #3987e5;
       --series-2: #199e70;
@@ -163,10 +169,32 @@
   }
   .mutant-toggle-grid label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; cursor: pointer; }
 
+  .mutant-group { margin-bottom: 12px; }
+  .mutant-group:last-child { margin-bottom: 0; }
+  .mutant-group h4 { margin: 0 0 6px; font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+
+  /* Small colored pill marking a mutant as training- or test-set, used wherever rows/cards stay
+     sortable (so mutants can't be physically grouped into blocks) but should still be
+     distinguishable at a glance. */
+  .mutant-tag { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 0 6px; line-height: 1.5; border-radius: 8px; margin-left: 6px; vertical-align: middle; border: 1px solid currentColor; white-space: nowrap; }
+  .mutant-tag.train { color: var(--group-train); }
+  .mutant-tag.test { color: var(--group-test); }
+
+  /* Full-width divider row/caption marking a block boundary in tables/charts that *do* physically
+     group mutants into consecutive blocks (nothing else there depends on row order). */
+  tr.mutant-group-row td, tr.mutant-group-row th { padding: 5px 8px 3px; border-bottom: none; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+  tr.mutant-group-row.train td, tr.mutant-group-row.train th { color: var(--group-train); }
+  tr.mutant-group-row.test td, tr.mutant-group-row.test th { color: var(--group-test); }
+  tr.mutant-group-row:not(:first-child) td, tr.mutant-group-row:not(:first-child) th { padding-top: 14px; }
+
   .chart-scroll { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1); }
   .chart-inner { padding: 10px 14px 4px; }
 
   .mutant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 14px; }
+  .mutant-grid-divider { grid-column: 1 / -1; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); margin-top: 8px; }
+  .mutant-grid-divider:first-child { margin-top: 0; }
+  .mutant-grid-divider.train { color: var(--group-train); }
+  .mutant-grid-divider.test { color: var(--group-test); }
   .mutant-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--page-plane); }
   .mutant-card h4 { margin: 0 0 8px; font-size: 0.88rem; }
   .mutant-card table { font-size: 0.75rem; }
@@ -203,15 +231,17 @@
 
   <section class="card" id="mutantToggleCard">
     <h2>Mutants</h2>
-    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison on the Overview, Compare Runs, and All Runs tabs. The Kills per Size tab isn't affected &mdash; its data isn't broken down per mutant.</p>
+    <p class="legend-note">Toggling a mutant here hides it from every table, chart, and comparison on the Overview, Compare Runs, and All Runs tabs. The Kills per Size tab isn't affected &mdash; its data isn't broken down per mutant. Grouped into <strong>Training</strong> and <strong>Test</strong> below when the selected run's <code>significance.json</code> carries that decision tree's mutant split (<code>decision_tree_mutant_splits</code> in the database) &mdash; a mutant missing from both groups wasn't part of that run's split at all.</p>
     <div class="controls-row">
       <input type="text" id="mutantFilterInput" placeholder="Filter by ID…" style="max-width:160px" />
       <button id="mutantsAllBtn" type="button">All</button>
       <button id="mutantsNoneBtn" type="button">None</button>
+      <button id="mutantsTrainBtn" type="button">Training only</button>
+      <button id="mutantsTestBtn" type="button">Test only</button>
       <span class="spacer"></span>
       <span class="status-note" id="mutantToggleCount"></span>
     </div>
-    <div class="mutant-toggle-grid" id="mutantToggleGrid"></div>
+    <div id="mutantToggleGrid"></div>
   </section>
 
   <div class="controls-row" id="tabBar">
@@ -226,7 +256,7 @@
     <section class="card" id="comparisonCard" style="display:none">
       <h2>Expected vs. actual</h2>
       <p class="legend-note">
-        E(k/N), E(equal) and E(weight) come from that run's <code>significance.json</code> (written by <code>DrawTicksWithDecisionTreeGroupingPostEvaluation.exportSignificance()</code>) for whichever run is currently selected below in the "Draw Ticks..." card &mdash; both cards always show the same run, so there's no separate run picker here. E(alternating) is derived on this page from the same per-leaf probabilities (see <code>expectedAlternating</code> in the page source for the derivation): the expected number of draws until first kill when draws alternate between the equal and weighted policies, under the same fixed-probability/with-replacement simplification the other estimators already make. <strong>Actual mean</strong> is this page's own empirically observed mean draws-to-kill for the strategy that most closely matches each estimator's sampling policy: E(k/N) &harr; uniform random, E(equal) &harr; unweighted leaf round-robin, E(weight) &harr; significance-weighted leaf sampling, E(alternating) &harr; alternating leaf sampling. <strong>Actual&nbsp;&divide;&nbsp;Expected</strong> below 1 (<span class="ratio-good">green</span>) means the mutant was killed faster in practice than the estimator predicted; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower.
+        E(k/N), E(equal) and E(weight) come from that run's <code>significance.json</code> (written by <code>DrawTicksWithDecisionTreeGroupingPostEvaluation.exportSignificance()</code>) for whichever run is currently selected below in the "Draw Ticks..." card &mdash; both cards always show the same run, so there's no separate run picker here. E(alternating) is derived on this page from the same per-leaf probabilities (see <code>expectedAlternating</code> in the page source for the derivation): the expected number of draws until first kill when draws alternate between the equal and weighted policies, under the same fixed-probability/with-replacement simplification the other estimators already make. <strong>Actual mean</strong> is this page's own empirically observed mean draws-to-kill for the strategy that most closely matches each estimator's sampling policy: E(k/N) &harr; uniform random, E(equal) &harr; unweighted leaf round-robin, E(weight) &harr; significance-weighted leaf sampling, E(alternating) &harr; alternating leaf sampling. <strong>Actual&nbsp;&divide;&nbsp;Expected</strong> below 1 (<span class="ratio-good">green</span>) means the mutant was killed faster in practice than the estimator predicted; above 1 (<span class="ratio-critical" style="color:var(--status-critical)">red</span>, shown once it exceeds 2&times;) means slower. <strong>&Delta;&nbsp;vs&nbsp;Random</strong> (shown for every estimator except E(k/N), which <em>is</em> the random strategy) is that strategy's actual mean minus the random strategy's actual mean for the same mutant: negative and shaded <span style="color:var(--status-good)">green</span> means that strategy needed fewer draws than random (better); positive and shaded <span style="color:var(--status-critical)">red</span> means it needed more (worse); close to zero stays unshaded.
       </p>
       <div class="controls-row">
         <span class="status-note" id="dtStatusNote"></span>
@@ -390,6 +420,36 @@
     if (v <= 1) return "ratio-good";
     if (v > 2) return "ratio-bad";
     return "";
+  }
+
+  function fmtSignedFloat(v, digits) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    const d = digits === undefined ? 1 : digits;
+    const sign = v > 0 ? "+" : "";
+    return sign + v.toLocaleString(NUM_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function fmtSignedPercent(fraction, digits) {
+    if (fraction === null || fraction === undefined || !isFinite(fraction)) return "—";
+    const d = digits === undefined ? 1 : digits;
+    const sign = fraction > 0 ? "+" : "";
+    return sign + (fraction * 100).toLocaleString(NUM_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+  }
+
+  /**
+   * Background tint for a "this strategy vs. random" difference cell, given `relDiff` = (this
+   * strategy's actual mean − random's actual mean) / random's actual mean. Negative (fewer draws
+   * needed than random, i.e. better) tints green, positive (more draws needed, i.e. worse) tints
+   * red, scaling up to full saturation at `cap` (fraction) and fading to no tint - the surrounding
+   * theme's own background - as `relDiff` approaches 0.
+   */
+  function diffCellStyle(relDiff, cap) {
+    if (relDiff === null || relDiff === undefined || !isFinite(relDiff)) return "";
+    const t = Math.max(-1, Math.min(1, relDiff / (cap || 0.25)));
+    if (t === 0) return "";
+    const varName = t < 0 ? "--status-good" : "--status-critical";
+    const pct = Math.round(Math.abs(t) * 40);
+    return "background-color: color-mix(in srgb, var(" + varName + ") " + pct + "%, transparent);";
   }
 
   function csvEscape(value) {
@@ -824,10 +884,25 @@
 
   // ---------------------------------------------------------- mutant toggle
 
+  /**
+   * Groups the mutant checkboxes into "Training" / "Test" / "not in this run's split" sections
+   * (via [computeMutantSplit]) whenever that information is available, falling back to one flat,
+   * ungrouped grid otherwise - same markup either way, just with a `.mutant-group` header wrapping
+   * each non-empty group's own `.mutant-toggle-grid`.
+   */
   function renderMutantToggle() {
     const grid = document.getElementById("mutantToggleGrid");
     grid.innerHTML = "";
-    allMutantIds.forEach((mid) => {
+
+    function refreshAfterVisibilityChange() {
+      updateMutantToggleCount();
+      renderComparisonSection();
+      renderDatasetSections();
+      refreshCompareTabIfLoaded();
+      refreshAllRunsTabIfLoaded();
+    }
+
+    function buildCheckbox(mid) {
       const wrap = document.createElement("label");
       wrap.dataset.mutantId = String(mid);
       const cb = document.createElement("input");
@@ -835,36 +910,62 @@
       cb.checked = visibleMutantIds.has(mid);
       cb.addEventListener("change", () => {
         if (cb.checked) visibleMutantIds.add(mid); else visibleMutantIds.delete(mid);
-        updateMutantToggleCount();
-        renderComparisonSection();
-        renderDatasetSections();
-        refreshCompareTabIfLoaded();
-        refreshAllRunsTabIfLoaded();
+        refreshAfterVisibilityChange();
       });
       wrap.appendChild(cb);
       wrap.appendChild(document.createTextNode("Mutant " + mid));
-      grid.appendChild(wrap);
-    });
+      return wrap;
+    }
+
+    const split = computeMutantSplit();
+    const trainIds = allMutantIds.filter((mid) => split.get(mid) === true);
+    const testIds = allMutantIds.filter((mid) => split.get(mid) === false);
+    const otherIds = allMutantIds.filter((mid) => !split.has(mid));
+
+    if (split.size === 0) {
+      const flat = document.createElement("div");
+      flat.className = "mutant-toggle-grid";
+      allMutantIds.forEach((mid) => flat.appendChild(buildCheckbox(mid)));
+      grid.appendChild(flat);
+    } else {
+      [
+        ["Training (" + trainIds.length + ")", trainIds],
+        ["Test (" + testIds.length + ")", testIds],
+        ["Not in this run's split (" + otherIds.length + ")", otherIds],
+      ].forEach(([label, ids]) => {
+        if (!ids.length) return;
+        const section = document.createElement("div");
+        section.className = "mutant-group";
+        const h = document.createElement("h4");
+        h.textContent = label;
+        section.appendChild(h);
+        const sub = document.createElement("div");
+        sub.className = "mutant-toggle-grid";
+        ids.forEach((mid) => sub.appendChild(buildCheckbox(mid)));
+        section.appendChild(sub);
+        grid.appendChild(section);
+      });
+    }
     updateMutantToggleCount();
 
-    document.getElementById("mutantsAllBtn").onclick = () => {
-      visibleMutantIds = new Set(allMutantIds);
-      grid.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = true));
-      updateMutantToggleCount();
-      renderComparisonSection();
-      renderDatasetSections();
-      refreshCompareTabIfLoaded();
-      refreshAllRunsTabIfLoaded();
-    };
-    document.getElementById("mutantsNoneBtn").onclick = () => {
-      visibleMutantIds = new Set();
-      grid.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = false));
-      updateMutantToggleCount();
-      renderComparisonSection();
-      renderDatasetSections();
-      refreshCompareTabIfLoaded();
-      refreshAllRunsTabIfLoaded();
-    };
+    function applyVisibility(ids) {
+      visibleMutantIds = new Set(ids);
+      grid.querySelectorAll("label").forEach((lbl) => {
+        const mid = Number(lbl.dataset.mutantId);
+        lbl.querySelector("input[type=checkbox]").checked = visibleMutantIds.has(mid);
+      });
+      refreshAfterVisibilityChange();
+    }
+
+    document.getElementById("mutantsAllBtn").onclick = () => applyVisibility(allMutantIds);
+    document.getElementById("mutantsNoneBtn").onclick = () => applyVisibility([]);
+    const trainBtn = document.getElementById("mutantsTrainBtn");
+    const testBtn = document.getElementById("mutantsTestBtn");
+    trainBtn.disabled = trainIds.length === 0;
+    testBtn.disabled = testIds.length === 0;
+    trainBtn.onclick = () => applyVisibility(trainIds);
+    testBtn.onclick = () => applyVisibility(testIds);
+
     document.getElementById("mutantFilterInput").oninput = (e) => {
       const q = e.target.value.trim();
       grid.querySelectorAll("label").forEach((lbl) => {
@@ -880,6 +981,66 @@
 
   function visibleSortedMutantIds(ids) {
     return ids.filter((id) => visibleMutantIds.has(id)).sort((a, b) => a - b);
+  }
+
+  /**
+   * Maps mutant id -> `true` (trained on) / `false` (test set), from the significance-capable
+   * dataset's currently selected run. Empty if that dataset isn't loaded, has no significance.json,
+   * or that file predates the `trainedMutantIds`/`testMutantIds` fields.
+   */
+  function computeMutantSplit() {
+    const split = new Map();
+    const ds = DATASETS.find((d) => d.significancePathForRun);
+    if (!ds || !ds.significance) return split;
+    (ds.significance.trainedMutantIds || []).forEach((mid) => split.set(mid, true));
+    (ds.significance.testMutantIds || []).forEach((mid) => split.set(mid, false));
+    return split;
+  }
+
+  /** Splits `ids` into `{ train, test, other }` per [computeMutantSplit]'s `split` map, each kept in ascending order. */
+  function bucketMutantIds(ids, split) {
+    const train = [], test = [], other = [];
+    ids.forEach((mid) => {
+      const v = split.get(mid);
+      (v === true ? train : v === false ? test : other).push(mid);
+    });
+    return { train, test, other };
+  }
+
+  /**
+   * Flattens [bucketMutantIds] into one list ordered training-block-then-test-block-then-other,
+   * each block still ascending within itself - the physical grouping used by charts/grids that
+   * aren't independently sortable, as opposed to [mutantTagEl]'s per-row tag used where sorting by
+   * some other column must stay possible.
+   */
+  function groupedMutantOrder(ids, split) {
+    const b = bucketMutantIds(ids, split);
+    return b.train.concat(b.test, b.other);
+  }
+
+  /** A small "Train"/"Test" pill for `mid`, or `null` if `mid` isn't part of `split` at all. */
+  function mutantTagEl(mid, split) {
+    const v = split.get(mid);
+    if (v === undefined) return null;
+    const tag = document.createElement("span");
+    tag.className = "mutant-tag " + (v ? "train" : "test");
+    tag.textContent = v ? "Train" : "Test";
+    return tag;
+  }
+
+  /**
+   * A full-width divider row for a `<table>` whose rows are physically grouped into blocks (not
+   * independently sortable) - `colSpan` columns wide, labeled and colored by `kind`
+   * ("train"/"test"/"other").
+   */
+  function mutantGroupRow(kind, label, colSpan) {
+    const tr = document.createElement("tr");
+    tr.className = "mutant-group-row " + kind;
+    const td = document.createElement("td");
+    td.colSpan = colSpan;
+    td.textContent = label;
+    tr.appendChild(td);
+    return tr;
   }
 
   // ------------------------------------------------- significance (from run_<id>/significance.json)
@@ -964,14 +1125,18 @@
     const container = document.getElementById("comparisonTables");
     container.innerHTML = "";
 
-    const mids = visibleSortedMutantIds(ds.mutantIds).filter((mid) => sig.has(mid));
-    if (!mids.length) {
+    const visibleMids = visibleSortedMutantIds(ds.mutantIds).filter((mid) => sig.has(mid));
+    if (!visibleMids.length) {
       const p = document.createElement("p");
       p.className = "status-note";
       p.textContent = "No overlap between visible mutants, this dataset's data, and this run's tree.";
       container.appendChild(p);
       return;
     }
+
+    const split = computeMutantSplit();
+    const mutantBuckets = bucketMutantIds(visibleMids, split);
+    const mids = groupedMutantOrder(visibleMids, split);
 
     const estimators = SIGNIFICANCE_ESTIMATORS;
 
@@ -983,9 +1148,10 @@
     const mutantTh = el("th", "Mutant");
     mutantTh.rowSpan = 2;
     groupTr.appendChild(mutantTh);
+    const randomStratKey = ds.expectedMap.ek;
     estimators.forEach((est) => {
       const th = el("th group-sep group-header", est.label);
-      th.colSpan = 3;
+      th.colSpan = est.key === "ek" ? 3 : 4;
       groupTr.appendChild(th);
     });
     thead.appendChild(groupTr);
@@ -999,6 +1165,11 @@
       if (stratLabel) actTh.title = "Actual mean draws-to-kill — strategy: " + stratLabel;
       subTr.appendChild(actTh);
       subTr.appendChild(el("th num", "Ratio"));
+      if (est.key !== "ek") {
+        const diffTh = el("th num", "Δ vs Random");
+        diffTh.title = "Actual mean (" + stratLabel + ") minus actual mean (Random), with that difference as a percentage of Random's actual mean — green: fewer draws than random, red: more draws than random.";
+        subTr.appendChild(diffTh);
+      }
     });
     thead.appendChild(subTr);
     table.appendChild(thead);
@@ -1009,17 +1180,34 @@
           estimators.flatMap((est) => {
             const stratKey = ds.expectedMap[est.key];
             const stratLabel = stratKey ? (ds.strategies.find((s) => s.key === stratKey) || {}).label : null;
-            return [
+            const cols = [
               est.label + " expected",
               est.label + " actual" + (stratLabel ? " (" + stratLabel + ")" : ""),
               est.label + " actual/expected",
             ];
+            if (est.key !== "ek") cols.push(est.label + " actual minus random actual", est.label + " vs random (%)");
+            return cols;
           })),
     ];
+    const colCount = 1 + estimators.reduce((n, est) => n + (est.key === "ek" ? 3 : 4), 0);
+    const trainSet = new Set(mutantBuckets.train);
+    const testSet = new Set(mutantBuckets.test);
+    let lastGroup = null;
     mids.forEach((mid) => {
+      if (split.size > 0) {
+        const group = trainSet.has(mid) ? "train" : testSet.has(mid) ? "test" : "other";
+        if (group !== lastGroup) {
+          const label =
+              group === "train" ? "Training mutants" : group === "test" ? "Test mutants" : "Not in this run's split";
+          tbody.appendChild(mutantGroupRow(group, label, colCount));
+          lastGroup = group;
+        }
+      }
       const tr = document.createElement("tr");
       tr.appendChild(el("td", "Mutant " + mid));
       const csvRow = [mid];
+      const randomActualStats = randomStratKey ? (ds.data[mid] || {})[randomStratKey] : null;
+      const randomActual = randomActualStats ? randomActualStats.mean : null;
       estimators.forEach((est) => {
         const expected = sig.get(mid)[est.key];
         const stratKey = ds.expectedMap[est.key];
@@ -1031,6 +1219,15 @@
         const ratioTd = el("td num " + ratioClass(ratio), fmtRatio(ratio));
         tr.appendChild(ratioTd);
         csvRow.push(expected, actual, ratio);
+        if (est.key !== "ek") {
+          const diff = actual !== null && randomActual !== null ? actual - randomActual : null;
+          const relDiff = diff !== null && randomActual ? diff / randomActual : null;
+          const diffText = diff === null ? "—" : fmtSignedFloat(diff, 1) + " (" + fmtSignedPercent(relDiff) + ")";
+          const diffTd = el("td num", diffText);
+          diffTd.style.cssText = diffCellStyle(relDiff);
+          tr.appendChild(diffTd);
+          csvRow.push(diff, relDiff);
+        }
       });
       tbody.appendChild(tr);
       csvRows.push(csvRow);
@@ -1071,17 +1268,26 @@
    * per strategy, colored by strategy index (fixed across groups/runs). `labelFn` defaults to
    * "Mutant <id>" for the original (per-mutant) call sites; pass one explicitly for any other kind
    * of id (e.g. a suite size).
+   *
+   * `split` (from [computeMutantSplit]) is optional and only meaningful when `ids` are mutant ids:
+   * when given, each group also gets a `mutantGroup` ("train"/"test"/"other") that [drawBoxplot]
+   * uses to draw a divider and color-code the group's label - omit it for non-mutant ids (e.g. the
+   * Kills per Size tab's suite sizes).
    */
-  function buildCombinedGroups(dsData, strategies, ids, labelFn) {
+  function buildCombinedGroups(dsData, strategies, ids, labelFn, split) {
     labelFn = labelFn || ((id) => "Mutant " + id);
-    return ids.map((id) => ({
-      label: labelFn(id),
-      boxes: strategies.map((s, i) => ({
-        label: s.label,
-        color: SERIES_COLORS[i % SERIES_COLORS.length],
-        stats: (dsData[id] || {})[s.key] || null,
-      })),
-    }));
+    return ids.map((id) => {
+      const v = split ? split.get(id) : undefined;
+      return {
+        label: labelFn(id),
+        mutantGroup: split ? (v === true ? "train" : v === false ? "test" : "other") : null,
+        boxes: strategies.map((s, i) => ({
+          label: s.label,
+          color: SERIES_COLORS[i % SERIES_COLORS.length],
+          stats: (dsData[id] || {})[s.key] || null,
+        })),
+      };
+    });
   }
 
   /** Largest `.max` across every strategy of every given mutant, or 1 if none have data (keeps the y-axis sane on an empty chart). */
@@ -1144,10 +1350,24 @@
     ctx.lineTo(width - marginRight, marginTop + plotH);
     ctx.stroke();
 
+    const groupColor = (mutantGroup) =>
+        mutantGroup === "train" ? cssVar("--group-train") :
+        mutantGroup === "test" ? cssVar("--group-test") : c.title;
+
     const rects = [];
     groups.forEach((g, gi) => {
       const gx0 = marginLeft + (gi * plotW) / groups.length;
       const gw = plotW / groups.length;
+
+      if (gi > 0 && g.mutantGroup !== groups[gi - 1].mutantGroup) {
+        ctx.save();
+        ctx.strokeStyle = c.border;
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(gx0, marginTop); ctx.lineTo(gx0, marginTop + plotH); ctx.stroke();
+        ctx.restore();
+      }
+
       const n = g.boxes.length;
       const totalBoxesWidth = n * boxWidth + (n - 1) * boxGap;
       let bx = gx0 + (gw - totalBoxesWidth) / 2;
@@ -1158,7 +1378,7 @@
         }
         bx += boxWidth + boxGap;
       });
-      ctx.fillStyle = c.title;
+      ctx.fillStyle = groupColor(g.mutantGroup);
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.font = "11px system-ui, sans-serif";
@@ -1374,7 +1594,7 @@
    * @param csvName Download filename for the CSV export button.
    */
   function renderGenericSummaryTable({
-    container, rowIds, rowLabel, rowHeaderText, strategies, statsFor, sortStateHolder, sortStateKey, csvName,
+    container, rowIds, rowLabel, rowHeaderText, strategies, statsFor, sortStateHolder, sortStateKey, csvName, rowTagFn,
   }) {
     const sortState = sortStateHolder[sortStateKey] || (sortStateHolder[sortStateKey] = { key: "__row", dir: "asc" });
 
@@ -1445,6 +1665,10 @@
         const tr = document.createElement("tr");
         const rtd = document.createElement("td");
         rtd.textContent = rowLabel(rowId);
+        if (rowTagFn) {
+          const tag = rowTagFn(rowId);
+          if (tag) rtd.appendChild(tag);
+        }
         tr.appendChild(rtd);
         strategies.forEach((strat) => {
           const s = statsFor(rowId)[strat.key];
@@ -1502,6 +1726,7 @@
   }
 
   function renderSummaryTable(ds, container, mids) {
+    const split = computeMutantSplit();
     renderGenericSummaryTable({
       container,
       rowIds: mids,
@@ -1512,6 +1737,7 @@
       sortStateHolder: ds,
       sortStateKey: "_sortState",
       csvName: "time_to_kill_summary_" + ds.id + ".csv",
+      rowTagFn: (mid) => mutantTagEl(mid, split),
     });
   }
 
@@ -1556,6 +1782,7 @@
         ds.dir = ds.dirForRun(ds.selectedRunId);
         select.disabled = true;
         Promise.all([loadDataset(ds), loadSignificance(ds), loadSizeDataset(ds)]).then(() => {
+          renderMutantToggle();
           renderDatasetSections();
           renderComparisonSection();
           renderSizesTab();
@@ -1574,7 +1801,8 @@
       return card;
     }
 
-    const mids = visibleSortedMutantIds(ds.mutantIds);
+    const split = computeMutantSplit();
+    const mids = groupedMutantOrder(visibleSortedMutantIds(ds.mutantIds), split);
     if (!mids.length) {
       const p = document.createElement("p");
       p.className = "status-note";
@@ -1610,7 +1838,7 @@
 
     const globalMax = maxStat(ds.data, ds.strategies, mids);
 
-    const groups = buildCombinedGroups(ds.data, ds.strategies, mids);
+    const groups = buildCombinedGroups(ds.data, ds.strategies, mids, null, split);
     requestAnimationFrame(() => {
       drawBoxplot(combinedCanvas, groups, { yMax: globalMax, height: 320 });
       wireTooltip(combinedCanvas, ds.unit);
@@ -1631,11 +1859,28 @@
 
     const grid = document.createElement("div");
     grid.className = "mutant-grid";
+    const mutantBuckets = bucketMutantIds(mids, split);
+    const trainSet = new Set(mutantBuckets.train);
+    const testSet = new Set(mutantBuckets.test);
+    let lastGridGroup = null;
     mids.forEach((mid) => {
+      if (split.size > 0) {
+        const group = trainSet.has(mid) ? "train" : testSet.has(mid) ? "test" : "other";
+        if (group !== lastGridGroup) {
+          const divider = document.createElement("div");
+          divider.className = "mutant-grid-divider " + group;
+          divider.textContent = group === "train" ? "Training mutants" : group === "test" ? "Test mutants" : "Not in this run's split";
+          grid.appendChild(divider);
+          lastGridGroup = group;
+        }
+      }
+
       const mcard = document.createElement("div");
       mcard.className = "mutant-card";
       const h4 = document.createElement("h4");
       h4.textContent = "Mutant " + mid;
+      const tag = mutantTagEl(mid, split);
+      if (tag) h4.appendChild(tag);
       mcard.appendChild(h4);
 
       const wrap = document.createElement("div");
@@ -1925,7 +2170,8 @@
     const idSet = new Set();
     compareDataA.mutantIds.forEach((id) => idSet.add(id));
     compareDataB.mutantIds.forEach((id) => idSet.add(id));
-    const mids = visibleSortedMutantIds(Array.from(idSet));
+    const split = computeMutantSplit();
+    const mids = groupedMutantOrder(visibleSortedMutantIds(Array.from(idSet)), split);
 
     if (!mids.length) {
       const p = document.createElement("p");
@@ -1970,9 +2216,25 @@
         ])
       ),
     ];
+    const compareColCount = 1 + ds.strategies.length * 3;
+    const compareBuckets = bucketMutantIds(mids, split);
+    const compareTrainSet = new Set(compareBuckets.train);
+    const compareTestSet = new Set(compareBuckets.test);
+    let lastCompareGroup = null;
     mids.forEach((mid) => {
+      if (split.size > 0) {
+        const group = compareTrainSet.has(mid) ? "train" : compareTestSet.has(mid) ? "test" : "other";
+        if (group !== lastCompareGroup) {
+          const label = group === "train" ? "Training mutants" : group === "test" ? "Test mutants" : "Not in this run's split";
+          tbody.appendChild(mutantGroupRow(group, label, compareColCount));
+          lastCompareGroup = group;
+        }
+      }
       const tr = document.createElement("tr");
-      tr.appendChild(el("td", "Mutant " + mid));
+      const mutantCell = el("td", "Mutant " + mid);
+      const tag = mutantTagEl(mid, split);
+      if (tag) mutantCell.appendChild(tag);
+      tr.appendChild(mutantCell);
       const csvRow = [mid];
       ds.strategies.forEach((s) => {
         const statA = (compareDataA.data[mid] || {})[s.key];
@@ -2037,7 +2299,7 @@
       inner.appendChild(canvas);
       wrap.appendChild(inner);
       col.appendChild(wrap);
-      const groups = buildCombinedGroups(dataObj.data, ds.strategies, mids);
+      const groups = buildCombinedGroups(dataObj.data, ds.strategies, mids, null, split);
       requestAnimationFrame(() => {
         drawBoxplot(canvas, groups, { yMax: globalMax, height: 300 });
         wireTooltip(canvas, ds.unit);
@@ -2140,9 +2402,26 @@
     const csvRows = [
       ["Mutant"].concat(groups.flatMap((g) => [g.label + " mean", g.label + " median", g.label + " stddev"])),
     ];
+    const split = computeMutantSplit();
+    const statsColCount = 1 + groups.length * 3;
+    const statsBuckets = bucketMutantIds(mids, split);
+    const statsTrainSet = new Set(statsBuckets.train);
+    const statsTestSet = new Set(statsBuckets.test);
+    let lastStatsGroup = null;
     mids.forEach((mid) => {
+      if (split.size > 0) {
+        const group = statsTrainSet.has(mid) ? "train" : statsTestSet.has(mid) ? "test" : "other";
+        if (group !== lastStatsGroup) {
+          const label = group === "train" ? "Training mutants" : group === "test" ? "Test mutants" : "Not in this run's split";
+          tbody.appendChild(mutantGroupRow(group, label, statsColCount));
+          lastStatsGroup = group;
+        }
+      }
       const tr = document.createElement("tr");
-      tr.appendChild(el("td", "Mutant " + mid));
+      const mutantCell = el("td", "Mutant " + mid);
+      const tag = mutantTagEl(mid, split);
+      if (tag) mutantCell.appendChild(tag);
+      tr.appendChild(mutantCell);
       const csvRow = [mid];
       groups.forEach((g) => {
         const values = valueFn(mid, g.key);
@@ -2184,7 +2463,7 @@
 
     const idSet = new Set();
     allRunsData.forEach(({ ttk }) => { if (ttk.available) ttk.mutantIds.forEach((id) => idSet.add(id)); });
-    const mids = visibleSortedMutantIds(Array.from(idSet));
+    const mids = groupedMutantOrder(visibleSortedMutantIds(Array.from(idSet)), computeMutantSplit());
 
     if (!mids.length) {
       const p = document.createElement("p");

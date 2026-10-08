@@ -259,6 +259,20 @@ val runG0MutantCoverageReplay by
       // args = listOf("--runId=8", "--bufferProcessors=2")
     }
 
+val runG0DivergenceLeadTimeAnalysis by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Coordinator: for every tick whose next tick was recorded as a G0 (Accidents) failure, spawns one worker process per available core to sweep that tick's own original mutant backward through lead times (0.0, 0.1, 0.2s, ...) to find the lead time at which it stops reproducing the recorded failure, then aggregates a summary to help pick a lead-time threshold for runG0MutantCoverageReplay."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunG0DivergenceLeadTimeAnalysisKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // args = listOf("--runId=8", "--bufferProcessors=2")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
