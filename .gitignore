@@ -28,3 +28,11 @@
 !/postEvaluation/g0_mutant_coverage_replay/
 /postEvaluation/g0_mutant_coverage_replay/*
 !/postEvaluation/g0_mutant_coverage_replay/index.html
+
+!/postEvaluation/g0_lead_time_divergence/
+/postEvaluation/g0_lead_time_divergence/*
+!/postEvaluation/g0_lead_time_divergence/index.html
+
+!/postEvaluation/g0_full_lead_time_sweep/
+/postEvaluation/g0_full_lead_time_sweep/*
+!/postEvaluation/g0_full_lead_time_sweep/index.html

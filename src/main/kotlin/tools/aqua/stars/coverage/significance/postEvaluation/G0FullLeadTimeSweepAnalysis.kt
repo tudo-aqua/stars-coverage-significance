@@ -31,11 +31,10 @@ import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
 import tools.aqua.stars.coverage.significance.db.dataclasses.MetricFailedMonitorsEntry
 import tools.aqua.stars.coverage.significance.db.repositories.MetricFailedMonitorsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingConfigurationRepository
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.DivergenceStopReason
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0DivergenceLeadTimeMutantStats
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0DivergenceLeadTimeSummary
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.LeadTimeStepResult
-import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickG0DivergenceResult
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0FullLeadTimeSweepMutantStats
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0FullLeadTimeSweepSummary
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.LeadTimeSweepStepResult
+import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickG0FullSweepResult
 import tools.aqua.stars.coverage.significance.tsc.g0Accidents
 import tools.aqua.stars.coverage.significance.utils.jsonConfiguration
 import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
@@ -44,19 +43,31 @@ import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
  * For every recorded tick (`metric_failed_monitors` row) whose *next* tick was flagged as a G0
  * (Accidents) failure during the original evaluation run, replays that exact recorded scene's own
  * original mutant (`tick.mutantId`) repeatedly, stepping the reconstruction *backward* in the
- * simulation's native 0.1s step length (0.0, 0.1, 0.2, ...) via [LeadTimeReplay] +
- * `LibsumoDynamicDataCollector.replayFromTickForDuration`, to find the per-tick "divergence lead
- * time" — the first lead time at which that same mutant, given more run-up time, no longer
- * reproduces the recorded accident.
+ * simulation's native 0.1s step length (0.0, 0.1, 0.2, ...) all the way to the start of the
+ * recorded scenario, via [LeadTimeReplay] +
+ * `LibsumoDynamicDataCollector.replayFromTickForDuration`.
  *
- * This answers a different question than
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]: that
- * analysis asks "which mutants also fail on this exact scene, at one caller-chosen lead time?";
- * this one asks "how much lead time can the *original* mutant tolerate before it stops reproducing
- * its own known failure?" — collecting that across every flagged tick gives a distribution to pick
- * a sensible lead-time threshold from for the other analysis's `--leadTimeSeconds` flag: large
- * enough to give a substituted mutant meaningful reaction time, small enough that the original
- * mutant still reliably reproduces its own recorded failures at that lead time.
+ * This differs from
+ * [tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis] in one
+ * crucial way: that analysis stops at the *first* lead time that fails to reproduce the recorded
+ * failure, implicitly assuming reproduction decays monotonically as lead time grows. But the
+ * autopilot under test (and the mutants substituted for it) are state-based, and so is the
+ * surrounding traffic's behavior — a different (earlier) starting point is a genuinely different
+ * trajectory, not "more of the same, with extra steps prepended," so there's no a priori reason
+ * reproduction can't turn back on at an even earlier lead time after failing to reproduce at a
+ * nearer one. This analysis sweeps every lead time unconditionally to find:
+ * 1. The *minimum* and *maximum* lead time at which the original mutant still reproduces the
+ *    recorded failure ([TickG0FullSweepResult.minReproducingLeadTimeSeconds] /
+ *    [TickG0FullSweepResult.maxReproducingLeadTimeSeconds]) — not just the first point of
+ *    departure.
+ * 2. Whether reproduction is actually monotonic in lead time at all
+ *    ([TickG0FullSweepResult.isMonotonic]) — direct evidence for or against the assumption the
+ *    other analysis makes.
+ *
+ * Because it never stops early, this analysis does strictly more simulation work per tick than
+ * [tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis] — every tick
+ * is swept all the way back to its scenario's start, where that analysis often stops after just a
+ * few steps. Expect a correspondingly longer total run time.
  *
  * Shares the same `g0Accidents.holds(nextTick)` reasoning (safe without the full `TSCEvaluation`
  * framework) and one-process-per-core parallelism rationale as
@@ -65,22 +76,22 @@ import tools.aqua.stars.data.sumo.libSumo.LibsumoDynamicDataCollector
  * Nth flagged tick; [aggregate] reads every worker's streamed NDJSON detail file back and writes
  * one summary JSON.
  */
-object G0DivergenceLeadTimeAnalysis {
+object G0FullLeadTimeSweepAnalysis {
 
-  private fun basePath(): Path = Path.of(POST_EVALUATION_BASE_DIR, "g0_lead_time_divergence")
+  private fun basePath(): Path = Path.of(POST_EVALUATION_BASE_DIR, "g0_full_lead_time_sweep")
 
   private fun detailDir(): Path = basePath().resolve("details")
 
   /** Detail (NDJSON) file path for one worker's share of ticks. */
   private fun detailFilePath(runId: Int?, workerId: Int): Path =
       detailDir()
-          .resolve("g0_lead_time_divergence_${runId?.toString() ?: "all"}_worker$workerId.jsonl")
+          .resolve("g0_full_lead_time_sweep_${runId?.toString() ?: "all"}_worker$workerId.jsonl")
 
   /**
    * Worker entry point: sweeps this worker's deterministic share of flagged ticks (every tick at
-   * index `i` where `i % numWorkers == workerId`, ticks ordered by id) backward through lead times
-   * against each tick's own original mutant, streaming one [TickG0DivergenceResult] per line to
-   * this worker's own detail file as each tick completes.
+   * index `i` where `i % numWorkers == workerId`, ticks ordered by id) all the way backward to
+   * their scenario's start against each tick's own original mutant, streaming one
+   * [TickG0FullSweepResult] per line to this worker's own detail file as each tick completes.
    *
    * @param runId Evaluation run id to restrict to, or `null` to include every run's flagged ticks.
    * @param workerId This worker's index, in `0 until numWorkers`.
@@ -95,17 +106,18 @@ object G0DivergenceLeadTimeAnalysis {
             (runId?.let { " for runId=$it" } ?: " across all runs") +
             ".")
 
-    analyzeTicks(ticks = myTicks, runId = runId, workerId = workerId)
+    sweepTicks(ticks = myTicks, runId = runId, workerId = workerId)
   }
 
   /**
-   * Runs the backward lead-time sweep for every tick in [ticks] against its own original mutant,
-   * streaming one [TickG0DivergenceResult] per line to this worker's detail file as each tick
-   * completes.
+   * Runs the full backward lead-time sweep for every tick in [ticks] against its own original
+   * mutant, streaming one [TickG0FullSweepResult] per line to this worker's detail file as each
+   * tick completes.
    *
    * Holds the actual sweep work factored out of [runWorkerSlice] so it can also be driven manually
-   * — e.g. to re-sweep a single tick — without going through the `numWorkers`/`workerId` slicing
-   * [runWorkerSlice] uses to split the full set of flagged ticks across worker processes.
+   * — e.g. to re-sweep just the ticks [G0FullLeadTimeSweepSummary.nonMonotonicTickIds] flagged for
+   * closer inspection — without going through the `numWorkers`/`workerId` slicing [runWorkerSlice]
+   * uses to split the full set of flagged ticks across worker processes.
    *
    * @param ticks The ticks to sweep, in order.
    * @param runId Evaluation run id the ticks were restricted to, or `null` for every run — only
@@ -113,7 +125,7 @@ object G0DivergenceLeadTimeAnalysis {
    * @param workerId Identifies the detail file this call writes/appends to, and is used in log
    *   output — for a manual, non-worker call, any id not colliding with a real worker's is fine.
    */
-  fun analyzeTicks(ticks: List<MetricFailedMonitorsEntry>, runId: Int?, workerId: Int) {
+  fun sweepTicks(ticks: List<MetricFailedMonitorsEntry>, runId: Int?, workerId: Int) {
     val collector = LibsumoDynamicDataCollector()
     // Many flagged ticks in a row often share a scenario/mutant (an accident tends to be flagged
     // over several consecutive ticks) - avoid re-querying the same candidate pool for each.
@@ -136,61 +148,63 @@ object G0DivergenceLeadTimeAnalysis {
               LeadTimeReplay.candidatesFor(tick)
             }
 
-        val steps = mutableListOf<LeadTimeStepResult>()
+        val steps = mutableListOf<LeadTimeSweepStepResult>()
         var previousStartTickId: Long? = null
-        var stopReason: DivergenceStopReason
-        var divergenceLeadTimeSeconds: Double? = null
         // Integer tenths of a second, to step in exact 0.1s increments without floating-point
         // drift from repeatedly adding 0.1.
         var tenths = 0
 
+        // Unlike G0DivergenceLeadTimeAnalysis, this loop never stops early on a diverged or
+        // inconclusive step - only once there's no earlier recorded tick left to step back to.
         while (true) {
           val leadTimeSeconds = tenths / 10.0
           val startTick = LeadTimeReplay.findStartTick(tick, leadTimeSeconds, candidates)
           val startTickId = checkNotNull(startTick.id)
-          if (previousStartTickId != null && startTickId == previousStartTickId) {
-            stopReason = DivergenceStopReason.REACHED_SCENARIO_START
-            break
-          }
+          if (previousStartTickId != null && startTickId == previousStartTickId) break
           previousStartTickId = startTickId
 
           val stepCount = LeadTimeReplay.stepCountThroughOriginal(tick, startTick)
           val replaySteps =
               collector.replayFromTickForDuration(
                   tick.runId, startTick, scenario, tick.mutantId, stepCount)
-          if (replaySteps.isEmpty()) {
-            stopReason = DivergenceStopReason.EGO_LEFT_SIMULATION
-            break
-          }
-
-          val g0Failed = replaySteps.any { !g0Accidents.holds(it) }
-          steps += LeadTimeStepResult(leadTimeSeconds, startTickId, stepCount, g0Failed)
-
-          if (!g0Failed) {
-            stopReason = DivergenceStopReason.DIVERGED
-            divergenceLeadTimeSeconds = leadTimeSeconds
-            break
-          }
+          // null (inconclusive) rather than stopping the sweep: this specific starting point left
+          // the ego stranded, but a different (earlier) one is a different trajectory and may not.
+          val g0Failed =
+              if (replaySteps.isEmpty()) null else replaySteps.any { !g0Accidents.holds(it) }
+          steps += LeadTimeSweepStepResult(leadTimeSeconds, startTickId, stepCount, g0Failed)
           tenths++
         }
 
+        val reproducingSteps = steps.filter { it.g0Failed == true }
+        val divergedSteps = steps.filter { it.g0Failed == false }
+        val inconclusiveSteps = steps.filter { it.g0Failed == null }
+        val minReproducing = reproducingSteps.minOfOrNull { it.leadTimeSeconds }
+        val maxReproducing = reproducingSteps.maxOfOrNull { it.leadTimeSeconds }
+        val isMonotonic = isMonotonicallyReproducing(steps)
+
         println(
             "[worker-$workerId] Tick $tickId (tick=${tick.tick}, run=${tick.runId}, " +
-                "mutant=${tick.mutantId}): ${steps.size} lead-time step(s) replayed, " +
-                "stopReason=$stopReason" +
-                (divergenceLeadTimeSeconds?.let { ", divergenceLeadTimeSeconds=$it" } ?: "") +
+                "mutant=${tick.mutantId}): ${steps.size} lead-time step(s) swept, " +
+                "reproducing=${reproducingSteps.size} diverged=${divergedSteps.size} " +
+                "inconclusive=${inconclusiveSteps.size} isMonotonic=$isMonotonic" +
+                (minReproducing?.let { ", min=$it" } ?: "") +
+                (maxReproducing?.let { ", max=$it" } ?: "") +
                 ".")
 
         val result =
-            TickG0DivergenceResult(
+            TickG0FullSweepResult(
                 tickId = tickId,
                 originalTick = tick.tick,
                 runId = tick.runId,
                 scenarioConfigId = tick.scenarioConfigId,
                 originalMutantId = tick.mutantId,
                 steps = steps,
-                divergenceLeadTimeSeconds = divergenceLeadTimeSeconds,
-                stopReason = stopReason,
+                minReproducingLeadTimeSeconds = minReproducing,
+                maxReproducingLeadTimeSeconds = maxReproducing,
+                reproducingCount = reproducingSteps.size,
+                divergedCount = divergedSteps.size,
+                inconclusiveCount = inconclusiveSteps.size,
+                isMonotonic = isMonotonic,
             )
         writer.write(jsonConfiguration.encodeToString(result))
         writer.newLine()
@@ -201,13 +215,32 @@ object G0DivergenceLeadTimeAnalysis {
   }
 
   /**
+   * `false` iff, scanning [steps] in increasing lead-time order (ignoring `g0Failed == null`
+   * steps), a reproducing (`true`) step is ever found after a diverged (`false`) one — i.e.
+   * reproduction "turned back on" at a larger lead time after turning off at a smaller one.
+   * Vacuously `true` if every non-null step agrees (including when there are none, or only one
+   * kind).
+   */
+  private fun isMonotonicallyReproducing(steps: List<LeadTimeSweepStepResult>): Boolean {
+    var seenDiverged = false
+    for (step in steps) {
+      when (step.g0Failed) {
+        true -> if (seenDiverged) return false
+        false -> seenDiverged = true
+        null -> Unit
+      }
+    }
+    return true
+  }
+
+  /**
    * Finds every worker detail file for [runId] currently on disk, by directory listing rather than
    * an assumed `0 until numWorkers` range — same rationale as
    * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]'s
    * `discoverDetailFiles`.
    */
   private fun discoverDetailFiles(runId: Int?): List<Path> {
-    val prefix = "g0_lead_time_divergence_${runId?.toString() ?: "all"}_worker"
+    val prefix = "g0_full_lead_time_sweep_${runId?.toString() ?: "all"}_worker"
     val dir = detailDir()
     if (!dir.exists()) return emptyList()
     return Files.list(dir).use { stream ->
@@ -229,7 +262,7 @@ object G0DivergenceLeadTimeAnalysis {
 
   /**
    * [histogram] (grouped-by-value counts) and [percentiles] (see [nearestRankPercentile]) over a
-   * divergence-lead-time list — shared between the overall summary and each mutant's own breakdown.
+   * lead-time list — shared between the overall summary and each mutant's own breakdown.
    */
   private fun histogramAndPercentiles(
       leadTimes: List<Double>
@@ -248,51 +281,30 @@ object G0DivergenceLeadTimeAnalysis {
   /** Mutable per-mutant running totals accumulated while scanning detail files in [aggregate]. */
   private class MutantAccumulator {
     var totalTicks = 0
-    var divergedCount = 0
-    var immediateDivergenceCount = 0
-    var egoLeftSimulationCount = 0
-    var reachedScenarioStartCount = 0
     var neverReproducedCount = 0
-    val divergenceLeadTimes = mutableListOf<Double>()
-    val maxReproducingLeadTimes = mutableListOf<Double>()
+    var nonMonotonicCount = 0
+    val minLeadTimes = mutableListOf<Double>()
+    val maxLeadTimes = mutableListOf<Double>()
   }
-
-  /**
-   * The highest lead time at which [tick]'s replay still reproduced the recorded failure, derived
-   * from its already-recorded [TickG0DivergenceResult.steps] (every step before the one that
-   * stopped the sweep has `g0Failed == true`) — `null` if no lead time (not even 0.0) reproduced
-   * it. See [G0DivergenceLeadTimeMutantStats.maxReproducingLeadTimeHistogram].
-   */
-  private fun maxReproducingLeadTimeSeconds(tick: TickG0DivergenceResult): Double? =
-      if (tick.stopReason == DivergenceStopReason.DIVERGED) {
-        // The last step is the diverging (g0Failed == false) one - the step right before it, if
-        // any, is the highest lead time that still reproduced the failure.
-        tick.steps.getOrNull(tick.steps.size - 2)?.leadTimeSeconds
-      } else {
-        // EGO_LEFT_SIMULATION / REACHED_SCENARIO_START: every recorded step (if any) succeeded.
-        tick.steps.lastOrNull()?.leadTimeSeconds
-      }
 
   /**
    * Coordinator-side aggregation: reads every worker's detail file (written by [runWorkerSlice],
    * discovered via [discoverDetailFiles]) back in, line by line, and writes one
-   * [G0DivergenceLeadTimeSummary] JSON.
+   * [G0FullLeadTimeSweepSummary] JSON.
    *
    * Can be run standalone against an existing `details/` folder to cheaply regenerate the summary
    * without re-running the (potentially multi-hour) sweep that produced the detail files.
    *
    * @param runId Evaluation run id the analysis was restricted to, or `null` for every run.
-   * @return The written [G0DivergenceLeadTimeSummary].
+   * @return The written [G0FullLeadTimeSweepSummary].
    */
-  fun aggregate(runId: Int?): G0DivergenceLeadTimeSummary {
+  fun aggregate(runId: Int?): G0FullLeadTimeSweepSummary {
     var totalTicksAnalyzed = 0
-    var divergedCount = 0
-    var immediateDivergenceCount = 0
-    var egoLeftSimulationCount = 0
-    var reachedScenarioStartCount = 0
     var neverReproducedCount = 0
-    val divergenceLeadTimes = mutableListOf<Double>()
-    val maxReproducingLeadTimes = mutableListOf<Double>()
+    var nonMonotonicCount = 0
+    val nonMonotonicTickIds = mutableListOf<Long>()
+    val minLeadTimes = mutableListOf<Double>()
+    val maxLeadTimes = mutableListOf<Double>()
     val byMutant = mutableMapOf<Int, MutantAccumulator>()
 
     val detailFiles = discoverDetailFiles(runId)
@@ -301,91 +313,72 @@ object G0DivergenceLeadTimeAnalysis {
     for (path in detailFiles) {
       path.forEachLine { line ->
         if (line.isBlank()) return@forEachLine
-        val tick = jsonConfiguration.decodeFromString<TickG0DivergenceResult>(line)
+        val tick = jsonConfiguration.decodeFromString<TickG0FullSweepResult>(line)
         totalTicksAnalyzed++
         val mutantAcc = byMutant.getOrPut(tick.originalMutantId) { MutantAccumulator() }
         mutantAcc.totalTicks++
 
-        when (tick.stopReason) {
-          DivergenceStopReason.DIVERGED -> {
-            divergedCount++
-            mutantAcc.divergedCount++
-            val leadTime = checkNotNull(tick.divergenceLeadTimeSeconds)
-            divergenceLeadTimes += leadTime
-            mutantAcc.divergenceLeadTimes += leadTime
-            if (leadTime == 0.0) {
-              immediateDivergenceCount++
-              mutantAcc.immediateDivergenceCount++
-            }
-          }
-          DivergenceStopReason.EGO_LEFT_SIMULATION -> {
-            egoLeftSimulationCount++
-            mutantAcc.egoLeftSimulationCount++
-          }
-          DivergenceStopReason.REACHED_SCENARIO_START -> {
-            reachedScenarioStartCount++
-            mutantAcc.reachedScenarioStartCount++
-          }
+        if (!tick.isMonotonic) {
+          nonMonotonicCount++
+          nonMonotonicTickIds += tick.tickId
+          mutantAcc.nonMonotonicCount++
         }
 
-        val maxReproducing = maxReproducingLeadTimeSeconds(tick)
-        if (maxReproducing == null) {
+        if (tick.minReproducingLeadTimeSeconds == null) {
           neverReproducedCount++
           mutantAcc.neverReproducedCount++
         } else {
-          maxReproducingLeadTimes += maxReproducing
-          mutantAcc.maxReproducingLeadTimes += maxReproducing
+          minLeadTimes += tick.minReproducingLeadTimeSeconds
+          maxLeadTimes += checkNotNull(tick.maxReproducingLeadTimeSeconds)
+          mutantAcc.minLeadTimes += tick.minReproducingLeadTimeSeconds
+          mutantAcc.maxLeadTimes += tick.maxReproducingLeadTimeSeconds
         }
       }
     }
 
-    val (histogram, percentiles) = histogramAndPercentiles(divergenceLeadTimes)
-    val (maxReproducingLeadTimeHistogram, _) = histogramAndPercentiles(maxReproducingLeadTimes)
+    val (minLeadTimeHistogram, minLeadTimePercentiles) = histogramAndPercentiles(minLeadTimes)
+    val (maxLeadTimeHistogram, maxLeadTimePercentiles) = histogramAndPercentiles(maxLeadTimes)
 
     val mutantStats =
         byMutant.entries
             .sortedBy { it.key }
             .map { (mutantId, acc) ->
-              val (mutantHistogram, mutantPercentiles) =
-                  histogramAndPercentiles(acc.divergenceLeadTimes)
-              val (mutantMaxReproducingHistogram, _) =
-                  histogramAndPercentiles(acc.maxReproducingLeadTimes)
-              G0DivergenceLeadTimeMutantStats(
+              val (mutantMinHistogram, mutantMinPercentiles) =
+                  histogramAndPercentiles(acc.minLeadTimes)
+              val (mutantMaxHistogram, mutantMaxPercentiles) =
+                  histogramAndPercentiles(acc.maxLeadTimes)
+              G0FullLeadTimeSweepMutantStats(
                   mutantId = mutantId,
                   totalTicks = acc.totalTicks,
-                  divergedCount = acc.divergedCount,
-                  immediateDivergenceCount = acc.immediateDivergenceCount,
-                  egoLeftSimulationCount = acc.egoLeftSimulationCount,
-                  reachedScenarioStartCount = acc.reachedScenarioStartCount,
-                  histogram = mutantHistogram,
-                  percentiles = mutantPercentiles,
                   neverReproducedCount = acc.neverReproducedCount,
-                  maxReproducingLeadTimeHistogram = mutantMaxReproducingHistogram,
+                  nonMonotonicCount = acc.nonMonotonicCount,
+                  minLeadTimeHistogram = mutantMinHistogram,
+                  maxLeadTimeHistogram = mutantMaxHistogram,
+                  minLeadTimePercentiles = mutantMinPercentiles,
+                  maxLeadTimePercentiles = mutantMaxPercentiles,
               )
             }
 
     val summary =
-        G0DivergenceLeadTimeSummary(
+        G0FullLeadTimeSweepSummary(
             runId = runId,
             totalTicksAnalyzed = totalTicksAnalyzed,
-            divergedCount = divergedCount,
-            immediateDivergenceCount = immediateDivergenceCount,
-            egoLeftSimulationCount = egoLeftSimulationCount,
-            reachedScenarioStartCount = reachedScenarioStartCount,
-            divergenceLeadTimes = divergenceLeadTimes,
-            histogram = histogram,
-            percentiles = percentiles,
-            mutantStats = mutantStats,
             neverReproducedCount = neverReproducedCount,
-            maxReproducingLeadTimeHistogram = maxReproducingLeadTimeHistogram,
+            nonMonotonicCount = nonMonotonicCount,
+            nonMonotonicTickIds = nonMonotonicTickIds,
+            minLeadTimeHistogram = minLeadTimeHistogram,
+            maxLeadTimeHistogram = maxLeadTimeHistogram,
+            minLeadTimePercentiles = minLeadTimePercentiles,
+            maxLeadTimePercentiles = maxLeadTimePercentiles,
+            mutantStats = mutantStats,
         )
 
     val base = basePath()
     Files.createDirectories(base)
     val summaryPath =
-        base.resolve("g0_lead_time_divergence_summary_${runId?.toString() ?: "all"}.json")
+        base.resolve("g0_full_lead_time_sweep_summary_${runId?.toString() ?: "all"}.json")
     summaryPath.writeText(jsonConfiguration.encodeToString(summary))
-    println("Finished G0DivergenceLeadTimeAnalysis. Summary written to: $summaryPath")
+    println("Finished G0FullLeadTimeSweepAnalysis. Summary written to: $summaryPath")
     return summary
   }
 }

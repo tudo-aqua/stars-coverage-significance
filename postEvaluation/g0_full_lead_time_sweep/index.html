@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>G0 Full Lead-Time Sweep — Summary</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+
+    --status-good:     #0ca30c;
+    --status-critical: #d03b3b;
+    --status-warn:     #b8860b;
+
+    --accent-min:    #2f6fed;
+    --accent-max:    #9a3fd0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+
+      --status-good:     #2fce2f;
+      --status-critical: #e66767;
+      --status-warn:     #d9a441;
+
+      --accent-min:    #6ea8ff;
+      --accent-max:    #c988ec;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 20px clamp(16px, 4vw, 40px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  header p.subtitle { margin: 0; color: var(--text-secondary); }
+  .summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 14px;
+  }
+  .summary-tile { min-width: 120px; }
+  .summary-tile .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; }
+  .summary-tile .value { font-size: 1.15rem; font-weight: 600; }
+
+  main {
+    padding: 20px clamp(16px, 4vw, 40px) 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .card p.note { margin: 0 0 12px; font-size: 0.85rem; color: var(--text-secondary); }
+
+  label { font-size: 0.85rem; color: var(--text-secondary); }
+  input[type="text"], select, button {
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--text-secondary); }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .controls-row .spacer { flex: 1; }
+
+  #errorBanner {
+    display: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 16px 20px;
+    border-radius: 10px;
+    margin: 0 clamp(16px, 4vw, 40px);
+  }
+  #errorBanner h2 { margin: 0 0 8px; font-size: 1.05rem; }
+  #errorBanner .upload-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  #errorBanner .note { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+  #errorBanner input[type="file"] { font-size: 0.85rem; color: var(--text-primary); }
+  #errorBanner input[type="file"]::file-selector-button {
+    font: inherit;
+    cursor: pointer;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--baseline);
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin-right: 8px;
+  }
+  #errorBanner input[type="file"]::file-selector-button:hover { border-color: var(--text-secondary); }
+  code {
+    background: var(--gridline);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  table th, table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  table th { color: var(--text-muted); font-weight: 600; }
+  table td.num, table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th[data-sort-key] { cursor: pointer; user-select: none; white-space: nowrap; }
+  th[data-sort-key]:hover { color: var(--text-primary); }
+  .sort-indicator { display: inline-block; width: 1em; font-size: 0.75em; color: var(--text-muted); }
+
+  .table-scroll {
+    overflow: auto;
+    max-height: 520px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .table-scroll table { width: 100%; }
+  .table-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-1);
+    z-index: 2;
+  }
+
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 760px) {
+    .charts-row { grid-template-columns: 1fr; }
+  }
+  .chart-title { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 6px; }
+  .chart-wrap { position: relative; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart-gridline { stroke: var(--gridline); stroke-width: 1; }
+  .chart-axis-text { fill: var(--text-muted); font-size: 10px; font-family: inherit; }
+  .chart-pct-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .chart-pct-label { fill: var(--text-secondary); font-size: 10px; font-family: inherit; }
+  .bar-min { fill: var(--accent-min); }
+  .bar-min:hover { fill: var(--status-critical); }
+  .bar-max { fill: var(--accent-max); }
+  .bar-max:hover { fill: var(--status-critical); }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--page-plane);
+    font-size: 0.75rem;
+    padding: 5px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+    opacity: 0;
+    transition: opacity 0.08s;
+    z-index: 5;
+  }
+
+  .callout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .callout strong { color: var(--text-primary); }
+
+  details.ticklist summary { cursor: pointer; color: var(--text-secondary); }
+  .ticklist-box {
+    max-height: 200px;
+    overflow: auto;
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+    margin-top: 8px;
+  }
+
+  #loadingBanner {
+    padding: 16px clamp(16px, 4vw, 40px);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>G0 Full Lead-Time Sweep — Summary</h1>
+  <p class="subtitle">Reads a <code>g0_full_lead_time_sweep_summary_&lt;runId-or-"all"&gt;.json</code> file (produced by <code>G0FullLeadTimeSweepAnalysis</code>). Unlike the divergence-lead-time analysis, every flagged tick is swept all the way back to its scenario's start — since the autopilot and mutants are state-based, reproduction isn't assumed to decay monotonically with lead time.</p>
+  <div class="summary-row" id="summaryRow"></div>
+</header>
+
+<div id="loadingBanner">Loading summary&hellip;</div>
+<div id="errorBanner"></div>
+
+<main id="mainContent" style="display:none">
+
+  <section class="card" id="switchFileCard">
+    <div class="controls-row" style="margin-bottom:0">
+      <label for="jsonFileInputMain">Load a different summary file:</label>
+      <input type="file" id="jsonFileInputMain" accept=".json,application/json" />
+    </div>
+  </section>
+
+  <section class="card" id="monotonicCard">
+    <h2>Is reproduction monotonic in lead time?</h2>
+    <p class="note">For each tick, scanning every swept lead time in increasing order: does the recorded failure ever reproduce again <em>after</em> already failing to reproduce at a nearer lead time? A state-based autopilot/mutant (or state-based background traffic) has no obligation to decay smoothly, so this isn't assumed — it's checked directly.</p>
+    <div class="callout" id="monotonicNote"></div>
+    <div class="controls-row" style="margin-top:14px; margin-bottom:0">
+      <details class="ticklist" id="nonMonotonicDetails">
+        <summary id="nonMonotonicSummary">Show non-monotonic tick ids</summary>
+        <div class="ticklist-box" id="nonMonotonicList">(expand to load)</div>
+        <div class="controls-row" style="margin-top:8px; margin-bottom:0">
+          <button id="nonMonotonicCopyBtn" type="button">Copy ids</button>
+          <button id="nonMonotonicDownloadBtn" type="button">Download .txt</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card" id="histogramsCard">
+    <h2>Minimum vs. maximum reproducing lead time</h2>
+    <p class="note">Over ticks that reproduce the recorded failure at at least one lead time: the smallest lead time that still reproduces it (left) and the largest (right) — log-scaled y axes. Dashed lines mark percentiles. A tick where these differ substantially, combined with non-monotonic reproduction above, means lead time alone is a poor proxy for "this mutant would still be caught."</p>
+    <div class="charts-row">
+      <div>
+        <p class="chart-title">Minimum reproducing lead time</p>
+        <div class="chart-wrap">
+          <svg class="chart" id="minHistogramChart" viewBox="0 0 460 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="tooltip" id="minHistogramTooltip"></div>
+        </div>
+      </div>
+      <div>
+        <p class="chart-title">Maximum reproducing lead time</p>
+        <div class="chart-wrap">
+          <svg class="chart" id="maxHistogramChart" viewBox="0 0 460 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="tooltip" id="maxHistogramTooltip"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="mutantsCard">
+    <h2>Per-mutant breakdown</h2>
+    <p class="note">One row per mutant that originally produced at least one flagged tick.</p>
+    <div class="controls-row">
+      <label for="mutantFilterInput">Filter</label>
+      <input type="text" id="mutantFilterInput" placeholder="mutant id" />
+      <span class="spacer"></span>
+      <button id="mutantsCsvBtn" type="button">Download CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table id="mutantsTable">
+        <thead><tr>
+          <th data-sort-key="mutantId">Mutant<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="totalTicks">Total ticks<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="neverReproducedCount">Never reproduced<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="nonMonotonicCount">Non-monotonic<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="medianMin">Median min lead time<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="medianMax">Median max lead time<span class="sort-indicator"></span></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  const DEFAULT_DATA_URL = "./g0_full_lead_time_sweep_summary_all.json";
+  const INLINE_LIST_LIMIT = 2000;
+
+  let DATA = null;
+  let mutantSortField = "totalTicks";
+  let mutantSortDir = "desc";
+  let mutantFilterText = "";
+
+  // ------------------------------------------------------------------ utils
+
+  function fmtNum(v) {
+    if (v === null || v === undefined) return "—";
+    return v.toLocaleString();
+  }
+
+  function fmtPercent(v, digits) {
+    if (v === null || v === undefined || !isFinite(v)) return "—";
+    return v.toFixed(digits === undefined ? 1 : digits) + "%";
+  }
+
+  function setText(el, text) {
+    el.textContent = text;
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function formatTickIdList(ids) {
+    if (!ids || ids.length === 0) return "(none)";
+    if (ids.length <= INLINE_LIST_LIMIT) return ids.join(", ");
+    return (
+      ids.slice(0, INLINE_LIST_LIMIT).join(", ") +
+      " … and " + (ids.length - INLINE_LIST_LIMIT).toLocaleString() +
+      " more (use the download/copy button below for the full list).");
+  }
+
+  function downloadText(filename, text, mime) {
+    const blob = new Blob([text], { type: (mime || "text/plain") + ";charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // -------------------------------------------------------------- data load
+
+  function setLoadingMessage(text) {
+    const banner = document.getElementById("loadingBanner");
+    banner.textContent = text;
+    banner.style.display = "block";
+  }
+
+  function hideLoadingBanner() {
+    document.getElementById("loadingBanner").style.display = "none";
+  }
+
+  function loadData() {
+    return fetch(DEFAULT_DATA_URL).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status + " while fetching " + DEFAULT_DATA_URL);
+      const lenHeader = r.headers.get("content-length");
+      if (lenHeader) {
+        const mb = Number(lenHeader) / (1024 * 1024);
+        setLoadingMessage(
+          "Loading and parsing " + mb.toFixed(1) + " MB… this can take a few seconds for large analysis runs.");
+      } else {
+        setLoadingMessage("Loading summary… this can take a few seconds for large analysis runs.");
+      }
+      return r.json();
+    });
+  }
+
+  function showError(detail) {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Load a g0_full_lead_time_sweep_summary_*.json file";
+    banner.appendChild(heading);
+
+    if (detail) {
+      const msg = document.createElement("p");
+      msg.style.margin = "0 0 4px";
+      msg.appendChild(document.createTextNode(detail));
+      banner.appendChild(msg);
+    }
+
+    const uploadRow = document.createElement("div");
+    uploadRow.className = "upload-row";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "jsonFileInput");
+    label.appendChild(document.createTextNode("Choose the file:"));
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.id = "jsonFileInput";
+    input.accept = ".json,application/json";
+    input.addEventListener("change", handleFileUpload);
+
+    uploadRow.appendChild(label);
+    uploadRow.appendChild(input);
+    banner.appendChild(uploadRow);
+
+    const note = document.createElement("p");
+    note.className = "note";
+    note.appendChild(
+      document.createTextNode("Tip: serving this folder over HTTP loads " + DEFAULT_DATA_URL.replace("./", "") + " automatically instead — e.g. run "));
+    const codeCmd = document.createElement("code");
+    codeCmd.textContent = "python -m http.server 8000";
+    note.appendChild(codeCmd);
+    note.appendChild(document.createTextNode(" here, then open "));
+    const codeUrl = document.createElement("code");
+    codeUrl.textContent = "http://localhost:8000/";
+    note.appendChild(codeUrl);
+    note.appendChild(document.createTextNode("."));
+    banner.appendChild(note);
+
+    banner.style.display = "block";
+    document.getElementById("mainContent").style.display = "none";
+    hideLoadingBanner();
+  }
+
+  function hideError() {
+    const banner = document.getElementById("errorBanner");
+    banner.innerHTML = "";
+    banner.style.display = "none";
+  }
+
+  function readJsonFile(file, onSuccess, onError) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (err) {
+        onError('"' + file.name + '" doesn\'t look like valid JSON (' + err.message + ").");
+        return;
+      }
+      onSuccess(data);
+    };
+    reader.onerror = () => onError('Could not read "' + file.name + '" (' + reader.error + ").");
+    reader.readAsText(file);
+  }
+
+  function handleFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    hideError();
+    setLoadingMessage(
+      "Loading and parsing " + (file.size / (1024 * 1024)).toFixed(1) + " MB… this can take a few seconds for large analysis runs.");
+    setTimeout(() => {
+      readJsonFile(
+        file,
+        (data) => { hideError(); initWithData(data); },
+        (msg) => showError(msg + " Please select a g0_full_lead_time_sweep_summary_*.json file produced by G0FullLeadTimeSweepAnalysis."));
+    }, 0);
+  }
+
+  // ------------------------------------------------------------- rendering
+
+  function renderSummary(data) {
+    const row = document.getElementById("summaryRow");
+    row.innerHTML = "";
+    const total = data.totalTicksAnalyzed || 0;
+    const tiles = [
+      ["Run", data.runId === null || data.runId === undefined ? "all runs" : data.runId],
+      ["Ticks analyzed", total],
+      ["Mutants", data.mutantStats.length],
+      ["Never reproduced", data.neverReproducedCount],
+      ["Non-monotonic", data.nonMonotonicCount],
+    ];
+    tiles.forEach((pair) => {
+      const label = pair[0];
+      const value = pair[1];
+      const tile = document.createElement("div");
+      tile.className = "summary-tile";
+      const l = document.createElement("div");
+      l.className = "label";
+      l.textContent = label;
+      const v = document.createElement("div");
+      v.className = "value";
+      v.textContent = typeof value === "number" ? fmtNum(value) : value;
+      tile.appendChild(l);
+      tile.appendChild(v);
+      row.appendChild(tile);
+    });
+  }
+
+  function renderMonotonicNote(data) {
+    const total = data.totalTicksAnalyzed || 0;
+    const pct = total > 0 ? (data.nonMonotonicCount / total) * 100 : 0;
+    const note = document.getElementById("monotonicNote");
+    note.innerHTML = "";
+    note.appendChild(document.createTextNode("Of all analyzed ticks, "));
+    const strong = document.createElement("strong");
+    strong.textContent = fmtNum(data.nonMonotonicCount) + " (" + fmtPercent(pct, 1) + ")";
+    note.appendChild(strong);
+    note.appendChild(document.createTextNode(
+      pct > 0
+        ? " reproduce the recorded failure again at some lead time after already failing to reproduce it at a nearer one — reproduction is not simply \"works below a threshold, fails above it\" for these ticks."
+        : " show any non-monotonic reproduction — for this run, a single divergence lead time per tick (as tracked by G0DivergenceLeadTimeAnalysis) is not contradicted by the full sweep."));
+
+    const summary = document.getElementById("nonMonotonicSummary");
+    summary.textContent = "Show non-monotonic tick ids (" + fmtNum(data.nonMonotonicCount) + ")";
+  }
+
+  function renderHistogram(svgId, tooltipId, histogram, percentiles, barClass, totalForPct) {
+    const svg = document.getElementById(svgId);
+    svg.innerHTML = "";
+    const W = 460, H = 260;
+    const marginLeft = 40, marginRight = 12, marginTop = 26, marginBottom = 26;
+    const plotW = W - marginLeft - marginRight;
+    const plotH = H - marginTop - marginBottom;
+
+    const keys = Object.keys(histogram || {}).map(Number).sort((a, b) => a - b);
+    if (keys.length === 0) {
+      const t = svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle", class: "chart-axis-text" });
+      t.textContent = "No data.";
+      svg.appendChild(t);
+      return;
+    }
+
+    const maxCount = Math.max.apply(null, keys.map((k) => histogram[k]));
+    const logMax = Math.log10(maxCount + 1);
+    const minX = keys[0], maxX = keys[keys.length - 1];
+    const span = Math.max(maxX - minX, 0.1);
+    let minGap = span;
+    for (let i = 1; i < keys.length; i++) minGap = Math.min(minGap, keys[i] - keys[i - 1]);
+    const barW = Math.max(Math.min((minGap / span) * plotW - 2, 30), 2);
+
+    function xForValue(v) {
+      return marginLeft + ((v - minX) / span) * (plotW - barW) + barW / 2;
+    }
+    function yForCount(c) {
+      return marginTop + plotH - (Math.log10(c + 1) / logMax) * plotH;
+    }
+
+    const gridPowers = [];
+    for (let p = 0; Math.pow(10, p) <= maxCount * 1.1; p++) gridPowers.push(Math.pow(10, p));
+    gridPowers.forEach((p) => {
+      const y = yForCount(p);
+      svg.appendChild(svgEl("line", { x1: marginLeft, x2: W - marginRight, y1: y, y2: y, class: "chart-gridline" }));
+      const t = svgEl("text", { x: marginLeft - 6, y: y + 3, "text-anchor": "end", class: "chart-axis-text" });
+      t.textContent = fmtNum(p);
+      svg.appendChild(t);
+    });
+
+    const tooltip = document.getElementById(tooltipId);
+    const wrap = svg.closest(".chart-wrap");
+
+    keys.forEach((k) => {
+      const count = histogram[k];
+      const x = xForValue(k) - barW / 2;
+      const y = yForCount(count);
+      const h = marginTop + plotH - y;
+      const rect = svgEl("rect", {
+        x: x, y: y, width: barW, height: Math.max(h, 1),
+        rx: Math.min(4, barW / 2), ry: Math.min(4, barW / 2),
+        class: barClass,
+      });
+      rect.addEventListener("mousemove", (e) => {
+        const rectBox = wrap.getBoundingClientRect();
+        tooltip.style.left = (e.clientX - rectBox.left) + "px";
+        tooltip.style.top = (e.clientY - rectBox.top - 10) + "px";
+        tooltip.style.opacity = "1";
+        const pct = totalForPct > 0 ? (count / totalForPct) * 100 : 0;
+        tooltip.textContent = k.toFixed(1) + "s: " + fmtNum(count) + " ticks (" + fmtPercent(pct, 1) + ")";
+      });
+      rect.addEventListener("mouseleave", () => { tooltip.style.opacity = "0"; });
+      svg.appendChild(rect);
+    });
+
+    const labelEvery = Math.max(1, Math.ceil(keys.length / 10));
+    keys.forEach((k, i) => {
+      if (i % labelEvery !== 0) return;
+      const t = svgEl("text", { x: xForValue(k), y: H - marginBottom + 16, "text-anchor": "middle", class: "chart-axis-text" });
+      t.textContent = k.toFixed(1);
+      svg.appendChild(t);
+    });
+
+    Object.keys(percentiles || {}).forEach((label, idx) => {
+      const v = percentiles[label];
+      if (v < minX || v > maxX) return;
+      const x = xForValue(v);
+      svg.appendChild(svgEl("line", { x1: x, x2: x, y1: marginTop, y2: marginTop + plotH, class: "chart-pct-line" }));
+      const t = svgEl("text", { x: x, y: marginTop - 6 - (idx % 2) * 12, "text-anchor": "middle", class: "chart-pct-label" });
+      t.textContent = label + "=" + v.toFixed(1) + "s";
+      svg.appendChild(t);
+    });
+  }
+
+  function renderHistograms(data) {
+    const reproducingTotal = data.totalTicksAnalyzed - data.neverReproducedCount;
+    renderHistogram("minHistogramChart", "minHistogramTooltip", data.minLeadTimeHistogram, data.minLeadTimePercentiles, "bar-min", reproducingTotal);
+    renderHistogram("maxHistogramChart", "maxHistogramTooltip", data.maxLeadTimeHistogram, data.maxLeadTimePercentiles, "bar-max", reproducingTotal);
+  }
+
+  // ------------------------------------------------------------- mutants table
+
+  function medianOf(percentiles) {
+    const v = percentiles && percentiles.p50;
+    return v === undefined || v === null ? -1 : v;
+  }
+
+  function mutantRowValue(row, field) {
+    if (field === "medianMin") return medianOf(row.minLeadTimePercentiles);
+    if (field === "medianMax") return medianOf(row.maxLeadTimePercentiles);
+    return row[field];
+  }
+
+  function filteredSortedMutants() {
+    const needle = mutantFilterText.trim().toLowerCase();
+    let rows = DATA.mutantStats.slice();
+    if (needle) {
+      rows = rows.filter((r) => String(r.mutantId).includes(needle));
+    }
+    const dir = mutantSortDir === "asc" ? 1 : -1;
+    rows.sort((a, b) => (mutantRowValue(a, mutantSortField) - mutantRowValue(b, mutantSortField)) * dir);
+    return rows;
+  }
+
+  function renderMutantsTable() {
+    const tbody = document.querySelector("#mutantsTable tbody");
+    tbody.innerHTML = "";
+    const rows = filteredSortedMutants();
+
+    rows.forEach((r) => {
+      const tr = document.createElement("tr");
+
+      const tdMutant = document.createElement("td");
+      tdMutant.textContent = "#" + r.mutantId;
+      tr.appendChild(tdMutant);
+
+      const tdTotal = document.createElement("td");
+      tdTotal.className = "num";
+      tdTotal.textContent = fmtNum(r.totalTicks);
+      tr.appendChild(tdTotal);
+
+      const tdNever = document.createElement("td");
+      tdNever.className = "num";
+      tdNever.textContent = fmtNum(r.neverReproducedCount) + (r.totalTicks > 0 ? " (" + fmtPercent((r.neverReproducedCount / r.totalTicks) * 100, 0) + ")" : "");
+      tr.appendChild(tdNever);
+
+      const tdNonMono = document.createElement("td");
+      tdNonMono.className = "num";
+      tdNonMono.textContent = fmtNum(r.nonMonotonicCount) + (r.totalTicks > 0 ? " (" + fmtPercent((r.nonMonotonicCount / r.totalTicks) * 100, 0) + ")" : "");
+      tr.appendChild(tdNonMono);
+
+      const tdMedianMin = document.createElement("td");
+      tdMedianMin.className = "num";
+      const medMin = medianOf(r.minLeadTimePercentiles);
+      tdMedianMin.textContent = medMin < 0 ? "—" : medMin.toFixed(1) + "s";
+      tr.appendChild(tdMedianMin);
+
+      const tdMedianMax = document.createElement("td");
+      tdMedianMax.className = "num";
+      const medMax = medianOf(r.maxLeadTimePercentiles);
+      tdMedianMax.textContent = medMax < 0 ? "—" : medMax.toFixed(1) + "s";
+      tr.appendChild(tdMedianMax);
+
+      tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll("#mutantsTable thead th[data-sort-key]").forEach((th) => {
+      const span = th.querySelector(".sort-indicator");
+      if (span) span.textContent = th.dataset.sortKey === mutantSortField ? (mutantSortDir === "asc" ? "▲" : "▼") : "";
+    });
+  }
+
+  // ---------------------------------------------------------------- export
+
+  function csvEscape(value) {
+    const s = value === null || value === undefined ? "" : String(value);
+    return /["\r\n,]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadMutantsCsv() {
+    const rows = [["mutantId", "totalTicks", "neverReproducedCount", "nonMonotonicCount", "medianMinLeadTimeSeconds", "medianMaxLeadTimeSeconds"]];
+    filteredSortedMutants().forEach((r) => {
+      const medMin = medianOf(r.minLeadTimePercentiles);
+      const medMax = medianOf(r.maxLeadTimePercentiles);
+      rows.push([r.mutantId, r.totalTicks, r.neverReproducedCount, r.nonMonotonicCount, medMin < 0 ? "" : medMin.toFixed(1), medMax < 0 ? "" : medMax.toFixed(1)]);
+    });
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+    downloadText("g0_full_lead_time_sweep_mutants.csv", csv, "text/csv");
+  }
+
+  // ----------------------------------------------------------------- init
+
+  function wireControls() {
+    document.querySelectorAll("#mutantsTable thead th[data-sort-key]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sortKey;
+        if (mutantSortField === key) {
+          mutantSortDir = mutantSortDir === "asc" ? "desc" : "asc";
+        } else {
+          mutantSortField = key;
+          mutantSortDir = "desc";
+        }
+        renderMutantsTable();
+      });
+    });
+
+    document.getElementById("mutantFilterInput").addEventListener("input", (e) => {
+      mutantFilterText = e.target.value;
+      renderMutantsTable();
+    });
+
+    document.getElementById("mutantsCsvBtn").addEventListener("click", downloadMutantsCsv);
+
+    document.getElementById("nonMonotonicDetails").addEventListener("toggle", (e) => {
+      const details = e.target;
+      if (details.open && details.dataset.populated !== "true") {
+        document.getElementById("nonMonotonicList").textContent = formatTickIdList(DATA.nonMonotonicTickIds || []);
+        details.dataset.populated = "true";
+      }
+    });
+    document.getElementById("nonMonotonicCopyBtn").addEventListener("click", () => {
+      const text = (DATA.nonMonotonicTickIds || []).join(", ");
+      navigator.clipboard && navigator.clipboard.writeText(text);
+    });
+    document.getElementById("nonMonotonicDownloadBtn").addEventListener("click", () => {
+      downloadText("non_monotonic_tick_ids.txt", (DATA.nonMonotonicTickIds || []).join("\n"));
+    });
+
+    document.getElementById("jsonFileInputMain").addEventListener("change", handleFileUpload);
+  }
+
+  let controlsWired = false;
+
+  function initWithData(data) {
+    DATA = data;
+    renderSummary(data);
+    renderMonotonicNote(data);
+    const details = document.getElementById("nonMonotonicDetails");
+    details.open = false;
+    details.dataset.populated = "false";
+    document.getElementById("nonMonotonicList").textContent = "(expand to load)";
+    renderHistograms(data);
+    renderMutantsTable();
+
+    if (!controlsWired) {
+      wireControls();
+      controlsWired = true;
+    }
+
+    document.getElementById("mainContent").style.display = "flex";
+    hideLoadingBanner();
+  }
+
+  loadData()
+    .then((data) => initWithData(data))
+    .catch((err) => showError(err.message));
+})();
+</script>
+</body>
+</html>

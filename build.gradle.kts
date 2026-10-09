@@ -273,6 +273,20 @@ val runG0DivergenceLeadTimeAnalysis by
       // args = listOf("--runId=8", "--bufferProcessors=2")
     }
 
+val runG0FullLeadTimeSweepAnalysis by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Coordinator: for every tick whose next tick was recorded as a G0 (Accidents) failure, spawns one worker process per available core to sweep that tick's own original mutant backward through every lead time all the way to the scenario start (not stopping at the first lead time that fails to reproduce), to find the minimum and maximum reproducing lead time and detect non-monotonic reproduction (the autopilot/mutants are state-based, so reproduction can plausibly turn back on at an even earlier lead time)."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunG0FullLeadTimeSweepAnalysisKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // args = listOf("--runId=8", "--bufferProcessors=2")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

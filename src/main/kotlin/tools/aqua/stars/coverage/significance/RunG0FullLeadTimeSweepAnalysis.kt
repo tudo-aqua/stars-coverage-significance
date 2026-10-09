@@ -18,21 +18,23 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.CliArgs
-import tools.aqua.stars.coverage.significance.workers.startG0DivergenceLeadTimeAnalysisWorkerProcess
+import tools.aqua.stars.coverage.significance.workers.startG0FullLeadTimeSweepAnalysisWorkerProcess
 
 /**
- * Coordinator for the G0 lead-time divergence analysis: spawns one worker process per available
+ * Coordinator for the G0 full lead-time sweep analysis: spawns one worker process per available
  * core (each worker runs its own libsumo simulation — see the "Parallelism" section on
  * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]), awaits
  * them, then aggregates their streamed detail files into one summary JSON.
  *
- * Unlike `RunG0MutantCoverageReplay.kt`, there is only ever one pass: each flagged tick's own
- * backward lead-time sweep (0.0, 0.1, 0.2, ... seconds) happens internally per tick — see
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis].
+ * Unlike [tools.aqua.stars.coverage.significance.RunG0DivergenceLeadTimeAnalysis]'s sweep, every
+ * tick is swept all the way back to its scenario's start rather than stopping at the first lead
+ * time that fails to reproduce the recorded failure — see
+ * [tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis] for why, and
+ * expect a correspondingly longer run time.
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as
@@ -49,7 +51,7 @@ fun main(args: Array<String>) {
 
   if (aggregateOnly) {
     // Aggregation only reads back already-written detail files (see
-    // G0DivergenceLeadTimeAnalysis.aggregate) - no DB access needed, so a live Postgres instance
+    // G0FullLeadTimeSweepAnalysis.aggregate) - no DB access needed, so a live Postgres instance
     // isn't required just to regenerate a summary from existing data.
     println(
         "--aggregateOnly: skipping sweep, re-aggregating existing detail files for runId=${runId ?: "all"}.")
@@ -58,20 +60,20 @@ fun main(args: Array<String>) {
     val parallelism =
         (Runtime.getRuntime().availableProcessors() - bufferProcessors).coerceAtLeast(1)
     println(
-        "Starting G0 lead-time divergence analysis with parallelism=$parallelism " +
+        "Starting G0 full lead-time sweep analysis with parallelism=$parallelism " +
             "(bufferProcessors=$bufferProcessors, runId=${runId ?: "all"}).")
 
     val processes: List<NamedProcess> =
         (0 until parallelism).map { workerId ->
           NamedProcess(
-              name = "g0-divergence-worker-$workerId",
+              name = "g0-full-sweep-worker-$workerId",
               process =
-                  startG0DivergenceLeadTimeAnalysisWorkerProcess(
+                  startG0FullLeadTimeSweepAnalysisWorkerProcess(
                       workerId = workerId, numWorkers = parallelism, runId = runId))
         }
     try {
       ProcessGroupRunner.awaitAll(
-          groupLabel = "G0 lead-time divergence analysis worker", processes = processes)
+          groupLabel = "G0 full lead-time sweep analysis worker", processes = processes)
     } catch (e: InterruptedException) {
       Thread.currentThread().interrupt()
       processes.forEach { it.killProcessTree() }
@@ -79,11 +81,12 @@ fun main(args: Array<String>) {
     }
   }
 
-  val summary = G0DivergenceLeadTimeAnalysis.aggregate(runId)
+  val summary = G0FullLeadTimeSweepAnalysis.aggregate(runId)
   println(
       "Finished! ${summary.totalTicksAnalyzed} ticks analyzed, " +
-          "${summary.divergedCount} diverged (${summary.immediateDivergenceCount} immediately), " +
-          "${summary.egoLeftSimulationCount} inconclusive (ego left simulation), " +
-          "${summary.reachedScenarioStartCount} reproduced through to the scenario start. " +
-          "Percentiles: ${summary.percentiles}.")
+          "${summary.neverReproducedCount} never reproduced, " +
+          "${summary.nonMonotonicCount} non-monotonic (reproduction turned back on after " +
+          "failing at a nearer lead time). Min-lead-time percentiles: " +
+          "${summary.minLeadTimePercentiles}. Max-lead-time percentiles: " +
+          "${summary.maxLeadTimePercentiles}.")
 }

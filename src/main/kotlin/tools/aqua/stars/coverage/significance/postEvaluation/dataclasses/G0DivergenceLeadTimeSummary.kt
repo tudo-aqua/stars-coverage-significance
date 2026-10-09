@@ -83,6 +83,52 @@ data class TickG0DivergenceResult(
 )
 
 /**
+ * Per-mutant aggregate across an entire `G0DivergenceLeadTimeAnalysis` run — the same fields as
+ * [G0DivergenceLeadTimeSummary], restricted to ticks whose own original mutant
+ * (`metric_failed_monitors.mutant_id`) is [mutantId]. [divergenceLeadTimes] itself isn't repeated
+ * per mutant (it's already in the top-level summary, partitioned across these rows would just
+ * duplicate it) — only the already-aggregated [histogram] and [percentiles] are.
+ *
+ * @property mutantId Unique identifier of the mutant (`mutants.id`) every one of these ticks was
+ *   originally produced by.
+ * @property totalTicks Number of flagged ticks originally produced by this mutant.
+ * @property divergedCount Of [totalTicks], how many ended with [DivergenceStopReason.DIVERGED].
+ * @property immediateDivergenceCount Of [divergedCount], how many diverged already at lead time 0.0
+ *   — see [G0DivergenceLeadTimeSummary.immediateDivergenceCount].
+ * @property egoLeftSimulationCount Of [totalTicks], how many ended with
+ *   [DivergenceStopReason.EGO_LEFT_SIMULATION].
+ * @property reachedScenarioStartCount Of [totalTicks], how many ended with
+ *   [DivergenceStopReason.REACHED_SCENARIO_START].
+ * @property histogram This mutant's diverged ticks' lead times grouped by exact value to tick
+ *   count.
+ * @property percentiles Nearest-rank percentiles ("p50", "p75", "p90", "p95", "p99") over this
+ *   mutant's diverged ticks' lead times.
+ * @property neverReproducedCount Of [totalTicks], how many never reproduced the recorded failure at
+ *   all — not even with zero lead time (a replay-fidelity gap, same underlying notion as
+ *   [immediateDivergenceCount] but also covering ticks whose very first replay attempt was
+ *   inconclusive, i.e. [DivergenceStopReason.EGO_LEFT_SIMULATION] with no steps completed).
+ * @property maxReproducingLeadTimeHistogram The highest lead time at which each (non-
+ *   [neverReproducedCount]) tick's replay still reproduced the recorded failure, grouped by exact
+ *   value to tick count — the complement of [histogram]/[divergenceLeadTimeSeconds]: a threshold
+ *   `L` picked for cross-mutant replay would still reproduce this mutant's own recorded failures on
+ *   exactly the ticks counted at keys `>= L` here (plus [neverReproducedCount] never counting,
+ *   regardless of `L`).
+ */
+@Serializable
+data class G0DivergenceLeadTimeMutantStats(
+    val mutantId: Int,
+    val totalTicks: Int,
+    val divergedCount: Int,
+    val immediateDivergenceCount: Int,
+    val egoLeftSimulationCount: Int,
+    val reachedScenarioStartCount: Int,
+    val histogram: Map<Double, Int>,
+    val percentiles: Map<String, Double>,
+    val neverReproducedCount: Int,
+    val maxReproducingLeadTimeHistogram: Map<Double, Int>,
+)
+
+/**
  * Aggregate summary across an entire `G0DivergenceLeadTimeAnalysis` run, built by reading back
  * every worker's streamed [TickG0DivergenceResult] detail file.
  *
@@ -105,6 +151,16 @@ data class TickG0DivergenceResult(
  *   multiples) to tick count.
  * @property percentiles Nearest-rank percentiles ("p50", "p75", "p90", "p95", "p99") over
  *   [divergenceLeadTimes].
+ * @property mutantStats Per-mutant breakdown — see [G0DivergenceLeadTimeMutantStats] — one entry
+ *   per distinct original mutant actually encountered among the swept ticks.
+ * @property neverReproducedCount See [G0DivergenceLeadTimeMutantStats.neverReproducedCount], across
+ *   every swept tick.
+ * @property maxReproducingLeadTimeHistogram See
+ *   [G0DivergenceLeadTimeMutantStats.maxReproducingLeadTimeHistogram], across every swept tick —
+ *   the basis for picking a `--leadTimeSeconds` threshold for
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]: the
+ *   fraction of ticks still reproducing at a candidate threshold `L` is the sum of counts at keys
+ *   `>= L` here, divided by [totalTicksAnalyzed].
  */
 @Serializable
 data class G0DivergenceLeadTimeSummary(
@@ -117,4 +173,7 @@ data class G0DivergenceLeadTimeSummary(
     val divergenceLeadTimes: List<Double>,
     val histogram: Map<Double, Int>,
     val percentiles: Map<String, Double>,
+    val mutantStats: List<G0DivergenceLeadTimeMutantStats>,
+    val neverReproducedCount: Int,
+    val maxReproducingLeadTimeHistogram: Map<Double, Int>,
 )
