@@ -82,6 +82,15 @@
   }
   .card h2 { margin: 0 0 4px; font-size: 1.05rem; }
   .card p.note { margin: 0 0 12px; font-size: 0.85rem; color: var(--text-secondary); }
+  .card p.context-line {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .chart-caption { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
   label { font-size: 0.85rem; color: var(--text-secondary); }
   input[type="text"], select, button {
@@ -182,6 +191,9 @@
   .chart-axis-text { fill: var(--text-muted); font-size: 10px; font-family: inherit; }
   .chart-pct-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart-pct-label { fill: var(--text-secondary); font-size: 10px; font-family: inherit; }
+  .chart-axis-title { fill: var(--text-secondary); font-size: 10px; font-weight: 600; font-family: inherit; }
+  .chart-value-label { fill: var(--text-primary); font-size: 10px; font-weight: 600; font-family: inherit; }
+  .chart-value-label-inverse { fill: #fff; font-size: 10px; font-weight: 600; font-family: inherit; }
   .bar-min { fill: var(--accent-min); }
   .bar-min:hover { fill: var(--status-critical); }
   .bar-max { fill: var(--accent-max); }
@@ -259,7 +271,8 @@
 
   <section class="card" id="monotonicCard">
     <h2>Is reproduction monotonic in lead time?</h2>
-    <p class="note">For each tick, scanning every swept lead time in increasing order: does the recorded failure ever reproduce again <em>after</em> already failing to reproduce at a nearer lead time? A state-based autopilot/mutant (or state-based background traffic) has no obligation to decay smoothly, so this isn't assumed — it's checked directly.</p>
+    <p class="context-line" id="monotonicContext"></p>
+    <p class="note">For each tick, scanning every swept lead time in increasing order: does the recorded failure ever reproduce again <em>after</em> already failing to reproduce at a nearer lead time? A state-based autopilot/mutant (or state-based background traffic) has no obligation to decay smoothly, so this isn't assumed — it's checked directly. (The sweep's final, full-scenario-replay step is excluded from this check — see the "Full-replay mismatches" note below.)</p>
     <div class="callout" id="monotonicNote"></div>
     <div class="controls-row" style="margin-top:14px; margin-bottom:0">
       <details class="ticklist" id="nonMonotonicDetails">
@@ -275,28 +288,32 @@
 
   <section class="card" id="histogramsCard">
     <h2>Minimum vs. maximum reproducing lead time</h2>
-    <p class="note">Over ticks that reproduce the recorded failure at at least one lead time: the smallest lead time that still reproduces it (left) and the largest (right) — log-scaled y axes. Dashed lines mark percentiles. A tick where these differ substantially, combined with non-monotonic reproduction above, means lead time alone is a poor proxy for "this mutant would still be caught."</p>
+    <p class="context-line" id="histogramsContext"></p>
+    <p class="note">Over ticks that reproduce the recorded failure at at least one (non-trivial) lead time: the smallest lead time that still reproduces it (left) and the largest (right) — log-scaled y axes ("tick count" grows ×10 per gridline, not linearly). Dashed lines mark percentiles; the bold number above the tallest bar is its exact count. A tick where min and max differ substantially, combined with non-monotonic reproduction above, means lead time alone is a poor proxy for "this mutant would still be caught."</p>
     <div class="charts-row">
       <div>
         <p class="chart-title">Minimum reproducing lead time</p>
         <div class="chart-wrap">
-          <svg class="chart" id="minHistogramChart" viewBox="0 0 460 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <svg class="chart" id="minHistogramChart" viewBox="0 0 460 280" preserveAspectRatio="xMidYMid meet"></svg>
           <div class="tooltip" id="minHistogramTooltip"></div>
         </div>
+        <p class="chart-caption" id="minHistogramCaption"></p>
       </div>
       <div>
         <p class="chart-title">Maximum reproducing lead time</p>
         <div class="chart-wrap">
-          <svg class="chart" id="maxHistogramChart" viewBox="0 0 460 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <svg class="chart" id="maxHistogramChart" viewBox="0 0 460 280" preserveAspectRatio="xMidYMid meet"></svg>
           <div class="tooltip" id="maxHistogramTooltip"></div>
         </div>
+        <p class="chart-caption" id="maxHistogramCaption"></p>
       </div>
     </div>
   </section>
 
   <section class="card" id="mutantsCard">
     <h2>Per-mutant breakdown</h2>
-    <p class="note">One row per mutant that originally produced at least one flagged tick.</p>
+    <p class="context-line" id="mutantsContext"></p>
+    <p class="note">One row per mutant that originally produced at least one flagged tick. "Never reproduced" / "Non-monotonic" counts and percentages are of that mutant's own total ticks (this table's "Total ticks" column), matching the definitions in the cards above.</p>
     <div class="controls-row">
       <label for="mutantFilterInput">Filter</label>
       <input type="text" id="mutantFilterInput" placeholder="mutant id" />
@@ -346,6 +363,12 @@
 
   function setText(el, text) {
     el.textContent = text;
+  }
+
+  /** "Run: all runs · 525,669 ticks analyzed" - repeated on every card so a screenshot cropped to just one card still says which dataset it's from. */
+  function runContextText(data) {
+    const run = data.runId === null || data.runId === undefined ? "all runs" : "run " + data.runId;
+    return "Run: " + run + " · " + fmtNum(data.totalTicksAnalyzed) + " ticks analyzed · " + fmtNum(data.mutantStats.length) + " mutants";
   }
 
   function svgEl(tag, attrs) {
@@ -501,6 +524,7 @@
       ["Mutants", data.mutantStats.length],
       ["Never reproduced", data.neverReproducedCount],
       ["Non-monotonic", data.nonMonotonicCount],
+      ["Full-replay mismatches", data.fullReplayMismatchCount],
     ];
     tiles.forEach((pair) => {
       const label = pair[0];
@@ -530,8 +554,12 @@
     note.appendChild(strong);
     note.appendChild(document.createTextNode(
       pct > 0
-        ? " reproduce the recorded failure again at some lead time after already failing to reproduce it at a nearer one — reproduction is not simply \"works below a threshold, fails above it\" for these ticks."
+        ? " reproduce the recorded failure again at some (non-trivial) lead time after already failing to reproduce it at a nearer one — reproduction is not simply \"works below a threshold, fails above it\" for these ticks."
         : " show any non-monotonic reproduction — for this run, a single divergence lead time per tick (as tracked by G0DivergenceLeadTimeAnalysis) is not contradicted by the full sweep."));
+    if (data.fullReplayMismatchCount > 0) {
+      note.appendChild(document.createTextNode(
+        " " + fmtNum(data.fullReplayMismatchCount) + " tick(s) didn't even reproduce at that trivial full-scenario-replay step — a replay-fidelity anomaly worth investigating on its own."));
+    }
 
     const summary = document.getElementById("nonMonotonicSummary");
     summary.textContent = "Show non-monotonic tick ids (" + fmtNum(data.nonMonotonicCount) + ")";
@@ -540,32 +568,52 @@
   function renderHistogram(svgId, tooltipId, histogram, percentiles, barClass, totalForPct) {
     const svg = document.getElementById(svgId);
     svg.innerHTML = "";
-    const W = 460, H = 260;
-    const marginLeft = 40, marginRight = 12, marginTop = 26, marginBottom = 26;
+    const W = 460, H = 280;
+    const marginLeft = 54, marginRight = 12, marginTop = 26, marginBottom = 46;
     const plotW = W - marginLeft - marginRight;
     const plotH = H - marginTop - marginBottom;
 
-    const keys = Object.keys(histogram || {}).map(Number).sort((a, b) => a - b);
-    if (keys.length === 0) {
+    // Built as {value, count} pairs, not a parallel "keys" array re-indexed into `histogram` by
+    // number - JS object property access coerces a numeric key back to its default string form
+    // (e.g. 0 -> "0"), which does NOT match a JSON-parsed key like "0.0" (any whole-number lead
+    // time), silently returning undefined and NaN-poisoning every bar's height, not just that one.
+    const entries = Object.keys(histogram || {})
+      .map((raw) => ({ value: Number(raw), count: histogram[raw] }))
+      .sort((a, b) => a.value - b.value);
+    if (entries.length === 0) {
       const t = svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle", class: "chart-axis-text" });
       t.textContent = "No data.";
       svg.appendChild(t);
       return;
     }
+    const keys = entries.map((e) => e.value);
+    const counts = entries.map((e) => e.count);
 
-    const maxCount = Math.max.apply(null, keys.map((k) => histogram[k]));
+    const maxCount = Math.max.apply(null, counts);
     const logMax = Math.log10(maxCount + 1);
-    const minX = keys[0], maxX = keys[keys.length - 1];
-    const span = Math.max(maxX - minX, 0.1);
-    let minGap = span;
-    for (let i = 1; i < keys.length; i++) minGap = Math.min(minGap, keys[i] - keys[i - 1]);
-    const barW = Math.max(Math.min((minGap / span) * plotW - 2, 30), 2);
+    // Bars sit on an evenly-spaced (categorical) axis, one slot per distinct observed lead time -
+    // NOT positioned by true value on a continuous axis. Real lead times are often unevenly spread
+    // (a tight cluster near 0 plus a handful of far-out stragglers), and sizing/positioning bars by
+    // true value then makes most of them thin slivers with large empty gaps between - exactly the
+    // "looks like vertical lines, not bars" readability failure this avoids. Axis labels still show
+    // each bar's real value, so no information is lost, only its literal spatial proportionality.
+    const slotW = plotW / keys.length;
+    const barW = Math.max(slotW * 0.7, 3);
 
-    function xForValue(v) {
-      return marginLeft + ((v - minX) / span) * (plotW - barW) + barW / 2;
+    function xForIndex(i) {
+      return marginLeft + (i + 0.5) * slotW;
     }
     function yForCount(c) {
       return marginTop + plotH - (Math.log10(c + 1) / logMax) * plotH;
+    }
+    /** Index of the key closest to v - percentile values are always one of the observed keys, but found by value (not index), so this bridges the two. */
+    function closestKeyIndex(v) {
+      let bestI = 0, bestDist = Infinity;
+      keys.forEach((k, i) => {
+        const d = Math.abs(k - v);
+        if (d < bestDist) { bestDist = d; bestI = i; }
+      });
+      return bestI;
     }
 
     const gridPowers = [];
@@ -581,9 +629,15 @@
     const tooltip = document.getElementById(tooltipId);
     const wrap = svg.closest(".chart-wrap");
 
-    keys.forEach((k) => {
-      const count = histogram[k];
-      const x = xForValue(k) - barW / 2;
+    // The single tallest bar gets its exact count labeled directly on the chart (selective direct
+    // labeling - not every bar), so a screenshot carries at least one concrete number even without
+    // hovering for the tooltip.
+    let maxCountIndex = 0;
+    counts.forEach((c, i) => { if (c > counts[maxCountIndex]) maxCountIndex = i; });
+
+    keys.forEach((k, i) => {
+      const count = counts[i];
+      const x = xForIndex(i) - barW / 2;
       const y = yForCount(count);
       const h = marginTop + plotH - y;
       const rect = svgEl("rect", {
@@ -601,31 +655,80 @@
       });
       rect.addEventListener("mouseleave", () => { tooltip.style.opacity = "0"; });
       svg.appendChild(rect);
+
+      if (i === maxCountIndex) {
+        let labelY = y - 6;
+        let labelClass = "chart-value-label";
+        let labelX = xForIndex(i);
+        let anchor = "middle";
+        if (labelY < marginTop + 8) {
+          labelY = y + 12;
+          labelClass = "chart-value-label-inverse";
+          // The leftmost bar's inside-top label can otherwise crowd into the y-axis gridline
+          // labels just to its left (both sit near the same y when the tallest bar is also near
+          // the top of the log scale) - anchor it to the bar's own left edge instead of centering,
+          // so it only ever extends rightward, clear of the axis labels.
+          if (i === 0) {
+            labelX = x + 2;
+            anchor = "start";
+          }
+        }
+        const valueLabel = svgEl("text", { x: labelX, y: labelY, "text-anchor": anchor, class: labelClass });
+        valueLabel.textContent = fmtNum(count);
+        svg.appendChild(valueLabel);
+      }
     });
 
     const labelEvery = Math.max(1, Math.ceil(keys.length / 10));
     keys.forEach((k, i) => {
       if (i % labelEvery !== 0) return;
-      const t = svgEl("text", { x: xForValue(k), y: H - marginBottom + 16, "text-anchor": "middle", class: "chart-axis-text" });
+      const t = svgEl("text", { x: xForIndex(i), y: marginTop + plotH + 16, "text-anchor": "middle", class: "chart-axis-text" });
       t.textContent = k.toFixed(1);
       svg.appendChild(t);
     });
 
-    Object.keys(percentiles || {}).forEach((label, idx) => {
-      const v = percentiles[label];
-      if (v < minX || v > maxX) return;
-      const x = xForValue(v);
-      svg.appendChild(svgEl("line", { x1: x, x2: x, y1: marginTop, y2: marginTop + plotH, class: "chart-pct-line" }));
-      const t = svgEl("text", { x: x, y: marginTop - 6 - (idx % 2) * 12, "text-anchor": "middle", class: "chart-pct-label" });
-      t.textContent = label + "=" + v.toFixed(1) + "s";
-      svg.appendChild(t);
+    // axis titles - always present so a screenshot cropped to just this chart still says what the
+    // axes mean, not just the tick-label numbers.
+    const xTitle = svgEl("text", { x: marginLeft + plotW / 2, y: marginTop + plotH + 34, "text-anchor": "middle", class: "chart-axis-title" });
+    xTitle.textContent = "Lead time before original tick (seconds)";
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl("text", {
+      x: 12, y: marginTop + plotH / 2, "text-anchor": "middle", class: "chart-axis-title",
+      transform: "rotate(-90 12 " + (marginTop + plotH / 2) + ")",
     });
+    yTitle.textContent = "Tick count (log scale)";
+    svg.appendChild(yTitle);
+
+    // Percentiles that resolve to the same bar (common when the top of the distribution is a long
+    // tail of near-identical values) are grouped into one combined label, rather than rendering
+    // separate <text> elements at the identical x/y position, which would just overlap illegibly.
+    const pctGroupsByIndex = new Map();
+    Object.keys(percentiles || {}).forEach((label) => {
+      const v = percentiles[label];
+      const i = closestKeyIndex(v);
+      if (!pctGroupsByIndex.has(i)) pctGroupsByIndex.set(i, { v, labels: [] });
+      pctGroupsByIndex.get(i).labels.push(label);
+    });
+    Array.from(pctGroupsByIndex.entries())
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([i, group], rowIdx) => {
+        const x = xForIndex(i);
+        svg.appendChild(svgEl("line", { x1: x, x2: x, y1: marginTop, y2: marginTop + plotH, class: "chart-pct-line" }));
+        const t = svgEl("text", { x: x, y: marginTop - 6 - (rowIdx % 2) * 12, "text-anchor": "middle", class: "chart-pct-label" });
+        t.textContent = group.labels.join("/") + "=" + group.v.toFixed(1) + "s";
+        svg.appendChild(t);
+      });
   }
 
   function renderHistograms(data) {
     const reproducingTotal = data.totalTicksAnalyzed - data.neverReproducedCount;
     renderHistogram("minHistogramChart", "minHistogramTooltip", data.minLeadTimeHistogram, data.minLeadTimePercentiles, "bar-min", reproducingTotal);
     renderHistogram("maxHistogramChart", "maxHistogramTooltip", data.maxLeadTimeHistogram, data.maxLeadTimePercentiles, "bar-max", reproducingTotal);
+
+    const captionSuffix = "n = " + fmtNum(reproducingTotal) + " reproducing ticks (of " + fmtNum(data.totalTicksAnalyzed) + " analyzed) · median ";
+    setText(document.getElementById("minHistogramCaption"), captionSuffix + (data.minLeadTimePercentiles.p50 !== undefined ? data.minLeadTimePercentiles.p50.toFixed(1) + "s" : "—"));
+    setText(document.getElementById("maxHistogramCaption"), captionSuffix + (data.maxLeadTimePercentiles.p50 !== undefined ? data.maxLeadTimePercentiles.p50.toFixed(1) + "s" : "—"));
   }
 
   // ------------------------------------------------------------- mutants table
@@ -764,6 +867,10 @@
   function initWithData(data) {
     DATA = data;
     renderSummary(data);
+    const context = runContextText(data);
+    setText(document.getElementById("monotonicContext"), context);
+    setText(document.getElementById("histogramsContext"), context);
+    setText(document.getElementById("mutantsContext"), context);
     renderMonotonicNote(data);
     const details = document.getElementById("nonMonotonicDetails");
     details.open = false;

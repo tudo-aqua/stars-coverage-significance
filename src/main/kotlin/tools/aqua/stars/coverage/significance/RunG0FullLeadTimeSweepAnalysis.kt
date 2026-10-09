@@ -84,9 +84,10 @@ fun main(args: Array<String>) {
   val summary = G0FullLeadTimeSweepAnalysis.aggregate(runId)
   println(
       "Finished! ${summary.totalTicksAnalyzed} ticks analyzed, " +
-          "${summary.neverReproducedCount} never reproduced, " +
-          "${summary.nonMonotonicCount} non-monotonic (reproduction turned back on after " +
-          "failing at a nearer lead time). Min-lead-time percentiles: " +
+          "${summary.neverReproducedCount} never reproduced (excluding the full-scenario-replay " +
+          "step), ${summary.nonMonotonicCount} non-monotonic (reproduction turned back on after " +
+          "failing at a nearer, non-trivial lead time), ${summary.fullReplayMismatchCount} " +
+          "full-scenario-replay mismatches (expected to be rare/zero). Min-lead-time percentiles: " +
           "${summary.minLeadTimePercentiles}. Max-lead-time percentiles: " +
           "${summary.maxLeadTimePercentiles}.")
 }

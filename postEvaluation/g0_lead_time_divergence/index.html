@@ -85,6 +85,15 @@
   }
   .card h2 { margin: 0 0 4px; font-size: 1.05rem; }
   .card p.note { margin: 0 0 12px; font-size: 0.85rem; color: var(--text-secondary); }
+  .card p.context-line {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .chart-caption { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
   label { font-size: 0.85rem; color: var(--text-secondary); }
   input[type="text"], select, button {
@@ -215,6 +224,9 @@
   .chart-axis-text { fill: var(--text-muted); font-size: 10px; font-family: inherit; }
   .chart-pct-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart-pct-label { fill: var(--text-secondary); font-size: 10px; font-family: inherit; }
+  .chart-axis-title { fill: var(--text-secondary); font-size: 11px; font-weight: 600; font-family: inherit; }
+  .chart-value-label { fill: var(--text-primary); font-size: 11px; font-weight: 600; font-family: inherit; }
+  .chart-value-label-inverse { fill: #fff; font-size: 11px; font-weight: 600; font-family: inherit; }
   .survival-area { fill: var(--accent-soft); }
   .survival-line { fill: none; stroke: var(--accent); stroke-width: 2; }
   .cursor-line { stroke: var(--cursor-line); stroke-width: 2; }
@@ -290,6 +302,7 @@
 
   <section class="card" id="stopReasonCard">
     <h2>How each tick's backward sweep ended</h2>
+    <p class="context-line" id="stopReasonContext"></p>
     <p class="note">Stepping the original mutant backward in 0.1s increments, each tick's sweep stops the first time the replay no longer reproduces the recorded failure ("diverged"), the ego leaves the simulation, or there's no earlier recorded tick left to step back to ("reached scenario start" — the failure reproduces at every available lead time).</p>
     <div class="bar" id="stopReasonBar"></div>
     <div class="legend" id="stopReasonLegend"></div>
@@ -298,15 +311,18 @@
 
   <section class="card" id="histogramCard">
     <h2>Divergence lead time distribution</h2>
-    <p class="note">Of the ticks that diverged, the lead time at which that happened — log-scaled y axis (counts vary by orders of magnitude across buckets). Dashed lines mark percentiles over this distribution. Excludes ticks that never diverged (reached scenario start) or were inconclusive (ego left the simulation).</p>
+    <p class="context-line" id="histogramContext"></p>
+    <p class="note">Of the ticks that diverged, the lead time at which that happened — log-scaled y axis ("tick count" grows ×10 per gridline, not linearly). Dashed lines mark percentiles over this distribution; the bold number above the tallest bar is its exact count. Excludes ticks that never diverged (reached scenario start) or were inconclusive (ego left the simulation).</p>
     <div class="chart-wrap">
-      <svg class="chart" id="histogramChart" viewBox="0 0 960 300" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg class="chart" id="histogramChart" viewBox="0 0 960 320" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="tooltip" id="histogramTooltip"></div>
     </div>
+    <p class="chart-caption" id="histogramCaption"></p>
   </section>
 
   <section class="card" id="thresholdCard">
     <h2>Threshold explorer</h2>
+    <p class="context-line" id="thresholdContextLine"></p>
     <p class="note">Pick a candidate <code>--leadTimeSeconds</code> value for <code>RunG0MutantCoverageReplay</code>: the fraction of flagged ticks whose own original mutant would still reproduce its recorded failure if replayed starting that far back. A good threshold trades off giving a substituted mutant meaningful reaction time against keeping this number high.</p>
     <div class="threshold-readout">
       <div class="big"><span id="thresholdCountValue">—</span> <span class="pct" id="thresholdPctValue"></span></div>
@@ -323,12 +339,13 @@
       </select>
     </div>
     <div class="chart-wrap">
-      <svg class="chart" id="survivalChart" viewBox="0 0 960 220" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg class="chart" id="survivalChart" viewBox="0 0 960 260" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
   </section>
 
   <section class="card" id="mutantsCard">
     <h2>Per-mutant breakdown</h2>
+    <p class="context-line" id="mutantsContext"></p>
     <p class="note">One row per mutant that originally produced at least one flagged tick. "Never reproduced" means the replay doesn't reproduce the recorded failure even with zero lead time — a replay-fidelity gap, not a lead-time effect. "Retained at threshold" updates with the slider above.</p>
     <div class="controls-row">
       <label for="mutantFilterInput">Filter</label>
@@ -382,6 +399,12 @@
 
   function setText(el, text) {
     el.textContent = text;
+  }
+
+  /** "Run: all runs · 525,669 ticks analyzed" - repeated on every card so a screenshot cropped to just one card still says which dataset it's from. */
+  function runContextText(data) {
+    const run = data.runId === null || data.runId === undefined ? "all runs" : "run " + data.runId;
+    return "Run: " + run + " · " + fmtNum(data.totalTicksAnalyzed) + " ticks analyzed · " + fmtNum(data.mutantStats.length) + " mutants";
   }
 
   function svgEl(tag, attrs) {
@@ -591,34 +614,51 @@
   function renderHistogramChart(data) {
     const svg = document.getElementById("histogramChart");
     svg.innerHTML = "";
-    const W = 960, H = 300;
-    const marginLeft = 42, marginRight = 16, marginTop = 28, marginBottom = 28;
+    const W = 960, H = 320;
+    const marginLeft = 56, marginRight = 16, marginTop = 28, marginBottom = 48;
     const plotW = W - marginLeft - marginRight;
     const plotH = H - marginTop - marginBottom;
 
     const histogram = data.histogram || {};
-    const keys = Object.keys(histogram).map(Number).sort((a, b) => a - b);
-    if (keys.length === 0) {
+    // Built as {value, count} pairs, not a parallel "keys" array re-indexed into `histogram` by
+    // number - JS object property access coerces a numeric key back to its default string form
+    // (e.g. 0 -> "0"), which does NOT match a JSON-parsed key like "0.0" (any whole-number lead
+    // time), silently returning undefined and NaN-poisoning every bar's height, not just that one.
+    const entries = Object.keys(histogram)
+      .map((raw) => ({ value: Number(raw), count: histogram[raw] }))
+      .sort((a, b) => a.value - b.value);
+    if (entries.length === 0) {
       svg.appendChild(svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle", class: "chart-axis-text" })).textContent = "No diverged ticks.";
       return;
     }
+    const keys = entries.map((e) => e.value);
+    const counts = entries.map((e) => e.count);
 
-    const maxCount = Math.max(...keys.map((k) => histogram[k]));
+    const maxCount = Math.max(...counts);
     const logMax = Math.log10(maxCount + 1);
-    const minX = keys[0], maxX = keys[keys.length - 1];
-    const span = Math.max(maxX - minX, 0.1);
-    // Bars sit on a continuous (not categorical) axis, so a gap between keys is a real gap - size
-    // bars from the smallest actual gap between consecutive keys rather than dividing evenly by
-    // count, so two closely-spaced keys can never render as overlapping bars.
-    let minGap = span;
-    for (let i = 1; i < keys.length; i++) minGap = Math.min(minGap, keys[i] - keys[i - 1]);
-    const barW = Math.max(Math.min((minGap / span) * plotW - 2, 40), 2);
+    // Bars sit on an evenly-spaced (categorical) axis, one slot per distinct observed lead time -
+    // NOT positioned by true value on a continuous axis. Real lead times are often unevenly spread
+    // (a tight cluster near 0 plus a handful of far-out stragglers), and sizing/positioning bars by
+    // true value then makes most of them thin slivers with large empty gaps between - exactly the
+    // "looks like vertical lines, not bars" readability failure this avoids. Axis labels still show
+    // each bar's real value, so no information is lost, only its literal spatial proportionality.
+    const slotW = plotW / keys.length;
+    const barW = Math.max(slotW * 0.7, 3);
 
-    function xForValue(v) {
-      return marginLeft + ((v - minX) / span) * (plotW - barW) + barW / 2;
+    function xForIndex(i) {
+      return marginLeft + (i + 0.5) * slotW;
     }
     function yForCount(c) {
       return marginTop + plotH - (Math.log10(c + 1) / logMax) * plotH;
+    }
+    /** Index of the key closest to v - percentile values are always one of the observed keys, but found by value (not index), so this bridges the two. */
+    function closestKeyIndex(v) {
+      let bestI = 0, bestDist = Infinity;
+      keys.forEach((k, i) => {
+        const d = Math.abs(k - v);
+        if (d < bestDist) { bestDist = d; bestI = i; }
+      });
+      return bestI;
     }
 
     // gridlines at powers of ten
@@ -635,9 +675,15 @@
     const tooltip = document.getElementById("histogramTooltip");
     const wrap = svg.closest(".chart-wrap");
 
-    keys.forEach((k) => {
-      const count = histogram[k];
-      const x = xForValue(k) - barW / 2;
+    // The single tallest bar gets its exact count labeled directly on the chart (selective direct
+    // labeling - not every bar), so a screenshot carries at least one concrete number even without
+    // hovering for the tooltip.
+    let maxCountIndex = 0;
+    counts.forEach((c, i) => { if (c > counts[maxCountIndex]) maxCountIndex = i; });
+
+    keys.forEach((k, i) => {
+      const count = counts[i];
+      const x = xForIndex(i) - barW / 2;
       const y = yForCount(count);
       const h = marginTop + plotH - y;
       const rect = svgEl("rect", {
@@ -655,28 +701,71 @@
       });
       rect.addEventListener("mouseleave", () => { tooltip.style.opacity = "0"; });
       svg.appendChild(rect);
+
+      if (i === maxCountIndex) {
+        let labelY = y - 6;
+        let labelClass = "chart-value-label";
+        let labelX = xForIndex(i);
+        let anchor = "middle";
+        if (labelY < marginTop + 8) {
+          labelY = y + 14;
+          labelClass = "chart-value-label-inverse";
+          // The leftmost bar's inside-top label can otherwise crowd into the y-axis gridline
+          // labels just to its left (both sit near the same y when the tallest bar is also near
+          // the top of the log scale) - anchor it to the bar's own left edge instead of centering,
+          // so it only ever extends rightward, clear of the axis labels.
+          if (i === 0) {
+            labelX = x + 2;
+            anchor = "start";
+          }
+        }
+        const valueLabel = svgEl("text", { x: labelX, y: labelY, "text-anchor": anchor, class: labelClass });
+        valueLabel.textContent = fmtNum(count);
+        svg.appendChild(valueLabel);
+      }
     });
 
     // x axis labels, thinned to avoid overlap
     const labelEvery = Math.max(1, Math.ceil(keys.length / 16));
     keys.forEach((k, i) => {
       if (i % labelEvery !== 0) return;
-      const t = svgEl("text", { x: xForValue(k), y: H - marginBottom + 16, "text-anchor": "middle", class: "chart-axis-text" });
+      const t = svgEl("text", { x: xForIndex(i), y: marginTop + plotH + 16, "text-anchor": "middle", class: "chart-axis-text" });
       t.textContent = k.toFixed(1);
       svg.appendChild(t);
     });
 
-    // percentile markers
-    const percentiles = data.percentiles || {};
-    Object.keys(percentiles).forEach((label, idx) => {
-      const v = percentiles[label];
-      if (v < minX || v > maxX) return;
-      const x = xForValue(v);
-      svg.appendChild(svgEl("line", { x1: x, x2: x, y1: marginTop, y2: marginTop + plotH, class: "chart-pct-line" }));
-      const t = svgEl("text", { x: x, y: marginTop - 6 - (idx % 2) * 12, "text-anchor": "middle", class: "chart-pct-label" });
-      t.textContent = label + "=" + v.toFixed(1) + "s";
-      svg.appendChild(t);
+    // axis titles - always present so a screenshot cropped to just this chart still says what the
+    // axes mean, not just the tick-label numbers.
+    const xTitle = svgEl("text", { x: marginLeft + plotW / 2, y: marginTop + plotH + 36, "text-anchor": "middle", class: "chart-axis-title" });
+    xTitle.textContent = "Lead time at divergence (seconds)";
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl("text", {
+      x: 14, y: marginTop + plotH / 2, "text-anchor": "middle", class: "chart-axis-title",
+      transform: "rotate(-90 14 " + (marginTop + plotH / 2) + ")",
     });
+    yTitle.textContent = "Tick count (log scale)";
+    svg.appendChild(yTitle);
+
+    // percentile markers - grouped by resolved bar index so percentiles landing on the same bar
+    // (common at the tail of the distribution) combine into one label instead of overlapping.
+    const percentiles = data.percentiles || {};
+    const pctGroupsByIndex = new Map();
+    Object.keys(percentiles).forEach((label) => {
+      const v = percentiles[label];
+      const i = closestKeyIndex(v);
+      if (!pctGroupsByIndex.has(i)) pctGroupsByIndex.set(i, { v, labels: [] });
+      pctGroupsByIndex.get(i).labels.push(label);
+    });
+    Array.from(pctGroupsByIndex.entries())
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([i, group], rowIdx) => {
+        const x = xForIndex(i);
+        svg.appendChild(svgEl("line", { x1: x, x2: x, y1: marginTop, y2: marginTop + plotH, class: "chart-pct-line" }));
+        const t = svgEl("text", { x: x, y: marginTop - 6 - (rowIdx % 2) * 12, "text-anchor": "middle", class: "chart-pct-label" });
+        t.textContent = group.labels.join("/") + "=" + group.v.toFixed(1) + "s";
+        svg.appendChild(t);
+      });
   }
 
   // ----------------------------------------------------------- threshold explorer
@@ -720,14 +809,19 @@
   function renderSurvivalChart() {
     const svg = document.getElementById("survivalChart");
     svg.innerHTML = "";
-    const W = 960, H = 220;
-    const marginLeft = 48, marginRight = 16, marginTop = 16, marginBottom = 28;
+    const W = 960, H = 260;
+    const marginLeft = 58, marginRight = 16, marginTop = 24, marginBottom = 48;
     const plotW = W - marginLeft - marginRight;
     const plotH = H - marginTop - marginBottom;
 
     const mutantIdStr = document.getElementById("thresholdMutantSelect").value;
     const { histogram, total } = currentHistogramAndTotal(mutantIdStr);
-    if (total === 0 || leadTimeValues.length === 0) return;
+    if (total === 0 || leadTimeValues.length === 0) {
+      const t = svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle", class: "chart-axis-text" });
+      t.textContent = "No data.";
+      svg.appendChild(t);
+      return;
+    }
 
     const maxTenths = leadTimeValues[leadTimeValues.length - 1];
     function xForTenths(t) { return marginLeft + (t / maxTenths) * plotW; }
@@ -771,15 +865,28 @@
     const labelEvery = Math.max(1, Math.ceil(leadTimeValues.length / 16));
     leadTimeValues.forEach((t, i) => {
       if (i % labelEvery !== 0) return;
-      const el = svgEl("text", { x: xForTenths(t), y: H - marginBottom + 16, "text-anchor": "middle", class: "chart-axis-text" });
+      const el = svgEl("text", { x: xForTenths(t), y: marginTop + plotH + 16, "text-anchor": "middle", class: "chart-axis-text" });
       el.textContent = (t / 10).toFixed(1);
       svg.appendChild(el);
     });
 
+    // axis titles - always present so a screenshot cropped to just this chart still says what the
+    // axes mean, not just the tick-label numbers.
+    const xTitle = svgEl("text", { x: marginLeft + plotW / 2, y: marginTop + plotH + 36, "text-anchor": "middle", class: "chart-axis-title" });
+    xTitle.textContent = "Candidate --leadTimeSeconds threshold (seconds)";
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl("text", {
+      x: 16, y: marginTop + plotH / 2, "text-anchor": "middle", class: "chart-axis-title",
+      transform: "rotate(-90 16 " + (marginTop + plotH / 2) + ")",
+    });
+    yTitle.textContent = "% of flagged ticks still reproducing";
+    svg.appendChild(yTitle);
+
     // current threshold cursor
     const cursorX = xForTenths(thresholdTenths);
     svg.appendChild(svgEl("line", { x1: cursorX, x2: cursorX, y1: marginTop, y2: marginTop + plotH, class: "cursor-line" }));
-    const label = svgEl("text", { x: cursorX, y: marginTop - 2, "text-anchor": "middle", class: "cursor-label" });
+    const label = svgEl("text", { x: cursorX, y: marginTop - 4, "text-anchor": "middle", class: "cursor-label" });
     label.textContent = (thresholdTenths / 10).toFixed(1) + "s";
     svg.appendChild(label);
   }
@@ -979,8 +1086,14 @@
     thresholdTenths = leadTimeValues[0] || 0;
 
     renderSummary(data);
+    const context = runContextText(data);
+    setText(document.getElementById("stopReasonContext"), context);
+    setText(document.getElementById("histogramContext"), context);
+    setText(document.getElementById("thresholdContextLine"), context);
+    setText(document.getElementById("mutantsContext"), context);
     renderStopReasonBar(data);
     renderHistogramChart(data);
+    setText(document.getElementById("histogramCaption"), "n = " + fmtNum(data.divergedCount) + " diverged ticks (of " + fmtNum(data.totalTicksAnalyzed) + " analyzed) · median " + (data.percentiles.p50 !== undefined ? data.percentiles.p50.toFixed(1) + "s" : "—"));
     populateThresholdMutantSelect(data);
     renderThresholdExplorer();
     renderMutantsTable();

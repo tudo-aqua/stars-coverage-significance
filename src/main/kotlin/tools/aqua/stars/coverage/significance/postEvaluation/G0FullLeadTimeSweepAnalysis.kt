@@ -175,20 +175,16 @@ object G0FullLeadTimeSweepAnalysis {
           tenths++
         }
 
-        val reproducingSteps = steps.filter { it.g0Failed == true }
-        val divergedSteps = steps.filter { it.g0Failed == false }
-        val inconclusiveSteps = steps.filter { it.g0Failed == null }
-        val minReproducing = reproducingSteps.minOfOrNull { it.leadTimeSeconds }
-        val maxReproducing = reproducingSteps.maxOfOrNull { it.leadTimeSeconds }
-        val isMonotonic = isMonotonicallyReproducing(steps)
+        val derived = deriveStats(steps)
 
         println(
             "[worker-$workerId] Tick $tickId (tick=${tick.tick}, run=${tick.runId}, " +
                 "mutant=${tick.mutantId}): ${steps.size} lead-time step(s) swept, " +
-                "reproducing=${reproducingSteps.size} diverged=${divergedSteps.size} " +
-                "inconclusive=${inconclusiveSteps.size} isMonotonic=$isMonotonic" +
-                (minReproducing?.let { ", min=$it" } ?: "") +
-                (maxReproducing?.let { ", max=$it" } ?: "") +
+                "reproducing=${derived.reproducingCount} diverged=${derived.divergedCount} " +
+                "inconclusive=${derived.inconclusiveCount} isMonotonic=${derived.isMonotonic} " +
+                "reproducesAtFullScenarioReplay=${derived.reproducesAtFullScenarioReplay}" +
+                (derived.minReproducingLeadTimeSeconds?.let { ", min=$it" } ?: "") +
+                (derived.maxReproducingLeadTimeSeconds?.let { ", max=$it" } ?: "") +
                 ".")
 
         val result =
@@ -199,12 +195,13 @@ object G0FullLeadTimeSweepAnalysis {
                 scenarioConfigId = tick.scenarioConfigId,
                 originalMutantId = tick.mutantId,
                 steps = steps,
-                minReproducingLeadTimeSeconds = minReproducing,
-                maxReproducingLeadTimeSeconds = maxReproducing,
-                reproducingCount = reproducingSteps.size,
-                divergedCount = divergedSteps.size,
-                inconclusiveCount = inconclusiveSteps.size,
-                isMonotonic = isMonotonic,
+                minReproducingLeadTimeSeconds = derived.minReproducingLeadTimeSeconds,
+                maxReproducingLeadTimeSeconds = derived.maxReproducingLeadTimeSeconds,
+                reproducingCount = derived.reproducingCount,
+                divergedCount = derived.divergedCount,
+                inconclusiveCount = derived.inconclusiveCount,
+                isMonotonic = derived.isMonotonic,
+                reproducesAtFullScenarioReplay = derived.reproducesAtFullScenarioReplay,
             )
         writer.write(jsonConfiguration.encodeToString(result))
         writer.newLine()
@@ -212,6 +209,49 @@ object G0FullLeadTimeSweepAnalysis {
       }
     }
     println("[worker-$workerId] Finished. Detail written to: " + detailFilePath(runId, workerId))
+  }
+
+  /**
+   * Derived per-tick statistics computed from a full sweep's raw step list — shared by [sweepTicks]
+   * (computed once, for the record written to disk) and [aggregate] (recomputed fresh from each
+   * stored tick's `steps` every time, so a fix to this logic applies retroactively to
+   * already-collected detail files without re-running the, potentially multi-hour, sweep itself).
+   */
+  private data class DerivedTickStats(
+      val minReproducingLeadTimeSeconds: Double?,
+      val maxReproducingLeadTimeSeconds: Double?,
+      val reproducingCount: Int,
+      val divergedCount: Int,
+      val inconclusiveCount: Int,
+      val isMonotonic: Boolean,
+      val reproducesAtFullScenarioReplay: Boolean?,
+  )
+
+  /**
+   * Derives [DerivedTickStats] from [steps]. Every field except
+   * [DerivedTickStats.reproducesAtFullScenarioReplay] itself excludes [steps]' *final* entry —
+   * replaying from the earliest recorded tick of this (run, scenario, mutant), i.e. re-simulating
+   * the entire original scenario from its true start with the same mutant, which by simulation
+   * determinism almost always reproduces the recorded failure regardless of any genuine lead-time
+   * effect (see [TickG0FullSweepResult.reproducesAtFullScenarioReplay] for the full reasoning).
+   * Including it would make nearly every tick that diverges even once register as "non-monotonic"
+   * purely because of this guaranteed endpoint.
+   */
+  private fun deriveStats(steps: List<LeadTimeSweepStepResult>): DerivedTickStats {
+    val reproducesAtFullScenarioReplay = steps.lastOrNull()?.g0Failed
+    val analyzedSteps = if (steps.size > 1) steps.dropLast(1) else steps
+    val reproducingSteps = analyzedSteps.filter { it.g0Failed == true }
+    val divergedSteps = analyzedSteps.filter { it.g0Failed == false }
+    val inconclusiveSteps = analyzedSteps.filter { it.g0Failed == null }
+    return DerivedTickStats(
+        minReproducingLeadTimeSeconds = reproducingSteps.minOfOrNull { it.leadTimeSeconds },
+        maxReproducingLeadTimeSeconds = reproducingSteps.maxOfOrNull { it.leadTimeSeconds },
+        reproducingCount = reproducingSteps.size,
+        divergedCount = divergedSteps.size,
+        inconclusiveCount = inconclusiveSteps.size,
+        isMonotonic = isMonotonicallyReproducing(analyzedSteps),
+        reproducesAtFullScenarioReplay = reproducesAtFullScenarioReplay,
+    )
   }
 
   /**
@@ -283,6 +323,7 @@ object G0FullLeadTimeSweepAnalysis {
     var totalTicks = 0
     var neverReproducedCount = 0
     var nonMonotonicCount = 0
+    var fullReplayMismatchCount = 0
     val minLeadTimes = mutableListOf<Double>()
     val maxLeadTimes = mutableListOf<Double>()
   }
@@ -302,6 +343,7 @@ object G0FullLeadTimeSweepAnalysis {
     var totalTicksAnalyzed = 0
     var neverReproducedCount = 0
     var nonMonotonicCount = 0
+    var fullReplayMismatchCount = 0
     val nonMonotonicTickIds = mutableListOf<Long>()
     val minLeadTimes = mutableListOf<Double>()
     val maxLeadTimes = mutableListOf<Double>()
@@ -318,20 +360,31 @@ object G0FullLeadTimeSweepAnalysis {
         val mutantAcc = byMutant.getOrPut(tick.originalMutantId) { MutantAccumulator() }
         mutantAcc.totalTicks++
 
-        if (!tick.isMonotonic) {
+        // Recomputed fresh from the raw steps rather than trusting the tick's own stored derived
+        // fields - see deriveStats' KDoc for why: this way, a fix to that logic (like excluding the
+        // trivial full-scenario-replay step) is picked up by --aggregateOnly against already-
+        // collected detail files without needing to re-run the sweep itself.
+        val derived = deriveStats(tick.steps)
+
+        if (derived.reproducesAtFullScenarioReplay != true) {
+          fullReplayMismatchCount++
+          mutantAcc.fullReplayMismatchCount++
+        }
+
+        if (!derived.isMonotonic) {
           nonMonotonicCount++
           nonMonotonicTickIds += tick.tickId
           mutantAcc.nonMonotonicCount++
         }
 
-        if (tick.minReproducingLeadTimeSeconds == null) {
+        if (derived.minReproducingLeadTimeSeconds == null) {
           neverReproducedCount++
           mutantAcc.neverReproducedCount++
         } else {
-          minLeadTimes += tick.minReproducingLeadTimeSeconds
-          maxLeadTimes += checkNotNull(tick.maxReproducingLeadTimeSeconds)
-          mutantAcc.minLeadTimes += tick.minReproducingLeadTimeSeconds
-          mutantAcc.maxLeadTimes += tick.maxReproducingLeadTimeSeconds
+          minLeadTimes += derived.minReproducingLeadTimeSeconds
+          maxLeadTimes += checkNotNull(derived.maxReproducingLeadTimeSeconds)
+          mutantAcc.minLeadTimes += derived.minReproducingLeadTimeSeconds
+          mutantAcc.maxLeadTimes += derived.maxReproducingLeadTimeSeconds
         }
       }
     }
@@ -356,6 +409,7 @@ object G0FullLeadTimeSweepAnalysis {
                   maxLeadTimeHistogram = mutantMaxHistogram,
                   minLeadTimePercentiles = mutantMinPercentiles,
                   maxLeadTimePercentiles = mutantMaxPercentiles,
+                  fullReplayMismatchCount = acc.fullReplayMismatchCount,
               )
             }
 
@@ -371,6 +425,7 @@ object G0FullLeadTimeSweepAnalysis {
             minLeadTimePercentiles = minLeadTimePercentiles,
             maxLeadTimePercentiles = maxLeadTimePercentiles,
             mutantStats = mutantStats,
+            fullReplayMismatchCount = fullReplayMismatchCount,
         )
 
     val base = basePath()

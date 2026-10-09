@@ -62,22 +62,39 @@ data class LeadTimeSweepStepResult(
  *   replayed throughout the sweep.
  * @property steps Every lead time actually replayed, in increasing order of
  *   [LeadTimeSweepStepResult.leadTimeSeconds], from 0.0 through to the earliest recorded tick of
- *   this (run, scenario, mutant) — i.e. always the full sweep, never cut short.
- * @property minReproducingLeadTimeSeconds The smallest lead time at which the replay reproduces the
- *   recorded failure, or `null` if it never does (see [reproducingCount]).
- * @property maxReproducingLeadTimeSeconds The largest lead time at which the replay reproduces the
- *   recorded failure, or `null` if it never does. Together with [minReproducingLeadTimeSeconds],
- *   these answer "how close" and "how far back" the original mutant can be given lead time and
- *   still reproduce its own recorded failure — not just the first point of departure from
- *   reproducing it.
- * @property reproducingCount Of [steps], how many have `g0Failed == true`.
- * @property divergedCount Of [steps], how many have `g0Failed == false`.
- * @property inconclusiveCount Of [steps], how many have `g0Failed == null`.
+ *   this (run, scenario, mutant) — i.e. always the full sweep, never cut short. **Note:** `steps`
+ *   always includes that final, earliest-available-tick step, but
+ *   [minReproducingLeadTimeSeconds]/[maxReproducingLeadTimeSeconds]/[reproducingCount]/
+ *   [divergedCount]/[inconclusiveCount]/[isMonotonic] below all **exclude** it — see
+ *   [reproducesAtFullScenarioReplay].
+ * @property minReproducingLeadTimeSeconds The smallest lead time (excluding the trivial final step,
+ *   see [reproducesAtFullScenarioReplay]) at which the replay reproduces the recorded failure, or
+ *   `null` if none do (see [reproducingCount]).
+ * @property maxReproducingLeadTimeSeconds The largest such lead time, or `null` if none do.
+ *   Together with [minReproducingLeadTimeSeconds], these answer "how close" and "how far back" the
+ *   original mutant can be given lead time and still reproduce its own recorded failure — not just
+ *   the first point of departure from reproducing it.
+ * @property reproducingCount Of [steps] *excluding* the final one, how many have `g0Failed ==
+ *   true`.
+ * @property divergedCount Of [steps] *excluding* the final one, how many have `g0Failed == false`.
+ * @property inconclusiveCount Of [steps] *excluding* the final one, how many have `g0Failed ==
+ *   null`.
  * @property isMonotonic Whether reproduction only ever turns off as lead time increases and never
- *   back on — `false` means some lead time reproduces the failure *after* a smaller lead time
- *   already failed to (inconclusive steps are ignored for this check) — direct evidence that the
- *   original mutant's (or the surrounding traffic's) state-based behavior doesn't decay smoothly
- *   with lead time. Vacuously `true` when [reproducingCount] or [divergedCount] is 0.
+ *   back on, considering every step *except* the final one — `false` means some (non-final) lead
+ *   time reproduces the failure *after* a smaller lead time already failed to (inconclusive steps
+ *   are ignored for this check) — evidence that the original mutant's (or the surrounding
+ *   traffic's) state-based behavior doesn't decay smoothly with lead time. Vacuously `true` when
+ *   [reproducingCount] or [divergedCount] (both excluding the final step) is 0.
+ * @property reproducesAtFullScenarioReplay Whether `steps`' *final* entry — replaying from the
+ *   earliest recorded tick of this (run, scenario, mutant), i.e. re-simulating the **entire**
+ *   original scenario from its true start with the same mutant — reproduces the recorded failure.
+ *   By simulation determinism this is almost always `true` regardless of any genuine lead-time
+ *   effect (it's simply re-deriving the data this very tick's record came from), which is exactly
+ *   why it's excluded from [minReproducingLeadTimeSeconds]/[maxReproducingLeadTimeSeconds]/
+ *   [isMonotonic] above — including it would make nearly every tick that diverges even once
+ *   register as "non-monotonic" purely because of this guaranteed endpoint, swamping any real
+ *   signal from the other, non-trivial lead times. A `false` (or `null`) value here is the
+ *   genuinely interesting anomaly: a replay-fidelity gap even at full reconstruction.
  */
 @Serializable
 data class TickG0FullSweepResult(
@@ -93,6 +110,7 @@ data class TickG0FullSweepResult(
     val divergedCount: Int,
     val inconclusiveCount: Int,
     val isMonotonic: Boolean,
+    val reproducesAtFullScenarioReplay: Boolean? = null,
 )
 
 /**
@@ -114,6 +132,9 @@ data class TickG0FullSweepResult(
  *   over this mutant's minimum reproducing lead times.
  * @property maxLeadTimePercentiles Nearest-rank percentiles ("p50", "p75", "p90", "p95", "p99")
  *   over this mutant's maximum reproducing lead times.
+ * @property fullReplayMismatchCount Of [totalTicks], how many have `reproducesAtFullScenarioReplay
+ *   != true` — see [TickG0FullSweepResult.reproducesAtFullScenarioReplay]. Expected to be
+ *   rare/zero; a nonzero value is a genuine replay-fidelity anomaly worth investigating on its own.
  */
 @Serializable
 data class G0FullLeadTimeSweepMutantStats(
@@ -125,6 +146,7 @@ data class G0FullLeadTimeSweepMutantStats(
     val maxLeadTimeHistogram: Map<Double, Int>,
     val minLeadTimePercentiles: Map<String, Double>,
     val maxLeadTimePercentiles: Map<String, Double>,
+    val fullReplayMismatchCount: Int,
 )
 
 /**
@@ -151,6 +173,8 @@ data class G0FullLeadTimeSweepMutantStats(
  *   over every maximum reproducing lead time.
  * @property mutantStats Per-mutant breakdown — see [G0FullLeadTimeSweepMutantStats] — one entry per
  *   distinct original mutant actually encountered among the swept ticks.
+ * @property fullReplayMismatchCount See [G0FullLeadTimeSweepMutantStats.fullReplayMismatchCount],
+ *   across every swept tick.
  */
 @Serializable
 data class G0FullLeadTimeSweepSummary(
@@ -164,4 +188,5 @@ data class G0FullLeadTimeSweepSummary(
     val minLeadTimePercentiles: Map<String, Double>,
     val maxLeadTimePercentiles: Map<String, Double>,
     val mutantStats: List<G0FullLeadTimeSweepMutantStats>,
+    val fullReplayMismatchCount: Int,
 )
