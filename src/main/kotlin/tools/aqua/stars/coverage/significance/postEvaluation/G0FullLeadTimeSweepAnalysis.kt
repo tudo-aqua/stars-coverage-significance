@@ -324,8 +324,52 @@ object G0FullLeadTimeSweepAnalysis {
     var neverReproducedCount = 0
     var nonMonotonicCount = 0
     var fullReplayMismatchCount = 0
+    var precededByEarlierAccidentCount = 0
     val minLeadTimes = mutableListOf<Double>()
     val maxLeadTimes = mutableListOf<Double>()
+  }
+
+  /**
+   * For every tick id in [ticksByTrajectory] (grouped by the (run, scenario, mutant) trajectory it
+   * belongs to), determines whether some *earlier* tick (by recorded time) in that same trajectory
+   * already had `monitorG0Failed == true` in the ORIGINAL recorded run — i.e. whether this flagged
+   * tick is preceded by an accident that already happened, rather than being a fresh one.
+   *
+   * One DB query per distinct (run, scenario, mutant) group (not per tick), reusing
+   * [MetricFailedMonitorsRepository.getAllForScenarioAndMutant] — the same dense, already-recorded
+   * trajectory [LeadTimeReplay.candidatesFor] draws its lead-time replay candidates from. No
+   * simulation involved: this only reads monitor flags the original evaluation run already wrote.
+   *
+   * @param ticksByTrajectory (runId, scenarioConfigId, mutantId) -> every flagged tick id in that
+   *   trajectory to check.
+   * @return tickId -> whether some strictly-earlier tick in its trajectory had `monitorG0Failed ==
+   *   true`. Always has an entry for every id passed in (false if no earlier accident is found,
+   *   including when the trajectory has no earlier ticks at all).
+   */
+  private fun computePrecededByEarlierAccident(
+      ticksByTrajectory: Map<Triple<Int, Int, Int>, List<Long>>
+  ): Map<Long, Boolean> {
+    val result = mutableMapOf<Long, Boolean>()
+    for ((trajectory, tickIds) in ticksByTrajectory) {
+      val (runId, scenarioConfigId, mutantId) = trajectory
+      val targetIds = tickIds.toHashSet()
+      val sortedTrajectory =
+          MetricFailedMonitorsRepository.getAllForScenarioAndMutant(
+                  runId, scenarioConfigId, mutantId)
+              .sortedBy { it.tick }
+
+      var anyAccidentSoFar = false
+      for (entry in sortedTrajectory) {
+        val entryId = checkNotNull(entry.id)
+        // Checked against anyAccidentSoFar as it stood *before* this entry - this entry's own
+        // monitorG0Failed must not count as "preceding" itself.
+        if (entryId in targetIds) {
+          result[entryId] = anyAccidentSoFar
+        }
+        if (entry.monitorG0Failed) anyAccidentSoFar = true
+      }
+    }
+    return result
   }
 
   /**
@@ -337,9 +381,15 @@ object G0FullLeadTimeSweepAnalysis {
    * without re-running the (potentially multi-hour) sweep that produced the detail files.
    *
    * @param runId Evaluation run id the analysis was restricted to, or `null` for every run.
+   * @param checkPrecedingAccidents Whether to additionally compute
+   *   [G0FullLeadTimeSweepSummary.precededByEarlierAccidentCount] (and the per-mutant equivalent) —
+   *   `false` by default since, unlike the rest of this function, it needs a live DB connection
+   *   (one query per distinct (run, scenario, mutant) trajectory, not per tick - see
+   *   [computePrecededByEarlierAccident]). Leaving it `false` keeps the default DB-free
+   *   `--aggregateOnly` path unchanged.
    * @return The written [G0FullLeadTimeSweepSummary].
    */
-  fun aggregate(runId: Int?): G0FullLeadTimeSweepSummary {
+  fun aggregate(runId: Int?, checkPrecedingAccidents: Boolean = false): G0FullLeadTimeSweepSummary {
     var totalTicksAnalyzed = 0
     var neverReproducedCount = 0
     var nonMonotonicCount = 0
@@ -348,6 +398,9 @@ object G0FullLeadTimeSweepAnalysis {
     val minLeadTimes = mutableListOf<Double>()
     val maxLeadTimes = mutableListOf<Double>()
     val byMutant = mutableMapOf<Int, MutantAccumulator>()
+    // (runId, scenarioConfigId, originalMutantId) -> every flagged tick id in that trajectory -
+    // only populated when checkPrecedingAccidents is requested.
+    val tickIdsByTrajectory = mutableMapOf<Triple<Int, Int, Int>, MutableList<Long>>()
 
     val detailFiles = discoverDetailFiles(runId)
     println("Aggregating ${detailFiles.size} worker detail file(s) for runId=${runId ?: "all"}.")
@@ -386,11 +439,35 @@ object G0FullLeadTimeSweepAnalysis {
           mutantAcc.minLeadTimes += derived.minReproducingLeadTimeSeconds
           mutantAcc.maxLeadTimes += derived.maxReproducingLeadTimeSeconds
         }
+
+        if (checkPrecedingAccidents) {
+          tickIdsByTrajectory.getOrPut(
+              Triple(tick.runId, tick.scenarioConfigId, tick.originalMutantId)) {
+                mutableListOf()
+              } += tick.tickId
+        }
       }
     }
 
     val (minLeadTimeHistogram, minLeadTimePercentiles) = histogramAndPercentiles(minLeadTimes)
     val (maxLeadTimeHistogram, maxLeadTimePercentiles) = histogramAndPercentiles(maxLeadTimes)
+
+    var precededByEarlierAccidentCount: Int? = null
+    var precededByEarlierAccidentTickIds: List<Long>? = null
+    if (checkPrecedingAccidents) {
+      println(
+          "Checking ${tickIdsByTrajectory.size} (run, scenario, mutant) trajectories for preceding accidents...")
+      val precededMap = computePrecededByEarlierAccident(tickIdsByTrajectory)
+      for ((trajectory, tickIds) in tickIdsByTrajectory) {
+        val mutantAcc = byMutant.getValue(trajectory.third)
+        tickIds.forEach { tickId ->
+          if (precededMap[tickId] == true) mutantAcc.precededByEarlierAccidentCount++
+        }
+      }
+      val precededIds = precededMap.filterValues { it }.keys.sorted()
+      precededByEarlierAccidentCount = precededIds.size
+      precededByEarlierAccidentTickIds = precededIds
+    }
 
     val mutantStats =
         byMutant.entries
@@ -410,6 +487,8 @@ object G0FullLeadTimeSweepAnalysis {
                   minLeadTimePercentiles = mutantMinPercentiles,
                   maxLeadTimePercentiles = mutantMaxPercentiles,
                   fullReplayMismatchCount = acc.fullReplayMismatchCount,
+                  precededByEarlierAccidentCount =
+                      if (checkPrecedingAccidents) acc.precededByEarlierAccidentCount else null,
               )
             }
 
@@ -426,6 +505,8 @@ object G0FullLeadTimeSweepAnalysis {
             maxLeadTimePercentiles = maxLeadTimePercentiles,
             mutantStats = mutantStats,
             fullReplayMismatchCount = fullReplayMismatchCount,
+            precededByEarlierAccidentCount = precededByEarlierAccidentCount,
+            precededByEarlierAccidentTickIds = precededByEarlierAccidentTickIds,
         )
 
     val base = basePath()

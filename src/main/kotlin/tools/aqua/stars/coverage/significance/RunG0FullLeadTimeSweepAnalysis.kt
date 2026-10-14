@@ -38,23 +38,33 @@ import tools.aqua.stars.coverage.significance.workers.startG0FullLeadTimeSweepAn
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as
- *   `RunEvaluation.kt`), and `--aggregateOnly=true` to skip the sweep entirely and just re-run
- *   aggregation against whatever detail files already exist under `details/`.
+ *   `RunEvaluation.kt`), `--aggregateOnly=true` to skip the sweep entirely and just re-run
+ *   aggregation against whatever detail files already exist under `details/`, and
+ *   `--checkPrecedingAccidents=true` to additionally compute
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.G0FullLeadTimeSweepSummary.precededByEarlierAccidentCount]
+ *   — unlike the rest of aggregation this needs a live DB connection (cheap queries against
+ *   already-recorded monitor flags, no simulation), so combine it with `--aggregateOnly=true` to
+ *   add it to an existing summary without re-running the (potentially multi-hour) sweep.
  */
 fun main(args: Array<String>) {
   val runId = CliArgs.optionalInt(args, "runId")
   val aggregateOnly = CliArgs.optionalBoolean(args, "aggregateOnly", false)
   val bufferProcessors = (CliArgs.optionalInt(args, "bufferProcessors") ?: 0).coerceAtLeast(0)
+  val checkPrecedingAccidents = CliArgs.optionalBoolean(args, "checkPrecedingAccidents", false)
 
   println(
-      "Got the following arguments: runId = $runId, aggregateOnly = $aggregateOnly, bufferProcessors = $bufferProcessors")
+      "Got the following arguments: runId = $runId, aggregateOnly = $aggregateOnly, bufferProcessors = $bufferProcessors, checkPrecedingAccidents = $checkPrecedingAccidents")
 
   if (aggregateOnly) {
     // Aggregation only reads back already-written detail files (see
     // G0FullLeadTimeSweepAnalysis.aggregate) - no DB access needed, so a live Postgres instance
-    // isn't required just to regenerate a summary from existing data.
+    // isn't required just to regenerate a summary from existing data, UNLESS the preceding-accident
+    // check was also requested, which does need to read already-recorded monitor flags back.
     println(
         "--aggregateOnly: skipping sweep, re-aggregating existing detail files for runId=${runId ?: "all"}.")
+    if (checkPrecedingAccidents) {
+      DbBootstrap.connect()
+    }
   } else {
     DbBootstrap.connectAndCreateSchema(DbBootstrap.DbConfig(port = 5432))
     val parallelism =
@@ -81,13 +91,17 @@ fun main(args: Array<String>) {
     }
   }
 
-  val summary = G0FullLeadTimeSweepAnalysis.aggregate(runId)
+  val summary = G0FullLeadTimeSweepAnalysis.aggregate(runId, checkPrecedingAccidents)
   println(
       "Finished! ${summary.totalTicksAnalyzed} ticks analyzed, " +
           "${summary.neverReproducedCount} never reproduced (excluding the full-scenario-replay " +
           "step), ${summary.nonMonotonicCount} non-monotonic (reproduction turned back on after " +
           "failing at a nearer, non-trivial lead time), ${summary.fullReplayMismatchCount} " +
-          "full-scenario-replay mismatches (expected to be rare/zero). Min-lead-time percentiles: " +
-          "${summary.minLeadTimePercentiles}. Max-lead-time percentiles: " +
-          "${summary.maxLeadTimePercentiles}.")
+          "full-scenario-replay mismatches (expected to be rare/zero)" +
+          (if (checkPrecedingAccidents)
+              ", ${summary.precededByEarlierAccidentCount} preceded by an earlier accident in " +
+                  "their own original recorded run"
+          else "") +
+          ". Min-lead-time percentiles: ${summary.minLeadTimePercentiles}. Max-lead-time " +
+          "percentiles: ${summary.maxLeadTimePercentiles}.")
 }

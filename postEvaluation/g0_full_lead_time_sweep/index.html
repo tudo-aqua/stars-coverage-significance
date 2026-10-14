@@ -313,7 +313,7 @@
   <section class="card" id="mutantsCard">
     <h2>Per-mutant breakdown</h2>
     <p class="context-line" id="mutantsContext"></p>
-    <p class="note">One row per mutant that originally produced at least one flagged tick. "Never reproduced" / "Non-monotonic" counts and percentages are of that mutant's own total ticks (this table's "Total ticks" column), matching the definitions in the cards above.</p>
+    <p class="note">One row per mutant that originally produced at least one flagged tick. "Never reproduced" / "Non-monotonic" counts and percentages are of that mutant's own total ticks (this table's "Total ticks" column), matching the definitions in the cards above. "Full-replay mismatches": of this mutant's ticks, how many do <em>not</em> reproduce the recorded failure even when the entire original scenario is re-simulated from its true start with this mutant — a determinism/replay-fidelity check, expected to be rare/zero; a high value for one mutant suggests its behavior isn't reproducible via this replay mechanism at all (e.g. a non-deterministic autopilot). "Preceded by accident": of this mutant's ticks, how many already had <em>some earlier</em> tick in their own original recorded run where the G0 monitor had already failed — i.e. the flagged tick may be a continuation of an accident that already happened, not a fresh one; only computed when the analysis was aggregated with <code>--checkPrecedingAccidents=true</code> (needs DB access to the original recorded monitor flags, but no re-simulation) — shows "not computed" otherwise.</p>
     <div class="controls-row">
       <label for="mutantFilterInput">Filter</label>
       <input type="text" id="mutantFilterInput" placeholder="mutant id" />
@@ -327,6 +327,8 @@
           <th class="num" data-sort-key="totalTicks">Total ticks<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="neverReproducedCount">Never reproduced<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="nonMonotonicCount">Non-monotonic<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="fullReplayMismatchCount">Full-replay mismatches<span class="sort-indicator"></span></th>
+          <th class="num" data-sort-key="precededByEarlierAccidentCount">Preceded by accident<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="medianMin">Median min lead time<span class="sort-indicator"></span></th>
           <th class="num" data-sort-key="medianMax">Median max lead time<span class="sort-indicator"></span></th>
         </tr></thead>
@@ -526,6 +528,9 @@
       ["Non-monotonic", data.nonMonotonicCount],
       ["Full-replay mismatches", data.fullReplayMismatchCount],
     ];
+    if (data.precededByEarlierAccidentCount !== undefined && data.precededByEarlierAccidentCount !== null) {
+      tiles.push(["Preceded by accident", data.precededByEarlierAccidentCount]);
+    }
     tiles.forEach((pair) => {
       const label = pair[0];
       const value = pair[1];
@@ -702,7 +707,7 @@
 
     // Percentiles that resolve to the same bar (common when the top of the distribution is a long
     // tail of near-identical values) are grouped into one combined label, rather than rendering
-    // separate <text> elements at the identical x/y position, which would just overlap illegibly.
+    // separate text elements at the identical x/y position, which would just overlap illegibly.
     const pctGroupsByIndex = new Map();
     Object.keys(percentiles || {}).forEach((label) => {
       const v = percentiles[label];
@@ -741,6 +746,10 @@
   function mutantRowValue(row, field) {
     if (field === "medianMin") return medianOf(row.minLeadTimePercentiles);
     if (field === "medianMax") return medianOf(row.maxLeadTimePercentiles);
+    if (field === "precededByEarlierAccidentCount") {
+      const v = row.precededByEarlierAccidentCount;
+      return v === undefined || v === null ? -1 : v;
+    }
     return row[field];
   }
 
@@ -782,6 +791,19 @@
       tdNonMono.textContent = fmtNum(r.nonMonotonicCount) + (r.totalTicks > 0 ? " (" + fmtPercent((r.nonMonotonicCount / r.totalTicks) * 100, 0) + ")" : "");
       tr.appendChild(tdNonMono);
 
+      const tdFullReplay = document.createElement("td");
+      tdFullReplay.className = "num";
+      tdFullReplay.textContent = fmtNum(r.fullReplayMismatchCount) + (r.totalTicks > 0 ? " (" + fmtPercent((r.fullReplayMismatchCount / r.totalTicks) * 100, 0) + ")" : "");
+      tr.appendChild(tdFullReplay);
+
+      const tdPreceded = document.createElement("td");
+      tdPreceded.className = "num";
+      const preceded = r.precededByEarlierAccidentCount;
+      tdPreceded.textContent = (preceded === undefined || preceded === null)
+        ? "not computed"
+        : fmtNum(preceded) + (r.totalTicks > 0 ? " (" + fmtPercent((preceded / r.totalTicks) * 100, 0) + ")" : "");
+      tr.appendChild(tdPreceded);
+
       const tdMedianMin = document.createElement("td");
       tdMedianMin.className = "num";
       const medMin = medianOf(r.minLeadTimePercentiles);
@@ -811,11 +833,12 @@
   }
 
   function downloadMutantsCsv() {
-    const rows = [["mutantId", "totalTicks", "neverReproducedCount", "nonMonotonicCount", "medianMinLeadTimeSeconds", "medianMaxLeadTimeSeconds"]];
+    const rows = [["mutantId", "totalTicks", "neverReproducedCount", "nonMonotonicCount", "fullReplayMismatchCount", "precededByEarlierAccidentCount", "medianMinLeadTimeSeconds", "medianMaxLeadTimeSeconds"]];
     filteredSortedMutants().forEach((r) => {
       const medMin = medianOf(r.minLeadTimePercentiles);
       const medMax = medianOf(r.maxLeadTimePercentiles);
-      rows.push([r.mutantId, r.totalTicks, r.neverReproducedCount, r.nonMonotonicCount, medMin < 0 ? "" : medMin.toFixed(1), medMax < 0 ? "" : medMax.toFixed(1)]);
+      const preceded = r.precededByEarlierAccidentCount;
+      rows.push([r.mutantId, r.totalTicks, r.neverReproducedCount, r.nonMonotonicCount, r.fullReplayMismatchCount, (preceded === undefined || preceded === null) ? "" : preceded, medMin < 0 ? "" : medMin.toFixed(1), medMax < 0 ? "" : medMax.toFixed(1)]);
     });
     const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
     downloadText("g0_full_lead_time_sweep_mutants.csv", csv, "text/csv");

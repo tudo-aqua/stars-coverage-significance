@@ -135,6 +135,15 @@ data class TickG0FullSweepResult(
  * @property fullReplayMismatchCount Of [totalTicks], how many have `reproducesAtFullScenarioReplay
  *   != true` — see [TickG0FullSweepResult.reproducesAtFullScenarioReplay]. Expected to be
  *   rare/zero; a nonzero value is a genuine replay-fidelity anomaly worth investigating on its own.
+ *   Together with [precededByEarlierAccidentCount], a determinism/fidelity sanity check on this
+ *   mutant's own original recorded run rather than a lead-time effect.
+ * @property precededByEarlierAccidentCount Of [totalTicks], how many had at least one *earlier*
+ *   tick (by recorded time, anywhere before it) in this mutant's own original recorded run of the
+ *   same scenario where the G0 (Accidents) monitor *already* failed — i.e. this flagged tick isn't
+ *   necessarily a fresh, first-time accident; it may be a continuation of (or caused by) one that
+ *   already happened earlier in the same recorded trajectory. `null` if this (comparatively cheap,
+ *   but DB-querying) check wasn't requested for this aggregation run — see
+ *   `G0FullLeadTimeSweepAnalysis.aggregate`'s `checkPrecedingAccidents` parameter.
  */
 @Serializable
 data class G0FullLeadTimeSweepMutantStats(
@@ -147,6 +156,7 @@ data class G0FullLeadTimeSweepMutantStats(
     val minLeadTimePercentiles: Map<String, Double>,
     val maxLeadTimePercentiles: Map<String, Double>,
     val fullReplayMismatchCount: Int,
+    val precededByEarlierAccidentCount: Int? = null,
 )
 
 /**
@@ -175,6 +185,11 @@ data class G0FullLeadTimeSweepMutantStats(
  *   distinct original mutant actually encountered among the swept ticks.
  * @property fullReplayMismatchCount See [G0FullLeadTimeSweepMutantStats.fullReplayMismatchCount],
  *   across every swept tick.
+ * @property precededByEarlierAccidentCount See
+ *   [G0FullLeadTimeSweepMutantStats.precededByEarlierAccidentCount], across every swept tick —
+ *   `null` if the check wasn't requested for this aggregation run.
+ * @property precededByEarlierAccidentTickIds Ids of the [precededByEarlierAccidentCount] ticks, for
+ *   direct inspection — `null` under the same condition.
  */
 @Serializable
 data class G0FullLeadTimeSweepSummary(
@@ -189,4 +204,6 @@ data class G0FullLeadTimeSweepSummary(
     val maxLeadTimePercentiles: Map<String, Double>,
     val mutantStats: List<G0FullLeadTimeSweepMutantStats>,
     val fullReplayMismatchCount: Int,
+    val precededByEarlierAccidentCount: Int? = null,
+    val precededByEarlierAccidentTickIds: List<Long>? = null,
 )
