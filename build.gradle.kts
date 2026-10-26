@@ -54,7 +54,7 @@ dependencies {
   implementation(
       group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.9.0")
   implementation(group = "org.eclipse.sumo", name = "libsumo", version = "1.25.0")
-  implementation("com.zaxxer:HikariCP:5.1.0")
+  implementation("com.zaxxer:HikariCP:7.0.2")
 }
 
 detekt {
