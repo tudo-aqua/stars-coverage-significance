@@ -18,7 +18,7 @@
 import java.net.URI
 
 plugins {
-  kotlin("jvm") version "2.2.0"
+  kotlin("jvm") version "2.3.20"
   application
   id("com.diffplug.spotless") version "7.0.2"
   id("io.gitlab.arturbosch.detekt") version "1.23.8"
