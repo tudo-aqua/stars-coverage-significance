@@ -18,6 +18,7 @@
 package tools.aqua.stars.coverage.validation.utils
 
 import java.io.File
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeLeafAssignmentsTable
@@ -33,7 +34,10 @@ class LeafAssignmentScriptsConsistencyTest {
   /** Both writer scripts use [LEAF_ASSIGNMENT_CHUNK_SIZE]. */
   @Test
   fun `Test scripts use the Kotlin chunk size`() {
-    val pythonValue = "%,d".format(LEAF_ASSIGNMENT_CHUNK_SIZE).replace(",", "_")
+    // Locale.ROOT pins the grouping separator to ',' regardless of the JVM's default locale
+    // (e.g. German locales format grouped integers with '.' instead).
+    val pythonValue =
+        String.format(Locale.ROOT, "%,d", LEAF_ASSIGNMENT_CHUNK_SIZE).replace(",", "_")
     for (script in listOf("scripts/decision_tree_g0.py", "scripts/label_new_ticks.py")) {
       assertTrue(
           File(script)
