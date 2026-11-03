@@ -287,6 +287,21 @@ val runG0FullLeadTimeSweepAnalysis by
       // args = listOf("--runId=8", "--bufferProcessors=2")
     }
 
+val runReplayDiagnostics by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Coordinator: diagnoses (1) whether replaying/reconstructing a simulation from a recorded tick is actually deterministic, via a double-run diff over a small, broad sample of ticks across mutants, and (2) why resuming from a later tick is often not possible, by re-aggregating the existing runG0FullLeadTimeSweepAnalysis detail files for free. Writes one Markdown report tying both findings together."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunReplayDiagnosticsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      // optional
+      // args = listOf("--runId=8", "--bufferProcessors=2", "--ticksPerMutant=3",
+      // "--maxLeadTimeSteps=10")
+    }
+
 val createHighwayTrafficAnalysisChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
