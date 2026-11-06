@@ -16,10 +16,10 @@ combination is needed instead of a scan of the whole table.
 Per scenario, the most common starting state is taken as the reference. Every other variant is
 reported with its members and the vehicles/fields in which it deviates from the reference.
 
-Usage (on the server):
-    python3 scripts/check_starting_scenarios.py --uri postgresql://stars:stars@localhost:5432/stars
-    python3 scripts/check_starting_scenarios.py --uri ... --tsc-id 1 --run-id 3
-    python3 scripts/check_starting_scenarios.py --uri ... --decimals 4
+Usage (in the evaluation container on the server; connects to DB_URI below):
+    python3 scripts/check_starting_scenarios.py
+    python3 scripts/check_starting_scenarios.py --tsc-id 1 --run-id 3
+    python3 scripts/check_starting_scenarios.py --decimals 4
 
 Exit code: 0 if all starting states are identical, 1 if any scenario has deviations.
 
@@ -41,6 +41,10 @@ from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from all_vehicles_json_codec import decompress  # noqa: E402
+
+# The database runs next to the evaluation container on the same server. Direct PostgreSQL port
+# (not PgBouncer on 6432): this is one long streaming read inside a single transaction.
+DB_URI = "postgresql://stars:stars@ls14-sting1.cs.tu-dortmund.de:5432/stars"
 
 # Per-vehicle fields that make up the starting state.
 COMPARED_FIELDS = ("lane", "front", "back", "speed")
@@ -178,8 +182,6 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--uri", required=True, metavar="POSTGRES_URI",
-                        help="PostgreSQL connection URI: postgresql://user:pass@host:port/db")
     parser.add_argument("--tsc-id", type=int, default=None,
                         help="Only check this TSC (default: all)")
     parser.add_argument("--run-id", type=int, default=None,
@@ -212,7 +214,7 @@ def main() -> None:
     print("Collecting the first tick of every (tsc, run, scenario, mutant) combination ...",
           flush=True)
 
-    conn = psycopg2.connect(args.uri)
+    conn = psycopg2.connect(DB_URI)
     reports, n_rows, n_scenarios = [], 0, 0
     try:
         # Named (server-side) cursor: rows are streamed instead of loaded all at once.
