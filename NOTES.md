@@ -21,8 +21,8 @@ python3 scripts/check_starting_scenarios.py
 
 ```
 ======================================================================
-Starting ticks checked:     34603008 (of up to 34603008 combinations)
-Scenarios checked:          196608
+Starting ticks checked:     34,603,008 (of up to 34,603,008 combinations)
+Scenarios checked:          196,608
 Scenarios with deviations:  0
 Report written to starting_scenario_check.json (4.8 min)
 ```
