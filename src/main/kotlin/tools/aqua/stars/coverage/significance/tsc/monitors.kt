@@ -76,12 +76,12 @@ val g1SafeDistanceToPrecedingVehicle =
                           TickDifferenceMilliseconds(TIME_CUT_IN))) { onceTick ->
                     cutIn.holds(
                         onceTick,
-                        onceTick.getVehicleById(otherVehicleGlobally.vehicleId) to onceTick.ego) &&
+                        onceTick.ego to onceTick.getVehicleById(otherVehicleGlobally.vehicleId)) &&
                         previous(onceTick) { previousTick ->
                           !cutIn.holds(
                               previousTick,
-                              previousTick.getVehicleById(otherVehicleGlobally.vehicleId) to
-                                  previousTick.ego)
+                              previousTick.ego to
+                                  previousTick.getVehicleById(otherVehicleGlobally.vehicleId))
                         }
                   }) implies
               keepSafeDistancePreceding.holds(
