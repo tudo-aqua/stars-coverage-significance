@@ -254,27 +254,29 @@ val hasRelevantVehicleInBehind =
     }
 
 /**
- * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
- * right lane.
+ * Predicate that checks if there is a vehicle in front of the ego vehicle on the ego's lane that is
+ * critical, i.e. its time gap is below [TG_LONGITUDINAL_CRITICAL_SECONDS] or its time-to-collision
+ * is below [TTC_LONGITUDINAL_CRITICAL_SECONDS]. Vehicles on other lanes are never critical here.
  */
 val hasCriticalVehicleInFront =
     predicate<TimeStep>("Has Critical Vehicle in Front") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(tick.ego, otherVehicle) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
-            ttcFront(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS
+            (timeGap(tick.ego, otherVehicle) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
+                ttcFront(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS)
       }
     }
 
 /**
- * Predicate that checks if the vehicle is critical for the ego vehicle and is not moving to the
- * right lane.
+ * Predicate that checks if there is a vehicle behind the ego vehicle on the ego's lane that is
+ * critical, i.e. its time gap is below [TG_LONGITUDINAL_CRITICAL_SECONDS] or its time-to-collision
+ * is below [TTC_LONGITUDINAL_CRITICAL_SECONDS]. Vehicles on other lanes are never critical here.
  */
 val hasCriticalVehicleInBehind =
     predicate<TimeStep>("Has Critical Vehicle in Behind") { tick ->
       exists(tick.nonEgoVehicles) { otherVehicle ->
         tick.ego.currentLane.laneIndex == otherVehicle.currentLane.laneIndex &&
-            timeGap(otherVehicle, tick.ego) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
-            ttcRear(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS
+            (timeGap(otherVehicle, tick.ego) < TG_LONGITUDINAL_CRITICAL_SECONDS ||
+                ttcRear(tick.ego, otherVehicle) < TTC_LONGITUDINAL_CRITICAL_SECONDS)
       }
     }
