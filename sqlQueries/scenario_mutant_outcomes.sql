@@ -4,6 +4,7 @@
 -- Run twice, baseline first (about 8M ticks), then the mutants (about 1.4B ticks):
 --   psql -v scope=baseline -f sqlQueries/scenario_mutant_outcomes.sql
 --   psql -v scope=mutants  -f sqlQueries/scenario_mutant_outcomes.sql
+-- Or everything in one go: -v scope=all.
 -- Each run replaces only the rows of its scope, so either one can be rerun on its own.
 -- Optional: -v lc_window=20 (ticks after an ego lane change that count for the *_after_lc columns).
 --
@@ -21,10 +22,10 @@
   \set lc_window 20
 \endif
 
-SELECT :'scope' IN ('baseline', 'mutants') AS scope_ok \gset
+SELECT :'scope' IN ('baseline', 'mutants', 'all') AS scope_ok \gset
 \if :scope_ok
 \else
-  \echo 'scope must be baseline or mutants, got' :'scope'
+  \echo 'scope must be baseline, mutants or all, got' :'scope'
   \quit
 \endif
 
@@ -43,7 +44,7 @@ WITH ticks AS (
            m.ego_lane <> LAG(m.ego_lane) OVER w AS lane_changed
     FROM metric_failed_monitors m
          JOIN mutants mu ON mu.id = m.mutant_id
-    WHERE (mu.mutant_number = -1) = (:'scope' = 'baseline')
+    WHERE :'scope' = 'all' OR (mu.mutant_number = -1) = (:'scope' = 'baseline')
     -- Same column order as the unique index, so Postgres can read it pre-sorted.
     WINDOW w AS (PARTITION BY m.tsc_id, m.run_id, m.scenario_config_id, m.mutant_id ORDER BY m.tick)
 ),
@@ -79,7 +80,7 @@ BEGIN;
 DELETE FROM scenario_mutant_outcomes o
 USING mutants mu
 WHERE mu.id = o.mutant_id
-  AND (mu.mutant_number = -1) = (:'scope' = 'baseline');
+  AND (:'scope' = 'all' OR (mu.mutant_number = -1) = (:'scope' = 'baseline'));
 INSERT INTO scenario_mutant_outcomes SELECT * FROM outcomes_src;
 COMMIT;
 

@@ -105,7 +105,7 @@ steps do not touch the tick table again.
      after a tick whose `ego_lane` differs from the previous tick.
    - `n_ticks`, `first_accident_tick`.
    - Implemented in `sqlQueries/scenario_mutant_outcomes.sql` (run with `-v scope=baseline`, then
-     `-v scope=mutants`). It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
+     `-v scope=mutants`, or both at once with `-v scope=all`). It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
      `lc_window_ticks`.
 2. Kill matrices, one per oracle, computed in Python from that table with thresholds as parameters:
    - Oracle TTC: `front_ttc < ttc_front OR rear_ttc[_after_lc] < ttc_rear` (P6); oracle TG likewise
