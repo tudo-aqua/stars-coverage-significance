@@ -1,0 +1,906 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1665" width="1400" height="1665" font-family="Helvetica, Arial, sans-serif">
+<title>STARS coverage significance: data generation pipeline</title>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d2733"/></marker></defs>
+<rect width="1400" height="1665" fill="#fff"/>
+<text x="30" y="40" font-size="22" fill="#1d2733" font-weight="bold" text-anchor="start" >STARS coverage significance: pipeline and plan</text>
+<rect x="1090" y="24" width="22" height="14" rx="4" fill="#f7f8fa" stroke="#d5dae0" stroke-width="1.2" />
+<text x="1118" y="36" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >done</text>
+<rect x="1165" y="24" width="22" height="14" rx="4" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="5 3"/>
+<text x="1193" y="36" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >next</text>
+<rect x="1240" y="24" width="22" height="14" rx="4" fill="#f5f9fd" stroke="#5b8fc4" stroke-width="1.4" stroke-dasharray="2 3"/>
+<text x="1268" y="36" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >later</text>
+<g transform="translate(0,40)">
+<text x="30" y="46" font-size="16" font-weight="bold" fill="#1d2733"><tspan fill="#3a8f5c">Done</tspan> · data generation</text>
+<rect x="30" y="70" width="400" height="250" rx="10" fill="#f7f8fa" stroke="#d5dae0" stroke-width="1.2" />
+<circle cx="54" cy="99" r="12" fill="#1d2733"/>
+<text x="54" y="103.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >1</text>
+<text x="74" y="104" font-size="15" fill="#1d2733" font-weight="bold" text-anchor="start" >Mutate the autopilot</text>
+<rect x="50" y="130" width="105" height="64" rx="6" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<text x="102.5" y="158" font-size="13" fill="#1d2733" font-weight="bold" text-anchor="middle" >Autopilot.kt</text>
+<text x="102.5" y="176" font-size="10.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >ACC + lane change</text>
+<line x1="158" y1="162" x2="182" y2="162" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="186" y="130" width="110" height="64" rx="6" fill="#fdf1e7" stroke="#d9822b" stroke-width="1.2" />
+<text x="241" y="158" font-size="13" fill="#1d2733" font-weight="bold" text-anchor="middle" >MutantKraken</text>
+<text x="241" y="176" font-size="10.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >source mutation</text>
+<line x1="299" y1="162" x2="321" y2="162" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="338" y="124" width="78" height="58" rx="5" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<rect x="332" y="130" width="78" height="58" rx="5" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<rect x="326" y="136" width="78" height="58" rx="5" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<line x1="336" y1="148" x2="382" y2="148" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<line x1="336" y1="157" x2="394" y2="157" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<line x1="336" y1="166" x2="376" y2="166" stroke="#c8443c" stroke-width="3" stroke-linecap="round"/>
+<line x1="336" y1="175" x2="388" y2="175" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<line x1="336" y1="184" x2="370" y2="184" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<text x="371" y="216" font-size="13" fill="#1d2733" font-weight="bold" text-anchor="middle" >174 mutants</text>
+<text x="371" y="232" font-size="10.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >one code change each</text>
+<text x="50" y="252" font-size="11.5" fill="#5f6b7a" font-weight="bold" text-anchor="start" >Mutation operators</text>
+<text x="50" y="271" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >arithmetic replacement</text>
+<text x="200" y="271" font-size="11.5" fill="#1d2733" font-weight="bold" text-anchor="end" >144</text>
+<text x="50" y="288" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >unary removal</text>
+<text x="200" y="288" font-size="11.5" fill="#1d2733" font-weight="bold" text-anchor="end" >19</text>
+<text x="50" y="305" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >logical replacement</text>
+<text x="200" y="305" font-size="11.5" fill="#1d2733" font-weight="bold" text-anchor="end" >11</text>
+<text x="230" y="271" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >also simulated:</text>
+<text x="230" y="288" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >unmutated autopilot (baseline)</text>
+<text x="230" y="305" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >AiPilot variant</text>
+<rect x="30" y="350" width="400" height="280" rx="10" fill="#f7f8fa" stroke="#d5dae0" stroke-width="1.2" />
+<circle cx="54" cy="379" r="12" fill="#1d2733"/>
+<text x="54" y="383.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >2</text>
+<text x="74" y="384" font-size="15" fill="#1d2733" font-weight="bold" text-anchor="start" >Enumerate starting scenarios</text>
+<rect x="50" y="408" width="216" height="114" rx="4" fill="#dfe3e8"/>
+<line x1="56" y1="446" x2="260" y2="446" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="56" y1="484" x2="260" y2="484" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="122" y1="411" x2="122" y2="519" stroke="#5f6b7a" stroke-width="0.8" stroke-dasharray="2 4"/>
+<line x1="194" y1="411" x2="194" y2="519" stroke="#5f6b7a" stroke-width="0.8" stroke-dasharray="2 4"/>
+<rect x="66.0" y="418.0" width="40" height="18" rx="5" fill="#3d5a80"/>
+<rect x="95.0" y="421.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="66.0" y="456.0" width="40" height="18" rx="5" fill="none" stroke="#5f6b7a" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="66.0" y="494.0" width="40" height="18" rx="5" fill="#7fb3a6"/>
+<rect x="95.0" y="497.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="138.0" y="418.0" width="40" height="18" rx="5" fill="#9aa5b1"/>
+<rect x="167.0" y="421.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="138.0" y="456.0" width="40" height="18" rx="5" fill="#c8443c"/>
+<rect x="167.0" y="459.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="138.0" y="494.0" width="40" height="18" rx="5" fill="none" stroke="#5f6b7a" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="210.0" y="418.0" width="40" height="18" rx="5" fill="none" stroke="#5f6b7a" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="210.0" y="456.0" width="40" height="18" rx="5" fill="#7fb3a6"/>
+<rect x="239.0" y="459.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="210.0" y="494.0" width="40" height="18" rx="5" fill="#9aa5b1"/>
+<rect x="239.0" y="497.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="86.0" y="538" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >behind</text>
+<text x="158.0" y="538" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >beside</text>
+<text x="230.0" y="538" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >ahead</text>
+<line x1="120" y1="554" x2="196" y2="554" stroke="#1d2733" stroke-width="1.2" marker-end="url(#ah)"/>
+<text x="158.0" y="570" font-size="10.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >driving direction</text>
+<rect x="292.0" y="411.0" width="28" height="14" rx="5" fill="#c8443c"/>
+<rect x="309.0" y="414.0" width="5" height="8" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="328" y="422" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >ego = mutant</text>
+<rect x="292.0" y="436.0" width="28" height="14" rx="5" fill="#7fb3a6"/>
+<rect x="309.0" y="439.0" width="5" height="8" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="328" y="447" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >slow</text>
+<rect x="292.0" y="461.0" width="28" height="14" rx="5" fill="#9aa5b1"/>
+<rect x="309.0" y="464.0" width="5" height="8" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="328" y="472" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >normal</text>
+<rect x="292.0" y="486.0" width="28" height="14" rx="5" fill="#3d5a80"/>
+<rect x="309.0" y="489.0" width="5" height="8" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="328" y="497" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >fast</text>
+<rect x="292.0" y="511.0" width="28" height="14" rx="5" fill="none" stroke="#5f6b7a" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="328" y="522" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >empty</text>
+<text x="230" y="596" font-size="15" fill="#1d2733" font-weight="bold" text-anchor="middle" >3 × 4⁸ = 196,608 scenarios</text>
+<text x="230" y="615" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >3 ego lanes × 4 options for each of the 8 other cells</text>
+<rect x="490" y="70" width="420" height="560" rx="10" fill="#f7f8fa" stroke="#d5dae0" stroke-width="1.2" />
+<circle cx="514" cy="99" r="12" fill="#1d2733"/>
+<text x="514" y="103.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >3</text>
+<text x="534" y="104" font-size="15" fill="#1d2733" font-weight="bold" text-anchor="start" >Instantiate and simulate in SUMO</text>
+<rect x="515" y="126" width="50" height="40" rx="4" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<line x1="523" y1="137" x2="549" y2="137" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<line x1="523" y1="146" x2="557" y2="146" stroke="#c8443c" stroke-width="2.4" stroke-linecap="round"/>
+<line x1="523" y1="155" x2="545" y2="155" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<text x="585" y="153" font-size="20" fill="#1d2733" font-weight="bold" text-anchor="middle" >×</text>
+<rect x="605" y="126" width="54" height="40" rx="4" fill="#dfe3e8" stroke="#1d2733" stroke-width="1.2" />
+<line x1="623" y1="126" x2="623" y2="166" stroke="#fff" stroke-width="1.5" />
+<line x1="605" y1="139.33" x2="659" y2="139.33" stroke="#fff" stroke-width="1.5" />
+<line x1="641" y1="126" x2="641" y2="166" stroke="#fff" stroke-width="1.5" />
+<line x1="605" y1="152.66" x2="659" y2="152.66" stroke="#fff" stroke-width="1.5" />
+<rect x="627" y="142" width="10" height="8" rx="2" fill="#c8443c"/>
+<line x1="668" y1="146" x2="694" y2="146" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="704" y="142" font-size="12" fill="#1d2733" font-weight="bold" text-anchor="start" >one SUMO run per</text>
+<text x="704" y="158" font-size="12" fill="#1d2733" font-weight="bold" text-anchor="start" >mutant–scenario pair</text>
+<rect x="510" y="200" width="380" height="96" rx="4" fill="#dfe3e8"/>
+<line x1="516" y1="232" x2="884" y2="232" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="516" y1="264" x2="884" y2="264" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<rect x="523.0" y="207.0" width="44" height="18" rx="5" fill="#3d5a80"/>
+<rect x="556.0" y="210.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="748.0" y="207.0" width="44" height="18" rx="5" fill="#9aa5b1"/>
+<rect x="781.0" y="210.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="638.0" y="239.0" width="44" height="18" rx="5" fill="#c8443c"/>
+<rect x="671.0" y="242.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="798.0" y="239.0" width="44" height="18" rx="5" fill="#9aa5b1"/>
+<rect x="831.0" y="242.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="553.0" y="271.0" width="44" height="18" rx="5" fill="#7fb3a6"/>
+<rect x="586.0" y="274.0" width="5" height="12" rx="1.5" fill="#fff" opacity="0.55"/>
+<line x1="688" y1="248" x2="722" y2="248" stroke="#1d2733" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="700" y="316" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >mutant drives the ego · SUMO drives all other vehicles</text>
+<text x="510" y="356" font-size="12.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Simulated time, one tick = 100 ms</text>
+<line x1="520" y1="382" x2="880" y2="382" stroke="#1d2733" stroke-width="1.2" />
+<line x1="520" y1="382" x2="520" y2="391" stroke="#1d2733" stroke-width="1.2" />
+<text x="520" y="405" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >0 s</text>
+<line x1="529" y1="382" x2="529" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="538" y1="382" x2="538" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="547" y1="382" x2="547" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="556" y1="382" x2="556" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="565" y1="382" x2="565" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="574" y1="382" x2="574" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="583" y1="382" x2="583" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="592" y1="382" x2="592" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="601" y1="382" x2="601" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="610" y1="382" x2="610" y2="391" stroke="#1d2733" stroke-width="1.2" />
+<text x="610" y="405" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >1 s</text>
+<line x1="619" y1="382" x2="619" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="628" y1="382" x2="628" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="637" y1="382" x2="637" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="646" y1="382" x2="646" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="655" y1="382" x2="655" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="664" y1="382" x2="664" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="673" y1="382" x2="673" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="682" y1="382" x2="682" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="691" y1="382" x2="691" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="700" y1="382" x2="700" y2="391" stroke="#1d2733" stroke-width="1.2" />
+<text x="700" y="405" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >2 s</text>
+<line x1="709" y1="382" x2="709" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="718" y1="382" x2="718" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="727" y1="382" x2="727" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="736" y1="382" x2="736" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="745" y1="382" x2="745" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="754" y1="382" x2="754" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="763" y1="382" x2="763" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="772" y1="382" x2="772" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="781" y1="382" x2="781" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="790" y1="382" x2="790" y2="391" stroke="#1d2733" stroke-width="1.2" />
+<text x="790" y="405" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >3 s</text>
+<line x1="799" y1="382" x2="799" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="808" y1="382" x2="808" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="817" y1="382" x2="817" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="826" y1="382" x2="826" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="835" y1="382" x2="835" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="844" y1="382" x2="844" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="853" y1="382" x2="853" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="862" y1="382" x2="862" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="871" y1="382" x2="871" y2="387" stroke="#1d2733" stroke-width="0.8" />
+<line x1="880" y1="382" x2="880" y2="391" stroke="#1d2733" stroke-width="1.2" />
+<text x="880" y="405" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >4 s</text>
+<rect x="520" y="424" width="360" height="14" rx="3" fill="#cfe0f1" stroke="#5b8fc4" stroke-width="1" />
+<line x1="880" y1="418" x2="880" y2="444" stroke="#1d2733" stroke-width="2" />
+<text x="520" y="458" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >no accident: run stops after 4 s</text>
+<rect x="520" y="480" width="207" height="14" rx="3" fill="#cfe0f1" stroke="#5b8fc4" stroke-width="1" />
+<polygon points="740.0,487.0 732.5,489.3 736.2,496.2 729.3,492.5 727.0,500.0 724.7,492.5 717.8,496.2 721.5,489.3 714.0,487.0 721.5,484.7 717.8,477.8 724.7,481.5 727.0,474.0 729.3,481.5 736.2,477.8 732.5,484.7" fill="#c8443c"/>
+<text x="520" y="514" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >accident: run stops at the collision tick</text>
+<line x1="510" y1="540" x2="890" y2="540" stroke="#d5dae0" stroke-width="1.2" />
+<text x="700" y="566" font-size="13" fill="#1d2733" font-weight="bold" text-anchor="middle" >196,608 scenarios × 176 controllers ≈ 34.6 M runs</text>
+<text x="700" y="586" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >174 mutants + baseline + AiPilot</text>
+<text x="700" y="608" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >run as chunk jobs (200 scenarios each) by parallel workers</text>
+<rect x="970" y="70" width="400" height="560" rx="10" fill="#f7f8fa" stroke="#d5dae0" stroke-width="1.2" />
+<circle cx="994" cy="99" r="12" fill="#1d2733"/>
+<text x="994" y="103.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >4</text>
+<text x="1014" y="104" font-size="15" fill="#1d2733" font-weight="bold" text-anchor="start" >Record every tick, store in the database</text>
+<rect x="990" y="122" width="360" height="278" rx="8" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<text x="1005" y="144" font-size="12.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Tick record</text>
+<text x="1335" y="144" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="end" >one row per run and tick</text>
+<line x1="990" y1="154" x2="1350" y2="154" stroke="#d5dae0" stroke-width="1.2" />
+<text x="1005" y="173" font-size="11" fill="#3a8f5c" font-weight="bold" text-anchor="start" >Needed for the next steps</text>
+<circle cx="1011" cy="190" r="6.5" fill="#3a8f5c"/>
+<path d="M1007.8,190.2 l2.2,2.4 l4.2,-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024" y="194" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >scenario, mutant, tick time</text>
+<circle cx="1011" cy="208" r="6.5" fill="#3a8f5c"/>
+<path d="M1007.8,208.2 l2.2,2.4 l4.2,-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024" y="212" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >accident flag (G0)</text>
+<circle cx="1011" cy="226" r="6.5" fill="#3a8f5c"/>
+<path d="M1007.8,226.2 l2.2,2.4 l4.2,-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024" y="230" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >TTC and TG to 6 neighbours</text>
+<circle cx="1011" cy="244" r="6.5" fill="#3a8f5c"/>
+<path d="M1007.8,244.2 l2.2,2.4 l4.2,-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024" y="248" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >ego lane</text>
+<circle cx="1011" cy="262" r="6.5" fill="#3a8f5c"/>
+<path d="M1007.8,262.2 l2.2,2.4 l4.2,-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1024" y="266" font-size="11.5" fill="#1d2733" font-weight="normal" text-anchor="start" >TSC class of the tick</text>
+<rect x="1222" y="186" width="114" height="66" rx="4" fill="#dfe3e8"/>
+<line x1="1228" y1="208" x2="1330" y2="208" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="1228" y1="230" x2="1330" y2="230" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="1279.0" y1="219.0" x2="1241.0" y2="197.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<line x1="1279.0" y1="219.0" x2="1241.0" y2="219.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<line x1="1279.0" y1="219.0" x2="1241.0" y2="241.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<line x1="1279.0" y1="219.0" x2="1317.0" y2="197.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<line x1="1279.0" y1="219.0" x2="1317.0" y2="219.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<line x1="1279.0" y1="219.0" x2="1317.0" y2="241.0" stroke="#1d2733" stroke-width="0.9" stroke-dasharray="2 2"/>
+<rect x="1230.0" y="191.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1241.0" y="194.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1230.0" y="213.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1241.0" y="216.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1230.0" y="235.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1241.0" y="238.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1268.0" y="213.5" width="22" height="11" rx="5" fill="#c8443c"/>
+<rect x="1279.0" y="216.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1306.0" y="191.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1317.0" y="194.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1306.0" y="213.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1317.0" y="216.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="1306.0" y="235.5" width="22" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="1317.0" y="238.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="1279.0" y="266" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >six nearest neighbours</text>
+<line x1="990" y1="284" x2="1350" y2="284" stroke="#d5dae0" stroke-width="1.2" />
+<text x="1005" y="302" font-size="11" fill="#5f6b7a" font-weight="bold" text-anchor="start" >Also stored, not needed for the plan</text>
+<circle cx="1011" cy="318" r="6" fill="#fff" stroke="#9aa5b1" stroke-width="1.3"/>
+<line x1="1008" y1="318" x2="1014" y2="318" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+<text x="1024" y="322" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="start" >6 other monitor flags, all next-tick flags</text>
+<circle cx="1011" cy="335" r="6" fill="#fff" stroke="#9aa5b1" stroke-width="1.3"/>
+<line x1="1008" y1="335" x2="1014" y2="335" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+<text x="1024" y="339" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="start" >neighbour distance, speed, acceleration</text>
+<circle cx="1011" cy="352" r="6" fill="#fff" stroke="#9aa5b1" stroke-width="1.3"/>
+<line x1="1008" y1="352" x2="1014" y2="352" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+<text x="1024" y="356" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="start" >ego speed, acceleration, planned maneuver</text>
+<circle cx="1011" cy="369" r="6" fill="#fff" stroke="#9aa5b1" stroke-width="1.3"/>
+<line x1="1008" y1="369" x2="1014" y2="369" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+<text x="1024" y="373" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="start" >collision details</text>
+<circle cx="1011" cy="386" r="6" fill="#fff" stroke="#9aa5b1" stroke-width="1.3"/>
+<line x1="1008" y1="386" x2="1014" y2="386" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+<text x="1024" y="390" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="start" >all vehicles per tick (compressed)</text>
+<line x1="1170" y1="402" x2="1170" y2="446" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="1182" y="428" font-size="11.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >one row per tick</text>
+<path d="M1070,464 v80 a100,16 0 0 0 200,0 v-80" fill="#e8eef6" stroke="#1d2733" stroke-width="1.3"/>
+<ellipse cx="1170" cy="464" rx="100" ry="16" fill="#f4f7fb" stroke="#1d2733" stroke-width="1.3"/>
+<text x="1170" y="506" font-size="14" fill="#1d2733" font-weight="bold" text-anchor="middle" >PostgreSQL</text>
+<text x="1170" y="525" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" font-family="Menlo, Consolas, monospace" >metric_failed_monitors</text>
+<text x="1170" y="590" font-size="12" fill="#1d2733" font-weight="bold" text-anchor="middle" >up to 41 ticks per run</text>
+<text x="1170" y="609" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >plus the scenario and mutant tables (both needed)</text>
+<line x1="432" y1="195" x2="486" y2="195" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="432" y1="490" x2="486" y2="490" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<line x1="912" y1="350" x2="966" y2="350" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<text x="939" y="341" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >each tick</text>
+</g>
+<path d="M1170,670 V694 H135 V744" fill="none" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<text x="652" y="687" font-size="11" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >all recorded runs</text>
+<text x="160" y="732" font-size="16" font-weight="bold" fill="#1d2733"><tspan fill="#d9822b">Next</tspan> · build the test bed from the existing database (no new simulation)</text>
+<rect x="30" y="750" width="428" height="34" rx="17" fill="#fdf1e7" stroke="#d9822b" stroke-width="1.6" />
+<text x="46" y="771.5" font-size="12" fill="#1d2733"><tspan font-weight="bold">1 · Full run on all data</tspan><tspan dx="8" fill="#5f6b7a">best-case result, worst-case runtime</tspan></text>
+<line x1="460" y1="767" x2="479" y2="767" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="482" y="750" width="428" height="34" rx="17" fill="#fff" stroke="#d9822b" stroke-width="1.2" />
+<text x="498" y="771.5" font-size="12" fill="#1d2733"><tspan font-weight="bold">2 · Coarse pre-study</tspan><tspan dx="8" fill="#5f6b7a">few levels and repeats, find the extremes</tspan></text>
+<line x1="912" y1="767" x2="931" y2="767" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="934" y="750" width="428" height="34" rx="17" fill="#fff" stroke="#d9822b" stroke-width="1.2" />
+<text x="950" y="771.5" font-size="12" fill="#1d2733"><tspan font-weight="bold">3 · Main study</tspan><tspan dx="8" fill="#5f6b7a">finer levels and more repeats where it matters</tspan></text>
+<text x="1370" y="802" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="end" >Order of work, agreed with the supervisor on 17 November</text>
+<line x1="135" y1="786" x2="135" y2="812" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="30" y="816" width="210" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="54" cy="846" r="12" fill="#d9822b"/>
+<text x="54" y="850.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >A</text>
+<text x="74" y="843" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Build three</text>
+<text x="74" y="859" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >kill matrices</text>
+<text x="44" y="994" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >One scenario × mutant matrix</text>
+<text x="44" y="1010" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >per oracle: was the mutant</text>
+<text x="44" y="1026" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >ever killed in the run? Only</text>
+<text x="44" y="1042" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >where the unmutated autopilot</text>
+<text x="44" y="1058" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >is not.</text>
+<rect x="44" y="886" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="54" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="64" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="74" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="84" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="44" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="54" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="64" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="74" y="895" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="84" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="44" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="54" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="64" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="74" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="84" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="44" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="54" y="913" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="64" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="74" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="84" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<text x="69" y="938" font-size="10" fill="#1d2733" font-weight="bold" text-anchor="middle" >accident</text>
+<text x="69" y="951" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >G0</text>
+<rect x="106" y="886" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="116" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="126" y="886" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="136" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="146" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="106" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="116" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="126" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="136" y="895" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="146" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="106" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="116" y="904" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="126" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="136" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="146" y="904" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="106" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="116" y="913" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="126" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="136" y="913" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="146" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<text x="131" y="938" font-size="10" fill="#1d2733" font-weight="bold" text-anchor="middle" >TTC</text>
+<text x="131" y="951" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >threshold</text>
+<rect x="168" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="178" y="886" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="188" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="198" y="886" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="208" y="886" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="168" y="895" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="178" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="188" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="198" y="895" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="208" y="895" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="168" y="904" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="178" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="188" y="904" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="198" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="208" y="904" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="168" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="178" y="913" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<rect x="188" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="198" y="913" width="10" height="9" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.8" />
+<rect x="208" y="913" width="10" height="9" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.8" />
+<text x="193" y="938" font-size="10" fill="#1d2733" font-weight="bold" text-anchor="middle" >TG</text>
+<text x="193" y="951" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >threshold</text>
+<line x1="242" y1="921" x2="253" y2="921" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="256" y="816" width="370" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="280" cy="846" r="12" fill="#d9822b"/>
+<text x="280" y="850.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >B</text>
+<text x="300" y="851" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Choose the training data</text>
+<rect x="272" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="279" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="286" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="293" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="300" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="307" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="314" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="321" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="272" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="279" y="904" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="286" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="293" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="300" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="307" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="314" y="904" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="321" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="272" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="279" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="286" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="293" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="300" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="307" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="314" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="321" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="272" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="279" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="286" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="293" y="916" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="300" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="307" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="314" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="321" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="272" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="279" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="286" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="293" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="300" y="922" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="307" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="314" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="321" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="272" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="279" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="286" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="293" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="300" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="307" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="314" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="321" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<text x="300" y="948" font-size="10" fill="#1d2733" font-weight="bold" text-anchor="middle" >all data</text>
+<text x="300" y="961" font-size="10" fill="#1d2733" font-weight="bold" text-anchor="middle" >full run</text>
+<rect x="342" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="349" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="356" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="363" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="370" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="377" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="384" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="391" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="342" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="349" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="356" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="363" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="370" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="377" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="384" y="904" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="391" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="342" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="349" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="356" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="363" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="370" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="377" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="384" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="391" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="342" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="349" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="356" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="363" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="370" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="377" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="384" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="391" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="342" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="349" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="356" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="363" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="370" y="922" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="377" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="384" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="391" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="342" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="349" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="356" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="363" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="370" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="377" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="384" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="391" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<text x="370" y="948" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >random</text>
+<text x="370" y="961" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >pairs</text>
+<rect x="412" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="419" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="426" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="433" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="440" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="447" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="454" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="461" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="412" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="419" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="426" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="433" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="440" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="447" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="454" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="461" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="412" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="419" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="426" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="433" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="440" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="447" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="454" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="461" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="412" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="419" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="426" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="433" y="916" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="440" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="447" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="454" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="461" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="412" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="419" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="426" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="433" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="440" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="447" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="454" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="461" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="412" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="419" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="426" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="433" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="440" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="447" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="454" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="461" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<text x="440" y="948" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >random</text>
+<text x="440" y="961" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >scenarios</text>
+<rect x="482" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="489" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="503" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="517" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="524" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="482" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="489" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="503" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="517" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="524" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="482" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="489" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="503" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="517" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="524" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="482" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="489" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="503" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="517" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="524" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="482" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="489" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="503" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="922" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="517" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="524" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="482" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="489" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="496" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="503" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="510" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="517" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="524" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="531" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<text x="510" y="948" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >random</text>
+<text x="510" y="961" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >mutants</text>
+<rect x="552" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="559" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="566" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="573" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="580" y="898" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="587" y="898" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="594" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="898" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="552" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="559" y="904" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="566" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="573" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="580" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="587" y="904" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="594" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="904" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="552" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="559" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="566" y="910" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="573" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="580" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="587" y="910" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="594" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="910" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="552" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="559" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="566" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="573" y="916" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="580" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="587" y="916" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="594" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="916" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="552" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="559" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="566" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="573" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="580" y="922" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="587" y="922" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="594" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="922" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="552" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="559" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="566" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="573" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="580" y="928" width="7" height="6" rx="0" fill="#fff" stroke="#d5dae0" stroke-width="0.6" />
+<rect x="587" y="928" width="7" height="6" rx="0" fill="#c8443c" stroke="#fff" stroke-width="0.6" />
+<rect x="594" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<rect x="601" y="928" width="7" height="6" rx="0" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.6" />
+<text x="580" y="948" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >one</text>
+<text x="580" y="961" font-size="10" fill="#1d2733" font-weight="normal" text-anchor="middle" >operator</text>
+<line x1="342" y1="890" x2="452" y2="890" stroke="#5f6b7a" stroke-width="1" />
+<text x="397" y="886" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >fewer data</text>
+<line x1="482" y1="890" x2="592" y2="890" stroke="#5f6b7a" stroke-width="1" />
+<text x="537" y="886" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >fewer mutants</text>
+<text x="272" y="978" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >rows = starting scenarios, columns = mutants</text>
+<rect x="494" y="971" width="10" height="8" rx="1" fill="#fff" stroke="#d5dae0" stroke-width="0.9" />
+<text x="508" y="978" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >used</text>
+<rect x="540" y="971" width="10" height="8" rx="1" fill="#d9dde2" stroke="#d9dde2" stroke-width="0.9" />
+<text x="554" y="978" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >left out</text>
+<text x="270" y="1002" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Full run first: all data, suites scored on the same mutants.</text>
+<text x="270" y="1018" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Reduced runs: less data or fewer mutants, at random and</text>
+<text x="270" y="1034" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >by mutation operator. Their suites are scored on held-out</text>
+<text x="270" y="1050" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >mutants (proposed, to confirm with the supervisor).</text>
+<line x1="628" y1="921" x2="639" y2="921" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="642" y="816" width="728" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="666" cy="846" r="12" fill="#d9822b"/>
+<text x="666" y="850.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >C</text>
+<text x="686" y="851" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Learn the tree: one per oracle, from the chosen training data</text>
+<text x="656" y="886" font-size="11" fill="#1d2733" font-weight="bold" text-anchor="start" >One training example = one (starting scenario, mutant) pair</text>
+<rect x="656" y="896" width="78" height="42" rx="4" fill="#dfe3e8"/>
+<line x1="662" y1="910" x2="728" y2="910" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="662" y1="924" x2="728" y2="924" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<rect x="661.0" y="899.0" width="18" height="8" rx="5" fill="#9aa5b1"/>
+<rect x="668.0" y="902.0" width="5" height="2" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="711.0" y="899.0" width="18" height="8" rx="5" fill="#3d5a80"/>
+<rect x="718.0" y="902.0" width="5" height="2" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="686.0" y="913.0" width="18" height="8" rx="5" fill="#c8443c"/>
+<rect x="693.0" y="916.0" width="5" height="2" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="711.0" y="927.0" width="18" height="8" rx="5" fill="#7fb3a6"/>
+<rect x="718.0" y="930.0" width="5" height="2" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="695" y="954" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >scenario at tick 0</text>
+<text x="748" y="923" font-size="16" fill="#1d2733" font-weight="bold" text-anchor="middle" >+</text>
+<rect x="760" y="896" width="34" height="42" rx="3" fill="#fff" stroke="#1d2733" stroke-width="1.1" />
+<line x1="766" y1="907" x2="784" y2="907" stroke="#c3c9d1" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="766" y1="916" x2="790" y2="916" stroke="#c8443c" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="766" y1="925" x2="780" y2="925" stroke="#c3c9d1" stroke-width="2.2" stroke-linecap="round"/>
+<text x="777" y="954" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >mutant</text>
+<line x1="800" y1="917" x2="816" y2="917" stroke="#1d2733" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="822" y="894" width="220" height="22" rx="3" fill="#fff" stroke="#d5dae0" stroke-width="1" />
+<text x="830" y="909" font-size="10.5" fill="#1d2733"><tspan font-weight="bold">input</tspan> ego lane, TTC and TG to 6 neighbours</text>
+<rect x="822" y="920" width="220" height="22" rx="3" fill="#fdf1e7" stroke="#d9822b" stroke-width="1" />
+<text x="830" y="935" font-size="10.5" fill="#1d2733"><tspan font-weight="bold">label</tspan> was this mutant killed? yes / no</text>
+<text x="822" y="956" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >The input is the same for every mutant of a scenario.</text>
+<line x1="1046" y1="917" x2="1078" y2="917" stroke="#1d2733" stroke-width="1.6" marker-end="url(#ah)"/>
+<line x1="1124" y1="892" x2="1104" y2="916" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1124" y1="892" x2="1144" y2="916" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1104" y1="916" x2="1094.0" y2="940" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1088.0" y="940" width="12" height="8" rx="1.5" fill="#f8ebe9" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1104" y1="916" x2="1114.0" y2="940" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1108.0" y="940" width="12" height="8" rx="1.5" fill="#e9b3ae" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1144" y1="916" x2="1134.0" y2="940" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1128.0" y="940" width="12" height="8" rx="1.5" fill="#f1cfcb" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1144" y1="916" x2="1154.0" y2="940" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1148.0" y="940" width="12" height="8" rx="1.5" fill="#c8443c" stroke="#1d2733" stroke-width="0.9" />
+<circle cx="1124" cy="892" r="3.6" fill="#1d2733"/>
+<circle cx="1104" cy="916" r="3.6" fill="#1d2733"/>
+<circle cx="1144" cy="916" r="3.6" fill="#1d2733"/>
+<text x="1124" y="962" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >tree</text>
+<line x1="1172" y1="917" x2="1190" y2="917" stroke="#1d2733" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="1196" y="892" width="40" height="50" rx="3" fill="#fff" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1196" y1="904.5" x2="1236" y2="904.5" stroke="#d5dae0" stroke-width="1" />
+<line x1="1196" y1="917.0" x2="1236" y2="917.0" stroke="#d5dae0" stroke-width="1" />
+<line x1="1196" y1="929.5" x2="1236" y2="929.5" stroke="#d5dae0" stroke-width="1" />
+<line x1="1196" y1="942.0" x2="1236" y2="942.0" stroke="#d5dae0" stroke-width="1" />
+<line x1="1224" y1="892" x2="1224" y2="942" stroke="#d5dae0" stroke-width="1" />
+<rect x="1226" y="894.5" width="8" height="8" rx="1" fill="#f8ebe9" stroke="#f8ebe9" stroke-width="0.5" />
+<rect x="1226" y="907.0" width="8" height="8" rx="1" fill="#c8443c" stroke="#c8443c" stroke-width="0.5" />
+<rect x="1226" y="919.5" width="8" height="8" rx="1" fill="#e9b3ae" stroke="#e9b3ae" stroke-width="0.5" />
+<rect x="1226" y="932.0" width="8" height="8" rx="1" fill="#f1cfcb" stroke="#f1cfcb" stroke-width="0.5" />
+<text x="1216" y="956" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >scenarios</text>
+<text x="1250" y="908" font-size="10.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Each of the 196,608</text>
+<text x="1250" y="922" font-size="10.5" fill="#1d2733" font-weight="bold" text-anchor="start" >starting scenarios</text>
+<text x="1250" y="936" font-size="10.5" fill="#1d2733" font-weight="bold" text-anchor="start" >gets its leaf.</text>
+<text x="1250" y="952" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >Ticks are not labelled.</text>
+<rect x="656" y="968" width="700" height="92" rx="6" fill="#fff" stroke="#d5dae0" stroke-width="1" />
+<text x="670" y="988" font-size="11" fill="#1d2733" font-weight="bold" text-anchor="start" >Hyperparameter search in every run (nested)</text>
+<text x="670" y="1006" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >1 · The training data is split 5 times by mutant into a fitting and a validation part.</text>
+<text x="670" y="1021" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >2 · 200 trials per leaf bound (16, 68, 160, 512), each scored by ROC-AUC on validation mutants.</text>
+<text x="670" y="1036" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >3 · The best setting is refitted on all training data; only that tree is used.</text>
+<text x="670" y="1051" font-size="10.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >Implementation: a scenario's pairs collapse into two weighted rows (killed / not killed), same splits, about 86× fewer rows.</text>
+<path d="M1006.0,1080 V1100 H135 V1118" fill="none" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="30" y="1124" width="210" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="54" cy="1154" r="12" fill="#d9822b"/>
+<text x="54" y="1158.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >D</text>
+<text x="74" y="1151" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Group the</text>
+<text x="74" y="1167" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >scenarios</text>
+<text x="44" y="1302" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Bucket every starting scenario</text>
+<text x="44" y="1318" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >by its state at tick 0: project</text>
+<text x="44" y="1334" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >TSC, static-distance TSC, and</text>
+<text x="44" y="1350" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >the three learned trees.</text>
+<text x="44" y="1202" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >TSC</text>
+<text x="44" y="1214" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >68 classes</text>
+<rect x="122" y="1192" width="41.66666666666667" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="163.66666666666669" y="1192" width="22.916666666666664" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="186.58333333333334" y="1192" width="14.583333333333334" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="201.16666666666669" y="1192" width="8.333333333333332" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="209.50000000000003" y="1192" width="5.208333333333334" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="214.70833333333337" y="1192" width="4.166666666666666" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="218.87500000000003" y="1192" width="3.125" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<text x="44" y="1232" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >static TSC</text>
+<text x="44" y="1244" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >160 classes</text>
+<rect x="122" y="1222" width="27.083333333333332" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="149.08333333333334" y="1222" width="18.75" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="167.83333333333334" y="1222" width="14.583333333333334" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="182.41666666666669" y="1222" width="11.458333333333332" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="193.87500000000003" y="1222" width="9.375" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="203.25000000000003" y="1222" width="7.291666666666667" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="210.54166666666669" y="1222" width="5.208333333333334" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<rect x="215.75000000000003" y="1222" width="3.125" height="12" rx="0" fill="#9aa5b1" stroke="#fff" stroke-width="1" />
+<rect x="218.87500000000003" y="1222" width="3.125" height="12" rx="0" fill="#c9ccd1" stroke="#fff" stroke-width="1" />
+<text x="44" y="1262" font-size="10.5" fill="#1d2733" font-weight="bold" text-anchor="start" >learned trees</text>
+<text x="44" y="1274" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="start" >3 oracles</text>
+<rect x="122" y="1252" width="20.833333333333336" height="12" rx="0" fill="#f8ebe9" stroke="#fff" stroke-width="1" />
+<rect x="142.83333333333334" y="1252" width="18.75" height="12" rx="0" fill="#e9b3ae" stroke="#fff" stroke-width="1" />
+<rect x="161.58333333333334" y="1252" width="16.666666666666664" height="12" rx="0" fill="#f1cfcb" stroke="#fff" stroke-width="1" />
+<rect x="178.25" y="1252" width="15.625" height="12" rx="0" fill="#c8443c" stroke="#fff" stroke-width="1" />
+<rect x="193.875" y="1252" width="14.583333333333334" height="12" rx="0" fill="#f8ebe9" stroke="#fff" stroke-width="1" />
+<rect x="208.45833333333334" y="1252" width="13.541666666666666" height="12" rx="0" fill="#e9b3ae" stroke="#fff" stroke-width="1" />
+<line x1="242" y1="1229" x2="253" y2="1229" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="256" y="1124" width="888" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="280" cy="1154" r="12" fill="#d9822b"/>
+<text x="280" y="1158.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >E</text>
+<text x="300" y="1159" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Draw test suites and score them, for each oracle</text>
+<text x="270" y="1194" font-size="11" fill="#1d2733" font-weight="bold" text-anchor="start" >Draw strategies</text>
+<line x1="270" y1="1208" x2="292" y2="1208" stroke="#9aa5b1" stroke-width="2.4" />
+<text x="298" y="1212" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >random scenarios</text>
+<line x1="270" y1="1223" x2="292" y2="1223" stroke="#5f6b7a" stroke-width="2.4" stroke-dasharray="5 3"/>
+<text x="298" y="1227" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >greedy (upper bound)</text>
+<line x1="270" y1="1238" x2="292" y2="1238" stroke="#3d5a80" stroke-width="2.4" />
+<text x="298" y="1242" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >by project TSC classes</text>
+<line x1="270" y1="1253" x2="292" y2="1253" stroke="#3d5a80" stroke-width="2.4" />
+<text x="298" y="1257" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >by static TSC classes</text>
+<line x1="270" y1="1268" x2="292" y2="1268" stroke="#3d5a80" stroke-width="2.4" />
+<text x="298" y="1272" font-size="10.5" fill="#1d2733" font-weight="normal" text-anchor="start" >by tree leaves, per leaf bound</text>
+<text x="270" y="1288" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="start" >Grouped: round-robin over classes,</text>
+<text x="270" y="1300" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="start" >or weighted by training kill rate.</text>
+<text x="552" y="1194" font-size="11" fill="#1d2733" font-weight="bold" text-anchor="start" >1 · Suite size</text>
+<line x1="556" y1="1272" x2="706" y2="1272" stroke="#1d2733" stroke-width="1.1" />
+<line x1="556" y1="1272" x2="556" y2="1204" stroke="#1d2733" stroke-width="1.1" />
+<path d="M556,1272 C582,1214 636,1209 704,1207" fill="none" stroke="#5f6b7a" stroke-width="1.8" stroke-dasharray="5 3"/>
+<path d="M556,1272 C590,1230 644,1220 704,1217" fill="none" stroke="#3d5a80" stroke-width="2.4"/>
+<path d="M556,1272 C610,1262 662,1246 704,1240" fill="none" stroke="#9aa5b1" stroke-width="1.8"/>
+<text x="709" y="1206" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="start" >greedy</text>
+<text x="709" y="1221" font-size="10" fill="#3d5a80" font-weight="bold" text-anchor="start" >grouped</text>
+<text x="709" y="1244" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="start" >random</text>
+<text transform="translate(548,1238) rotate(-90)" font-size="9.5" fill="#5f6b7a" text-anchor="middle">mutants killed</text>
+<text x="631" y="1286" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >scenarios drawn</text>
+<text x="802" y="1194" font-size="11" fill="#1d2733" font-weight="bold" text-anchor="start" >2 · Time to kill</text>
+<line x1="846" y1="1204" x2="846" y2="1272" stroke="#1d2733" stroke-width="1.1" />
+<line x1="846" y1="1272" x2="1061" y2="1272" stroke="#1d2733" stroke-width="1.1" />
+<rect x="846" y="1206" width="16" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<rect x="846" y="1211" width="12" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<rect x="846" y="1219" width="40" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<rect x="846" y="1224" width="26" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<rect x="846" y="1232" width="78" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<rect x="846" y="1237" width="44" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<rect x="846" y="1245" width="128" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<rect x="846" y="1250" width="66" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<rect x="846" y="1258" width="200" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<rect x="846" y="1263" width="92" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<rect x="966" y="1207" width="16" height="4.5" rx="0" fill="#9aa5b1" stroke="#9aa5b1" stroke-width="0" />
+<text x="987" y="1213" font-size="10" fill="#5f6b7a" font-weight="normal" text-anchor="start" >random</text>
+<rect x="966" y="1221" width="16" height="4.5" rx="0" fill="#3d5a80" stroke="#3d5a80" stroke-width="0" />
+<text x="987" y="1227" font-size="10" fill="#3d5a80" font-weight="bold" text-anchor="start" >grouped</text>
+<text x="840" y="1214" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="end" >easy</text>
+<text x="840" y="1266" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="end" >rare</text>
+<text transform="translate(810,1240) rotate(-90)" font-size="9.5" fill="#5f6b7a" text-anchor="middle">mutants</text>
+<text x="954" y="1286" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >scenarios drawn until the first kill</text>
+<text x="1130" y="1194" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="end" >schematic, not data</text>
+<text x="270" y="1328" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >1 · Suite size: how many scoring mutants are killed after n draws (n from 1 to 2000, as in NEXT_TICK_SUITE_SIZES).</text>
+<text x="270" y="1344" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >2 · Time to kill: how many draws until a scoring mutant is first killed. Draw every scenario; 100 repetitions; median and spread.</text>
+<text x="270" y="1360" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Scoring mutants: held out in reduced runs, the training mutants in the full run. Both measures are lookups in the kill matrices.</text>
+<line x1="1146" y1="1229" x2="1157" y2="1229" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="1160" y="1124" width="210" height="262" rx="10" fill="#fffaf3" stroke="#d9822b" stroke-width="1.4" stroke-dasharray="6 4"/>
+<circle cx="1184" cy="1154" r="12" fill="#d9822b"/>
+<text x="1184" y="1158.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >F</text>
+<text x="1204" y="1151" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Freeze the</text>
+<text x="1204" y="1167" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >test bed</text>
+<text x="1174" y="1302" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Keep the grouping that beats</text>
+<text x="1174" y="1318" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >random and comes closest to</text>
+<text x="1174" y="1334" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >greedy on held-out mutants.</text>
+<text x="1174" y="1350" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Publish the scenario IDs</text>
+<text x="1174" y="1366" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >plus the classifier.</text>
+<rect x="1232" y="1190" width="62" height="78" rx="4" fill="#fff" stroke="#1d2733" stroke-width="1.2" />
+<rect x="1240" y="1199.0" width="5" height="5" rx="1" fill="#c8443c"/>
+<line x1="1250" y1="1201.5" x2="1286" y2="1201.5" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="1240" y="1209.5" width="5" height="5" rx="1" fill="#e9b3ae"/>
+<line x1="1250" y1="1212.0" x2="1292" y2="1212.0" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="1240" y="1220.0" width="5" height="5" rx="1" fill="#c8443c"/>
+<line x1="1250" y1="1222.5" x2="1280" y2="1222.5" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="1240" y="1230.5" width="5" height="5" rx="1" fill="#e9b3ae"/>
+<line x1="1250" y1="1233.0" x2="1290" y2="1233.0" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="1240" y="1241.0" width="5" height="5" rx="1" fill="#c8443c"/>
+<line x1="1250" y1="1243.5" x2="1284" y2="1243.5" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="1240" y="1251.5" width="5" height="5" rx="1" fill="#e9b3ae"/>
+<line x1="1250" y1="1254.0" x2="1288" y2="1254.0" stroke="#c3c9d1" stroke-width="2.4" stroke-linecap="round"/>
+<circle cx="1294" cy="1264" r="11" fill="#3a8f5c" stroke="#fffaf3" stroke-width="2"/>
+<path d="M1288.5,1264.3 l3.8,4 l7,-8.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1265,1388 V1410 H135 V1456" fill="none" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<text x="160" y="1432" font-size="16" font-weight="bold" fill="#1d2733"><tspan fill="#5b8fc4">Later</tspan> · highway traffic, once these results exist (needs new simulation runs)</text>
+<rect x="30" y="1462" width="323" height="176" rx="10" fill="#f5f9fd" stroke="#5b8fc4" stroke-width="1.4" stroke-dasharray="2 4"/>
+<circle cx="54" cy="1490" r="12" fill="#3d5a80"/>
+<text x="54" y="1494.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >G</text>
+<text x="74" y="1495" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Record normal traffic</text>
+<text x="162" y="1534" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >No mutants: the unmutated</text>
+<text x="162" y="1550" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >autopilot drives the ego,</text>
+<text x="162" y="1566" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >SUMO drives the rest.</text>
+<text x="162" y="1582" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Store the raw scene per tick,</text>
+<text x="162" y="1598" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >not only a class ID.</text>
+<line x1="355" y1="1557" x2="366" y2="1557" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="44" y="1520" width="104" height="78" rx="4" fill="#dfe3e8"/>
+<line x1="50" y1="1546" x2="142" y2="1546" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<line x1="50" y1="1572" x2="142" y2="1572" stroke="#fff" stroke-width="2" stroke-dasharray="10 8"/>
+<rect x="62.0" y="1527.5" width="24" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="75.0" y="1530.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="114.0" y="1527.5" width="24" height="11" rx="5" fill="#3d5a80"/>
+<rect x="127.0" y="1530.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="84.0" y="1553.5" width="24" height="11" rx="5" fill="#c8443c"/>
+<rect x="97.0" y="1556.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="126.0" y="1553.5" width="24" height="11" rx="5" fill="#7fb3a6"/>
+<rect x="139.0" y="1556.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="56.0" y="1579.5" width="24" height="11" rx="5" fill="#7fb3a6"/>
+<rect x="69.0" y="1582.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<rect x="102.0" y="1579.5" width="24" height="11" rx="5" fill="#9aa5b1"/>
+<rect x="115.0" y="1582.5" width="5" height="5" rx="1.5" fill="#fff" opacity="0.55"/>
+<text x="96" y="1614" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >baseline autopilot as ego</text>
+<rect x="369" y="1462" width="323" height="176" rx="10" fill="#f5f9fd" stroke="#5b8fc4" stroke-width="1.4" stroke-dasharray="2 4"/>
+<circle cx="393" cy="1490" r="12" fill="#3d5a80"/>
+<text x="393" y="1494.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >H</text>
+<text x="413" y="1495" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Classify every tick</text>
+<text x="501" y="1534" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Apply both TSCs and the trees.</text>
+<text x="501" y="1550" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Result: how often each class</text>
+<text x="501" y="1566" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >occurs in normal traffic, and</text>
+<text x="501" y="1582" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >which classes the grid over-</text>
+<text x="501" y="1598" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >or under-represents.</text>
+<line x1="694" y1="1557" x2="705" y2="1557" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="387" y="1528" width="8" height="70" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="398" y="1552" width="8" height="46" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="409" y="1568" width="8" height="30" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="420" y="1578" width="8" height="20" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="431" y="1585" width="8" height="13" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="442" y="1589" width="8" height="9" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="453" y="1592" width="8" height="6" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="464" y="1594" width="8" height="4" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<rect x="475" y="1595" width="8" height="3" rx="1" fill="#5b8fc4" stroke="#5b8fc4" stroke-width="0.5" />
+<line x1="383" y1="1598" x2="489" y2="1598" stroke="#1d2733" stroke-width="1.1" />
+<text x="435" y="1614" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >class frequency</text>
+<rect x="708" y="1462" width="323" height="176" rx="10" fill="#f5f9fd" stroke="#5b8fc4" stroke-width="1.4" stroke-dasharray="2 4"/>
+<circle cx="732" cy="1490" r="12" fill="#3d5a80"/>
+<text x="732" y="1494.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >I</text>
+<text x="752" y="1495" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Turn snapshots into tests</text>
+<text x="840" y="1534" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Sample snapshots per class,</text>
+<text x="840" y="1550" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >rare classes included. Each</text>
+<text x="840" y="1566" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >is a fresh run from t = 0,</text>
+<text x="840" y="1582" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >so it is reproducible.</text>
+<text x="840" y="1598" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Run all mutants for 4 s.</text>
+<line x1="1033" y1="1557" x2="1044" y2="1557" stroke="#1d2733" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="724" y="1534" width="44" height="36" rx="3" fill="#dfe3e8" stroke="#1d2733" stroke-width="1.1" />
+<line x1="724" y1="1546" x2="768" y2="1546" stroke="#fff" stroke-width="1.2" />
+<line x1="724" y1="1558" x2="768" y2="1558" stroke="#fff" stroke-width="1.2" />
+<rect x="729" y="1537" width="10" height="6" rx="1.5" fill="#9aa5b1"/>
+<rect x="749" y="1537" width="10" height="6" rx="1.5" fill="#3d5a80"/>
+<rect x="739" y="1549" width="10" height="6" rx="1.5" fill="#c8443c"/>
+<rect x="755" y="1561" width="10" height="6" rx="1.5" fill="#7fb3a6"/>
+<rect x="727" y="1561" width="10" height="6" rx="1.5" fill="#9aa5b1"/>
+<text x="746" y="1584" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >snapshot</text>
+<line x1="772" y1="1552" x2="786" y2="1552" stroke="#1d2733" stroke-width="1.3" marker-end="url(#ah)"/>
+<rect x="792" y="1534" width="32" height="36" rx="3" fill="#fff" stroke="#1d2733" stroke-width="1.1" />
+<line x1="798" y1="1544" x2="814" y2="1544" stroke="#c3c9d1" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="798" y1="1552" x2="820" y2="1552" stroke="#c8443c" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="798" y1="1560" x2="812" y2="1560" stroke="#c3c9d1" stroke-width="2.2" stroke-linecap="round"/>
+<text x="808" y="1584" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >mutants</text>
+<rect x="1047" y="1462" width="323" height="176" rx="10" fill="#f5f9fd" stroke="#5b8fc4" stroke-width="1.4" stroke-dasharray="2 4"/>
+<circle cx="1071" cy="1490" r="12" fill="#3d5a80"/>
+<text x="1071" y="1494.5" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle" >J</text>
+<text x="1091" y="1495" font-size="13.5" fill="#1d2733" font-weight="bold" text-anchor="start" >Refine the tree</text>
+<text x="1179" y="1534" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Learn a better tree from</text>
+<text x="1179" y="1550" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >the new starting scenarios,</text>
+<text x="1179" y="1566" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >or refine the existing one.</text>
+<text x="1179" y="1582" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >Compare both on mutants</text>
+<text x="1179" y="1598" font-size="11" fill="#1d2733" font-weight="normal" text-anchor="start" >neither has seen.</text>
+<line x1="1081" y1="1536" x2="1069" y2="1560" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1081" y1="1536" x2="1093" y2="1560" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1063" y="1560" width="12" height="9" rx="1.5" fill="#f8ebe9" stroke="#1d2733" stroke-width="0.9" />
+<rect x="1087" y="1560" width="12" height="9" rx="1.5" fill="#c8443c" stroke="#1d2733" stroke-width="0.9" />
+<circle cx="1081" cy="1536" r="3.6" fill="#1d2733"/>
+<text x="1081" y="1612" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >v1 (grid)</text>
+<line x1="1101" y1="1556" x2="1113" y2="1556" stroke="#1d2733" stroke-width="1.3" marker-end="url(#ah)"/>
+<line x1="1139" y1="1530" x2="1123" y2="1554" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1139" y1="1530" x2="1155" y2="1554" stroke="#1d2733" stroke-width="1.1" />
+<line x1="1123" y1="1554" x2="1115.0" y2="1578" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1110.0" y="1578" width="10" height="8" rx="1.5" fill="#f8ebe9" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1123" y1="1554" x2="1131.0" y2="1578" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1126.0" y="1578" width="10" height="8" rx="1.5" fill="#e9b3ae" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1155" y1="1554" x2="1147.0" y2="1578" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1142.0" y="1578" width="10" height="8" rx="1.5" fill="#f1cfcb" stroke="#1d2733" stroke-width="0.9" />
+<line x1="1155" y1="1554" x2="1163.0" y2="1578" stroke="#1d2733" stroke-width="1.1" />
+<rect x="1158.0" y="1578" width="10" height="8" rx="1.5" fill="#c8443c" stroke="#1d2733" stroke-width="0.9" />
+<circle cx="1139" cy="1530" r="3.6" fill="#1d2733"/>
+<circle cx="1123" cy="1554" r="3.6" fill="#1d2733"/>
+<circle cx="1155" cy="1554" r="3.6" fill="#1d2733"/>
+<text x="1139" y="1612" font-size="9.5" fill="#5f6b7a" font-weight="normal" text-anchor="middle" >v2 (+ highway)</text>
+</svg>
