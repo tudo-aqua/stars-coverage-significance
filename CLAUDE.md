@@ -9,3 +9,4 @@ or commit messages.
 - Keep the old tick-level pipeline (`scripts/decision_tree_g0.py`,
 `DrawTicksWithDecisionTreeGroupingPostEvaluation.kt`) unchanged; build the new one alongside it.
 - `NOTES.md` documents simulation determinism and the identical tick-0 state across controllers.
+- Every coding task should be done in Kotlin. Before finishing the task, build the project and execute "spotlessApply"

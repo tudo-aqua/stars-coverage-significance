@@ -111,6 +111,29 @@ val buildMaterializedViews by
       // args = listOf("--flag", "value")
     }
 
+val buildScenarioMutantOutcomes by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Builds scenario_mutant_outcomes (test-bed plan step A.1). Args: --scope=baseline|mutants|all."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.BuildScenarioMutantOutcomesKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+    }
+
+val runThresholdSweep by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description = "Threshold sweep for the TTC and TG oracles (test-bed plan step A.2a)."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunThresholdSweepKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx16g")
+    }
+
 val createChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

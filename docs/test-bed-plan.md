@@ -55,6 +55,9 @@ scenarios.
 | D9 | A kill counts only where the unmutated autopilot does not violate the same oracle in the same scenario | Till, 2026-11-14 |
 | D10 | Draw until every scenario is drawn; read results at `NEXT_TICK_SUITE_SIZES`; 100 repetitions | Till, 2026-11-14 |
 | D11 | The other six monitors (G1 to G4, I1, I2) are not used: their results are not trusted yet | Till, 2026-11-14 |
+| D12 | TTC threshold 1.5 s, front and rear; 2 s and 3 s as sensitivity runs. The sweep cannot set it: the baseline never goes below 6.5 s TTC, the tick-0 value (`NOTES.md`) | Till, 2026-11-18 |
+| D13 | TG threshold 0.8 s front, 0.5 s rear. Front: the baseline's violations cluster at 0.795 s and 0.808 s, so 0.8 s removes 3.7% of scenarios, while 0.85 s and above remove 5.1%. Rear: the baseline never goes below 0.64 s after its own lane change | Till, 2026-11-18 |
+| D14 | Rear vehicle counts only within 20 ticks after an ego lane change (`after_lane_change`); otherwise the oracle measures the other vehicles' behaviour, not the mutant's | Till, 2026-11-18 |
 
 ### Proposed, pending confirmation with the supervisor
 
@@ -71,9 +74,7 @@ scenarios.
 
 | # | Question | Suggested default |
 | --- | --- | --- |
-| O1 | TTC thresholds (front, rear) | Set by the sweep (P5) over {1.0, 1.5, 2.0, 2.5, 3.0, 4.0} s; fallback if the sweep is skipped: 1.5 s. The hand-built TSC uses 2.0 s |
-| O2 | TG thresholds (front, rear) | Set by the sweep (P5) over {0.5, 0.7, 0.9, 1.0, 1.2, 1.5} s; fallback if the sweep is skipped: 0.9 s (the autopilot aims for 1.0 s headway). The hand-built TSC uses 1.0 s |
-| O3 | Rear vehicle: count always, or only shortly after an ego lane change | Implement both: `always` and `after_lane_change` (20 ticks = 2 s after the tick where `ego_lane` changed); default `after_lane_change` |
+| O1, O2, O3 | Thresholds and rear mode | Settled as D12 to D14 after the sweep (`NOTES.md`). Keep them as config parameters |
 | O4 | Mutant count: the discussion used 172, the registry has 174 | Use all mutants present in the data after cleaning (section 4, step A); log the ids |
 | O5 | Extra run weighting every mutant equally (pair weight 1 / number of scenarios killing that mutant) | Implement as an option, off by default |
 | O6 | Reference tree on the nine raw grid cells of `scenario_starting_configurations` | Optional, not part of the first run |
@@ -104,8 +105,8 @@ steps do not touch the tick table again.
    - `min_rear_ttc_after_lc`, `min_rear_tg_after_lc`: the same, but only over ticks within 20 ticks
      after a tick whose `ego_lane` differs from the previous tick.
    - `n_ticks`, `first_accident_tick`.
-   - Implemented in `sqlQueries/scenario_mutant_outcomes.sql` (run with `-v scope=baseline`, then
-     `-v scope=mutants`, or both at once with `-v scope=all`). It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
+   - Implemented as the table `ScenarioMutantOutcomesTable` and `ScenarioMutantOutcomes.kt`; run
+     `./gradlew buildScenarioMutantOutcomes --args="--scope=baseline|mutants|all"`. It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
      `lc_window_ticks`.
 2. Kill matrices, one per oracle, computed in Python from that table with thresholds as parameters:
    - Oracle TTC: `front_ttc < ttc_front OR rear_ttc[_after_lc] < ttc_rear` (P6); oracle TG likewise
@@ -120,7 +121,7 @@ steps do not touch the tick table again.
    pool size. Pick the largest value with a baseline-violating share of at most `max_pool_loss`. Only the
    baseline enters this choice. As a description only (full run), also report: killable mutants, the share of
    mutants killed in more than 90% of scenarios, and the Jaccard overlap of each kill matrix with the G0
-   matrix. Write the chosen values into the run config. Implemented in `scripts/threshold_sweep.py`
+   matrix. Write the chosen values into the run config. Implemented in `ThresholdSweep.kt` (`./gradlew runThresholdSweep`)
    (outputs `sweep.csv` and `chosen.json` under `postEvaluation/threshold_sweep/`).
 3. Cleaning, per oracle: drop mutants that kill nowhere; group mutants with identical kill columns
    and keep one representative per group (record the groups). AiPilot is not a training or scoring
