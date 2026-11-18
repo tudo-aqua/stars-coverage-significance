@@ -120,7 +120,8 @@ steps do not touch the tick table again.
    pool size. Pick the largest value with a baseline-violating share of at most `max_pool_loss`. Only the
    baseline enters this choice. As a description only (full run), also report: killable mutants, the share of
    mutants killed in more than 90% of scenarios, and the Jaccard overlap of each kill matrix with the G0
-   matrix. Write the chosen values into the run config.
+   matrix. Write the chosen values into the run config. Implemented in `scripts/threshold_sweep.py`
+   (outputs `sweep.csv` and `chosen.json` under `postEvaluation/threshold_sweep/`).
 3. Cleaning, per oracle: drop mutants that kill nowhere; group mutants with identical kill columns
    and keep one representative per group (record the groups). AiPilot is not a training or scoring
    mutant; keep its row as an outside check.
