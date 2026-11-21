@@ -36,3 +36,7 @@
 !/postEvaluation/g0_full_lead_time_sweep/
 /postEvaluation/g0_full_lead_time_sweep/*
 !/postEvaluation/g0_full_lead_time_sweep/index.html
+
+!/postEvaluation/kill_matrices/
+/postEvaluation/kill_matrices/*
+!/postEvaluation/kill_matrices/index.html

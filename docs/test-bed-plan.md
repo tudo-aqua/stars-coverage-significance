@@ -108,7 +108,7 @@ steps do not touch the tick table again.
    - Implemented as the table `ScenarioMutantOutcomesTable` and `ScenarioMutantOutcomes.kt`; run
      `./gradlew buildScenarioMutantOutcomes --args="--scope=baseline|mutants|all"`. It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
      `lc_window_ticks`.
-2. Kill matrices, one per oracle, computed in Python from that table with thresholds as parameters:
+2. Kill matrices, one per oracle, computed in memory from that table with thresholds as parameters:
    - Oracle TTC: `front_ttc < ttc_front OR rear_ttc[_after_lc] < ttc_rear` (P6); oracle TG likewise
      with `tg_front` and `tg_rear`.
    - Kill = mutant violates and baseline (`mutant_number = -1`) does not, in the same scenario (D9).
@@ -126,6 +126,11 @@ steps do not touch the tick table again.
 3. Cleaning, per oracle: drop mutants that kill nowhere; group mutants with identical kill columns
    and keep one representative per group (record the groups). AiPilot is not a training or scoring
    mutant; keep its row as an outside check.
+   Steps 2 and 3 are implemented in `KillMatrices.kt` (`./gradlew runKillMatrices`, thresholds as
+   arguments, defaults D12 to D14). It stores one `kill_matrix_<oracle>.json` per oracle, the
+   acceptance log `summary.json` and `kill_rarity.json` in `postEvaluation/kill_matrices/`; the page
+   `index.html` there shows how rarely each mutant is killed. Later steps read the stored matrices
+   with `KillMatrices.read`, without the database.
 
 Acceptance: one outcome row per (scenario, controller) and no duplicates per pair; per oracle, a
 log of valid scenarios, killable mutants, duplicate groups and baseline-violating scenarios.

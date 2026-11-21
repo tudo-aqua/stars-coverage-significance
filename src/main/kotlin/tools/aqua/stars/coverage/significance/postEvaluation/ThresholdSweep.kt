@@ -20,76 +20,6 @@ package tools.aqua.stars.coverage.significance.postEvaluation
 import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.transactions.transaction
-import tools.aqua.stars.coverage.significance.db.tables.MutantsTable
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioMutantOutcomesTable
-import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
-
-/**
- * One `min*` column of [ScenarioMutantOutcomesTable] used as an oracle input.
- *
- * @property oracle `ttc` or `tg`.
- * @property side `front` or `rear`.
- * @property mode `always`, or `after_lane_change` (only ticks shortly after an ego lane change).
- * @property column The column holding the run's smallest value.
- */
-enum class OracleMeasure(
-    val oracle: String,
-    val side: String,
-    val mode: String,
-    val column: Column<Float?>,
-) {
-  /** TTC to the vehicle in front. */
-  TTC_FRONT(TTC, FRONT, ALWAYS, ScenarioMutantOutcomesTable.minFrontTtc),
-  /** TTC of the vehicle behind, all ticks. */
-  TTC_REAR(TTC, REAR, ALWAYS, ScenarioMutantOutcomesTable.minRearTtc),
-  /** TTC of the vehicle behind, only after an ego lane change. */
-  TTC_REAR_AFTER_LC(TTC, REAR, AFTER_LANE_CHANGE, ScenarioMutantOutcomesTable.minRearTtcAfterLc),
-  /** Time gap to the vehicle in front. */
-  TG_FRONT(TG, FRONT, ALWAYS, ScenarioMutantOutcomesTable.minFrontTg),
-  /** Time gap of the vehicle behind, all ticks. */
-  TG_REAR(TG, REAR, ALWAYS, ScenarioMutantOutcomesTable.minRearTg),
-  /** Time gap of the vehicle behind, only after an ego lane change. */
-  TG_REAR_AFTER_LC(TG, REAR, AFTER_LANE_CHANGE, ScenarioMutantOutcomesTable.minRearTgAfterLc),
-}
-
-private const val TTC = "ttc"
-private const val TG = "tg"
-private const val FRONT = "front"
-private const val REAR = "rear"
-private const val ALWAYS = "always"
-private const val AFTER_LANE_CHANGE = "after_lane_change"
-
-/**
- * [ScenarioMutantOutcomesTable] in memory: per-scenario vectors for the baseline and
- * mutant-by-scenario matrices (index `mutant * scenarioCount + scenario`) for the mutants. Missing
- * values are +infinity (never a violation) and `false`.
- *
- * @property scenarioCount Number of starting scenarios.
- * @property mutantCount Number of mutants (baseline and AiPilot excluded).
- * @property baselineAccident Whether the baseline had an accident, per scenario.
- * @property baselineLaneChanged Whether the baseline changed lanes, per scenario.
- * @property baseline Baseline minimum per [OracleMeasure], per scenario.
- * @property mutantAccident Whether the mutant had an accident, per (mutant, scenario).
- * @property mutant Mutant minimum per [OracleMeasure], per (mutant, scenario).
- */
-@Suppress("UseDataClass") // A data class would compare the arrays by reference in equals().
-class OutcomeMatrices(
-    val scenarioCount: Int,
-    val mutantCount: Int,
-    val baselineAccident: BooleanArray,
-    val baselineLaneChanged: BooleanArray,
-    val baseline: Map<OracleMeasure, FloatArray>,
-    val mutantAccident: BooleanArray,
-    val mutant: Map<OracleMeasure, FloatArray>,
-) {
-  /** G0 kills: the mutant has an accident and the baseline does not (D9). */
-  val g0Kills: BooleanArray =
-      BooleanArray(mutantCount * scenarioCount) {
-        mutantAccident[it] && !baselineAccident[it % scenarioCount]
-      }
-}
 
 /**
  * Pool and kill numbers of one oracle setting.
@@ -195,7 +125,6 @@ object ThresholdSweep {
   /** Where `sweep.csv` and `chosen.json` are written. */
   const val OUTPUT_DIR: String = "postEvaluation/threshold_sweep"
 
-  private const val CHUNK_SCENARIOS = 2048
   private const val OVER_KILL_SHARE = 0.9
   private val json = Json { prettyPrint = true }
 
@@ -206,7 +135,7 @@ object ThresholdSweep {
    */
   fun run(maxPoolLoss: Double = DEFAULT_MAX_POOL_LOSS) {
     val t0 = System.nanoTime()
-    val data = load()
+    val data = OutcomeMatrices.load()
     val t1 = System.nanoTime()
     println("${data.scenarioCount} scenarios, ${data.mutantCount} mutants (AiPilot excluded)")
 
@@ -329,70 +258,6 @@ object ThresholdSweep {
         killPairs = killPairs,
         jaccardWithG0 = if (union > 0) intersection.toDouble() / union else Double.NaN,
     )
-  }
-
-  /** Reads [ScenarioMutantOutcomesTable] in chunks of scenario ids into [OutcomeMatrices]. */
-  private fun load(): OutcomeMatrices = transaction {
-    val sc = ScenarioStartingConfigurationTable
-    val scenarioIds = sc.select(sc.id).map { it[sc.id].value }.sorted().toIntArray()
-    val controllers =
-        MutantsTable.select(MutantsTable.id, MutantsTable.mutantNumber, MutantsTable.className)
-            .map {
-              Triple(
-                  it[MutantsTable.id].value,
-                  it[MutantsTable.mutantNumber],
-                  it[MutantsTable.className])
-            }
-    val baselineId = controllers.single { it.second == -1 }.first
-    val mutantRow =
-        controllers
-            .filter { it.second != -1 && it.third != ScenarioMutantOutcomes.AI_PILOT_CLASS_NAME }
-            .map { it.first }
-            .sorted()
-            .withIndex()
-            .associate { (row, id) -> id to row }
-
-    val n = scenarioIds.size
-    val cells = mutantRow.size * n
-    val baseAccident = BooleanArray(n)
-    val baseLaneChanged = BooleanArray(n)
-    val base = OracleMeasure.entries.associateWith { FloatArray(n) { Float.POSITIVE_INFINITY } }
-    val mutAccident = BooleanArray(cells)
-    val mut = OracleMeasure.entries.associateWith { FloatArray(cells) { Float.POSITIVE_INFINITY } }
-    var baseFilled = 0
-    var mutFilled = 0L
-
-    val t = ScenarioMutantOutcomesTable
-    val columns =
-        listOf(t.scenarioConfigId, t.mutantId, t.accidentAny, t.nLaneChanges) +
-            OracleMeasure.entries.map { it.column }
-    for (chunk in scenarioIds.asList().chunked(CHUNK_SCENARIOS)) {
-      t.select(columns)
-          .where { t.scenarioConfigId.between(chunk.first(), chunk.last()) }
-          .forEach { r ->
-            val s = scenarioIds.binarySearch(r[t.scenarioConfigId])
-            val id = r[t.mutantId]
-            if (id == baselineId) {
-              baseAccident[s] = r[t.accidentAny]
-              baseLaneChanged[s] = r[t.nLaneChanges] > 0
-              for ((m, col) in base) col[s] = r[m.column] ?: Float.POSITIVE_INFINITY
-              baseFilled++
-            } else {
-              val row = mutantRow[id] ?: return@forEach // AiPilot
-              val i = row * n + s
-              mutAccident[i] = r[t.accidentAny]
-              for ((m, col) in mut) col[i] = r[m.column] ?: Float.POSITIVE_INFINITY
-              mutFilled++
-            }
-          }
-    }
-    if (baseFilled != n || mutFilled != cells.toLong()) {
-      // Missing rows count as "no violation"; say so instead of hiding it.
-      println(
-          "WARNING: ${n - baseFilled} scenarios without a baseline row, " +
-              "${cells - mutFilled} missing (scenario, mutant) pairs")
-    }
-    OutcomeMatrices(n, mutantRow.size, baseAccident, baseLaneChanged, base, mutAccident, mut)
   }
 
   private fun toCsv(rows: List<SweepRow>): String = buildString {

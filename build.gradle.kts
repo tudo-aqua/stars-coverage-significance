@@ -134,6 +134,19 @@ val runThresholdSweep by
       jvmArgs = listOf("-Xmx16g")
     }
 
+val runKillMatrices by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Kill matrices per oracle (plan steps A.2, A.3), stored with kill_rarity.json for postEvaluation/kill_matrices/index.html."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunKillMatricesKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx16g")
+    }
+
 val createChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"

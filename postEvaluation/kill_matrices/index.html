@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mutant kill rarity</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --panel: #ffffff; --line: #e3e2de; --text: #1d1f22; --muted: #62656b;
+    --faint: #9a9da3; --grid: #ececea; --s0: #2f6db5; --s0-fill: #d7e4f4; --s1: #c4572a;
+    --s1-fill: #f6ddd2; --ref: #7a7d83; --tip: #ffffff; --shadow: 0 4px 16px rgba(20, 22, 26, 0.12);
+    --bar: #2f6db5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181b; --panel: #1f2125; --line: #33363c; --text: #e8e8e6; --muted: #a3a6ac;
+      --faint: #6f7279; --grid: #2a2c31; --s0: #7fb0ea; --s0-fill: #263a54; --s1: #ee8a5f;
+      --s1-fill: #4a2c20; --ref: #8d9097; --tip: #26282d; --shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      --bar: #7fb0ea; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-left)) 48px; display: flex; flex-direction: column; gap: 28px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0; }
+  .meta { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .lede { font-size: 15px; max-width: 70ch; margin: 0; }
+  .lede b, .num { font-variant-numeric: tabular-nums; }
+  .banner { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 16px; }
+  .banner h2 { margin-bottom: 6px; }
+  .banner code { background: var(--grid); padding: 1px 4px; border-radius: 4px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tab { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--muted); cursor: pointer; }
+  .tab[aria-pressed="true"] { background: var(--panel); color: var(--text); border-color: var(--muted); }
+  .tab:focus-visible { outline: 2px solid var(--s0); outline-offset: 2px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .big { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .tile .sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  section { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .note { color: var(--muted); font-size: 12px; margin: 0; max-width: 80ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
+  .chart { position: relative; min-height: 320px; }
+  .chart svg { display: block; overflow: visible; }
+  .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .gridline { stroke: var(--grid); }
+  .reflabel { fill: var(--text); font-size: 11px; }
+  .tip { position: absolute; pointer-events: none; background: var(--tip); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 6px; padding: 8px 10px; font-size: 12px; line-height: 1.45; white-space: nowrap; font-variant-numeric: tabular-nums; z-index: 2; }
+  .tip strong { display: block; font-weight: 600; }
+  .tip div { color: var(--muted); }
+  .tablewrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; max-height: 30rem; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: right; font-weight: 600; font-size: 12px; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { text-align: right; padding: 5px 12px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th.l, td.l { text-align: left; }
+  .sortbtn { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; white-space: nowrap; }
+  .sortbtn:hover { color: var(--text); }
+  .sortbtn:focus-visible { outline: 2px solid var(--s0); outline-offset: 2px; border-radius: 2px; }
+  th[aria-sort="ascending"] .sortbtn::after { content: " ▲"; font-size: 9px; }
+  th[aria-sort="descending"] .sortbtn::after { content: " ▼"; font-size: 9px; }
+  tr.dup td { color: var(--faint); }
+  td .barcell { display: inline-block; height: 8px; border-radius: 2px; background: var(--bar); vertical-align: middle; margin-right: 6px; opacity: 0.7; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  details { max-width: 80ch; }
+  summary { cursor: pointer; color: var(--muted); }
+  dl { display: grid; gap: 8px; margin: 12px 0 0; }
+  dt { font-weight: 600; }
+  dd { margin: 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mutant kill rarity</h1>
+    <p class="meta" id="meta">Reads <code>kill_rarity.json</code>, written by <code>./gradlew runKillMatrices</code>.</p>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div id="content" hidden>
+    <div style="display:flex;flex-direction:column;gap:28px">
+      <p class="lede" id="lede"></p>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between">
+        <div class="tabs" role="group" aria-label="Oracle" id="tabs"></div>
+        <button type="button" class="tab" id="download" title="Markdown with monospace tables for all oracles, in the current sort order; paste it into Element/Matrix">Download tables for chat (.md)</button>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+
+      <section>
+        <h2>Random draws until each mutant is killed, rarest first</h2>
+        <p class="note">Box: 25th to 75th percentile, line in the box: median, whiskers: 5th to 95th percentile of the number of random draws until the mutant is killed. Faded: same kill set as a kept mutant. The last box, apart from the rest, is the number of draws until all mutants are killed. Log scale.</p>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--s0-fill);border:1px solid var(--s0)"></i>One mutant</span>
+          <span><i class="sw" style="background:var(--s1-fill);border:1px solid var(--s1)"></i>All mutants (1,000 simulated orders)</span>
+        </div>
+        <div class="chart" id="boxes"></div>
+      </section>
+
+      <section>
+        <h2>How random drawing catches up</h2>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--s0);height:3px"></i>Expected share of killable mutants killed</span>
+          <span><i class="sw" style="background:var(--s1);height:3px"></i>Probability that all are killed</span>
+          <span><i class="sw" style="background:var(--ref);height:3px"></i>Best order (greedy)</span>
+        </div>
+        <div class="chart" id="curve"></div>
+      </section>
+
+      <section>
+        <h2>Mutants killed per scenario</h2>
+        <p class="note" id="per-scenario-note"></p>
+        <div class="tablewrap">
+          <table id="per-scenario">
+            <thead><tr>
+              <th>Mutants killed</th><th>% of mutants</th><th>% of killable mutants</th><th>Scenarios</th><th class="l">% of valid scenarios</th><th>Scenarios killing at least this many</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Every killable mutant</h2>
+        <div class="tablewrap">
+          <table id="mutants">
+            <thead><tr>
+              <th>Mutant id</th><th>Scenarios that kill it</th><th>Share of pool</th><th>Expected draws</th>
+              <th>5%</th><th>25%</th><th>Median</th><th>75%</th><th>95%</th><th class="l">Same kill set</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <details>
+        <summary>How these numbers are worked out</summary>
+        <dl>
+          <dt>Valid scenarios</dt>
+          <dd>All 196,608 starting scenarios, minus those where the unmutated autopilot already violates the oracle. A mutant counts as killed only in valid scenarios.</dd>
+          <dt>Oracles</dt>
+          <dd id="oracle-def"></dd>
+          <dt>Draws until one mutant is killed</dt>
+          <dd>Scenarios are drawn at random without replacement. With N valid scenarios and K that kill the mutant, the expected number of draws is (N + 1) / (K + 1). The percentiles are exact, from the hypergeometric distribution.</dd>
+          <dt>Draws until all mutants are killed</dt>
+          <dd>From simulated random orders of the valid scenarios: the draw at which the last killable mutant is killed.</dd>
+          <dt>Best order</dt>
+          <dd>A greedy set cover: repeatedly take the scenario that kills the most mutants not yet killed. The true minimum can only be smaller or equal.</dd>
+          <dt>Mutants killed per scenario</dt>
+          <dd>For each valid scenario, the number of mutants it kills, counting mutants with the same kill set separately. "% of mutants" refers to all mutants, AiPilot excluded; "% of killable mutants" to those killed in at least one valid scenario.</dd>
+        </dl>
+      </details>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const DATA_URL = "./kill_rarity.json";
+  const state = { report: null, oracle: "TG" };
+  const NAMES = { G0: "G0 · accident", TTC: "TTC", TG: "TG" };
+
+  const nf = new Intl.NumberFormat("en-US");
+  const int = (v) => nf.format(Math.round(v));
+  const draws = (v) => (v < 10 ? v.toFixed(1) : int(v));
+  const pct = (v) => {
+    const p = v * 100;
+    if (p === 0) return "0%";
+    if (p < 0.1) return p.toPrecision(2) + "%";
+    if (p < 10) return p.toFixed(1) + "%";
+    return p.toFixed(0) + "%";
+  };
+  const el = (tag, attrs = {}, text) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const SVG = "http://www.w3.org/2000/svg";
+  const s = (tag, attrs = {}, text) => {
+    const e = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const textWidth = (svg, str, cls) => {
+    const t = s("text", { class: cls }, str);
+    svg.appendChild(t);
+    const w = t.getComputedTextLength();
+    t.remove();
+    return w;
+  };
+  const oracle = () => state.report.oracles.find((o) => o.oracle === state.oracle);
+
+  function tipFor(box) {
+    let t = box.querySelector(".tip");
+    if (!t) { t = el("div", { class: "tip" }); t.hidden = true; box.appendChild(t); }
+    return t;
+  }
+  function showTip(box, tip, ev, title, lines) {
+    tip.replaceChildren(el("strong", {}, title), ...lines.map((l) => el("div", {}, l)));
+    tip.hidden = false;
+    const r = box.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    tip.style.left = Math.max(0, Math.min(box.clientWidth - tip.offsetWidth, x + 12)) + "px";
+    tip.style.top = Math.max(0, y - tip.offsetHeight - 10) + "px";
+  }
+
+  // ---------- loading ----------
+  function showBanner(detail) {
+    const b = document.getElementById("banner");
+    b.replaceChildren();
+    b.appendChild(el("h2", {}, "Load kill_rarity.json"));
+    if (detail) b.appendChild(el("p", {}, detail));
+    const row = el("p");
+    row.appendChild(el("label", { for: "file" }, "Choose the file: "));
+    const input = el("input", { type: "file", id: "file", accept: ".json,application/json" });
+    input.addEventListener("change", () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      f.text().then((t) => start(JSON.parse(t))).catch((e) => showBanner("Could not read the file: " + e.message));
+    });
+    row.appendChild(input);
+    b.appendChild(row);
+    const tip = el("p", { class: "note" });
+    tip.append("Produce it with ", el("code", {}, "./gradlew runKillMatrices"),
+      ". Serving this folder over HTTP loads it automatically, e.g. ", el("code", {}, "python -m http.server 8000"), " here.");
+    b.appendChild(tip);
+    b.hidden = false;
+  }
+
+  function start(report) {
+    if (!report || !Array.isArray(report.oracles)) { showBanner("This file has no oracles."); return; }
+    state.report = report;
+    if (!report.oracles.some((o) => o.oracle === state.oracle)) state.oracle = report.oracles[0].oracle;
+    document.getElementById("banner").hidden = true;
+    document.getElementById("content").hidden = false;
+    const th = report.thresholds;
+    document.getElementById("meta").textContent =
+      `Generated ${new Date(report.generatedAt).toLocaleString()} · TTC below ${th.ttcFront} s front / ${th.ttcRear} s rear · ` +
+      `TG below ${th.tgFront} s front / ${th.tgRear} s rear · rear vehicle ${th.rearMode === "AFTER_LANE_CHANGE" ? "only after an ego lane change" : "always"}`;
+    document.getElementById("oracle-def").textContent =
+      `G0: an accident. TTC: time to collision below ${th.ttcFront} s to the vehicle in front or ${th.ttcRear} s behind. ` +
+      `TG: time gap below ${th.tgFront} s in front or ${th.tgRear} s behind. ` +
+      (th.rearMode === "AFTER_LANE_CHANGE" ? "The vehicle behind counts only within 2 s after an ego lane change. " : "") +
+      "AiPilot is left out.";
+    const tabs = document.getElementById("tabs");
+    tabs.replaceChildren(...report.oracles.map((o) => {
+      const b = el("button", { type: "button", class: "tab", "aria-pressed": String(o.oracle === state.oracle) }, NAMES[o.oracle] || o.oracle);
+      b.addEventListener("click", () => {
+        state.oracle = o.oracle;
+        tabs.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        render();
+      });
+      return b;
+    }));
+    render();
+  }
+
+  fetch(DATA_URL)
+    .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(start)
+    .catch(() => showBanner("The page could not load it on its own (opening the file from disk blocks that)."));
+
+  // ---------- rendering ----------
+  function render() {
+    const o = oracle();
+    renderLede(o);
+    renderTiles(o);
+    renderBoxes(o);
+    renderCurve(o);
+    renderPerScenario(o);
+    renderMutants(o);
+  }
+
+  function renderLede(o) {
+    const p = document.getElementById("lede");
+    if (!o.killing) { p.textContent = `No mutant is killed under ${o.oracle}.`; return; }
+    const b = (t) => el("b", {}, t);
+    p.replaceChildren(
+      "Drawing starting scenarios at random, a typical ", b(o.oracle), " mutant is killed within ",
+      b(draws(o.medianExpectedDraws)), " draws, but killing every mutant takes a median of ",
+      b(int(o.drawsToKillAll.p50)), " draws. The best ", b(int(o.greedyMinimum)), " scenarios would kill them all.");
+  }
+
+  function renderTiles(o) {
+    const t = (label, big, sub) => {
+      const d = el("div", { class: "tile" });
+      d.append(el("span", { class: "label" }, label), el("span", { class: "big" }, big), el("span", { class: "sub" }, sub));
+      return d;
+    };
+    const all = o.drawsToKillAll;
+    document.getElementById("tiles").replaceChildren(
+      t("Valid starting scenarios", int(o.pool), `${int(o.removed)} removed: the unmutated autopilot already violates`),
+      t("Mutants killed at least once", int(o.killing), `of ${int(o.mutants)} mutants (${pct(o.killing / o.mutants)}); ${int(o.distinct)} distinct kill sets`),
+      t("Rarest mutant", o.rarestKillScenarios == null ? "—" : int(o.rarestKillScenarios), "scenarios kill it"),
+      t("Typical mutant, random drawing", o.medianExpectedDraws == null ? "—" : draws(o.medianExpectedDraws), "expected draws until killed (median over mutants)"),
+      t("All mutants, random drawing", all ? int(all.p50) : "—", all ? `draws, median; 90% of orders need ${int(all.p05)} to ${int(all.p95)}` : ""),
+      t("All mutants, best order", int(o.greedyMinimum), "scenarios (greedy set cover)"),
+    );
+  }
+
+  function renderBoxes(o) {
+    const box = document.getElementById("boxes");
+    box.replaceChildren();
+    const rows = o.mutantRows.slice().sort((a, b) => b.draws.p50 - a.draws.p50 || a.mutantId - b.mutantId);
+    if (!rows.length) { box.textContent = "No killable mutants."; return; }
+    const W = Math.max(300, box.clientWidth), H = 320, mt = 12, mb = 28;
+    const svg = s("svg", { width: "100%", viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `Box plots of random draws until killed for the ${rows.length} killable ${o.oracle} mutants and for all of them together, log scale` });
+    box.appendChild(svg);
+    const all = o.drawsToKillAll;
+    const top = Math.max(o.pool, all ? all.p95 : 1, ...rows.map((r) => r.draws.p95));
+    const decades = Math.ceil(Math.log10(top));
+    const y = (v) => H - mb - (Math.log10(Math.max(1, v)) / decades) * (H - mb - mt);
+    const ticks = Array.from({ length: decades + 1 }, (_, e) => 10 ** e);
+    const ml = Math.max(...ticks.map((t) => textWidth(svg, int(t), "tick"))) + 12;
+    const gap = 24, allW = 36;
+    const plotW = W - ml - 8 - gap - allW;
+    const step = plotW / rows.length;
+    const bw = Math.max(2, Math.min(18, step * 0.7));
+    ticks.forEach((t) => {
+      svg.appendChild(s("line", { class: "gridline", x1: ml, x2: W, y1: y(t), y2: y(t) }));
+      svg.appendChild(s("text", { class: "tick", x: ml - 8, y: y(t), dy: "0.32em", "text-anchor": "end" }, int(t)));
+    });
+    svg.appendChild(s("text", { class: "tick", x: ml + plotW / 2, y: H - 8, "text-anchor": "middle" }, `${rows.length} mutants, rarest first`));
+    const tip = tipFor(box);
+    const drawBox = (cx, q, w, stroke, fill, opacity) => {
+      const g = s("g", { opacity });
+      g.appendChild(s("line", { x1: cx, x2: cx, y1: y(q.p95), y2: y(q.p75), stroke, "stroke-width": 1.2 }));
+      g.appendChild(s("line", { x1: cx, x2: cx, y1: y(q.p25), y2: y(q.p05), stroke, "stroke-width": 1.2 }));
+      if (w >= 6) {
+        g.appendChild(s("line", { x1: cx - w / 4, x2: cx + w / 4, y1: y(q.p95), y2: y(q.p95), stroke }));
+        g.appendChild(s("line", { x1: cx - w / 4, x2: cx + w / 4, y1: y(q.p05), y2: y(q.p05), stroke }));
+      }
+      const h = Math.max(1, y(q.p25) - y(q.p75));
+      g.appendChild(s("rect", { x: cx - w / 2, y: y(q.p75), width: w, height: h, fill, stroke, "stroke-width": 1 }));
+      g.appendChild(s("line", { x1: cx - w / 2, x2: cx + w / 2, y1: y(q.p50), y2: y(q.p50), stroke, "stroke-width": 2 }));
+      svg.appendChild(g);
+      return g;
+    };
+    const css = getComputedStyle(document.documentElement);
+    const c0 = css.getPropertyValue("--s0").trim(), f0 = css.getPropertyValue("--s0-fill").trim();
+    const c1 = css.getPropertyValue("--s1").trim(), f1 = css.getPropertyValue("--s1-fill").trim();
+    rows.forEach((r, i) => {
+      const cx = ml + step * (i + 0.5);
+      drawBox(cx, r.draws, bw, c0, f0, r.representative ? 1 : 0.35);
+      const hit = s("rect", { x: cx - step / 2, y: 0, width: step, height: H - mb, fill: "transparent" });
+      hit.addEventListener("pointermove", (ev) => showTip(box, tip, ev, `Mutant ${r.mutantId}`, [
+        `killed in ${int(r.killScenarios)} scenarios (${pct(r.killShare)})`,
+        `expected draws ${draws(r.expectedDraws)}`,
+        `5% ${int(r.draws.p05)} · 25% ${int(r.draws.p25)} · median ${int(r.draws.p50)} · 75% ${int(r.draws.p75)} · 95% ${int(r.draws.p95)}`,
+        r.groupSize > 1 ? (r.representative ? `kept for ${r.groupSize - 1} more with the same kill set` : `same kill set as mutant ${r.group}`) : "own kill set",
+      ]));
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+      svg.appendChild(hit);
+    });
+    if (all) {
+      const cx = W - 8 - allW / 2;
+      svg.appendChild(s("line", { x1: W - 8 - allW - gap / 2, x2: W - 8 - allW - gap / 2, y1: mt, y2: H - mb, stroke: "var(--line)" }));
+      drawBox(cx, all, Math.min(22, allW - 6), c1, f1, 1);
+      svg.appendChild(s("text", { class: "tick", x: cx, y: H - 8, "text-anchor": "middle" }, "all"));
+      const hit = s("rect", { x: cx - allW / 2, y: 0, width: allW, height: H - mb, fill: "transparent" });
+      hit.addEventListener("pointermove", (ev) => showTip(box, tip, ev, "All killable mutants", [
+        `5% ${int(all.p05)} · 25% ${int(all.p25)} · median ${int(all.p50)} · 75% ${int(all.p75)} · 95% ${int(all.p95)}`,
+        `best order: ${int(o.greedyMinimum)} scenarios`,
+      ]));
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+      svg.appendChild(hit);
+    }
+  }
+
+  function renderCurve(o) {
+    const box = document.getElementById("curve");
+    box.replaceChildren();
+    const rows = o.curve;
+    if (!rows.length) { box.textContent = "No data."; return; }
+    const W = Math.max(300, box.clientWidth), H = 300, mt = 16, mb = 26;
+    const svg = s("svg", { width: "100%", viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `For ${o.oracle}: expected share of killable mutants killed and probability that all are killed, against random draws, log scale` });
+    box.appendChild(svg);
+    const ml = textWidth(svg, "100%", "tick") + 12, mr = 12;
+    const decades = Math.log10(o.pool);
+    const x = (d) => ml + (Math.log10(d) / decades) * (W - ml - mr);
+    const y = (v) => H - mb - v * (H - mb - mt);
+    [0, 0.25, 0.5, 0.75, 1].forEach((t) => {
+      svg.appendChild(s("line", { class: "gridline", x1: ml, x2: W - mr, y1: y(t), y2: y(t) }));
+      svg.appendChild(s("text", { class: "tick", x: ml - 8, y: y(t), dy: "0.32em", "text-anchor": "end" }, (t * 100) + "%"));
+    });
+    const xt = Array.from({ length: Math.floor(decades) + 1 }, (_, e) => 10 ** e);
+    const every = (W - ml - mr) < xt.length * (textWidth(svg, int(xt[xt.length - 1]), "tick") + 16) ? 2 : 1;
+    xt.forEach((t, i) => {
+      if (i % every) return;
+      svg.appendChild(s("text", { class: "tick", x: x(t), y: H - 6, "text-anchor": i === 0 ? "start" : "middle" }, int(t)));
+    });
+    const gx = x(Math.max(1, o.greedyMinimum));
+    svg.appendChild(s("line", { x1: gx, x2: gx, y1: mt, y2: H - mb, stroke: "var(--ref)", "stroke-dasharray": "4 3" }));
+    svg.appendChild(s("text", { class: "reflabel", x: gx + 6, y: mt + 10 }, `best order: ${int(o.greedyMinimum)} scenarios`));
+    const path = (key, color) => {
+      const d = rows.map((r, i) => `${i ? "L" : "M"}${x(r.draws).toFixed(1)},${y(r[key]).toFixed(1)}`).join("");
+      svg.appendChild(s("path", { d, fill: "none", stroke: color, "stroke-width": 2 }));
+    };
+    path("expectedShareKilled", "var(--s0)");
+    path("pAllKilled", "var(--s1)");
+    if (o.drawsToKillAll) {
+      const mx = x(o.drawsToKillAll.p50), right = mx > (ml + W) / 2;
+      svg.appendChild(s("circle", { cx: mx, cy: y(0.5), r: 4, fill: "var(--s1)" }));
+      svg.appendChild(s("text", { class: "reflabel", x: mx + (right ? -8 : 8), y: y(0.5) + 16, "text-anchor": right ? "end" : "start" },
+        `median ${int(o.drawsToKillAll.p50)} draws`));
+    }
+    const tip = tipFor(box);
+    const guide = s("line", { class: "gridline", y1: mt, y2: H - mb, visibility: "hidden" });
+    svg.appendChild(guide);
+    const hit = s("rect", { x: ml, y: 0, width: W - ml - mr, height: H, fill: "transparent" });
+    hit.addEventListener("pointermove", (ev) => {
+      const r = svg.getBoundingClientRect();
+      const sx = (ev.clientX - r.left) * (W / r.width);
+      const target = 10 ** (((sx - ml) / (W - ml - mr)) * decades);
+      let best = rows[0];
+      for (const p of rows) if (Math.abs(Math.log(p.draws / target)) < Math.abs(Math.log(best.draws / target))) best = p;
+      guide.setAttribute("x1", x(best.draws)); guide.setAttribute("x2", x(best.draws)); guide.setAttribute("visibility", "visible");
+      showTip(box, tip, ev, `${int(best.draws)} draws`, [
+        `expected share killed ${(best.expectedShareKilled * 100).toFixed(1)}%`,
+        `probability all killed ${(best.pAllKilled * 100).toFixed(1)}%`,
+      ]);
+    });
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; guide.setAttribute("visibility", "hidden"); });
+    svg.appendChild(hit);
+  }
+
+  function renderPerScenario(o) {
+    const tb = document.querySelector("#per-scenario tbody");
+    const rows = o.killsPerScenario.slice().sort((a, b) => a.mutantsKilled - b.mutantsKilled);
+    const maxShare = Math.max(...rows.map((r) => r.scenarios / o.pool));
+    let atLeast = o.pool;
+    tb.replaceChildren(...rows.map((r) => {
+      const tr = el("tr");
+      const share = r.scenarios / o.pool;
+      const bar = cell(share, "", "l");
+      bar.append(el("span", { class: "barcell", style: `width:${Math.max(1, (share / maxShare) * 120).toFixed(0)}px` }), pct(share));
+      tr.append(cell(r.mutantsKilled, int(r.mutantsKilled)), cell(r.mutantsKilled / o.mutants, pct(r.mutantsKilled / o.mutants)),
+        cell(o.killing ? r.mutantsKilled / o.killing : 0, o.killing ? pct(r.mutantsKilled / o.killing) : "—"),
+        cell(r.scenarios, int(r.scenarios)), bar, cell(atLeast, `${int(atLeast)} (${pct(atLeast / o.pool)})`));
+      atLeast -= r.scenarios;
+      return tr;
+    }));
+    applySort(document.getElementById("per-scenario"));
+    const killing = o.pool - (rows.find((r) => r.mutantsKilled === 0)?.scenarios ?? 0);
+    const mean = rows.reduce((a, r) => a + r.mutantsKilled * r.scenarios, 0) / o.pool;
+    document.getElementById("per-scenario-note").textContent =
+      `${int(killing)} of ${int(o.pool)} valid scenarios (${pct(killing / o.pool)}) kill at least one mutant; ` +
+      `a scenario kills ${mean.toFixed(1)} of ${int(o.mutants)} mutants on average.`;
+  }
+
+  function renderMutants(o) {
+    const tb = document.querySelector("#mutants tbody");
+    tb.replaceChildren(...o.mutantRows.map((r) => {
+      const tr = el("tr", r.representative ? {} : { class: "dup" });
+      const same = r.groupSize > 1 ? (r.representative ? `kept for ${r.groupSize - 1} more` : `as mutant ${r.group}`) : "";
+      tr.append(cell(r.mutantId, String(r.mutantId)), cell(r.killScenarios, int(r.killScenarios)),
+        cell(r.killShare, pct(r.killShare)), cell(r.expectedDraws, draws(r.expectedDraws)),
+        ...["p05", "p25", "p50", "p75", "p95"].map((k) => cell(r.draws[k], int(r.draws[k]))),
+        // groups sort together, the kept mutant first
+        cell(r.group * 2 + (r.representative ? 0 : 1), same, "l"));
+      return tr;
+    }));
+    applySort(document.getElementById("mutants"));
+  }
+
+  // ---------- sortable tables ----------
+  // Each cell keeps its raw value in data-sort, so "17%" or "1,234 (5%)" sort as numbers.
+  function cell(sortValue, text, cls) {
+    const td = el("td", cls ? { class: cls } : {}, text);
+    td.dataset.sort = String(sortValue);
+    return td;
+  }
+  const sortState = new Map(); // table id -> { col, dir }
+  function applySort(table) {
+    const st = sortState.get(table.id);
+    table.querySelectorAll("thead th").forEach((th, i) =>
+      th.setAttribute("aria-sort", st && st.col === i ? (st.dir > 0 ? "ascending" : "descending") : "none"));
+    if (!st) return;
+    const tb = table.tBodies[0];
+    const rows = Array.from(tb.rows);
+    const key = (tr) => {
+      const v = tr.cells[st.col]?.dataset.sort ?? "";
+      const n = Number(v);
+      return v !== "" && Number.isFinite(n) ? n : v;
+    };
+    rows.sort((a, b) => {
+      const x = key(a), y = key(b);
+      const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return c * st.dir;
+    });
+    tb.append(...rows);
+  }
+  document.querySelectorAll("table").forEach((table) => {
+    table.querySelectorAll("thead th").forEach((th, i) => {
+      const b = el("button", { type: "button", class: "sortbtn" }, th.textContent);
+      th.replaceChildren(b);
+      b.addEventListener("click", () => {
+        const st = sortState.get(table.id);
+        sortState.set(table.id, { col: i, dir: st && st.col === i ? -st.dir : 1 });
+        applySort(table);
+      });
+    });
+  });
+
+  // ---------- download for chat ----------
+  // Element renders Markdown but not Markdown tables, so tables go into code blocks with aligned columns.
+  function textTable(table) {
+    const rows = [table.tHead.rows[0], ...table.tBodies[0].rows].map((tr) =>
+      Array.from(tr.cells, (c) => ({ t: c.textContent.trim(), l: c.classList.contains("l") })));
+    const w = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].t.length)));
+    const line = (r) => r.map((c, i) => (c.l ? c.t.padEnd(w[i]) : c.t.padStart(w[i]))).join("  ").trimEnd();
+    return ["```", line(rows[0]), w.map((n) => "-".repeat(n)).join("  "), ...rows.slice(1).map(line), "```"].join("\n");
+  }
+  function chatOverview() {
+    const parts = ["**Mutant kill rarity**", document.getElementById("meta").textContent];
+    // the tables are read from the page so the export keeps the chosen sort order
+    for (const o of state.report.oracles) {
+      renderLede(o); renderTiles(o); renderPerScenario(o); renderMutants(o);
+      const tiles = Array.from(document.querySelectorAll("#tiles .tile"), (t) =>
+        `- ${t.children[0].textContent}: **${t.children[1].textContent}** ${t.children[2].textContent}`.trimEnd());
+      parts.push(`### ${NAMES[o.oracle] || o.oracle}`, document.getElementById("lede").textContent, tiles.join("\n"),
+        `**Mutants killed per scenario.** ${document.getElementById("per-scenario-note").textContent}`,
+        textTable(document.getElementById("per-scenario")),
+        "**Every killable mutant**", o.mutantRows.length ? textTable(document.getElementById("mutants")) : "none");
+    }
+    const o = oracle();
+    renderLede(o); renderTiles(o); renderPerScenario(o); renderMutants(o);
+    return parts.join("\n\n") + "\n";
+  }
+  document.getElementById("download").addEventListener("click", () => {
+    const a = el("a", { href: URL.createObjectURL(new Blob([chatOverview()], { type: "text/markdown" })), download: "kill_rarity_overview.md" });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => {
+    if (!state.report) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { const o = oracle(); renderBoxes(o); renderCurve(o); }, 100);
+  }).observe(document.getElementById("boxes"));
+})();
+</script>
+</body>
+</html>
