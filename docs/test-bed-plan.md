@@ -164,7 +164,19 @@ class (evaluate `tscWithStaticDistances()` on the tick-0 state).
 Acceptance: 196,608 rows. A re-implementation of the predicates predicts 68 distinct project-TSC
 classes and 160 static-TSC classes at tick 0; check against the data and report any difference.
 
-### C. Tree learning (new script, e.g. `scripts/decision_tree_start_scenarios.py`)
+### C. Tree learning (`scripts/decision_tree_start_scenarios.py`)
+
+Implemented (2026-11-21) in Python as described below (Till's choice: LightGBM and Optuna have no
+equivalent on the JVM). The condition spec is `scripts/conditions/full_run.json`; only the full run
+is implemented, other conditions come with the pre-study. Every tree is learned twice, with and
+without `ego_lane` (feature sets `with_ego_lane`, `without_ego_lane`; Till, 2026-11-21). As in the old
+script, `--mutant-ids` / `--mutant-numbers` with `--train-fraction` split the mutants by hand
+(stratified by operator); a picked duplicate becomes its representative. The minimum leaf size is
+searched in scenarios (10 to 2,500) with `min_child_samples = 2 * scenarios`. Results go to
+`start_scenario_grouping_runs` (`kind = tree`, with `kill_matrix_id`), `start_scenario_grouping_mutant_splits`
+and `start_scenario_group_assignments` instead of `scenario_tree_runs` / `scenario_leaf_assignments`: new
+tables in the pattern of `decision_tree_runs`, kept apart so the old pipeline does not read them.
+
 
 Inputs: features (B), one kill matrix (A), a condition spec (JSON: training mutants, which of their
 pairs are visible, scoring mutants, seed, thresholds, leaf bound).

@@ -1,0 +1,13 @@
+{
+  "name": "full",
+  "description": "Full run (D6, D7): all pairs of all kept mutants for training and scoring.",
+  "oracles": ["G0", "TTC", "TG"],
+  "trainingMutants": "all",
+  "visiblePairs": "all",
+  "scoringMutants": "same",
+  "seed": 0,
+  "leafBounds": [16, 68, 160, 512],
+  "trials": 200,
+  "folds": 5,
+  "featureSets": ["with_ego_lane", "without_ego_lane"]
+}
