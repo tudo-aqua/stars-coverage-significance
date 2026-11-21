@@ -147,6 +147,15 @@ log of valid scenarios, killable mutants, duplicate groups and baseline-violatin
 
 ### B. Tick-0 features and TSC classes
 
+Implemented (2026-11-21): the features need no extra table, the tree script reads them from the
+baseline's tick-0 rows directly. `StartScenarioTscGroupings.kt` (`./gradlew runStartScenarioTscGroupings`)
+stores the two TSCs as groupings, in the same tables as the trees (step C), so the draw step treats
+TSCs and trees alike: the project class is `current_tsc_instance_id`; the static TSC is seeded into
+`tscs` / `tsc_instances` and evaluated on the tick-0 scene rebuilt from `all_vehicles_json_deflate`.
+Evaluating `tsc()` on the rebuilt scene must reproduce the recorded class (printed check). It also
+creates the grouping tables, so it runs before the tree script.
+
+
 One row per starting scenario, taken from the baseline's tick-0 row (tick 0 is identical for all
 controllers): `ego_lane` plus TTC and TG to the six neighbours (13 columns; NULL stays missing for
 LightGBM). Add the project TSC class (`current_tsc_instance_id` at tick 0) and the static-distance TSC

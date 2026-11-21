@@ -117,7 +117,7 @@ private fun seedMutants(
  * @param tsc The TSC whose instances are to be inserted.
  * @param tscId The database ID of the TSC.
  */
-private fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: Int) = db {
+internal fun insertAllTSCInstance(tsc: TSC<*, *, *, *>, tscId: Int) = db {
   println("Checking existing TSCInstances in Db...")
   val existingEntries = TSCInstancesRepository.countByTSC(tscId)
   if (existingEntries == tsc.instanceCount.toLong()) {

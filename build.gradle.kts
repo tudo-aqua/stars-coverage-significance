@@ -147,6 +147,19 @@ val runKillMatrices by
       jvmArgs = listOf("-Xmx16g")
     }
 
+val runStartScenarioTscGroupings by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Project and static-distance TSC classes per starting scenario (test-bed plan step B), stored as groupings."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunStartScenarioTscGroupingsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx16g")
+    }
+
 val createChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
