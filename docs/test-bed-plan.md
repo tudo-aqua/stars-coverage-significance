@@ -236,6 +236,13 @@ K killing scenarios, within sampling error.
 Outputs per run: CSV of time to kill per (strategy, repetition, mutant) and CSV of the suite-size
 curves, under `postEvaluation/start_scenario_draws/run_<id>/`.
 
+Implemented (2026-11-21) in `StartScenarioDraws.kt` (`./gradlew runStartScenarioDraws --args="--condition=full"`).
+Per oracle it uses the latest tree per (feature set, leaf bound) and their kill matrix, plus the two TSC
+groupings, and writes `time_to_kill.csv`, `suite_size_curves.csv` and `summary.json` (with the random
+acceptance check as the largest z of the mean time to kill against (N + 1) / (K + 1)) under
+`postEvaluation/start_scenario_draws/<condition>/<oracle>/`. These are lookups, recomputed in seconds.
+Greedy resets when all training mutants are killed or when no remaining scenario adds a kill.
+
 ## 5. Experiment conditions
 
 | Condition | Training data | Scoring mutants | Status |

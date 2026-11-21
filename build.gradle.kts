@@ -160,6 +160,19 @@ val runStartScenarioTscGroupings by
       jvmArgs = listOf("-Xmx16g")
     }
 
+val runStartScenarioDraws by
+    tasks.registering(JavaExec::class) {
+      group = "application"
+      description =
+          "Draw experiments over the starting scenarios (test-bed plan steps D/E). Args: --condition=full --seed=0."
+      dependsOn(tasks.run.get().taskDependencies)
+
+      mainClass.set("tools.aqua.stars.coverage.significance.RunStartScenarioDrawsKt")
+      classpath = sourceSets.main.get().runtimeClasspath
+
+      jvmArgs = listOf("-Xmx16g")
+    }
+
 val createChunkJobs by
     tasks.registering(JavaExec::class) {
       group = "application"
