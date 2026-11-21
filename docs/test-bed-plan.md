@@ -108,6 +108,10 @@ steps do not touch the tick table again.
    - Implemented as the table `ScenarioMutantOutcomesTable` and `ScenarioMutantOutcomes.kt`; run
      `./gradlew buildScenarioMutantOutcomes --args="--scope=baseline|mutants|all"`. It also stores `n_lane_changes` (for A.2a), `n_runs` (duplicate check) and
      `lc_window_ticks`.
+   - Fixed 2026-11-21: `tick` is stored in milliseconds, so the first build's window was 20 ms, i.e. only
+     the lane-change tick itself. The window now counts rows of the run (`ROW_NUMBER`). Tables built
+     before the fix have wrong `min_rear_*_after_lc` values and must be rebuilt (`--scope=all`), followed
+     by the sweep and the kill matrices; D13's rear finding was measured on the old values.
 2. Kill matrices, one per oracle, computed in memory from that table with thresholds as parameters:
    - Oracle TTC: `front_ttc < ttc_front OR rear_ttc[_after_lc] < ttc_rear` (P6); oracle TG likewise
      with `tg_front` and `tg_rear`.

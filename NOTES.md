@@ -6,6 +6,9 @@
 - Threshold sweep: the baseline never goes below 6.5 s TTC, so the pool-loss rule cannot set the
   TTC threshold. Chosen: TTC 1.5 s, TG 0.8 s front and 0.5 s rear, rear only after an ego lane
   change ([details](#threshold-sweep-for-the-ttc-and-tg-oracles))
+- The first `scenario_mutant_outcomes` build used a 20 ms lane-change window instead of 20 ticks,
+  so the rear "after lane change" values and the TG rear result below must be redone
+  ([details](#lane-change-window-bug-found-21-november-2026))
 
 ## Starting Configurations
 
@@ -89,3 +92,22 @@ cache.
   So 0.8 s removes 3.7% of scenarios, and anything from 0.81 s to 0.9 s removes 5.1%. With rear
   0.5 s after a lane change, TG kills 100 mutants at 0.8 s, against 76 at 0.7 s and 93 at 0.9 s
   (0.9 s removes more scenarios from the pool).
+
+## Lane-change window bug (found 21 November 2026)
+
+`metric_failed_monitors.tick` holds the tick time in milliseconds (0, 100, ..., 4000), not a tick
+index. The outcome build compared `tick - lane-change tick <= 20`, so the D14 window ("20 ticks
+after an ego lane change", 2 s) was really 20 ms: only the lane-change tick itself entered
+`min_rear_ttc_after_lc` and `min_rear_tg_after_lc`. G0 and every front or `always` column are
+unaffected. Affected: the TTC and TG oracles in `after_lane_change` mode, the sweep's
+`after_lane_change` rows, and the D13 finding "the baseline never goes below 0.64 s after its own
+lane change". The build now counts rows of the run (`ROW_NUMBER`). To redo, in this order:
+
+```
+./gradlew buildScenarioMutantOutcomes --args="--scope=all"
+./gradlew runThresholdSweep
+./gradlew runKillMatrices
+```
+
+Check: `--scope=baseline --laneChangeWindowTicks=0` reproduces the old after-lane-change values;
+with 20 ticks they can only be smaller or equal.

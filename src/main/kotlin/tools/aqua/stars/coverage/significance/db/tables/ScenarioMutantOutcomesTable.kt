@@ -31,7 +31,8 @@ import org.jetbrains.exposed.sql.Table
  * @property scenarioConfigId Id in [ScenarioStartingConfigurationTable].
  * @property mutantId Id in [MutantsTable] (the baseline has `mutant_number = -1`).
  * @property accidentAny Whether G0 (accident) failed at any tick.
- * @property firstAccidentTick First tick at which G0 failed, or `null`.
+ * @property firstAccidentTick Time of the first tick at which G0 failed, in milliseconds (like
+ *   `metric_failed_monitors.tick`), or `null`.
  * @property minFrontTtc Smallest TTC to the vehicle in front on the ego's lane (s).
  * @property minFrontTg Smallest time gap to the vehicle in front on the ego's lane (s).
  * @property minRearTtc Smallest TTC of the vehicle behind on the ego's lane (s).
@@ -44,7 +45,8 @@ import org.jetbrains.exposed.sql.Table
  * @property nTicks Number of ticks of the run.
  * @property nRuns Number of (tsc, evaluation run) combinations that contributed ticks; above 1
  *   means duplicate runs were merged.
- * @property lcWindowTicks Lane-change window used for the `*AfterLc` columns.
+ * @property lcWindowTicks Lane-change window used for the `*AfterLc` columns, in ticks (rows of the
+ *   run, 100 ms apart).
  */
 object ScenarioMutantOutcomesTable : Table("scenario_mutant_outcomes") {
   val scenarioConfigId = integer("scenario_config_id")

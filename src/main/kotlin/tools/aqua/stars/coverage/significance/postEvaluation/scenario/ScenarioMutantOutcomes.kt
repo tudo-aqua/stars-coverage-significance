@@ -123,7 +123,9 @@ object ScenarioMutantOutcomes {
                  m."monitor_g0_Accidents_failed" AS g0,
                  m.surrounding_front_ttc_s AS front_ttc, m.surrounding_front_tg_s AS front_tg,
                  m.surrounding_rear_ttc_s  AS rear_ttc,  m.surrounding_rear_tg_s  AS rear_tg,
-                 m.ego_lane <> LAG(m.ego_lane) OVER w AS lane_changed
+                 m.ego_lane <> LAG(m.ego_lane) OVER w AS lane_changed,
+                 -- tick is in milliseconds, so the window counts rows of the run, not tick values.
+                 ROW_NUMBER() OVER w AS tick_index
           FROM metric_failed_monitors m
           WHERE m.mutant_id = ANY(ARRAY[${mutantIds.joinToString(",")}]::int[])
           -- Same column order as the unique index, so Postgres can read it pre-sorted.
@@ -132,7 +134,7 @@ object ScenarioMutantOutcomes {
       ),
       marked AS (
           SELECT t.*,
-                 t.tick - MAX(CASE WHEN t.lane_changed THEN t.tick END) OVER (
+                 t.tick_index - MAX(CASE WHEN t.lane_changed THEN t.tick_index END) OVER (
                      PARTITION BY t.tsc_id, t.run_id, t.scenario_config_id, t.mutant_id
                      ORDER BY t.tick) <= $laneChangeWindowTicks AS after_lc
           FROM ticks t
