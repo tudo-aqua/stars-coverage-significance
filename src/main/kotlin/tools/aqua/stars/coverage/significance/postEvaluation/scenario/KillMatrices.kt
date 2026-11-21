@@ -21,6 +21,19 @@ import java.io.File
 import java.util.BitSet
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import tools.aqua.stars.coverage.significance.db.tables.KillMatricesTable
+import tools.aqua.stars.coverage.significance.db.tables.KillMatrixBaselineViolationsTable
+import tools.aqua.stars.coverage.significance.db.tables.KillMatrixMutantsTable
+import tools.aqua.stars.coverage.significance.db.tables.ScenarioMutantOutcomesTable
+import tools.aqua.stars.coverage.significance.db.tables.ScenarioStartingConfigurationTable
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 /** The three oracles of D1. */
@@ -125,6 +138,7 @@ data class BaselineViolation(val scenarioConfigId: Int, val anyMutantAvoided: Bo
  * @property nonKillingMutantIds Mutants dropped because they kill nowhere.
  * @property baselineViolations Scenarios removed from the pool.
  * @property aiPilotKills AiPilot's kill set over the pool (outside check, not a mutant), or `null`.
+ * @property aiPilotMutantId AiPilot's `mutants.id`, or `null`.
  */
 @Suppress("UseDataClass") // A data class would compare the arrays by reference in equals().
 class KillMatrix(
@@ -136,11 +150,40 @@ class KillMatrix(
     val nonKillingMutantIds: List<Int>,
     val baselineViolations: List<BaselineViolation>,
     val aiPilotKills: BitSet?,
+    val aiPilotMutantId: Int? = null,
+)
+
+/** What cleaning made of a controller, as stored in [KillMatrixMutantsTable]. */
+enum class KillMatrixRole {
+  /** A column of the matrix. */
+  KEPT,
+  /** Same kill set as a kept mutant. */
+  DUPLICATE,
+  /** Kills nowhere. */
+  NON_KILLING,
+  /** Outside check, not a mutant. */
+  AI_PILOT,
+}
+
+/**
+ * One [KillMatrixMutantsTable] row.
+ *
+ * @property mutantId `mutants.id`.
+ * @property role What cleaning made of it.
+ * @property representativeMutantId The kept mutant of a [KillMatrixRole.DUPLICATE].
+ * @property killScenarioIds Killing `scenario_config_id`s, ascending, for kept mutants and AiPilot.
+ */
+data class KillMatrixMutantRow(
+    val mutantId: Int,
+    val role: KillMatrixRole,
+    val representativeMutantId: Int? = null,
+    val killScenarioIds: List<Int>? = null,
 )
 
 /**
  * Per-oracle numbers written to `summary.json`.
  *
+ * @property killMatrixId Id of the stored matrix in `kill_matrices`.
  * @property oracle Oracle name.
  * @property scenarios All scenarios.
  * @property pool Valid scenarios.
@@ -155,6 +198,7 @@ class KillMatrix(
  */
 @Serializable
 data class KillMatrixSummary(
+    val killMatrixId: Int,
     val oracle: String,
     val scenarios: Int,
     val pool: Int,
@@ -183,125 +227,204 @@ data class KillMatricesSummary(
 )
 
 /**
- * A [KillMatrix] as stored in `kill_matrix_<oracle>.json`; kill sets are lists of pool indices.
- *
- * @property oracle Oracle name.
- * @property thresholds Thresholds it was built with.
- * @property poolScenarioIds See [KillMatrix.poolScenarioIds].
- * @property mutantIds See [KillMatrix.mutantIds].
- * @property kills Per kept mutant, the pool indices of the scenarios that kill it, ascending.
- * @property duplicateGroups See [KillMatrix.duplicateGroups].
- * @property nonKillingMutantIds See [KillMatrix.nonKillingMutantIds].
- * @property baselineViolations See [KillMatrix.baselineViolations].
- * @property aiPilotKills AiPilot's kill set as pool indices, or `null`.
- */
-@Serializable
-data class StoredKillMatrix(
-    val oracle: String,
-    val thresholds: OracleThresholds,
-    val poolScenarioIds: List<Int>,
-    val mutantIds: List<Int>,
-    val kills: List<List<Int>>,
-    val duplicateGroups: Map<Int, List<Int>>,
-    val nonKillingMutantIds: List<Int>,
-    val baselineViolations: List<BaselineViolation>,
-    val aiPilotKills: List<Int>?,
-)
-
-/**
- * Builds the kill matrices of all oracles from [ScenarioMutantOutcomes]' table and stores them, so
- * later steps and the page `postEvaluation/kill_matrices/index.html` need no database.
+ * Builds the kill matrices of all oracles from [ScenarioMutantOutcomes]' table and stores them in
+ * [KillMatricesTable], [KillMatrixMutantsTable] and [KillMatrixBaselineViolationsTable]. The page
+ * `postEvaluation/kill_matrices/index.html` reads the `kill_rarity.json` written next to it.
  */
 object KillMatrices {
 
-  /** Where everything is written; its `index.html` is committed, the rest is not. */
+  /** Where the acceptance log and the page data are written; its `index.html` is committed. */
   const val OUTPUT_DIR: String = "postEvaluation/kill_matrices"
 
   private val json = Json { prettyPrint = true }
   private val compact = Json
 
+  /** Every threshold written out, so the stored JSON can be compared and read from Python. */
+  private val thresholdsJson = Json { encodeDefaults = true }
+
   /**
-   * Loads the outcomes, builds every oracle's kill matrix and writes to [OUTPUT_DIR]:
-   * `kill_matrix_<oracle>.json` (the matrix), `summary.json` (the acceptance log),
-   * `baseline_violations_<oracle>.csv` and `kill_rarity.json` (for the page).
+   * Loads the outcomes, builds every oracle's kill matrix, stores each as a new matrix in the
+   * database and writes `summary.json` (the acceptance log) and `kill_rarity.json` (the page's
+   * data) to [OUTPUT_DIR].
    *
    * @param thresholds Oracle thresholds.
    */
   fun run(thresholds: OracleThresholds = OracleThresholds()) {
     val t0 = System.nanoTime()
     val data = OutcomeMatrices.load(includeAiPilot = true)
+    val lcWindowTicks = transaction {
+      val t = ScenarioMutantOutcomesTable
+      t.select(t.lcWindowTicks).withDistinct().map { it[t.lcWindowTicks] }.single()
+    }
     val t1 = System.nanoTime()
     val matrices = KillOracle.entries.map { compute(data, it, thresholds) }
     val t2 = System.nanoTime()
+    val ids = matrices.map { store(it, thresholds, lcWindowTicks, data.scenarioCount) }
+    val t3 = System.nanoTime()
 
     val dir = File(OUTPUT_DIR).apply { mkdirs() }
-    for (m in matrices) {
-      val name = m.oracle.name.lowercase()
-      File(dir, "kill_matrix_$name.json")
-          .writeText(compact.encodeToString(StoredKillMatrix.serializer(), toStored(m, thresholds)))
-      File(dir, "baseline_violations_$name.csv")
-          .writeText(
-              buildString {
-                appendLine("scenario_config_id,any_mutant_avoided")
-                m.baselineViolations.forEach {
-                  appendLine("${it.scenarioConfigId},${it.anyMutantAvoided}")
-                }
-              })
-    }
     val mutants = data.mutantCount - (if (data.aiPilotRow != null) 1 else 0)
     val rarity = KillRarity.report(matrices, data.scenarioCount, mutants, thresholds)
     File(dir, "kill_rarity.json")
         .writeText(compact.encodeToString(KillRarityReport.serializer(), rarity))
-    val t3 = System.nanoTime()
+    val t4 = System.nanoTime()
 
     val summary =
         KillMatricesSummary(
             thresholds,
-            matrices.map { summarize(it, data) },
+            matrices.zip(ids) { m, id -> summarize(m, data, id) },
             mapOf(
                 "load" to (t1 - t0) / 1e9,
                 "compute" to (t2 - t1) / 1e9,
-                "rarity" to (t3 - t2) / 1e9),
+                "store" to (t3 - t2) / 1e9,
+                "rarity" to (t4 - t3) / 1e9),
         )
     val summaryJson = json.encodeToString(KillMatricesSummary.serializer(), summary)
     File(dir, "summary.json").writeText(summaryJson)
     println(summaryJson)
-    println("Wrote kill matrices, summary and kill_rarity.json to $dir; open $dir/index.html")
+    println(
+        "Stored kill matrices ${KillOracle.entries.zip(ids)} (lane-change window $lcWindowTicks " +
+            "ticks); wrote summary and kill_rarity.json to $dir; open $dir/index.html")
   }
 
-  /** Reads the matrix of [oracle] that [run] stored in [dir]. */
-  fun read(oracle: KillOracle, dir: File = File(OUTPUT_DIR)): KillMatrix =
-      fromStored(
-          compact.decodeFromString(
-              StoredKillMatrix.serializer(),
-              File(dir, "kill_matrix_${oracle.name.lowercase()}.json").readText()))
+  /**
+   * Stores [m] as a new [KillMatricesTable] row with its mutants and violations; returns its id.
+   */
+  private fun store(
+      m: KillMatrix,
+      thresholds: OracleThresholds,
+      lcWindowTicks: Int,
+      scenarioCount: Int
+  ): Int = transaction {
+    SchemaUtils.createMissingTablesAndColumns(
+        KillMatricesTable, KillMatrixMutantsTable, KillMatrixBaselineViolationsTable)
+    val id =
+        KillMatricesTable.insertAndGetId {
+          it[oracle] = m.oracle.name
+          it[this.thresholdsJson] = encodeThresholds(thresholds)
+          it[this.lcWindowTicks] = lcWindowTicks
+          it[nScenarios] = scenarioCount
+          it[nPool] = m.poolScenarioIds.size
+        }
+    KillMatrixMutantsTable.batchInsert(mutantRows(m), shouldReturnGeneratedValues = false) { r ->
+      this[KillMatrixMutantsTable.killMatrixId] = id
+      this[KillMatrixMutantsTable.mutantId] = r.mutantId
+      this[KillMatrixMutantsTable.role] = r.role.name
+      this[KillMatrixMutantsTable.representativeMutantId] = r.representativeMutantId
+      this[KillMatrixMutantsTable.killScenarioIds] = r.killScenarioIds
+    }
+    KillMatrixBaselineViolationsTable.batchInsert(
+        m.baselineViolations, shouldReturnGeneratedValues = false) { v ->
+          this[KillMatrixBaselineViolationsTable.killMatrixId] = id
+          this[KillMatrixBaselineViolationsTable.scenarioConfigId] = v.scenarioConfigId
+          this[KillMatrixBaselineViolationsTable.anyMutantAvoided] = v.anyMutantAvoided
+        }
+    id.value
+  }
 
-  /** [m] in its stored form. */
-  fun toStored(m: KillMatrix, thresholds: OracleThresholds): StoredKillMatrix =
-      StoredKillMatrix(
-          oracle = m.oracle.name,
-          thresholds = thresholds,
-          poolScenarioIds = m.poolScenarioIds.toList(),
-          mutantIds = m.mutantIds.toList(),
-          kills = m.kills.map { it.stream().toArray().toList() },
-          duplicateGroups = m.duplicateGroups,
-          nonKillingMutantIds = m.nonKillingMutantIds,
-          baselineViolations = m.baselineViolations,
-          aiPilotKills = m.aiPilotKills?.stream()?.toArray()?.toList(),
-      )
+  /** [thresholds] as stored in [KillMatricesTable.thresholdsJson]. */
+  fun encodeThresholds(thresholds: OracleThresholds): String =
+      thresholdsJson.encodeToString(OracleThresholds.serializer(), thresholds)
 
-  /** The [KillMatrix] stored as [s]. */
-  fun fromStored(s: StoredKillMatrix): KillMatrix {
-    fun bits(indices: List<Int>) = BitSet().apply { indices.forEach { set(it) } }
+  /**
+   * Id of the newest stored matrix of [oracle], optionally only among those built with
+   * [thresholds].
+   */
+  fun latestId(oracle: KillOracle, thresholds: OracleThresholds? = null): Int = transaction {
+    val t = KillMatricesTable
+    t.select(t.id)
+        .where {
+          (t.oracle eq oracle.name) and
+              (thresholds?.let { t.thresholdsJson eq encodeThresholds(it) } ?: Op.TRUE)
+        }
+        .maxOfOrNull { it[t.id].value }
+        ?: error("No stored $oracle kill matrix; run runKillMatrices")
+  }
+
+  /** Reads the stored matrix [killMatrixId]. */
+  fun read(killMatrixId: Int): KillMatrix = transaction {
+    val oracle =
+        KillMatricesTable.select(KillMatricesTable.oracle)
+            .where { KillMatricesTable.id eq killMatrixId }
+            .single()[KillMatricesTable.oracle]
+    val mt = KillMatrixMutantsTable
+    val rows =
+        mt.selectAll()
+            .where { mt.killMatrixId eq killMatrixId }
+            .map {
+              KillMatrixMutantRow(
+                  it[mt.mutantId].value,
+                  KillMatrixRole.valueOf(it[mt.role]),
+                  it[mt.representativeMutantId],
+                  it[mt.killScenarioIds])
+            }
+    val vt = KillMatrixBaselineViolationsTable
+    val violations =
+        vt.selectAll()
+            .where { vt.killMatrixId eq killMatrixId }
+            .map { BaselineViolation(it[vt.scenarioConfigId].value, it[vt.anyMutantAvoided]) }
+    val sc = ScenarioStartingConfigurationTable
+    val scenarioIds = sc.select(sc.id).map { it[sc.id].value }.toIntArray()
+    fromRows(KillOracle.valueOf(oracle), scenarioIds, rows, violations)
+  }
+
+  /** [m]'s controllers as [KillMatrixMutantsTable] rows. */
+  fun mutantRows(m: KillMatrix): List<KillMatrixMutantRow> {
+    fun ids(kills: BitSet) = kills.stream().map { m.poolScenarioIds[it] }.toArray().toList()
+    val kept =
+        m.mutantIds.mapIndexed { i, id ->
+          KillMatrixMutantRow(id, KillMatrixRole.KEPT, null, ids(m.kills[i]))
+        }
+    val duplicates =
+        m.duplicateGroups.flatMap { (rep, group) ->
+          group.filter { it != rep }.map { KillMatrixMutantRow(it, KillMatrixRole.DUPLICATE, rep) }
+        }
+    val nonKilling =
+        m.nonKillingMutantIds.map { KillMatrixMutantRow(it, KillMatrixRole.NON_KILLING) }
+    val aiPilot =
+        m.aiPilotMutantId?.let {
+          listOf(KillMatrixMutantRow(it, KillMatrixRole.AI_PILOT, null, m.aiPilotKills?.let(::ids)))
+        } ?: emptyList()
+    return kept + duplicates + nonKilling + aiPilot
+  }
+
+  /**
+   * The [KillMatrix] stored as [rows] and [violations]; the pool is [scenarioIds] minus the
+   * violations.
+   */
+  fun fromRows(
+      oracle: KillOracle,
+      scenarioIds: IntArray,
+      rows: List<KillMatrixMutantRow>,
+      violations: List<BaselineViolation>,
+  ): KillMatrix {
+    val removed = violations.map { it.scenarioConfigId }.toSet()
+    val pool = scenarioIds.filter { it !in removed }.sorted().toIntArray()
+    fun bits(ids: List<Int>?) =
+        BitSet(pool.size).apply {
+          ids.orEmpty().forEach { set(pool.binarySearch(it).also { p -> check(p >= 0) }) }
+        }
+    val byRole = rows.groupBy { it.role }
+    val kept = byRole[KillMatrixRole.KEPT].orEmpty().sortedBy { it.mutantId }
+    val duplicates =
+        byRole[KillMatrixRole.DUPLICATE].orEmpty().groupBy { it.representativeMutantId!! }
+    val aiPilot = byRole[KillMatrixRole.AI_PILOT]?.single()
     return KillMatrix(
-        oracle = KillOracle.valueOf(s.oracle),
-        poolScenarioIds = s.poolScenarioIds.toIntArray(),
-        mutantIds = s.mutantIds.toIntArray(),
-        kills = s.kills.map(::bits),
-        duplicateGroups = s.duplicateGroups,
-        nonKillingMutantIds = s.nonKillingMutantIds,
-        baselineViolations = s.baselineViolations,
-        aiPilotKills = s.aiPilotKills?.let(::bits),
+        oracle = oracle,
+        poolScenarioIds = pool,
+        mutantIds = kept.map { it.mutantId }.toIntArray(),
+        kills = kept.map { bits(it.killScenarioIds) },
+        duplicateGroups =
+            duplicates.entries
+                .sortedBy { it.key }
+                .associate { (rep, dups) ->
+                  rep to (listOf(rep) + dups.map { it.mutantId }).sorted()
+                },
+        nonKillingMutantIds =
+            byRole[KillMatrixRole.NON_KILLING].orEmpty().map { it.mutantId }.sorted(),
+        baselineViolations = violations.sortedBy { it.scenarioConfigId },
+        aiPilotKills = aiPilot?.let { bits(it.killScenarioIds) },
+        aiPilotMutantId = aiPilot?.mutantId,
     )
   }
 
@@ -347,11 +470,13 @@ object KillMatrices {
                   BaselineViolation(data.scenarioIds[s], rows.any { !violates(it * n + s) })
                 },
         aiPilotKills = data.aiPilotRow?.let(::killSet),
+        aiPilotMutantId = data.aiPilotRow?.let { data.mutantIds[it] },
     )
   }
 
-  private fun summarize(m: KillMatrix, data: OutcomeMatrices): KillMatrixSummary =
+  private fun summarize(m: KillMatrix, data: OutcomeMatrices, id: Int): KillMatrixSummary =
       KillMatrixSummary(
+          killMatrixId = id,
           oracle = m.oracle.name,
           scenarios = data.scenarioCount,
           pool = m.poolScenarioIds.size,

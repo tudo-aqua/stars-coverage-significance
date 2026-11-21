@@ -92,8 +92,10 @@ estimate from the code, not measured; the sweep replaces them.
 
 ## 4. Pipeline to implement
 
-Each step lists its output and an acceptance check. Write intermediate results to Parquet so later
-steps do not touch the tick table again.
+Each step lists its output and an acceptance check. Intermediate results are stored in the
+database (files can be lost), so later steps do not touch the tick table again. The Kotlin code of
+the scenario-based pipeline lives in `postEvaluation/scenario/`; the tick-based evaluations, including
+the old pipeline, are in `postEvaluation/tick/`.
 
 ### A. Per-pair outcomes and kill matrices
 
@@ -131,10 +133,14 @@ steps do not touch the tick table again.
    and keep one representative per group (record the groups). AiPilot is not a training or scoring
    mutant; keep its row as an outside check.
    Steps 2 and 3 are implemented in `KillMatrices.kt` (`./gradlew runKillMatrices`, thresholds as
-   arguments, defaults D12 to D14). It stores one `kill_matrix_<oracle>.json` per oracle, the
-   acceptance log `summary.json` and `kill_rarity.json` in `postEvaluation/kill_matrices/`; the page
-   `index.html` there shows how rarely each mutant is killed. Later steps read the stored matrices
-   with `KillMatrices.read`, without the database.
+   arguments, defaults D12 to D14). Every run stores one new matrix per oracle in `kill_matrices`
+   (thresholds, lane-change window), `kill_matrix_mutants` (role `KEPT`, `DUPLICATE`, `NON_KILLING` or
+   `AI_PILOT`, the representative of a duplicate, the killing scenario ids) and
+   `kill_matrix_baseline_violations`; the pool is every scenario minus these violations. Older matrices
+   stay, so every tree points at the matrix it was trained on. Later steps read a matrix with
+   `KillMatrices.read(id)` / `KillMatrices.latestId(oracle)`. The acceptance log `summary.json` and the
+   page data `kill_rarity.json` go to `postEvaluation/kill_matrices/`; the page `index.html` there shows
+   how rarely each mutant is killed.
 
 Acceptance: one outcome row per (scenario, controller) and no duplicates per pair; per oracle, a
 log of valid scenarios, killable mutants, duplicate groups and baseline-violating scenarios.

@@ -95,10 +95,24 @@ class KillMatricesTest {
     assertEquals(BitSet().apply { set(1) }, matrix.aiPilotKills)
   }
 
-  /** A matrix survives being stored and read back unchanged. */
+  /** A matrix survives being turned into database rows and read back unchanged. */
   @Test
   fun `stored matrix round-trips`() {
-    val back = KillMatrices.fromStored(KillMatrices.toStored(matrix, OracleThresholds()))
+    val back =
+        KillMatrices.fromRows(
+            matrix.oracle,
+            data.scenarioIds,
+            KillMatrices.mutantRows(matrix),
+            matrix.baselineViolations)
+    assertEquals(
+        listOf(
+            KillMatrixRole.KEPT,
+            KillMatrixRole.DUPLICATE,
+            KillMatrixRole.NON_KILLING,
+            KillMatrixRole.AI_PILOT),
+        KillMatrices.mutantRows(matrix).map { it.role })
+    assertEquals(4, matrix.aiPilotMutantId)
+    assertEquals(matrix.aiPilotMutantId, back.aiPilotMutantId)
     assertEquals(matrix.oracle, back.oracle)
     assertContentEquals(matrix.poolScenarioIds, back.poolScenarioIds)
     assertContentEquals(matrix.mutantIds, back.mutantIds)
