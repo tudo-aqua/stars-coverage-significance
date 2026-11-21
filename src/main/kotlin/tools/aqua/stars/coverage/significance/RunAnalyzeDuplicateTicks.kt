@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.DuplicateTicksAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.DuplicateTicksAnalysis
 
 fun main() {
   // maxPoolSize must be >= the parallelism used by

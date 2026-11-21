@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance.workers
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.utils.CliArgs
@@ -27,8 +27,8 @@ import tools.aqua.stars.coverage.significance.utils.CliArgs
  * Entry point for one G0 full lead-time sweep analysis worker process.
  *
  * One libsumo simulation exists per process (see the "Parallelism" section on
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis], which
- * this analysis shares the same rationale with), so — exactly like
+ * [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis],
+ * which this analysis shares the same rationale with), so — exactly like
  * `g0MutantCoverageReplayWorker.kt` — each worker runs in its own JVM process rather than as a
  * thread, deterministically claiming every Nth flagged tick.
  *

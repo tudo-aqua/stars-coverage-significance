@@ -22,8 +22,8 @@ import org.jetbrains.exposed.sql.Table
 /**
  * One row per (starting scenario, controller): the run's accident flag and the smallest own-lane
  * TTC and TG, built from [MetricFailedMonitorsTable] by
- * [tools.aqua.stars.coverage.significance.postEvaluation.ScenarioMutantOutcomes] (step A.1 of
- * `docs/test-bed-plan.md`).
+ * [tools.aqua.stars.coverage.significance.postEvaluation.scenario.ScenarioMutantOutcomes] (step A.1
+ * of `docs/test-bed-plan.md`).
  *
  * A `null` in one of the `min*` columns means the value was never finite during the run, i.e.
  * +infinity: it never falls below any threshold.

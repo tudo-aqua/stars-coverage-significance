@@ -111,8 +111,9 @@ class LibsumoDynamicDataCollector(
    * The very first returned [TimeStep] (`tickTimeMillis == 0`) is the force-placed scene itself,
    * captured before any [Simulation.step] — every subsequent [TimeStep] is captured after a step,
    * as before. This gives every scenario a real t=0 anchor (e.g. for
-   * [tools.aqua.stars.coverage.significance.postEvaluation.LeadTimeReplay] to lead-time back to),
-   * instead of the earliest available tick always being one step (100ms) after actual insertion.
+   * [tools.aqua.stars.coverage.significance.postEvaluation.tick.LeadTimeReplay] to lead-time back
+   * to), instead of the earliest available tick always being one step (100ms) after actual
+   * insertion.
    *
    * @param runId Run identifier.
    * @param scenario Database entry of the scenario to run.

@@ -21,7 +21,7 @@ import org.jetbrains.exposed.dao.id.EntityID
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.DecisionTreeRunsRepository
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
-import tools.aqua.stars.coverage.significance.postEvaluation.DrawTicksWithDecisionTreeGroupingPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.DrawTicksWithDecisionTreeGroupingPostEvaluation
 
 /**
  * Selects which decision tree run(s) to evaluate via [args]:

@@ -20,7 +20,7 @@ package tools.aqua.stars.coverage.significance
 import org.jetbrains.exposed.dao.id.EntityID
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.tables.DecisionTreeRunsTable
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.BaselineNextTickDrawScenariosPostEvaluation
 
 /**
  * @param args Optionally the decision tree run ID to use for leaf assignments

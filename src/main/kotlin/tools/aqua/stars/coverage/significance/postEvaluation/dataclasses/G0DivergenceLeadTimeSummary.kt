@@ -21,7 +21,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * Why a tick's backward lead-time sweep (see
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis`) stopped.
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0DivergenceLeadTimeAnalysis`)
+ * stopped.
  */
 @Serializable
 enum class DivergenceStopReason {
@@ -55,7 +56,7 @@ data class LeadTimeStepResult(
 
 /**
  * Backward lead-time sweep outcome for one flagged tick, replaying only its own original mutant
- * (see `tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis`).
+ * (see `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0DivergenceLeadTimeAnalysis`).
  *
  * @property tickId `metric_failed_monitors.id` of the analyzed tick.
  * @property originalTick `metric_failed_monitors.tick` value of the analyzed tick.
@@ -158,9 +159,9 @@ data class G0DivergenceLeadTimeMutantStats(
  * @property maxReproducingLeadTimeHistogram See
  *   [G0DivergenceLeadTimeMutantStats.maxReproducingLeadTimeHistogram], across every swept tick —
  *   the basis for picking a `--leadTimeSeconds` threshold for
- *   [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]: the
- *   fraction of ticks still reproducing at a candidate threshold `L` is the sum of counts at keys
- *   `>= L` here, divided by [totalTicksAnalyzed].
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis]:
+ *   the fraction of ticks still reproducing at a candidate threshold `L` is the sum of counts at
+ *   keys `>= L` here, divided by [totalTicksAnalyzed].
  */
 @Serializable
 data class G0DivergenceLeadTimeSummary(

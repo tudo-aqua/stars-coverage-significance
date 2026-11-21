@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * One step of a tick's *full* backward lead-time sweep (see
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis`).
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis`).
  *
  * @property leadTimeSeconds How far before the original tick this step reconstructed the scene from
  *   (0.0, 0.1, 0.2, ...).
@@ -45,8 +45,9 @@ data class LeadTimeSweepStepResult(
 
 /**
  * Full backward lead-time sweep outcome for one flagged tick, replaying only its own original
- * mutant (see `tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis`)
- * — unlike
+ * mutant (see
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis`) —
+ * unlike
  * `tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TickG0DivergenceResult`, the
  * sweep always continues all the way back to the start of the recorded scenario instead of stopping
  * at the first lead time that fails to reproduce the recorded failure, because a state-based
@@ -171,7 +172,8 @@ data class G0FullLeadTimeSweepMutantStats(
  * @property nonMonotonicCount See [G0FullLeadTimeSweepMutantStats.nonMonotonicCount], across every
  *   swept tick — the headline count for "does lead time help non-monotonically."
  * @property nonMonotonicTickIds Ids of the [nonMonotonicCount] ticks, for direct inspection (e.g.
- *   re-running [tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis]
+ *   re-running
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis]
  *   against just these ids to look at their full [TickG0FullSweepResult.steps] sequence).
  * @property minLeadTimeHistogram [TickG0FullSweepResult.minReproducingLeadTimeSeconds] grouped by
  *   exact value to tick count, over every tick that reproduces at all.

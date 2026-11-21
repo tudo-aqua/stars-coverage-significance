@@ -27,9 +27,9 @@ import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesReposi
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMonitorMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildFailedMutantsMapping
 import tools.aqua.stars.coverage.significance.db.tables.MetricFailedMonitorsTable.buildTSCInstanceTransitions
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.*
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.TSCInstanceTransition
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.BaselineNextTickDrawScenariosPostEvaluation
 import tools.aqua.stars.coverage.significance.tsc.tsc
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation.Companion.buildMonitorCombinations

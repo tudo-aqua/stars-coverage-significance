@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance.workers
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.utils.CliArgs

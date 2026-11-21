@@ -25,8 +25,8 @@ import tools.aqua.stars.coverage.significance.db.DbBootstrap
 import tools.aqua.stars.coverage.significance.db.repositories.EvaluationRunsRepository
 import tools.aqua.stars.coverage.significance.db.repositories.HighwayTrafficScenariosRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation.writeOrderedCountsCsv
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioInstancesLongTailDistributionPostEvaluation.writePgfplotsBarChartTex
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.ScenarioInstancesLongTailDistributionPostEvaluation.writeOrderedCountsCsv
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.ScenarioInstancesLongTailDistributionPostEvaluation.writePgfplotsBarChartTex
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.tsc.tsc

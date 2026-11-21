@@ -24,9 +24,9 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import org.jetbrains.letsPlot.core.plot.base.stat.AggregateFunctions.median
 import tools.aqua.stars.coverage.significance.POST_EVALUATION_BASE_DIR
-import tools.aqua.stars.coverage.significance.postEvaluation.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.BoxPlotValues
 import tools.aqua.stars.coverage.significance.postEvaluation.dataclasses.PlotData
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.MutantKillingPostEvaluation
 import tools.aqua.stars.coverage.significance.utils.MonitorViolation
 
 private fun writeCSVFiles(

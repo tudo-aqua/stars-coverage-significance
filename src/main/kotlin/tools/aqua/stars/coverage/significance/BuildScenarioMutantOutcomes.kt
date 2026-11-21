@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.OutcomeScope
-import tools.aqua.stars.coverage.significance.postEvaluation.ScenarioMutantOutcomes
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.OutcomeScope
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.ScenarioMutantOutcomes
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 /**

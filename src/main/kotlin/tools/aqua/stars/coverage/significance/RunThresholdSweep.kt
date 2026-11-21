@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.ThresholdSweep
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.ThresholdSweep
 import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 /**

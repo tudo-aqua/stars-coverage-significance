@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * G0 (Accidents) replay outcome for one mutant substituted into one recorded tick (see
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis`).
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis`).
  *
  * @property mutantId Unique identifier of the substituted mutant.
  * @property mutantNumber Mutant number (see `mutants.mutant_number`).
@@ -43,7 +43,7 @@ data class TickMutantG0ReplayResult(
 
 /**
  * Aggregated G0 (Accidents) replay outcome for one recorded tick across every known mutant (see
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis`).
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis`).
  *
  * @property tickId `metric_failed_monitors.id` of the replayed tick.
  * @property originalTick `metric_failed_monitors.tick` value of the replayed tick.

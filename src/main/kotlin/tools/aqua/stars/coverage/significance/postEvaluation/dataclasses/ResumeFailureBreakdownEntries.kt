@@ -22,7 +22,7 @@ import kotlinx.serialization.Serializable
 /**
  * Reproducing/diverged/inconclusive breakdown over some slice of lead-time sweep steps, re-derived
  * from the existing `G0FullLeadTimeSweepAnalysis` detail files by
- * `tools.aqua.stars.coverage.significance.postEvaluation.ResumeFailureAggregation`.
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.ResumeFailureAggregation`.
  *
  * @property totalSteps Total number of (non-final) lead-time sweep steps in this slice.
  * @property reproducingCount Of [totalSteps], how many had `g0Failed == true`.

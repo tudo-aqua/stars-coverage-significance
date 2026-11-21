@@ -18,9 +18,9 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.ReplayDeterminismAnalysis
-import tools.aqua.stars.coverage.significance.postEvaluation.ReplayDiagnosticsReport
-import tools.aqua.stars.coverage.significance.postEvaluation.ResumeFailureAggregation
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.ReplayDeterminismAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.ReplayDiagnosticsReport
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.ResumeFailureAggregation
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.CliArgs
@@ -35,9 +35,9 @@ import tools.aqua.stars.coverage.significance.workers.startReplayDeterminismAnal
  *
  * Spawns one worker process per available core (each worker runs its own libsumo simulation — see
  * the "Parallelism" section on
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis`), awaits
- * them, re-aggregates the EXISTING `g0_full_lead_time_sweep` detail files (read-only), then writes
- * one Markdown report tying both findings together.
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis`),
+ * awaits them, re-aggregates the EXISTING `g0_full_lead_time_sweep` detail files (read-only), then
+ * writes one Markdown report tying both findings together.
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0),

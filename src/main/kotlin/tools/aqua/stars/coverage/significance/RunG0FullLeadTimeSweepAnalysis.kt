@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.CliArgs
@@ -27,14 +27,14 @@ import tools.aqua.stars.coverage.significance.workers.startG0FullLeadTimeSweepAn
 /**
  * Coordinator for the G0 full lead-time sweep analysis: spawns one worker process per available
  * core (each worker runs its own libsumo simulation — see the "Parallelism" section on
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]), awaits
- * them, then aggregates their streamed detail files into one summary JSON.
+ * [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis]),
+ * awaits them, then aggregates their streamed detail files into one summary JSON.
  *
  * Unlike [tools.aqua.stars.coverage.significance.RunG0DivergenceLeadTimeAnalysis]'s sweep, every
  * tick is swept all the way back to its scenario's start rather than stopping at the first lead
  * time that fails to reproduce the recorded failure — see
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0FullLeadTimeSweepAnalysis] for why, and
- * expect a correspondingly longer run time.
+ * [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0FullLeadTimeSweepAnalysis] for why,
+ * and expect a correspondingly longer run time.
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as

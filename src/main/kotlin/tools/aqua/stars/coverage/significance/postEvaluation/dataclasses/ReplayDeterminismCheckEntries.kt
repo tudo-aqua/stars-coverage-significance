@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Where a sampled tick came from, in
- * `tools.aqua.stars.coverage.significance.postEvaluation.ReplayDeterminismAnalysis`.
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.ReplayDeterminismAnalysis`.
  */
 @Serializable
 enum class SampleSource {

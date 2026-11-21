@@ -107,7 +107,7 @@ object MetricFailedMonitorsRepository {
    * Retrieves every [MetricFailedMonitorsEntry] recorded for one (run, scenario, mutant)
    * combination — bounded by that scenario's own tick count (small), unlike the table as a whole.
    * Used to find the tick closest to a target time for lead-time replays (see
-   * `tools.aqua.stars.coverage.significance.postEvaluation.LeadTimeReplay`).
+   * `tools.aqua.stars.coverage.significance.postEvaluation.tick.LeadTimeReplay`).
    *
    * @param runId Evaluation run id.
    * @param scenarioConfigId Scenario starting configuration id.

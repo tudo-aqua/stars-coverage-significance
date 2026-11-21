@@ -83,8 +83,8 @@ data class NearUnavoidableTierStats(
  * @property originalMutantNotReproducedCount Ticks where replaying the original mutant did *not*
  *   reproduce the failure — a discrepancy between the recorded run and the replay worth
  *   investigating (see
- *   [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis] docs on
- *   replay fidelity).
+ *   [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis]
+ *   docs on replay fidelity).
  * @property originalMutantNotReproducedTickIds Ids of the [originalMutantNotReproducedCount] ticks.
  * @property originalMutantInconclusiveCount Ticks where the original mutant's replay was
  *   inconclusive (the ego left the simulation before a next tick could be evaluated).

@@ -18,8 +18,8 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.KillMatrices
-import tools.aqua.stars.coverage.significance.postEvaluation.OracleThresholds
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.KillMatrices
+import tools.aqua.stars.coverage.significance.postEvaluation.scenario.OracleThresholds
 
 /**
  * Builds the kill matrices of all oracles (steps A.2 and A.3 of `docs/test-bed-plan.md`) from

@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.G0DivergenceLeadTimeAnalysis
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.utils.CliArgs
@@ -27,12 +27,12 @@ import tools.aqua.stars.coverage.significance.workers.startG0DivergenceLeadTimeA
 /**
  * Coordinator for the G0 lead-time divergence analysis: spawns one worker process per available
  * core (each worker runs its own libsumo simulation — see the "Parallelism" section on
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis]), awaits
- * them, then aggregates their streamed detail files into one summary JSON.
+ * [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis]),
+ * awaits them, then aggregates their streamed detail files into one summary JSON.
  *
  * Unlike `RunG0MutantCoverageReplay.kt`, there is only ever one pass: each flagged tick's own
  * backward lead-time sweep (0.0, 0.1, 0.2, ... seconds) happens internally per tick — see
- * [tools.aqua.stars.coverage.significance.postEvaluation.G0DivergenceLeadTimeAnalysis].
+ * [tools.aqua.stars.coverage.significance.postEvaluation.tick.G0DivergenceLeadTimeAnalysis].
  *
  * @param args Supports `--runId=<id>` (restrict to one evaluation run; omit for every run),
  *   `--bufferProcessors=<number>` (cores to reserve for buffering, default 0 — same convention as

@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance.workers
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.ReplayDeterminismAnalysis
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.ReplayDeterminismAnalysis
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.installParentDeathWatcher
 import tools.aqua.stars.coverage.significance.process.ProcessHelpers.startJavaProcess
 import tools.aqua.stars.coverage.significance.utils.CliArgs
@@ -27,8 +27,8 @@ import tools.aqua.stars.coverage.significance.utils.CliArgs
  * Entry point for one replay-determinism-analysis worker process.
  *
  * One libsumo simulation exists per process (see the "Parallelism" section on
- * `tools.aqua.stars.coverage.significance.postEvaluation.G0MutantCoverageReplayAnalysis`), so —
- * exactly like `g0FullLeadTimeSweepAnalysisWorker.kt` — each worker runs in its own JVM process
+ * `tools.aqua.stars.coverage.significance.postEvaluation.tick.G0MutantCoverageReplayAnalysis`), so
+ * — exactly like `g0FullLeadTimeSweepAnalysisWorker.kt` — each worker runs in its own JVM process
  * rather than as a thread, deterministically claiming every Nth entry of the sample.
  *
  * @param args Command-line arguments: `--workerId=<id>` `--numWorkers=<n>` `--ticksPerMutant=<n>`

@@ -18,7 +18,7 @@
 package tools.aqua.stars.coverage.significance
 
 import tools.aqua.stars.coverage.significance.db.DbBootstrap
-import tools.aqua.stars.coverage.significance.postEvaluation.BaselineNextTickDrawScenariosPostEvaluation
+import tools.aqua.stars.coverage.significance.postEvaluation.tick.BaselineNextTickDrawScenariosPostEvaluation
 
 /**
  * Runs [BaselineNextTickDrawScenariosPostEvaluation.evaluateTimeToKill] in isolation.
