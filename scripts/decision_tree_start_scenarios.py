@@ -29,10 +29,14 @@ Usage:
         [--kill-matrix-ids G0=1,TTC=2,TG=3] [--leaf-bounds 16,68] [--trials 200] [--folds 5]
         [--feature-sets with_ego_lane,without_ego_lane] [--check-collapse] [--n-jobs 8]
         [--mutant-ids 1,2,3] [--mutant-numbers 10,11] [--train-fraction 0.7] [--seed 0]
+        [--rare-below 0.01]
 
 Manual mutant split, as in decision_tree_g0.py: --mutant-ids / --mutant-numbers (union) restrict
 the run to hand-picked mutants; --train-fraction then splits them into training and scoring
 mutants, stratified by operator (1.0, the default, trains and scores on all of them).
+
+Common vs rare mutants: --rare-below SHARE trains, per oracle, on the kept mutants killed in at
+least SHARE of the pool scenarios and scores on the rarer ones. Condition rare_below_<SHARE>.
 
 Dependencies (all in the Dockerfile):
     pip install numpy lightgbm optuna scikit-learn psycopg2-binary
@@ -165,6 +169,18 @@ def split_mutants(args, spec: dict, km: KillMatrix, mutants: dict, log: Log) -> 
                 sys.exit(f"Unknown mutant number {n}")
             picked.add(by_number[n])
     manual = bool(picked)
+
+    if args.rare_below is not None:
+        if manual or args.train_fraction < 1.0:
+            sys.exit("--rare-below picks the mutants itself; do not combine it with --mutant-ids, "
+                     "--mutant-numbers or --train-fraction")
+        share = km.kills.mean(axis=0)
+        log("  kill share per kept mutant: " + ", ".join(f"{m}: {s:.4%}" for m, s in zip(km.mutant_ids, share)))
+        training = [m for m, s in zip(km.mutant_ids, share) if s >= args.rare_below]
+        scoring = [m for m, s in zip(km.mutant_ids, share) if s < args.rare_below]
+        if not training or not scoring:
+            sys.exit(f"{km.oracle}: --rare-below {args.rare_below:g} leaves no common or no rare mutant")
+        return training, scoring, False
 
     if not manual:
         training = km.mutant_ids if spec["trainingMutants"] == "all" else picked_to_kept(spec["trainingMutants"], km, log)
@@ -392,6 +408,8 @@ def main() -> None:
     ap.add_argument("--mutant-ids", help="hand-picked mutants.id values")
     ap.add_argument("--mutant-numbers", help="hand-picked mutants.mutant_number values")
     ap.add_argument("--train-fraction", type=float, default=1.0)
+    ap.add_argument("--rare-below", type=float, metavar="SHARE",
+                    help="train on mutants killed in >= SHARE of the pool, score on the rarer ones")
     ap.add_argument("--seed", type=int, help="seed of the search and the split, default from the condition")
     ap.add_argument("--check-collapse", action="store_true", help="assert raw pairs == collapsed rows first")
     ap.add_argument("--n-jobs", type=int, default=8, help="LightGBM threads")
@@ -434,7 +452,10 @@ def main() -> None:
             sys.exit(f"{len(missing)} pool scenarios have no baseline tick-0 row")
         in_pool = np.searchsorted(scenario_ids, km.pool)
         training, scoring, manual = split_mutants(args, spec, km, mutants, log)
-        condition = "manual" if manual else spec["name"]
+        if args.rare_below is not None:
+            condition = f"rare_below_{args.rare_below:g}"
+        else:
+            condition = "manual" if manual else spec["name"]
         log(f"  condition {condition}: training {training}, scoring {scoring}")
         train_kills = km.kills[:, [km.mutant_ids.index(m) for m in training]]
         folds = inner_folds(training, km, mutants, n_folds, seed)

@@ -252,6 +252,7 @@ Greedy resets when all training mutants are killed or when no remaining scenario
 | Fewer data, random scenarios | Share p of the scenarios, all training mutants' pairs on them | Held-out mutants | D5; P1 |
 | Fewer mutants, random | Share q of the mutants, all their scenarios | The other mutants | D5 (supervisor: the weaker condition) |
 | Fewer mutants, by operator | All mutants except one operator | That operator's mutants | D5 |
+| Common vs rare mutants | Mutants killed in at least share s of the pool, all their pairs | The rarer mutants | Requested by Till (22 November 2026); s is a parameter (`--rare-below`), no default |
 
 Held-out split: 30%, stratified by operator, seeds 0 to n-1. Pre-study grid (P2), to adjust after the
 full run's runtime is known:
