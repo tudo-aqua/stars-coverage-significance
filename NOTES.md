@@ -111,3 +111,49 @@ lane change". The build now counts rows of the run (`ROW_NUMBER`). To redo, in t
 
 Check: `--scope=baseline --laneChangeWindowTicks=0` reproduces the old after-lane-change values;
 with 20 ticks they can only be smaller or equal.
+
+
+#
+The page works with your real results: all six runs load without errors and the charts read well, even for rare G0, where greedy needs around 100,000 draws. Open postEvaluation/start_scenario_draws/index.html and choose that folder.
+
+First reading of the numbers
+
+"Speedup" is how many times fewer draws than random a method needs to kill a scoring mutant, averaged over the mutants; ×1 means as fast as random.
+
+┌───────────────────────────────┬───────────┬────────────────────────────────┬────────┐
+│              Run              │ Best tree │ Static-distance TSC (weighted) │ Greedy │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Full G0                       │ ×1.22     │ ×0.98                          │ ×7.3   │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Full TTC                      │ ×2.37     │ ×1.67                          │ ×32    │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Full TG                       │ ×1.54     │ ×1.08                          │ ×18    │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Common → rare G0 (2 mutants)  │ ×0.80     │ ×0.08                          │ ×0.02  │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Common → rare TTC (4 mutants) │ ×1.47     │ ×1.18                          │ ×0.03  │
+├───────────────────────────────┼───────────┼────────────────────────────────┼────────┤
+│ Common → rare TG (9 mutants)  │ ×1.06     │ ×0.35                          │ ×2.2   │
+└───────────────────────────────┴───────────┴────────────────────────────────┴────────┘
+
+Full run (trained and scored on the same mutants):
+- The trees beat random modestly and the static TSC slightly. The project TSC is slower than random for G0 and TG.
+- Greedy is far ahead, but it is fitted to exactly these mutants, so it is an upper bound, not a fair competitor.
+- Picking groups by kill rate ("weighted") is clearly better than cycling over them ("equal"), which is often slower than random.
+- With or without ego_lane, and the leaf bound, make no consistent difference.
+- For G0 and TG there is little room to improve: random drawing kills most mutants within 2–20 draws. In G0, 10 of 12 mutants die within 4 draws; only 135 and 147 are slow.
+
+Common → rare (trained on common mutants, scored on rare ones): the trees don't carry over.
+- G0: every grouping is slower than random, and the bigger the tree, the worse: ×0.80 with ≤ 16 leaves, ×0.12 with ≤ 512.
+- TG: about the same as random.
+- TTC: a small gain, but over only 4 mutants.
+- "Equal" now beats "weighted", the opposite of the full run. Weights learned on the common mutants send the draws away from where the rare ones are killed.
+- Greedy collapses for G0 and TTC: it draws the scenarios that kill the common mutants first and reaches the rare mutants' scenarios very late. TG is the exception at ×2.2, and the only clear gain in this condition.
+
+How much weight these numbers can bear
+
+- The "Best tree" column takes the highest of 16 tree variants, so it is optimistic. A value like ×1.06 for rare TG fits "no effect".
+- Rare G0 rests on 2 mutants and rare TTC on 4, so one mutant can change the result.
+- The average treats easy and rare mutants equally. In the full run this caps the possible speedups, because random already kills the easy mutants within 2–4 draws.
+
+The page and the .gitignore change are still uncommitted. One addition to the "All runs" table that would counter the best-of-16 optimism: a column with the median over the 16 tree variants.
