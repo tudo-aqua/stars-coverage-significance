@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Start-scenario draws</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --panel: #ffffff; --line: #e3e2de; --text: #1d1f22; --muted: #62656b;
+    --faint: #9a9da3; --grid: #ececea; --ref: #7a7d83; --tip: #ffffff; --shadow: 0 4px 16px rgba(20, 22, 26, 0.12);
+    --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --sel: #eaf1fb; --hover: #f3f3f1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181b; --panel: #1f2125; --line: #33363c; --text: #e8e8e6; --muted: #a3a6ac;
+      --faint: #6f7279; --grid: #2a2c31; --ref: #8d9097; --tip: #26282d; --shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      --c1: #3987e5; --c2: #d95926; --c3: #199e70; --sel: #1f2a3a; --hover: #24262b; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-left)) 48px; display: flex; flex-direction: column; gap: 28px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0; }
+  code { background: var(--grid); padding: 1px 4px; border-radius: 4px; }
+  .meta { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .lede { font-size: 15px; max-width: 75ch; margin: 0; }
+  .lede b { font-variant-numeric: tabular-nums; }
+  .banner { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 16px; }
+  .banner h2 { margin-bottom: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tabs .label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .tab { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--muted); cursor: pointer; }
+  .tab[aria-pressed="true"] { background: var(--panel); color: var(--text); border-color: var(--muted); }
+  .tab:focus-visible, .chart svg:focus-visible, tr.pick:focus-visible { outline: 2px solid var(--c1); outline-offset: 2px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .big { font-size: 26px; font-weight: 600; line-height: 1.25; }
+  .tile .sub { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  section { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .note { color: var(--muted); font-size: 12px; margin: 0; max-width: 85ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key { display: inline-block; width: 14px; height: 3px; border-radius: 2px; flex: none; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .chart { position: relative; }
+  .chart svg { display: block; overflow: visible; }
+  .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .gridline { stroke: var(--grid); }
+  .tip { position: absolute; pointer-events: none; background: var(--tip); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 6px; padding: 8px 10px; font-size: 12px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; z-index: 2; }
+  .tip .title { display: block; color: var(--muted); margin-bottom: 2px; }
+  .tip .row { display: flex; align-items: center; gap: 6px; }
+  .tip .row b { font-weight: 600; }
+  .tip .row span.n { color: var(--muted); }
+  .tablewrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; max-height: 32rem; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; z-index: 1; background: var(--panel); text-align: right; vertical-align: bottom; font-weight: 600; font-size: 12px; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  td .sub { display: block; font-size: 12px; color: var(--muted); }
+  th.l, td.l { text-align: left; }
+  tr.pick { cursor: pointer; }
+  tr.pick:hover td { background: var(--hover); }
+  tr.current td { background: var(--sel); }
+  td.show label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  td.show input { margin: 0; cursor: pointer; }
+  td.show input:disabled { cursor: default; }
+  .sortbtn { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+  .sortbtn:hover { color: var(--text); }
+  .sortbtn:focus-visible { outline: 2px solid var(--c1); outline-offset: 2px; border-radius: 2px; }
+  th[aria-sort="ascending"] .sortbtn::after { content: " ▲"; font-size: 9px; }
+  th[aria-sort="descending"] .sortbtn::after { content: " ▼"; font-size: 9px; }
+  details { max-width: 85ch; }
+  summary { cursor: pointer; color: var(--muted); }
+  details .tablewrap { margin-top: 8px; }
+  dl { display: grid; gap: 8px; margin: 12px 0 0; }
+  dt { font-weight: 600; }
+  dd { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Start-scenario draws</h1>
+    <p class="meta" id="meta">Reads the folders written by <code>./gradlew runStartScenarioDraws</code>.</p>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div id="content" hidden style="display:flex;flex-direction:column;gap:28px">
+    <section>
+      <h2>All runs</h2>
+      <p class="note">Speedup: how many times fewer starting scenarios a strategy draws than random drawing until a scoring mutant is killed, as the geometric mean over the scoring mutants of their median time to kill. Above ×1 is faster than random. Click a row to open that run below.</p>
+      <div class="tablewrap">
+        <table id="runs">
+          <thead><tr>
+            <th class="l">Condition</th><th class="l">Oracle</th><th>Valid scenarios</th><th>Training mutants</th><th>Scoring mutants</th>
+            <th class="l">Best tree</th><th class="l">Best TSC</th><th>Greedy</th><th class="l">Random check</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="controls">
+      <div class="tabs" role="group" aria-label="Condition" id="cond-tabs"></div>
+      <div class="tabs" role="group" aria-label="Oracle" id="oracle-tabs"></div>
+    </div>
+
+    <p class="lede" id="lede"></p>
+    <div class="tiles" id="tiles"></div>
+
+    <section>
+      <h2>Strategies and groupings</h2>
+      <p class="note">Tick up to three rows to show them in the charts below. Random drawing is always shown, in gray, as the reference. Strategy "equal" cycles over the groups; "weighted" picks a group by its kill rate on the training mutants; both draw uniformly within the group.</p>
+      <div class="tablewrap">
+        <table id="methods">
+          <thead><tr>
+            <th class="l">Show</th><th class="l">Grouping</th><th class="l">Strategy</th><th>Groups</th><th>Speedup vs random</th>
+            <th>Faster than random</th><th>Median time to kill</th><th>Draws to kill all: median (25–75%)</th><th>Killed by draw 100</th><th>Killed by draw 1,000</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Scoring mutants killed as scenarios are drawn</h2>
+      <p class="note">Line: median over the repetitions; band: 25th to 75th percentile. Greedy has a single order. Log scale.</p>
+      <div class="legend" id="curve-legend"></div>
+      <div class="chart" id="curve"></div>
+    </section>
+
+    <section>
+      <h2>Time to kill per scoring mutant, rarest first</h2>
+      <p class="note">Dot: median number of drawn scenarios until the mutant is first killed; line: 25th to 75th percentile over the repetitions. Mutants (x axis: mutant id) are ordered by random drawing's median, slowest first. Log scale.</p>
+      <div class="legend" id="mutant-legend"></div>
+      <div class="chart" id="mutants"></div>
+      <details>
+        <summary>Per-mutant table</summary>
+        <div class="tablewrap"><table id="mutant-table"><thead></thead><tbody></tbody></table></div>
+      </details>
+    </section>
+
+    <details>
+      <summary>Run details</summary>
+      <dl id="run-details"></dl>
+    </details>
+
+    <details>
+      <summary>How these numbers are worked out</summary>
+      <dl>
+        <dt>Time to kill</dt>
+        <dd>One plus the position, in the strategy's order, of the first drawn starting scenario that kills the mutant. Every order covers the whole pool of valid scenarios, so every scoring mutant is killed eventually.</dd>
+        <dt>Training and scoring mutants</dt>
+        <dd>The trees, greedy and the weighted strategy learn from the training mutants; all times are measured on the scoring mutants. In the full run both are the same mutants, so greedy is an upper bound there. With <code>rare_below_…</code>, training uses the mutants killed in at least that share of the pool and scoring the rarer ones.</dd>
+        <dt>Speedup vs random</dt>
+        <dd>For each scoring mutant, random drawing's median time to kill divided by the strategy's median, then the geometric mean over the mutants. "Faster than random" counts the mutants whose median is lower than random's.</dd>
+        <dt>Draws to kill all</dt>
+        <dd>Per repetition, the largest time to kill over the scoring mutants; shown as the median and the 25th to 75th percentile over the repetitions.</dd>
+        <dt>Random check</dt>
+        <dd>Written by the draw step: the largest |z| of random drawing's mean time to kill against the exact expectation (N + 1) / (K + 1). Below 4 is expected.</dd>
+      </dl>
+    </details>
+  </div>
+</main>
+
+<script>
+(() => {
+  const ORACLES = ["G0", "TTC", "TG"];
+  const ORACLE_NAMES = { G0: "G0 · accident", TTC: "TTC", TG: "TG" };
+  const STRATEGY_NAMES = { random: "random", greedy: "greedy", grouped_equal: "equal", grouped_weighted: "weighted" };
+  const SLOTS = ["--c1", "--c2", "--c3"];
+  const RANDOM_KEY = "random|none";
+  const MAX_Z = 4;
+  const state = { runs: [], run: null, selected: new Map() }; // selected: method key -> color slot
+
+  const nf = new Intl.NumberFormat("en-US");
+  const int = (v) => (Number.isFinite(v) ? nf.format(Math.round(v)) : "—");
+  const cnt = (v) => (Number.isInteger(v) ? nf.format(v) : v.toFixed(1));
+  const speed = (v) => (Number.isFinite(v) ? "×" + v.toFixed(v >= 10 ? 1 : 2) : "—");
+  const el = (tag, attrs = {}, text) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const SVG = "http://www.w3.org/2000/svg";
+  const s = (tag, attrs = {}, text) => {
+    const e = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const textWidth = (svg, str, cls) => {
+    const t = s("text", { class: cls }, str);
+    svg.appendChild(t);
+    const w = t.getComputedTextLength();
+    t.remove();
+    return w;
+  };
+
+  // ---------- names ----------
+  function conditionName(c) {
+    if (c === "full") return "Full run";
+    const m = /^rare_below_(.+)$/.exec(c);
+    if (m && Number.isFinite(Number(m[1]))) return `Common → rare, below ${+(Number(m[1]) * 100).toPrecision(3)}%`;
+    return c;
+  }
+  function groupingName(g) {
+    if (g === "none") return "—";
+    if (g === "tsc_project") return "Project TSC";
+    if (g === "tsc_static") return "Static-distance TSC";
+    const m = /^tree_(with|without)_ego_lane_L(\d+)$/.exec(g);
+    return m ? `Tree ${m[1]} ego lane, ≤ ${m[2]} leaves` : g;
+  }
+  function methodName(m) {
+    if (m.strategy === "random") return "Random";
+    if (m.strategy === "greedy") return "Greedy";
+    return `${groupingName(m.grouping)} · ${STRATEGY_NAMES[m.strategy] || m.strategy}`;
+  }
+
+  // ---------- statistics ----------
+  function quantile(sorted, p) {
+    if (!sorted.length) return NaN;
+    const i = (sorted.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
+    if (sorted[lo] === sorted[hi]) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+  }
+  const q3 = (values) => {
+    const a = Float64Array.from(values).sort();
+    return { p25: quantile(a, 0.25), p50: quantile(a, 0.5), p75: quantile(a, 0.75) };
+  };
+  function countAtMost(sorted, n) {
+    let lo = 0, hi = sorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] <= n) lo = mid + 1; else hi = mid; }
+    return lo;
+  }
+  function logGrid(pool) {
+    const out = new Set([1, pool]);
+    for (let i = 0; i <= 120; i++) out.add(Math.max(1, Math.round(10 ** ((Math.log10(pool) * i) / 120))));
+    return [...out].sort((a, b) => a - b);
+  }
+
+  function buildRun(condition, summary, csv) {
+    const ids = summary.scoringMutantIds;
+    const col = new Map(ids.map((id, i) => [id, i]));
+    const methods = new Map();
+    const lines = csv.split(/\r?\n/);
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i]) continue;
+      const [strategy, grouping, rep, mutant, ttk] = lines[i].split(",");
+      const key = strategy + "|" + grouping;
+      let m = methods.get(key);
+      if (!m) { m = { key, strategy, grouping, reps: new Map() }; methods.set(key, m); }
+      let r = m.reps.get(rep);
+      if (!r) { r = new Float64Array(ids.length).fill(Infinity); m.reps.set(rep, r); }
+      const j = col.get(Number(mutant));
+      if (j !== undefined) r[j] = Number(ttk);
+    }
+    if (!methods.has(RANDOM_KEY)) throw new Error(`${condition}/${summary.oracle}: time_to_kill.csv has no random strategy`);
+    const run = { condition, oracle: summary.oracle, summary, ids, pool: summary.pool, grid: logGrid(summary.pool), methods: [...methods.values()] };
+    for (const m of run.methods) stats(m, run);
+    run.random = methods.get(RANDOM_KEY);
+    for (const m of run.methods) compare(m, run.random);
+    run.bestTree = best(run, (m) => m.grouping.startsWith("tree_"));
+    run.bestTsc = best(run, (m) => m.grouping.startsWith("tsc_"));
+    run.greedy = run.methods.find((m) => m.strategy === "greedy") || null;
+    return run;
+  }
+  function stats(m, run) {
+    const reps = [...m.reps.values()];
+    m.groups = m.grouping === "none" ? null : (run.summary.groupCounts || {})[m.grouping] ?? null;
+    m.perMutant = run.ids.map((_, j) => q3(reps.map((r) => r[j])));
+    m.killAll = q3(reps.map((r) => Math.max(...r)));
+    const sorted = reps.map((r) => Float64Array.from(r).sort());
+    const killedBy = (n) => q3(sorted.map((r) => countAtMost(r, n)));
+    m.curve = run.grid.map(killedBy);
+    m.within100 = killedBy(100).p50;
+    m.within1000 = killedBy(1000).p50;
+  }
+  function compare(m, random) {
+    let logSum = 0, n = 0, faster = 0;
+    m.perMutant.forEach((q, j) => {
+      const r = random.perMutant[j].p50;
+      if (!(q.p50 > 0) || !Number.isFinite(r)) return;
+      logSum += Math.log(r / q.p50);
+      n++;
+      if (q.p50 < r) faster++;
+    });
+    m.speedup = n ? Math.exp(logSum / n) : NaN;
+    m.faster = faster;
+    m.medianTtk = quantile(Float64Array.from(m.perMutant.map((q) => q.p50)).sort(), 0.5);
+  }
+  const best = (run, pred) => run.methods.filter(pred).reduce((b, m) => (!b || m.speedup > b.speedup ? m : b), null);
+
+  // ---------- loading ----------
+  function showBanner(detail) {
+    const b = document.getElementById("banner");
+    b.replaceChildren(el("h2", {}, "Choose the start_scenario_draws folder"));
+    if (detail) b.appendChild(el("p", {}, detail));
+    const row = el("p");
+    row.appendChild(el("label", { for: "folder" }, "Folder: "));
+    const input = el("input", { type: "file", id: "folder", webkitdirectory: "", multiple: "" });
+    input.addEventListener("change", () => {
+      if (!input.files || !input.files.length) return;
+      b.querySelector(".note").textContent = "Reading the files …";
+      loadFromFiles(input.files).then(start).catch((e) => showBanner("Could not read the folder: " + e.message));
+    });
+    row.appendChild(input);
+    b.appendChild(row);
+    const tip = el("p", { class: "note" });
+    tip.append("It holds one folder per condition (", el("code", {}, "full"), ", ", el("code", {}, "rare_below_0.01"),
+      ", …) with one folder per oracle, each with ", el("code", {}, "summary.json"), " and ", el("code", {}, "time_to_kill.csv"),
+      ". Copy it from the server's ", el("code", {}, "postEvaluation/start_scenario_draws/"), ". The files stay in your browser.");
+    b.appendChild(tip);
+    b.hidden = false;
+    document.getElementById("content").hidden = true;
+  }
+
+  // Accepts File objects from a folder input (webkitRelativePath = "<…>/<condition>/<oracle>/<file>").
+  async function loadFromFiles(files) {
+    const dirs = new Map();
+    for (const f of files) {
+      const parts = (f.webkitRelativePath || f.name).split("/");
+      const name = parts.pop();
+      if (name !== "summary.json" && name !== "time_to_kill.csv") continue;
+      const key = parts.join("/");
+      if (!dirs.has(key)) dirs.set(key, { parts, files: {} });
+      dirs.get(key).files[name] = f;
+    }
+    const runs = [];
+    for (const { parts, files: fs } of dirs.values()) {
+      if (!fs["summary.json"] || !fs["time_to_kill.csv"]) continue;
+      const condition = parts.length >= 2 ? parts[parts.length - 2] : "run";
+      runs.push(buildRun(condition, JSON.parse(await fs["summary.json"].text()), await fs["time_to_kill.csv"].text()));
+    }
+    return runs;
+  }
+
+  function start(runs) {
+    if (!runs.length) { showBanner("No run found in that folder."); return; }
+    const condRank = (c) => (c === "full" ? 0 : 1);
+    runs.sort((a, b) => condRank(a.condition) - condRank(b.condition) || a.condition.localeCompare(b.condition) ||
+      ORACLES.indexOf(a.oracle) - ORACLES.indexOf(b.oracle));
+    state.runs = runs;
+    document.getElementById("banner").hidden = true;
+    document.getElementById("content").hidden = false;
+    const conditions = [...new Set(runs.map((r) => r.condition))];
+    document.getElementById("meta").textContent =
+      `${runs.length} runs: ${conditions.map(conditionName).join(", ")} · written by ./gradlew runStartScenarioDraws`;
+    const first = runs.find((r) => r.oracle === "TG") || runs[0];
+    state.selected.clear();
+    [first.bestTree, first.bestTsc, first.greedy].filter(Boolean).forEach((m, i) => state.selected.set(m.key, i));
+    renderRuns();
+    pick(first);
+  }
+
+  function pick(run) {
+    state.run = run;
+    renderTabs();
+    document.querySelectorAll("#runs tbody tr").forEach((tr) => tr.classList.toggle("current", tr.run === run));
+    renderRun();
+  }
+
+  // ---------- rendering ----------
+  function tabGroup(id, label, items, current, onPick) {
+    const g = document.getElementById(id);
+    g.replaceChildren(el("span", { class: "label" }, label));
+    for (const [value, text] of items) {
+      const b = el("button", { type: "button", class: "tab", "aria-pressed": String(value === current) }, text);
+      b.addEventListener("click", () => onPick(value));
+      g.appendChild(b);
+    }
+  }
+  function renderTabs() {
+    const run = state.run;
+    const conditions = [...new Set(state.runs.map((r) => r.condition))];
+    tabGroup("cond-tabs", "Condition", conditions.map((c) => [c, conditionName(c)]), run.condition, (c) => {
+      const same = state.runs.filter((r) => r.condition === c);
+      pick(same.find((r) => r.oracle === run.oracle) || same[0]);
+    });
+    const oracles = state.runs.filter((r) => r.condition === run.condition).map((r) => r.oracle);
+    tabGroup("oracle-tabs", "Oracle", oracles.map((o) => [o, ORACLE_NAMES[o] || o]), run.oracle, (o) =>
+      pick(state.runs.find((r) => r.condition === run.condition && r.oracle === o)));
+  }
+
+  function sameMutants(run) {
+    const a = run.summary.trainingMutantIds, b = run.summary.scoringMutantIds;
+    return a.length === b.length && a.every((x, i) => x === b[i]);
+  }
+  function checkText(run) {
+    const z = run.summary.randomCheck ? run.summary.randomCheck.maxAbsZ : NaN;
+    if (!Number.isFinite(z)) return "—";
+    return z > MAX_Z ? `⚠ |z| ${z.toFixed(1)}, deviates` : `ok, |z| ${z.toFixed(1)}`;
+  }
+
+  function renderRuns() {
+    const tb = document.querySelector("#runs tbody");
+    tb.replaceChildren(...state.runs.map((run) => {
+      const tr = el("tr", { class: "pick", tabindex: "0" });
+      tr.run = run;
+      const sp = (m) => cell(m ? m.speedup : -1, m ? speed(m.speedup) : "—");
+      // speedup on top, the grouping below it in small type, so the table fits the page
+      const named = (m) => {
+        const td = cell(m ? m.speedup : -1, m ? speed(m.speedup) : "—", "l");
+        if (m) td.appendChild(el("span", { class: "sub" }, groupingName(m.grouping).replace(/^Tree /, "").replace(/ TSC$/, "") + " · " + STRATEGY_NAMES[m.strategy]));
+        return td;
+      };
+      tr.append(cell(run.condition, conditionName(run.condition), "l"), cell(ORACLES.indexOf(run.oracle), ORACLE_NAMES[run.oracle] || run.oracle, "l"),
+        cell(run.pool, int(run.pool)), cell(run.summary.trainingMutantIds.length, int(run.summary.trainingMutantIds.length)),
+        cell(run.ids.length, int(run.ids.length)), named(run.bestTree), named(run.bestTsc),
+        sp(run.greedy), cell(run.summary.randomCheck ? run.summary.randomCheck.maxAbsZ : 0, checkText(run), "l"));
+      tr.addEventListener("click", () => pick(run));
+      tr.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(run); } });
+      return tr;
+    }));
+    applySort(document.getElementById("runs"));
+  }
+
+  function renderRun() {
+    const run = state.run;
+    renderLede(run);
+    renderTiles(run);
+    renderMethods(run);
+    renderCharts();
+    renderDetails(run);
+  }
+
+  function renderLede(run) {
+    const b = (t) => el("b", {}, t);
+    const S = run.ids.length, T = run.summary.trainingMutantIds.length;
+    const where = run.condition === "full" ? "the full run" : `“${conditionName(run.condition)}”`;
+    const parts = [`In ${where} for ${run.oracle}, `, b(int(S)), ` scoring mutant${S === 1 ? " is" : "s are"} measured`,
+      sameMutants(run) ? ", which also trained the trees, so greedy is an upper bound. " : [", while the trees learned from ", b(int(T)), " other mutants. "],
+      "Random drawing needs a median of ", b(int(run.random.medianTtk)), " scenarios to kill a typical one."].flat();
+    if (run.bestTree) parts.push(" The best tree is ", b(speed(run.bestTree.speedup)), ` as fast as random (${groupingName(run.bestTree.grouping)}, ${STRATEGY_NAMES[run.bestTree.strategy]})`);
+    if (run.bestTsc) parts.push(", the best TSC ", b(speed(run.bestTsc.speedup)));
+    if (run.greedy) parts.push(", greedy ", b(speed(run.greedy.speedup)));
+    parts.push(".");
+    document.getElementById("lede").replaceChildren(...parts);
+  }
+
+  function renderTiles(run) {
+    const t = (label, big, sub) => {
+      const d = el("div", { class: "tile" });
+      d.append(el("span", { class: "label" }, label), el("span", { class: "big" }, big), el("span", { class: "sub" }, sub));
+      return d;
+    };
+    const ka = run.random.killAll;
+    const top = run.methods.filter((m) => m.strategy !== "random").reduce((b, m) => (!b || m.speedup > b.speedup ? m : b), null);
+    const z = run.summary.randomCheck ? run.summary.randomCheck.maxAbsZ : NaN;
+    document.getElementById("tiles").replaceChildren(
+      t("Valid starting scenarios", int(run.pool), `kill matrix ${run.summary.killMatrixId}`),
+      t("Scoring mutants", int(run.ids.length), sameMutants(run) ? "also the training mutants" : `${int(run.summary.trainingMutantIds.length)} other mutants trained the trees`),
+      t("Random, typical mutant", int(run.random.medianTtk), "scenarios until killed (median over the mutants)"),
+      t("Random, all scoring mutants", int(ka.p50), `scenarios, median; 25–75%: ${int(ka.p25)}–${int(ka.p75)}`),
+      t("Fastest strategy", top ? speed(top.speedup) : "—", top ? methodName(top) : ""),
+      t("Random check", Number.isFinite(z) ? (z > MAX_Z ? "⚠ " : "") + z.toFixed(1) : "—",
+        Number.isFinite(z) ? (z > MAX_Z ? "largest |z|: random draws deviate, check the run" : "largest |z|: random draws match (N + 1) / (K + 1)") : ""),
+    );
+  }
+
+  function renderMethods(run) {
+    const S = run.ids.length;
+    const tb = document.querySelector("#methods tbody");
+    tb.replaceChildren(...run.methods.map((m) => {
+      const tr = el("tr");
+      const isRandom = m.key === RANDOM_KEY;
+      const slot = state.selected.get(m.key);
+      const show = cell(isRandom ? -1 : slot ?? 9, "", "l show");
+      const label = el("label");
+      const box = el("input", { type: "checkbox", "aria-label": `Show ${methodName(m)} in the charts` });
+      box.checked = isRandom || slot !== undefined;
+      box.disabled = isRandom || (slot === undefined && state.selected.size >= SLOTS.length);
+      box.addEventListener("change", () => {
+        if (box.checked) {
+          const free = SLOTS.findIndex((_, i) => ![...state.selected.values()].includes(i));
+          if (free < 0) { box.checked = false; return; }
+          state.selected.set(m.key, free);
+        } else state.selected.delete(m.key);
+        renderMethods(run);
+        renderCharts();
+      });
+      label.appendChild(box);
+      if (isRandom) label.appendChild(el("span", { class: "key", style: "background:var(--ref)" }));
+      else if (slot !== undefined) label.appendChild(el("span", { class: "key", style: `background:var(${SLOTS[slot]})` }));
+      show.appendChild(label);
+      const ka = m.killAll;
+      tr.append(show,
+        cell(m.grouping === "none" ? "" : groupingName(m.grouping), m.grouping === "none" ? "—" : groupingName(m.grouping), "l"),
+        cell(STRATEGY_NAMES[m.strategy] || m.strategy, STRATEGY_NAMES[m.strategy] || m.strategy, "l"),
+        cell(m.groups ?? -1, m.groups == null ? "—" : int(m.groups)),
+        cell(m.speedup, speed(m.speedup)),
+        cell(isRandom ? -1 : m.faster, isRandom ? "—" : `${m.faster} of ${S}`),
+        cell(m.medianTtk, int(m.medianTtk)),
+        cell(ka.p50, ka.p25 === ka.p75 ? int(ka.p50) : `${int(ka.p50)} (${int(ka.p25)}–${int(ka.p75)})`),
+        cell(m.within100, `${cnt(m.within100)} of ${S}`),
+        cell(m.within1000, `${cnt(m.within1000)} of ${S}`));
+      return tr;
+    }));
+    applySort(document.getElementById("methods"));
+  }
+
+  function shownSeries() {
+    const run = state.run;
+    const out = [{ m: run.random, color: "var(--ref)" }];
+    [...state.selected.entries()].sort((a, b) => a[1] - b[1]).forEach(([key, slot]) => {
+      const m = run.methods.find((x) => x.key === key);
+      if (m && m.key !== RANDOM_KEY) out.push({ m, color: `var(${SLOTS[slot]})` });
+    });
+    return out;
+  }
+  function legend(id, series, dot) {
+    document.getElementById(id).replaceChildren(...series.map(({ m, color }) => {
+      const sp = el("span");
+      sp.append(el("span", { class: dot ? "dot" : "key", style: `background:${color}` }), methodName(m));
+      return sp;
+    }));
+  }
+  function renderCharts() {
+    const series = shownSeries();
+    legend("curve-legend", series, false);
+    legend("mutant-legend", series, true);
+    renderCurve(series);
+    renderMutantChart(series);
+    renderMutantTable(series);
+  }
+
+  function tipFor(box) {
+    let t = box.querySelector(".tip");
+    if (!t) { t = el("div", { class: "tip" }); t.hidden = true; box.appendChild(t); }
+    return t;
+  }
+  // rows: [color, value, name, extra]
+  function showTip(box, tip, clientX, clientY, title, rows) {
+    tip.replaceChildren(el("span", { class: "title" }, title), ...rows.map(([color, value, name, extra]) => {
+      const r = el("div", { class: "row" });
+      r.append(el("span", { class: "key", style: `background:${color}` }), el("b", {}, value), el("span", {}, name));
+      if (extra) r.appendChild(el("span", { class: "n" }, extra));
+      return r;
+    }));
+    tip.hidden = false;
+    const rect = box.getBoundingClientRect();
+    const x = clientX - rect.left, y = clientY - rect.top;
+    tip.style.left = Math.max(0, Math.min(box.clientWidth - tip.offsetWidth, x + 14)) + "px";
+    tip.style.top = Math.max(0, y - tip.offsetHeight - 12) + "px";
+  }
+  // Pointer and arrow keys move one index; onShow(i) returns [clientX, clientY] for the tooltip.
+  function hover(svg, count, indexAt, onShow, onHide) {
+    let cur = -1;
+    const show = (i, ev) => {
+      cur = Math.max(0, Math.min(count - 1, i));
+      const [x, y] = onShow(cur);
+      return ev ? [ev.clientX, ev.clientY] : [x, y];
+    };
+    svg.addEventListener("pointermove", (ev) => {
+      const r = svg.getBoundingClientRect();
+      const i = indexAt((ev.clientX - r.left) * (svg.viewBox.baseVal.width / r.width));
+      if (i < 0) { onHide(); return; }
+      onShow(i, [ev.clientX, ev.clientY]);
+      cur = i;
+    });
+    svg.addEventListener("pointerleave", onHide);
+    svg.addEventListener("blur", onHide);
+    svg.addEventListener("focus", () => show(cur < 0 ? 0 : cur));
+    svg.addEventListener("keydown", (ev) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[ev.key];
+      if (!step) return;
+      ev.preventDefault();
+      show((cur < 0 ? 0 : cur) + step);
+    });
+  }
+
+  function stepPoints(xs, vs) {
+    const pts = [];
+    xs.forEach((x, i) => { if (i) pts.push([x, vs[i - 1]]); pts.push([x, vs[i]]); });
+    return pts;
+  }
+  const pathOf = (pts) => pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+
+  function renderCurve(series) {
+    const run = state.run, box = document.getElementById("curve");
+    box.replaceChildren();
+    const S = run.ids.length;
+    const W = Math.max(300, box.clientWidth), H = 320, mt = 12, mb = 28, mr = 16;
+    const svg = s("svg", { width: "100%", viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0",
+      "aria-label": `Scoring mutants killed against scenarios drawn, for ${series.map((x) => methodName(x.m)).join(", ")}; arrow keys step through the values` });
+    box.appendChild(svg);
+    const ml = textWidth(svg, int(S), "tick") + 14;
+    const decades = Math.log10(run.pool);
+    const x = (n) => ml + (Math.log10(n) / decades) * (W - ml - mr);
+    const y = (v) => H - mb - (v / S) * (H - mb - mt);
+    const step = S <= 10 ? 1 : S <= 20 ? 2 : S <= 50 ? 5 : 10;
+    const yt = [];
+    for (let v = 0; v < S; v += step) yt.push(v);
+    yt.push(S);
+    yt.forEach((v) => {
+      svg.appendChild(s("line", { class: "gridline", x1: ml, x2: W - mr, y1: y(v), y2: y(v) }));
+      svg.appendChild(s("text", { class: "tick", x: ml - 8, y: y(v), dy: "0.32em", "text-anchor": "end" }, int(v)));
+    });
+    const xt = Array.from({ length: Math.floor(decades) + 1 }, (_, e) => 10 ** e);
+    const thin = (W - ml - mr) < xt.length * (textWidth(svg, int(xt[xt.length - 1]), "tick") + 16) ? 2 : 1;
+    xt.forEach((t, i) => {
+      if (i % thin) return;
+      svg.appendChild(s("text", { class: "tick", x: x(t), y: H - 8, "text-anchor": i === 0 ? "start" : "middle" }, int(t)));
+    });
+    const xs = run.grid.map(x);
+    for (const { m, color } of series) {
+      if (m.reps.size > 1) {
+        const up = stepPoints(xs, m.curve.map((q) => y(q.p75)));
+        const lo = stepPoints(xs, m.curve.map((q) => y(q.p25))).reverse();
+        svg.appendChild(s("path", { d: pathOf(up.concat(lo)) + "Z", style: `fill:${color};opacity:0.1;stroke:none` }));
+      }
+    }
+    for (const { m, color } of series) {
+      svg.appendChild(s("path", { d: pathOf(stepPoints(xs, m.curve.map((q) => y(q.p50)))),
+        style: `fill:none;stroke:${color};stroke-width:2;stroke-linejoin:round;stroke-linecap:round` }));
+    }
+    const guide = s("line", { class: "gridline", y1: mt, y2: H - mb, visibility: "hidden" });
+    svg.appendChild(guide);
+    const tip = tipFor(box);
+    const at = (i) => {
+      const r = svg.getBoundingClientRect(), k = r.width / W;
+      return [r.left + xs[i] * k, r.top + mt * k + 40];
+    };
+    hover(svg, run.grid.length,
+      (sx) => {
+        if (sx < ml - 4 || sx > W - mr + 4) return -1;
+        const target = Math.log10(Math.max(1, 10 ** (((sx - ml) / (W - ml - mr)) * decades)));
+        let bi = 0;
+        run.grid.forEach((n, i) => { if (Math.abs(Math.log10(n) - target) < Math.abs(Math.log10(run.grid[bi]) - target)) bi = i; });
+        return bi;
+      },
+      (i, pos) => {
+        guide.setAttribute("x1", xs[i]); guide.setAttribute("x2", xs[i]); guide.setAttribute("visibility", "visible");
+        const [cx, cy] = pos || at(i);
+        showTip(box, tip, cx, cy, `${int(run.grid[i])} scenarios drawn`, series.map(({ m, color }) => {
+          const q = m.curve[i];
+          return [color, `${cnt(q.p50)} of ${S}`, methodName(m), m.reps.size > 1 && q.p25 !== q.p75 ? `(${cnt(q.p25)}–${cnt(q.p75)})` : ""];
+        }));
+        return at(i);
+      },
+      () => { tip.hidden = true; guide.setAttribute("visibility", "hidden"); });
+  }
+
+  function mutantOrder(run) {
+    return run.ids.map((_, j) => j).sort((a, b) => run.random.perMutant[b].p50 - run.random.perMutant[a].p50 || run.ids[a] - run.ids[b]);
+  }
+
+  function renderMutantChart(series) {
+    const run = state.run, box = document.getElementById("mutants");
+    box.replaceChildren();
+    const order = mutantOrder(run);
+    const W = Math.max(300, box.clientWidth), H = 340, mt = 12, mb = 30, mr = 8;
+    const svg = s("svg", { width: "100%", viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0",
+      "aria-label": `Median time to kill of each of the ${order.length} scoring mutants, rarest first, log scale; arrow keys step through the mutants` });
+    box.appendChild(svg);
+    const top = Math.max(10, ...series.flatMap(({ m }) => m.perMutant.map((q) => (Number.isFinite(q.p75) ? q.p75 : 1))));
+    const decades = Math.max(1, Math.ceil(Math.log10(top)));
+    const y = (v) => H - mb - (Math.log10(Math.max(1, v)) / decades) * (H - mb - mt);
+    const ticks = Array.from({ length: decades + 1 }, (_, e) => 10 ** e);
+    const ml = Math.max(...ticks.map((t) => textWidth(svg, int(t), "tick"))) + 14;
+    const step = (W - ml - mr) / order.length;
+    ticks.forEach((t) => {
+      svg.appendChild(s("line", { class: "gridline", x1: ml, x2: W - mr, y1: y(t), y2: y(t) }));
+      svg.appendChild(s("text", { class: "tick", x: ml - 8, y: y(t), dy: "0.32em", "text-anchor": "end" }, int(t)));
+    });
+    const labelW = Math.max(...run.ids.map((id) => textWidth(svg, String(id), "tick"))) + 8;
+    const every = Math.max(1, Math.ceil(labelW / step));
+    const band = s("rect", { y: mt, height: H - mb - mt, width: Math.max(1, step), style: "fill:var(--hover)", visibility: "hidden" });
+    svg.appendChild(band);
+    const k = series.length, spread = Math.min(step * 0.7, k * 12);
+    order.forEach((j, i) => {
+      const cx = ml + step * (i + 0.5);
+      if (i % every === 0) svg.appendChild(s("text", { class: "tick", x: cx, y: H - 10, "text-anchor": "middle" }, String(run.ids[j])));
+      series.forEach(({ m, color }, si) => {
+        const q = m.perMutant[j];
+        if (!Number.isFinite(q.p50)) return;
+        const px = cx - spread / 2 + (spread * (si + 0.5)) / k;
+        if (q.p25 !== q.p75) svg.appendChild(s("line", { x1: px, x2: px, y1: y(q.p75), y2: y(q.p25), style: `stroke:${color};stroke-width:2;stroke-linecap:round` }));
+        svg.appendChild(s("circle", { cx: px, cy: y(q.p50), r: 4, style: `fill:${color};stroke:var(--bg);stroke-width:2` }));
+      });
+    });
+    const tip = tipFor(box);
+    const at = (i) => {
+      const r = svg.getBoundingClientRect(), kk = r.width / W;
+      return [r.left + (ml + step * (i + 0.5)) * kk, r.top + mt * kk + 40];
+    };
+    hover(svg, order.length,
+      (sx) => (sx < ml || sx > W - mr ? -1 : Math.min(order.length - 1, Math.floor((sx - ml) / step))),
+      (i, pos) => {
+        band.setAttribute("x", ml + step * i); band.setAttribute("visibility", "visible");
+        const j = order[i], rnd = run.random.perMutant[j].p50;
+        const [cx, cy] = pos || at(i);
+        showTip(box, tip, cx, cy, `Mutant ${run.ids[j]}`, series.map(({ m, color }) => {
+          const q = m.perMutant[j];
+          const extra = [q.p25 !== q.p75 ? `(${int(q.p25)}–${int(q.p75)})` : "", m.key === RANDOM_KEY ? "" : `${speed(rnd / q.p50)} vs random`];
+          return [color, int(q.p50), methodName(m), extra.filter(Boolean).join(" · ")];
+        }));
+        return at(i);
+      },
+      () => { tip.hidden = true; band.setAttribute("visibility", "hidden"); });
+  }
+
+  function renderMutantTable(series) {
+    const run = state.run, table = document.getElementById("mutant-table");
+    const head = el("tr");
+    head.append(el("th", {}, "Mutant id"), ...series.map(({ m }) => el("th", {}, methodName(m) + ": median (25–75%)")));
+    table.tHead.replaceChildren(head);
+    sortable(table);
+    table.tBodies[0].replaceChildren(...mutantOrder(run).map((j) => {
+      const tr = el("tr");
+      tr.append(cell(run.ids[j], String(run.ids[j])), ...series.map(({ m }) => {
+        const q = m.perMutant[j];
+        return cell(q.p50, q.p25 === q.p75 ? int(q.p50) : `${int(q.p50)} (${int(q.p25)}–${int(q.p75)})`);
+      }));
+      return tr;
+    }));
+    applySort(table);
+  }
+
+  function renderDetails(run) {
+    const sm = run.summary;
+    const item = (k, v) => [el("dt", {}, k), el("dd", {}, v)];
+    document.getElementById("run-details").replaceChildren(
+      ...item("Folder", `${run.condition}/${run.oracle.toLowerCase()}`),
+      ...item("Kill matrix", `kill_matrices.id = ${sm.killMatrixId}`),
+      ...item("Training mutants", sm.trainingMutantIds.join(", ")),
+      ...item("Scoring mutants", sm.scoringMutantIds.join(", ")),
+      ...item("Groupings (start_scenario_grouping_runs.id)",
+        Object.entries(sm.groupings || {}).map(([g, id]) => `${groupingName(g)}: ${id} (${int((sm.groupCounts || {})[g])} groups)`).join("; ")),
+      ...item("Repetitions per random strategy", int(sm.repetitions)),
+    );
+  }
+
+  // ---------- sortable tables ----------
+  // Each cell keeps its raw value in data-sort, so "×2.31" or "1,234 (900–1,500)" sort as numbers.
+  function cell(sortValue, text, cls) {
+    const td = el("td", cls ? { class: cls } : {}, text);
+    td.dataset.sort = String(sortValue);
+    return td;
+  }
+  const sortState = new Map([["methods", { col: 4, dir: -1 }]]);
+  function applySort(table) {
+    const st = sortState.get(table.id);
+    table.querySelectorAll("thead th").forEach((th, i) =>
+      th.setAttribute("aria-sort", st && st.col === i ? (st.dir > 0 ? "ascending" : "descending") : "none"));
+    if (!st) return;
+    const tb = table.tBodies[0];
+    const key = (tr) => {
+      const v = tr.cells[st.col]?.dataset.sort ?? "";
+      const n = Number(v);
+      return v !== "" && !Number.isNaN(n) ? n : v;
+    };
+    const rows = Array.from(tb.rows);
+    rows.sort((a, b) => {
+      const x = key(a), y = key(b);
+      const c = typeof x === "number" && typeof y === "number" ? (x === y ? 0 : x < y ? -1 : 1) : String(x).localeCompare(String(y));
+      return c * st.dir;
+    });
+    tb.append(...rows);
+  }
+  function sortable(table) {
+    table.querySelectorAll("thead th").forEach((th, i) => {
+      if (th.querySelector(".sortbtn")) return;
+      const b = el("button", { type: "button", class: "sortbtn" }, th.textContent);
+      th.replaceChildren(b);
+      b.addEventListener("click", () => {
+        const st = sortState.get(table.id);
+        sortState.set(table.id, { col: i, dir: st && st.col === i ? -st.dir : 1 });
+        applySort(table);
+      });
+    });
+  }
+  ["runs", "methods"].forEach((id) => sortable(document.getElementById(id)));
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => {
+    if (!state.run) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderCharts, 100);
+  }).observe(document.getElementById("curve"));
+
+  showBanner();
+})();
+</script>
+</body>
+</html>

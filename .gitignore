@@ -40,3 +40,7 @@
 !/postEvaluation/kill_matrices/
 /postEvaluation/kill_matrices/*
 !/postEvaluation/kill_matrices/index.html
+
+!/postEvaluation/start_scenario_draws/
+/postEvaluation/start_scenario_draws/*
+!/postEvaluation/start_scenario_draws/index.html
