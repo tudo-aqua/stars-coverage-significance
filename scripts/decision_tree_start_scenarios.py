@@ -58,7 +58,7 @@ import optuna
 import psycopg2
 from psycopg2.extras import execute_values
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import KFold, StratifiedGroupKFold
 
 REPO = Path(__file__).resolve().parent.parent
 MUTANTS_DIR = REPO / "src/main/kotlin/tools/aqua/stars/sumo/mutants"
@@ -348,13 +348,17 @@ def search(x, kills, folds, names, bound, trials, seed, n_jobs, log: Log):
     return study.best_params, study.best_value
 
 
-def inner_folds(training: list[int], km: KillMatrix, mutants: dict, n_folds: int, seed: int):
+def inner_folds(training: list[int], km: KillMatrix, mutants: dict, n_folds: int, seed: int, log: Log):
     """Folds over the training mutants (columns of km.kills), grouped by mutant, stratified by operator."""
     cols = np.array([km.mutant_ids.index(m) for m in training])
     k = min(n_folds, len(cols))
     if k < 2:
         sys.exit(f"{km.oracle}: {len(cols)} training mutant(s), too few for inner folds")
     strata = np.array([mutants[m][2] or "unknown" for m in training])
+    if np.unique(strata, return_counts=True)[1].max() < k:
+        # Each group is one mutant, so plain k-fold over the mutants is the unstratified group k-fold.
+        log(f"  no operator has {k} training mutants; inner folds are not stratified by operator")
+        return [(cols[tr], cols[va]) for tr, va in KFold(n_splits=k, shuffle=True, random_state=seed).split(cols)]
     cv = StratifiedGroupKFold(n_splits=k, shuffle=True, random_state=seed)
     return [(cols[tr], cols[va]) for tr, va in cv.split(cols.reshape(-1, 1), strata, groups=cols)]
 
@@ -458,7 +462,7 @@ def main() -> None:
             condition = "manual" if manual else spec["name"]
         log(f"  condition {condition}: training {training}, scoring {scoring}")
         train_kills = km.kills[:, [km.mutant_ids.index(m) for m in training]]
-        folds = inner_folds(training, km, mutants, n_folds, seed)
+        folds = inner_folds(training, km, mutants, n_folds, seed, log)
         splits = [(m, m in training, m in scoring) for m in sorted(set(training) | set(scoring))]
 
         for fs in feature_sets:
