@@ -4,36 +4,77 @@
            vClass="passenger"
            color="white"/>
 
-    <!-- Calm car (70 km/h = 19.44 m/s) -->
+    <!--
+      Driver profiles of the speed grid (docs/v2-scenarios-and-mutants-plan.md, section 4). The
+      scenario generator chooses a vehicle's profile from its start speed. maxSpeed only has to admit
+      every start speed: each vehicle's own maximum speed is set at placement to its start speed plus
+      MAX_SPEED_ABOVE_START_SPEED_KMH. car_calm, car_normal and car_speedy take the following and
+      lane-changing values of the same-named types in sumoData/highwayTraffic/vTypesHighway.add.xml;
+      car_sporty lies halfway between car_normal and car_speedy. speedFactor 1 without spread keeps
+      every start speed exactly as generated.
+    -->
+
+    <!-- Careful driver: large gaps, strong keep-right discipline -->
     <vType id="car_calm"
            vClass="passenger"
-           maxSpeed="19.44"
+           maxSpeed="41.67"
            speedFactor="1.0"
            speedDev="0.0"
-           sigma="0.5"
-           tau="1.0"
-           minGap="2.5"
+           sigma="0.45"
+           tau="1.15"
+           minGap="2.8"
+           lcKeepRight="4.0"
+           lcStrategic="0.7"
+           lcCooperative="0.9"
+           lcSpeedGain="0.7"
+           lcAssertive="0.8"
            color="0,255,0"/>
 
-    <!-- Normal car (100 km/h = 27.78 m/s) -->
+    <!-- Normal driver: balanced lane changing -->
     <vType id="car_normal"
            vClass="passenger"
-           maxSpeed="27.78"
+           maxSpeed="41.67"
            speedFactor="1.0"
            speedDev="0.0"
            sigma="0.5"
            tau="1.0"
            minGap="2.5"
+           lcKeepRight="2.0"
+           lcStrategic="1.0"
+           lcCooperative="1.0"
+           lcSpeedGain="1.0"
+           lcAssertive="1.0"
            color="255,255,0"/>
 
-    <!-- Speedy car (130 km/h = 36.11 m/s) -->
-    <vType id="car_speedy"
+    <!-- Sporty driver: halfway between the normal and the careless driver -->
+    <vType id="car_sporty"
            vClass="passenger"
-           maxSpeed="36.11"
+           maxSpeed="41.67"
            speedFactor="1.0"
            speedDev="0.0"
-           sigma="0.5"
-           tau="1.0"
-           minGap="2.5"
+           sigma="0.525"
+           tau="0.95"
+           minGap="2.35"
+           lcKeepRight="1.75"
+           lcStrategic="1.25"
+           lcCooperative="0.875"
+           lcSpeedGain="1.125"
+           lcAssertive="1.125"
+           color="255,128,0"/>
+
+    <!-- Careless driver: small gaps, weak keep-right discipline, assertive lane changes -->
+    <vType id="car_speedy"
+           vClass="passenger"
+           maxSpeed="41.67"
+           speedFactor="1.0"
+           speedDev="0.0"
+           sigma="0.55"
+           tau="0.9"
+           minGap="2.2"
+           lcKeepRight="1.5"
+           lcStrategic="1.5"
+           lcCooperative="0.75"
+           lcSpeedGain="1.25"
+           lcAssertive="1.25"
            color="255,0,0"/>
 </additional>
