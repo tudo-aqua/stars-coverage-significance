@@ -17,25 +17,72 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
-import kotlin.math.max
-import kotlin.math.min
+import java.util.Locale
+import kotlin.math.roundToInt
+import kotlin.random.Random
+import tools.aqua.stars.coverage.significance.SEED
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.CALM
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.EGO
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.NORMAL
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.SPEEDY
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType.SPORTY
 import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO
 import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_BEHIND_MIN_DISTANCE_METERS_FROM
 import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO
 import tools.aqua.stars.coverage.significance.tsc.VEHICLE_IN_FRONT_MIN_DISTANCE_METERS_FROM
+import tools.aqua.stars.coverage.significance.utils.CliArgs
 
 /**
- * Exhaustive 3x3-grid scenario generator.
+ * Speed-grid scenario generator (`docs/v2-scenarios-and-mutants-plan.md`, section 4).
  *
- * @property i0Start Start of row 0 interval (meters).
- * @property i0End End of row 0 interval (meters).
- * @property i1Start Start of row 1 interval (meters).
- * @property i1End End of row 1 interval (meters).
- * @property i2Start Start of row 2 interval (meters).
- * @property i2End End of row 2 interval (meters).
+ * The grid has three rows (behind, beside and ahead of the ego, see [i0Start] to [i2End]) and three
+ * lanes. The ego sits in the middle row at the centre of the middle interval. A configuration fixes
+ * the ego lane, the ego speed and the content of the other eight cells: empty, or a vehicle with
+ * one of [otherSpeedsKmh], whose type follows from [typeBySpeedKmh]. All configurations are
+ * enumerated, and each one is drawn [positionDraws] times with different positions inside the
+ * cells.
+ *
+ * Enumeration index of a scenario: `draw * configurationCount + configuration`, with `configuration
+ * = (egoSpeedIndex * 3 + egoLane) * patternCount + pattern`. Each of the eight other cells, in
+ * [cellIndex] order, is one base-(1 + S) digit of `pattern`, with S the number of [otherSpeedsKmh]:
+ * 0 for an empty cell and k for the k-th speed.
+ *
+ * Positions are drawn uniformly inside the cells and rounded to 0.1 m. On every lane, consecutive
+ * vehicles (the ego included) must start with a bumper gap of at least [minStartGapMeters] and a
+ * time to collision of at least [minStartTtcSeconds]; otherwise the lane is drawn again. Without
+ * [variance], every vehicle stands at its cell centre and the start conditions are not applied.
+ *
+ * @property egoSpeedsKmh Start speeds of the ego in km/h.
+ * @property otherSpeedsKmh Start speeds of the other vehicles in km/h.
+ * @property typeBySpeedKmh Vehicle type (driver profile) of another vehicle, by its start speed.
+ * @property positionDraws Number of position draws per configuration.
+ * @property variance Whether positions are drawn inside the cells instead of using the cell
+ *   centres.
+ * @property minStartGapMeters Minimum bumper gap between consecutive vehicles on a lane.
+ * @property minStartTtcSeconds Minimum time to collision between consecutive vehicles on a lane.
+ * @property vehicleLengthMeters Vehicle length used for the bumper gap.
+ * @property maxAttempts Maximum number of draws of a lane, and of a whole position draw that
+ *   differs from the earlier draws of its configuration, before generation fails.
+ * @property seed Seed of the position draws.
+ * @property i0Start Start of the row behind the ego (meters).
+ * @property i0End End of the row behind the ego (meters).
+ * @property i1Start Start of the row beside the ego (meters).
+ * @property i1End End of the row beside the ego (meters).
+ * @property i2Start Start of the row ahead of the ego (meters).
+ * @property i2End End of the row ahead of the ego (meters).
  */
 data class GridTrafficScenarioGenerator(
-    // Intervals (meters)
+    val egoSpeedsKmh: List<Int> = listOf(80, 100, 120),
+    val otherSpeedsKmh: List<Int> = listOf(70, 90, 110, 130),
+    val typeBySpeedKmh: Map<Int, GridVehicleType> =
+        mapOf(70 to CALM, 90 to NORMAL, 110 to SPORTY, 130 to SPEEDY),
+    val positionDraws: Int = 1,
+    val variance: Boolean = true,
+    val minStartGapMeters: Double = 10.0,
+    val minStartTtcSeconds: Double = 4.0,
+    val vehicleLengthMeters: Double = 5.0,
+    val maxAttempts: Int = 1000,
+    val seed: Int = SEED,
     val i0Start: Float = 0.0f,
     val i0End: Float = VEHICLE_IN_BEHIND_MAX_DISTANCE_METERS_TO,
     val i1Start: Float = i0End,
@@ -46,214 +93,320 @@ data class GridTrafficScenarioGenerator(
     val i2Start: Float = i1End,
     val i2End: Float = i2Start + VEHICLE_IN_FRONT_MAX_DISTANCE_METERS_TO,
 ) {
-
-  private val interval0 = Interval(i0Start, i0End)
-  private val interval1 = Interval(i1Start, i1End)
-  private val interval2 = Interval(i2Start, i2End)
-
-  /** Validates the configuration parameters. */
-  private fun validate() {
-    require(interval0.end > interval0.start) { "I0 must have positive length" }
-    require(interval1.end > interval1.start) { "I1 must have positive length" }
-    require(interval2.end > interval2.start) { "I2 must have positive length" }
-
-    // Ensure constructive placement is always possible for the chosen intervals and min gap.
-    require(interval1.end >= interval0.start) {
-      "I1 must allow a middle-row position that is at least d_min ahead of I0.start"
+  init {
+    requireDistinctPositive(egoSpeedsKmh, "egoSpeedsKmh")
+    requireDistinctPositive(otherSpeedsKmh, "otherSpeedsKmh")
+    val untyped = otherSpeedsKmh.filter { it !in typeBySpeedKmh }
+    require(untyped.isEmpty()) { "typeBySpeedKmh has no type for the speeds $untyped" }
+    require(EGO !in typeBySpeedKmh.values) { "typeBySpeedKmh must not map a speed to EGO" }
+    require(positionDraws >= 1) { "positionDraws must be at least 1 but was $positionDraws" }
+    require(variance || positionDraws == 1) {
+      "Without variance every position draw is the same, so positionDraws must be 1"
     }
-    require(interval1.start <= interval2.end) {
-      "I1 must allow a middle-row position that is at least d_min behind I2.end"
+    require(minStartGapMeters >= 0.0 && minStartTtcSeconds >= 0.0 && vehicleLengthMeters >= 0.0) {
+      "minStartGapMeters, minStartTtcSeconds and vehicleLengthMeters must not be negative"
     }
-    require(interval2.end >= interval0.start) { "I2.end must be at least d_min ahead of I0.start" }
-  }
-
-  /**
-   * Generates all possible scenarios based on the configured parameters.
-   *
-   * @return Sequence of generated scenarios.
-   */
-  fun generateAll(): Sequence<GeneratedScenario> {
-    validate()
-
-    return sequence {
-      for (egoLane in 0..2) {
-        val egoCellIndex = 1 * 3 + egoLane
-        val otherCells = (0 until 9).filter { it != egoCellIndex }
-        check(otherCells.size == 8)
-
-        val totalTypedOccupancies = intPow(4, otherCells.size) // 4^8
-        for (pattern in 0 until totalTypedOccupancies) {
-          val occupancy: Array<GridVehicleType?> = arrayOfNulls(9)
-
-          var tmp = pattern
-          for (idx in otherCells.indices) {
-            val digit = tmp % 4
-            tmp /= 4
-            occupancy[otherCells[idx]] = digitToBackgroundTypeOrNull(digit)
-          }
-
-          // Ego cell is excluded from M and therefore always null in the occupancy array.
-          occupancy[egoCellIndex] = null
-
-          yield(buildScenarioForOccupancy(egoLane, occupancy))
-        }
-      }
+    require(maxAttempts >= 1) { "maxAttempts must be at least 1 but was $maxAttempts" }
+    require(i0End > i0Start && i1End > i1Start && i2End > i2Start) {
+      "Every row interval must have a positive length"
     }
   }
 
+  private val rowIntervals =
+      listOf(Interval(i0Start, i0End), Interval(i1Start, i1End), Interval(i2Start, i2End))
+
+  private val egoPositionMeters: Float = rowIntervals[MIDDLE_ROW].center()
+
+  private val statesPerCell: Int = otherSpeedsKmh.size + 1
+
+  /** Number of cell patterns per ego lane and ego speed, `(1 + S)^8`. */
+  val patternCount: Long = power(statesPerCell, CELL_COUNT - 1)
+
+  /** Number of configurations, `3 * E * (1 + S)^8` with E ego speeds. */
+  val configurationCount: Long = GRID_SIZE.toLong() * egoSpeedsKmh.size * patternCount
+
+  /** Number of enumeration indices, [configurationCount] times [positionDraws]. */
+  val indexCount: Long = configurationCount * positionDraws
+
   /**
-   * Builds a scenario for the given [occupancy] and [egoLane].
-   *
-   * @param egoLane Lane index (0 to 2) for the ego vehicle.
-   * @param occupancy Occupancy array representing vehicle types in the grid.
-   * @return Generated scenario.
+   * Number of configurations without other vehicles. Their position draw is always the same, so
+   * they exist only in draw 0.
    */
-  private fun buildScenarioForOccupancy(
-      egoLane: Int,
-      occupancy: Array<GridVehicleType?>,
-  ): GeneratedScenario {
-    val placements = mutableListOf<Spawn>()
-    val egoCell = Pair(1, egoLane)
+  private val egoOnlyConfigurationCount: Long = GRID_SIZE.toLong() * egoSpeedsKmh.size
 
-    // --- Step 1: place all middle-row vehicles first (including ego) ---
-    val egoMiddlePos = placeMiddleFeasible(lane = egoLane, occupancy = occupancy)
-    placements +=
-        Spawn(row = 1, lane = egoLane, positionMeters = egoMiddlePos, type = GridVehicleType.EGO)
+  /** Number of generated scenarios: every index except later draws of ego-only configurations. */
+  val scenarioCount: Long = scenariosBefore(indexCount)
 
-    for (lane in 0..2) {
-      if (lane == egoLane) continue
-      val t = occupancy[1 * 3 + lane]
-      if (t != null) {
-        val pos = placeMiddleFeasible(lane = lane, occupancy = occupancy)
-        placements += Spawn(row = 1, lane = lane, positionMeters = pos, type = t)
-      }
-    }
-
-    // --- Step 2: place remaining rows (0, then 2), lane by lane ---
-    for (row in intArrayOf(0, 2)) {
-      for (lane in 0..2) {
-        val spawn = placeCell(row, lane, occupancy, egoCell, placements)
-        if (spawn != null) placements += spawn
-      }
-    }
-
-    placements.sortWith(compareBy<Spawn> { it.row }.thenBy { it.lane }.thenBy { it.positionMeters })
-
-    val grid: Array<Array<Spawn?>> =
-        Array(3) { Array<Spawn?>(3) { null } }
-            .also { g ->
-              for (s in placements) {
-                g[s.row][s.lane] = s
-              }
-            }
-
-    return GeneratedScenario(grid = grid)
+  /**
+   * Returns the number of scenarios whose enumeration index is below [index].
+   *
+   * @param index Enumeration index in `0..indexCount`.
+   * @return Number of scenarios with a smaller enumeration index.
+   */
+  fun scenariosBefore(index: Long): Long {
+    require(index in 0..indexCount) { "index $index outside 0..$indexCount" }
+    val draw = index / configurationCount
+    val configuration = index % configurationCount
+    val skippedInCompleteDraws = maxOf(0L, draw - 1) * egoOnlyConfigurationCount
+    val skippedInCurrentDraw =
+        if (draw == 0L) 0L
+        else minOf(egoOnlyConfigurationCount, (configuration + patternCount - 1) / patternCount)
+    return index - skippedInCompleteDraws - skippedInCurrentDraw
   }
 
   /**
-   * Places a middle-row vehicle in the specified [lane], ensuring feasibility given the occupancy.
+   * Returns the scenario with the given enumeration [index], or `null` if [index] is a later draw
+   * of a configuration without other vehicles.
    *
-   * @param lane Lane index (0 to 2).
-   * @param occupancy Occupancy array representing vehicle types in the grid.
-   * @return Position (meters) for the middle-row vehicle.
+   * @param index Enumeration index in `0 until indexCount`.
+   * @param statistics Collects the position draws, if given.
+   * @return The scenario, or `null`.
    */
-  private fun placeMiddleFeasible(
+  fun scenarioAt(index: Long, statistics: DrawStatistics? = null): GeneratedScenario? {
+    require(index in 0 until indexCount) { "index $index outside 0 until $indexCount" }
+    val draw = (index / configurationCount).toInt()
+    val configuration = configurationAt(index % configurationCount)
+    if (draw > 0 && configuration.speedByCell.isEmpty()) return null
+
+    val positions = positionsOf(configuration, draw, statistics)
+    val spawns = buildList {
+      add(
+          Spawn(
+              row = MIDDLE_ROW,
+              lane = configuration.egoLane,
+              positionMeters = egoPositionMeters,
+              type = EGO,
+              speedKmh = configuration.egoSpeedKmh))
+      configuration.speedByCell.forEach { (cell, speedKmh) ->
+        add(
+            Spawn(
+                row = cell / GRID_SIZE,
+                lane = cell % GRID_SIZE,
+                positionMeters = positions.getValue(cell),
+                type = typeBySpeedKmh.getValue(speedKmh),
+                speedKmh = speedKmh))
+      }
+    }
+    return GeneratedScenario(spawns, enumerationIndex = index, positionDrawIndex = draw)
+  }
+
+  /**
+   * Generates the scenarios in enumeration order.
+   *
+   * @param fromIndex First enumeration index to generate.
+   * @param statistics Collects the position draws, if given.
+   * @return The scenarios with an enumeration index of at least [fromIndex].
+   */
+  fun generateAll(
+      fromIndex: Long = 0L,
+      statistics: DrawStatistics? = null,
+  ): Sequence<GeneratedScenario> = sequence {
+    for (index in fromIndex until indexCount) scenarioAt(index, statistics)?.let { yield(it) }
+  }
+
+  /** Returns the derived counts, for logging. */
+  fun countSummary(): String =
+      "$patternCount cell patterns, $configurationCount configurations, $positionDraws position " +
+          "draw(s) per configuration, $scenarioCount scenarios"
+
+  /**
+   * A configuration: ego lane and speed, and the speed of the vehicle in every occupied cell.
+   *
+   * @property index Configuration index.
+   * @property egoLane Lane of the ego.
+   * @property egoSpeedKmh Start speed of the ego.
+   * @property speedByCell Start speed by cell index, for the occupied cells only.
+   */
+  private data class Configuration(
+      val index: Long,
+      val egoLane: Int,
+      val egoSpeedKmh: Int,
+      val speedByCell: Map<Int, Int>,
+  )
+
+  private fun configurationAt(index: Long): Configuration {
+    var digits = index % patternCount
+    val egoSlot = index / patternCount
+    val egoLane = (egoSlot % GRID_SIZE).toInt()
+    val egoCell = cellIndex(MIDDLE_ROW, egoLane)
+    val speedByCell = LinkedHashMap<Int, Int>()
+    for (cell in 0 until CELL_COUNT) {
+      if (cell == egoCell) continue
+      val digit = (digits % statesPerCell).toInt()
+      digits /= statesPerCell
+      if (digit > 0) speedByCell[cell] = otherSpeedsKmh[digit - 1]
+    }
+    return Configuration(
+        index = index,
+        egoLane = egoLane,
+        egoSpeedKmh = egoSpeedsKmh[(egoSlot / GRID_SIZE).toInt()],
+        speedByCell = speedByCell)
+  }
+
+  /** Positions by cell index for position draw [draw] of [configuration]. */
+  private fun positionsOf(
+      configuration: Configuration,
+      draw: Int,
+      statistics: DrawStatistics?,
+  ): Map<Int, Float> {
+    if (!variance) {
+      return configuration.speedByCell.keys.associateWith { rowIntervals[it / GRID_SIZE].center() }
+    }
+    val earlierDraws = (0 until draw).map { positionsOf(configuration, it, statistics = null) }
+    repeat(maxAttempts) { attempt ->
+      val rng = Random(seedFor(configuration.index, draw, attempt))
+      val positions = drawPositions(configuration, rng, statistics)
+      if (positions !in earlierDraws) return positions
+      statistics?.let { it.duplicateDraws++ }
+    }
+    error(
+        "Position draw $draw of configuration ${configuration.index} equals an earlier draw in " +
+            "all $maxAttempts attempts")
+  }
+
+  private fun drawPositions(
+      configuration: Configuration,
+      rng: Random,
+      statistics: DrawStatistics?,
+  ): Map<Int, Float> = buildMap {
+    for (lane in 0 until GRID_SIZE) {
+      val cells =
+          (BOTTOM_ROW..TOP_ROW)
+              .map { row -> cellIndex(row, lane) }
+              .filter { it in configuration.speedByCell }
+      if (cells.isNotEmpty()) putAll(drawLane(configuration, lane, cells, rng, statistics))
+    }
+  }
+
+  private fun drawLane(
+      configuration: Configuration,
       lane: Int,
-      occupancy: Array<GridVehicleType?>,
-  ): Float {
-    val row0Occupied = occupancy[0 * 3 + lane] != null
-    val row2Occupied = occupancy[2 * 3 + lane] != null
-
-    var lower = interval1.start
-    var upper = interval1.end
-
-    if (row0Occupied) lower = max(lower, interval0.start)
-    if (row2Occupied) upper = min(upper, interval2.end)
-
-    // The ego lane always has a middle-row vehicle (ego). For other lanes, this function is only
-    // called if the middle-row cell is occupied in M.
-    require(upper + 1e-12 >= lower) {
-      "No feasible middle-row position for lane=$lane (lower=$lower, upper=$upper)"
+      cells: List<Int>,
+      rng: Random,
+      statistics: DrawStatistics?,
+  ): Map<Int, Float> {
+    repeat(maxAttempts) {
+      statistics?.let { it.laneDraws++ }
+      val positions =
+          cells.associateWith { cell ->
+            roundToPositionStep(rowIntervals[cell / GRID_SIZE].pick(rng, variance = true))
+          }
+      if (startConditionsHold(configuration, lane, positions)) return positions
+      statistics?.let { it.laneRejections++ }
     }
-
-    val restricted = Interval(lower, upper)
-    return restricted.center()
+    error(
+        "No positions on lane $lane of configuration ${configuration.index} satisfy " +
+            "minStartGapMeters=$minStartGapMeters and minStartTtcSeconds=$minStartTtcSeconds in " +
+            "$maxAttempts attempts")
   }
 
-  /**
-   * Places a vehicle in the specified [row] and [lane].
-   *
-   * @param row Row index (0 or 2).
-   * @param lane Lane index (0 to 2).
-   * @param occupancy Occupancy array representing vehicle types in the grid.
-   * @param egoCell Pair representing the ego vehicle's cell (row, lane).
-   * @param placementsSoFar List of already placed vehicles.
-   * @return Spawn object if placement is successful, null otherwise.
-   */
-  private fun placeCell(
-      row: Int,
+  private fun startConditionsHold(
+      configuration: Configuration,
       lane: Int,
-      occupancy: Array<GridVehicleType?>,
-      egoCell: Pair<Int, Int>,
-      placementsSoFar: List<Spawn>,
-  ): Spawn? {
-    require(row == 0 || row == 2) { "placeCell is only used for rows 0 and 2" }
-
-    if (egoCell.first == row && egoCell.second == lane) return null
-    val t = occupancy[row * 3 + lane] ?: return null
-
-    val middlePos = placementsSoFar.firstOrNull { it.row == 1 && it.lane == lane }?.positionMeters
-    val row0Pos = placementsSoFar.firstOrNull { it.row == 0 && it.lane == lane }?.positionMeters
-
-    val interval: Interval =
-        when (row) {
-          0 -> {
-            if (middlePos != null) {
-              Interval(interval0.start, interval0.end)
+      positions: Map<Int, Float>,
+  ): Boolean {
+    val vehicles =
+        positions.map { (cell, position) -> position to configuration.speedByCell.getValue(cell) } +
+            if (lane == configuration.egoLane) {
+              listOf(egoPositionMeters to configuration.egoSpeedKmh)
             } else {
-              val row2Occupied = occupancy[2 * 3 + lane] != null
-              if (row2Occupied) {
-                // Restrict row-0 so that row-2 remains feasible later.
-                Interval(interval0.start, interval0.end)
-              } else {
-                interval0
-              }
+              emptyList()
             }
-          }
-          2 -> {
-            if (middlePos != null) {
-              Interval(interval2.start, interval2.end)
-            } else {
-              if (row0Pos != null) {
-                Interval(interval2.start, interval2.end)
-              } else {
-                interval2
-              }
-            }
-          }
-          else -> error("unreachable")
+    return vehicles
+        .sortedBy { it.first }
+        .zipWithNext()
+        .all { (follower, leader) ->
+          val gap = leader.first - follower.first - vehicleLengthMeters
+          val closingSpeedMps = (follower.second - leader.second) / KMH_PER_MPS
+          gap >= minStartGapMeters &&
+              (closingSpeedMps <= 0.0 || gap / closingSpeedMps >= minStartTtcSeconds)
+        }
+  }
+
+  private fun seedFor(configuration: Long, draw: Int, attempt: Int): Long =
+      splitMix64(
+          splitMix64(splitMix64(seed.toLong()) xor configuration) xor
+              ((draw.toLong() shl Int.SIZE_BITS) or attempt.toLong()))
+
+  /** Creates generators from command-line arguments. */
+  companion object {
+    private const val KMH_PER_MPS = 3.6
+    private const val POSITION_STEPS_PER_METER = 10
+
+    /**
+     * Creates a generator from command-line arguments. Every argument is optional and defaults to
+     * the constructor default: `--egoSpeeds=80,100,120`, `--otherSpeeds=70,90,110,130`,
+     * `--types=70:CALM,90:NORMAL,110:SPORTY,130:SPEEDY`, `--positionDraws=1`, `--variance=true`,
+     * `--minStartGap=10`, `--minStartTtc=4` and `--maxAttempts=1000`.
+     *
+     * @param args Command-line arguments.
+     * @return The generator.
+     */
+    fun fromArgs(args: Array<String>): GridTrafficScenarioGenerator {
+      val defaults = GridTrafficScenarioGenerator()
+      return GridTrafficScenarioGenerator(
+          egoSpeedsKmh = CliArgs.optionalIntList(args, "egoSpeeds") ?: defaults.egoSpeedsKmh,
+          otherSpeedsKmh = CliArgs.optionalIntList(args, "otherSpeeds") ?: defaults.otherSpeedsKmh,
+          typeBySpeedKmh =
+              CliArgs.optionalString(args, "types")?.let(::parseTypes) ?: defaults.typeBySpeedKmh,
+          positionDraws = CliArgs.optionalInt(args, "positionDraws") ?: defaults.positionDraws,
+          variance = CliArgs.optionalBoolean(args, "variance", defaults.variance),
+          minStartGapMeters =
+              CliArgs.optionalDouble(args, "minStartGap") ?: defaults.minStartGapMeters,
+          minStartTtcSeconds =
+              CliArgs.optionalDouble(args, "minStartTtc") ?: defaults.minStartTtcSeconds,
+          maxAttempts = CliArgs.optionalInt(args, "maxAttempts") ?: defaults.maxAttempts,
+      )
+    }
+
+    /** Parses `70:CALM,90:NORMAL` into a map from speed to type. */
+    private fun parseTypes(raw: String): Map<Int, GridVehicleType> =
+        raw.split(",").associate { part ->
+          val (speed, type) = part.split(":").map { it.trim() }
+          speed.toInt() to GridVehicleType.valueOf(type)
         }
 
-    require(interval.isNonEmpty()) {
-      "No feasible interval for row=$row, lane=$lane (interval=[${interval.start},${interval.end}])"
+    private fun requireDistinctPositive(speeds: List<Int>, name: String) {
+      require(speeds.isNotEmpty() && speeds.all { it > 0 } && speeds.toSet().size == speeds.size) {
+        "$name must be distinct positive speeds but was $speeds"
+      }
     }
 
-    val pos = interval.center()
-    return Spawn(row = row, lane = lane, positionMeters = pos, type = t)
-  }
+    private fun roundToPositionStep(positionMeters: Float): Float =
+        (positionMeters * POSITION_STEPS_PER_METER).roundToInt().toFloat() /
+            POSITION_STEPS_PER_METER
 
-  private fun digitToBackgroundTypeOrNull(digit: Int): GridVehicleType? =
-      when (digit) {
-        0 -> null
-        1 -> GridVehicleType.CALM
-        2 -> GridVehicleType.NORMAL
-        3 -> GridVehicleType.SPEEDY
-        else -> error("invalid digit $digit")
-      }
+    private fun power(base: Int, exponent: Int): Long {
+      var result = 1L
+      repeat(exponent) { result = Math.multiplyExact(result, base.toLong()) }
+      return result
+    }
 
-  private fun intPow(base: Int, exp: Int): Int {
-    var result = 1
-    repeat(exp) { result *= base }
-    return result
+    /** SplitMix64 finalizer, a fast bijective mix of the seed parts. */
+    private fun splitMix64(value: Long): Long {
+      var z = value + 0x9E3779B97F4A7C15uL.toLong()
+      z = (z xor (z ushr 30)) * 0xBF58476D1CE4E5B9uL.toLong()
+      z = (z xor (z ushr 27)) * 0x94D049BB133111EBuL.toLong()
+      return z xor (z ushr 31)
+    }
   }
+}
+
+/**
+ * Counts the position draws of [GridTrafficScenarioGenerator].
+ *
+ * @property laneDraws Number of drawn lanes.
+ * @property laneRejections Number of drawn lanes that violated the start conditions.
+ * @property duplicateDraws Number of position draws that equalled an earlier draw of their
+ *   configuration.
+ */
+class DrawStatistics(
+    var laneDraws: Long = 0L,
+    var laneRejections: Long = 0L,
+    var duplicateDraws: Long = 0L,
+) {
+  override fun toString(): String =
+      "$laneDraws lane draws, $laneRejections rejected by the start conditions " +
+          "(${"%.1f".format(Locale.US, 100.0 * laneRejections / laneDraws.coerceAtLeast(1))}%), " +
+          "$duplicateDraws duplicate position draws"
 }

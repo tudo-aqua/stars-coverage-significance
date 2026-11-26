@@ -18,68 +18,49 @@
 package tools.aqua.stars.coverage.significance.db.tables
 
 import org.jetbrains.exposed.dao.id.IntIdTable
-import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
+import org.jetbrains.exposed.sql.Column
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridVehicleType
 
 /**
- * Table for storing scenario starting configurations.
+ * Columns of one grid cell (see
+ * [tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioCell]).
  *
- * @property sequenceNumber Auto-incrementing sequence number.
- * @property humanReadableScenarioId Unique human-readable scenario ID.
- * @property topLeft Vehicle state in the top left corner of the grid.
- * @property topCenter Vehicle state in the top center of the grid.
- * @property topRight Vehicle state in the top right corner of the grid.
- * @property topLeftPosition Position of the vehicle in the top left corner of the grid.
- * @property topCenterPosition Position of the vehicle in the top center of the grid.
- * @property topRightPosition Position of the vehicle in the top right corner of the grid.
- * @property middleLeft Vehicle state in the middle left corner of the grid.
- * @property middleCenter Vehicle state in the middle center of the grid.
- * @property middleRight Vehicle state in the middle right corner of the grid.
- * @property middleLeftPosition Position of the vehicle in the middle left corner of the grid.
- * @property middleCenterPosition Position of the vehicle in the middle center of the grid.
- * @property middleRightPosition Position of the vehicle in the middle right corner of the grid.
- * @property bottomLeft Vehicle state in the bottom left corner of the grid.
- * @property bottomCenter Vehicle state in the bottom center of the grid.
- * @property bottomRight Vehicle state in the bottom right corner of the grid.
- * @property bottomLeftPosition Position of the vehicle in the bottom left corner of the grid.
- * @property bottomCenterPosition Position of the vehicle in the bottom center of the grid.
- * @property bottomRightPosition Position of the vehicle in the bottom right corner of the grid.
+ * @property type Vehicle type, `null` for an empty cell.
+ * @property positionMeters Front-bumper position in meters, `null` for an empty cell.
+ * @property speedKmh Start speed in km/h, `null` for an empty cell.
+ */
+class CellColumns(
+    val type: Column<GridVehicleType?>,
+    val positionMeters: Column<Float?>,
+    val speedKmh: Column<Int?>,
+)
+
+/**
+ * Table for storing the starting scenarios.
+ *
+ * @property sequenceNumber Insertion order; chunk jobs split the scenarios by it.
+ * @property humanReadableScenarioId Unique human-readable scenario id built from the cells.
+ * @property enumerationIndex Index of the scenario in the generator's enumeration (see
+ *   [tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator.scenarioAt]).
+ * @property positionDrawIndex Position draw of the scenario's speed configuration, starting at 0.
+ * @property cells Columns of the nine cells, indexed by `row * 3 + lane`. The database columns are
+ *   named after the cell, e.g. `topLeft`, `topLeftPosition` and `topLeftSpeedKmh`.
  */
 object ScenarioStartingConfigurationTable : IntIdTable("scenario_starting_configurations") {
   val sequenceNumber = long("seq").autoIncrement().uniqueIndex()
   val humanReadableScenarioId = varchar("humanReadableScenarioId", 256).uniqueIndex()
+  val enumerationIndex = long("enumerationIndex").uniqueIndex()
+  val positionDrawIndex = integer("positionDrawIndex")
 
-  val topLeft = enumerationByName("topLeft", 16, ScenarioStartingConfigurationVehicleState::class)
-  val topCenter =
-      enumerationByName("topCenter", 16, ScenarioStartingConfigurationVehicleState::class)
-  val topRight = enumerationByName("topRight", 16, ScenarioStartingConfigurationVehicleState::class)
-
-  val topCenterPosition = float("topCenterPosition").nullable()
-  val topLeftPosition = float("topLeftPosition").nullable()
-  val topRightPosition = float("topRightPosition").nullable()
-
-  val middleLeft =
-      enumerationByName("middleLeft", 16, ScenarioStartingConfigurationVehicleState::class)
-  val middleCenter =
-      enumerationByName("middleCenter", 16, ScenarioStartingConfigurationVehicleState::class)
-  val middleRight =
-      enumerationByName("middleRight", 16, ScenarioStartingConfigurationVehicleState::class)
-
-  val middleCenterPosition = float("middleCenterPosition").nullable()
-  val middleLeftPosition = float("middleLeftPosition").nullable()
-  val middleRightPosition = float("middleRightPosition").nullable()
-
-  val bottomLeft =
-      enumerationByName("bottomLeft", 16, ScenarioStartingConfigurationVehicleState::class)
-  val bottomCenter =
-      enumerationByName("bottomCenter", 16, ScenarioStartingConfigurationVehicleState::class)
-  val bottomRight =
-      enumerationByName("bottomRight", 16, ScenarioStartingConfigurationVehicleState::class)
-
-  val bottomCenterPosition = float("bottomCenterPosition").nullable()
-  val bottomLeftPosition = float("bottomLeftPosition").nullable()
-  val bottomRightPosition = float("bottomRightPosition").nullable()
-
-  init {
-    index(false, humanReadableScenarioId)
-  }
+  val cells: List<CellColumns> =
+      listOf("bottom", "middle", "top").flatMap { row ->
+        listOf("Right", "Center", "Left").map { lane ->
+          val name = row + lane
+          CellColumns(
+              type = enumerationByName(name, 16, GridVehicleType::class).nullable(),
+              positionMeters = float("${name}Position").nullable(),
+              speedKmh = integer("${name}SpeedKmh").nullable(),
+          )
+        }
+      }
 }

@@ -125,12 +125,13 @@ class MutantSimulationTest {
         Array(3) { arrayOfNulls<Spawn>(3) }
             .apply {
               this[MIDDLE_ROW][CENTER_LANE] =
-                  Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO)
+                  Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO, 90)
               this[TOP_ROW][CENTER_LANE] =
-                  Spawn(TOP_ROW, CENTER_LANE, 1060.0f, GridVehicleType.CALM)
-              this[TOP_ROW][LEFT_LANE] = Spawn(TOP_ROW, LEFT_LANE, 1100.0f, GridVehicleType.SPEEDY)
+                  Spawn(TOP_ROW, CENTER_LANE, 1060.0f, GridVehicleType.CALM, 60)
+              this[TOP_ROW][LEFT_LANE] =
+                  Spawn(TOP_ROW, LEFT_LANE, 1100.0f, GridVehicleType.SPEEDY, 120)
               this[BOTTOM_ROW][RIGHT_LANE] =
-                  Spawn(BOTTOM_ROW, RIGHT_LANE, 900.0f, GridVehicleType.NORMAL)
+                  Spawn(BOTTOM_ROW, RIGHT_LANE, 900.0f, GridVehicleType.NORMAL, 90)
             }
             .let { GeneratedScenario(it).toScenarioStartingConfigurationEntry(id = 1) }
   }

@@ -36,21 +36,39 @@ class TestSpawns {
   @Test
   fun `Test correct conversion from Spawn to ScenarioStartingConfigurationEntry and back`() {
     val spawns = Array(3) { arrayOfNulls<Spawn>(3) }
-    spawns[TOP_ROW][LEFT_LANE] = Spawn(TOP_ROW, LEFT_LANE, 0.0f, GridVehicleType.CALM)
-    spawns[TOP_ROW][MIDDLE_ROW] = Spawn(TOP_ROW, MIDDLE_ROW, 0.0f, GridVehicleType.NORMAL)
-    spawns[TOP_ROW][RIGHT_LANE] = Spawn(TOP_ROW, RIGHT_LANE, 0.0f, GridVehicleType.SPEEDY)
+    spawns[TOP_ROW][LEFT_LANE] = Spawn(TOP_ROW, LEFT_LANE, 170.3f, GridVehicleType.CALM, 70)
+    spawns[TOP_ROW][CENTER_LANE] = Spawn(TOP_ROW, CENTER_LANE, 200.0f, GridVehicleType.NORMAL, 90)
+    spawns[TOP_ROW][RIGHT_LANE] = Spawn(TOP_ROW, RIGHT_LANE, 121.7f, GridVehicleType.SPEEDY, 130)
 
-    spawns[MIDDLE_ROW][LEFT_LANE] = Spawn(MIDDLE_ROW, LEFT_LANE, 0.0f, GridVehicleType.SPEEDY)
-    spawns[MIDDLE_ROW][CENTER_LANE] = Spawn(MIDDLE_ROW, CENTER_LANE, 0.0f, GridVehicleType.EGO)
-    spawns[MIDDLE_ROW][RIGHT_LANE] = Spawn(MIDDLE_ROW, RIGHT_LANE, 0.0f, GridVehicleType.NORMAL)
+    spawns[MIDDLE_ROW][LEFT_LANE] =
+        Spawn(MIDDLE_ROW, LEFT_LANE, 101.2f, GridVehicleType.SPORTY, 110)
+    spawns[MIDDLE_ROW][CENTER_LANE] =
+        Spawn(MIDDLE_ROW, CENTER_LANE, 110.0f, GridVehicleType.EGO, 100)
+    spawns[MIDDLE_ROW][RIGHT_LANE] =
+        Spawn(MIDDLE_ROW, RIGHT_LANE, 119.9f, GridVehicleType.NORMAL, 90)
 
-    spawns[BOTTOM_ROW][LEFT_LANE] = Spawn(BOTTOM_ROW, LEFT_LANE, 0.0f, GridVehicleType.NORMAL)
-    spawns[BOTTOM_ROW][CENTER_LANE] = Spawn(BOTTOM_ROW, CENTER_LANE, 0.0f, GridVehicleType.SPEEDY)
-    spawns[BOTTOM_ROW][RIGHT_LANE] = Spawn(BOTTOM_ROW, RIGHT_LANE, 0.0f, GridVehicleType.CALM)
+    spawns[BOTTOM_ROW][LEFT_LANE] = Spawn(BOTTOM_ROW, LEFT_LANE, 0.0f, GridVehicleType.NORMAL, 90)
+    spawns[BOTTOM_ROW][CENTER_LANE] =
+        Spawn(BOTTOM_ROW, CENTER_LANE, 40.4f, GridVehicleType.SPEEDY, 130)
+    spawns[BOTTOM_ROW][RIGHT_LANE] = Spawn(BOTTOM_ROW, RIGHT_LANE, 99.5f, GridVehicleType.CALM, 70)
 
-    val generatedScenario = GeneratedScenario(spawns)
+    val generatedScenario = GeneratedScenario(spawns, enumerationIndex = 42L, positionDrawIndex = 1)
     val startingScenario = generatedScenario.toScenarioStartingConfigurationEntry()
     val generatedScenarioFromStartingScenario = startingScenario.toGeneratedScenario()
     assertEquals(generatedScenario, generatedScenarioFromStartingScenario)
+    assertEquals(generatedScenario.id, startingScenario.humanReadableScenarioId)
+  }
+
+  /** The human-readable id names the cell, the type, the position at 0.1 m and the speed. */
+  @Test
+  fun `the human-readable id encodes cell, type, position and speed`() {
+    val spawns =
+        listOf(
+            Spawn(MIDDLE_ROW, CENTER_LANE, 110.0f, GridVehicleType.EGO, 80),
+            Spawn(TOP_ROW, CENTER_LANE, 163.4f, GridVehicleType.SPORTY, 110),
+            Spawn(BOTTOM_ROW, LEFT_LANE, 12.2f, GridVehicleType.SPEEDY, 130),
+        )
+    assertEquals(
+        "[0][2]S@12.2v130__[1][1]E@110.0v80__[2][1]P@163.4v110", GeneratedScenario(spawns).id)
   }
 }

@@ -28,10 +28,14 @@ import tools.aqua.stars.coverage.significance.db.repositories.ScenarioStartingCo
 import tools.aqua.stars.coverage.significance.db.repositories.TSCInstancesRepository
 import tools.aqua.stars.coverage.significance.db.repositories.TSCsRepository
 import tools.aqua.stars.coverage.significance.db.seed.MutantGenerator
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.DEFAULT_SEED_BATCH_SIZE
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.GridTrafficScenarioGenerator
+import tools.aqua.stars.coverage.significance.gridTrafficGenerator.printGridTrafficScenarioStatistics
 import tools.aqua.stars.coverage.significance.gridTrafficGenerator.seedGridTrafficScenarios
 import tools.aqua.stars.coverage.significance.process.NamedProcess
 import tools.aqua.stars.coverage.significance.process.ProcessGroupRunner
 import tools.aqua.stars.coverage.significance.tsc.tsc
+import tools.aqua.stars.coverage.significance.utils.CliArgs
 import tools.aqua.stars.coverage.significance.utils.ConsoleProgress
 import tools.aqua.stars.coverage.significance.utils.getJsonString
 import tools.aqua.stars.coverage.significance.utils.toTSCEntry
@@ -41,8 +45,21 @@ import tools.aqua.stars.sumo.mutants.AutopilotMutants
 /** Seeds the database with the TSC and mutants used in the project. */
 val tscListToUseInProject = listOf(tsc())
 
-/** Seed and precompute necessary data for coverage significance evaluation. */
-fun main() {
+/**
+ * Seed and precompute necessary data for coverage significance evaluation.
+ *
+ * @param args Scenario generator arguments (see [GridTrafficScenarioGenerator.fromArgs]), plus
+ *   `--batchSize=<n>` (scenarios per insert transaction, default [DEFAULT_SEED_BATCH_SIZE]) and
+ *   `--dryRun=true`, which only generates the scenarios and prints their statistics, without a
+ *   database.
+ */
+fun main(args: Array<String>) {
+  val generator = GridTrafficScenarioGenerator.fromArgs(args)
+  if (CliArgs.optionalBoolean(args, "dryRun", default = false)) {
+    printGridTrafficScenarioStatistics(generator)
+    return
+  }
+
   DbBootstrap.connectAndCreateSchema()
 
   // Add TSC to db
@@ -51,15 +68,8 @@ fun main() {
     insertAllTSCInstance(tsc, tscId)
   }
 
-  // Seed scenarios
-  seedGridTrafficScenarios(seed = SEED, insertIntoDatabase = true)
-  //  seedGridTrafficScenarios(
-  //      seed = SEED,
-  //      insertIntoDatabase = true,
-  //      onlyInsertFromListOfReadableIds =
-  //          listOf(
-  //
-  // "[0][0]C@50__[0][1]S@50__[0][2]N@50__[1][0]N@110__[1][1]E@110__[1][2]C@110__[2][0]S@170__[2][1]C@170__[2][2]S@170"))
+  seedGridTrafficScenarios(
+      generator, batchSize = CliArgs.optionalInt(args, "batchSize") ?: DEFAULT_SEED_BATCH_SIZE)
 
   // Seed mutants
   seedMutants(seedBaseLine = true, seedMutants = true)

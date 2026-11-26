@@ -92,6 +92,9 @@ class LibsumoDynamicDataCollector(
      * check, never the driven physics.
      */
     private const val MUTANT_MAX_SPEED_MPS = 100.0
+
+    /** SUMO vType of the ego, a copy of `DEFAULT_VEHTYPE` with [MUTANT_MAX_SPEED_MPS]. */
+    private const val MUTANT_TYPE_ID = "mutant"
   }
 
   /**
@@ -140,38 +143,12 @@ class LibsumoDynamicDataCollector(
     reloadSimulationWithRoute(routeId, writeFCDReplayFile)
 
     // Spawn vehicles from placements
-    val sortedPlacements =
-        scenario
-            .toGeneratedScenario()
-            .placements
-            .sortedWith(compareBy({ it.row }, { it.lane }, { it.positionMeters }))
-
-    var egoVehicleId: String? = null
-
-    val placementSpecs =
-        sortedPlacements
-            .indexedByKey { it.type.idLabel }
-            .map { (sp, indexWithinType) ->
-              val vehId = getVehicleId(sp.type.idLabel, indexWithinType)
-              var typeId = sp.type.sumoId
-
-              if (sp.type == GridVehicleType.EGO) {
-                egoVehicleId = vehId
-                typeId = "mutant"
-                SumoVehicleType.copy("DEFAULT_VEHTYPE", typeId)
-                SumoVehicleType.setMaxSpeed(typeId, MUTANT_MAX_SPEED_MPS)
-              }
-
-              PlacementSpec(
-                  vehId = vehId,
-                  typeId = typeId,
-                  laneIndex = sp.lane,
-                  positionMeters = sp.positionMeters.toDouble(),
-                  speedMps = (sp.type.departSpeedKmh - 10) / 3.6,
-              )
-            }
-
-    val egoId = egoVehicleId ?: run { error("Ego not found in placements") }
+    val placementSpecs = placementSpecsOf(scenario)
+    val egoId =
+        placementSpecs.singleOrNull { it.typeId == MUTANT_TYPE_ID }?.vehId
+            ?: error("Ego not found in placements")
+    SumoVehicleType.copy("DEFAULT_VEHTYPE", MUTANT_TYPE_ID)
+    SumoVehicleType.setMaxSpeed(MUTANT_TYPE_ID, MUTANT_MAX_SPEED_MPS)
 
     // Inserted in vehicle-id order — a deterministic ordering [replayFromTickForDuration] can
     // exactly reconstruct from a recorded tick's vehicle ids alone (unlike (row, lane, position),
@@ -312,17 +289,21 @@ class LibsumoDynamicDataCollector(
     // (row, lane, position).
     val replayPlacements = computeReplayPlacements(startTick).sortedBy { it.vehId }
     val egoId = replayPlacements.first { it.isEgo }.vehId
-    SumoVehicleType.copy("DEFAULT_VEHTYPE", "mutant")
-    SumoVehicleType.setMaxSpeed("mutant", MUTANT_MAX_SPEED_MPS)
+    SumoVehicleType.copy("DEFAULT_VEHTYPE", MUTANT_TYPE_ID)
+    SumoVehicleType.setMaxSpeed(MUTANT_TYPE_ID, MUTANT_MAX_SPEED_MPS)
 
+    // A recorded tick holds speeds but not the vehicles' own maximum speeds; those follow from the
+    // start speeds in the scenario, under the same vehicle ids.
+    val maxSpeedByVehicleId = placementSpecsOf(scenario).associate { it.vehId to it.maxSpeedMps }
     val placementSpecs =
         replayPlacements.map { rp ->
           PlacementSpec(
               vehId = rp.vehId,
-              typeId = if (rp.isEgo) "mutant" else rp.vehicleType,
+              typeId = if (rp.isEgo) MUTANT_TYPE_ID else rp.vehicleType,
               laneIndex = rp.laneIndex,
               positionMeters = rp.positionMeters,
               speedMps = rp.speedMps,
+              maxSpeedMps = maxSpeedByVehicleId[rp.vehId],
           )
         }
 
@@ -414,6 +395,8 @@ class LibsumoDynamicDataCollector(
    * @property speedMps Speed to insert the vehicle at (`vehicle.add`'s `departSpeed`) and to
    *   re-apply after force-placement (see [forcePlaceVehicles]) — the single speed value actually
    *   used for this vehicle.
+   * @property maxSpeedMps The vehicle's own maximum speed, set after force-placement, or `null` to
+   *   keep the vType's maximum speed.
    */
   private data class PlacementSpec(
       val vehId: String,
@@ -421,7 +404,30 @@ class LibsumoDynamicDataCollector(
       val laneIndex: Int,
       val positionMeters: Double,
       val speedMps: Double,
+      val maxSpeedMps: Double? = null,
   )
+
+  /**
+   * Placement of every vehicle of [scenario]. Vehicle ids are assigned per type label in row, lane
+   * and position order; [replayFromTickForDuration] finds the vehicles of a recorded tick under the
+   * same ids.
+   */
+  private fun placementSpecsOf(scenario: ScenarioStartingConfigurationEntry): List<PlacementSpec> =
+      scenario
+          .toGeneratedScenario()
+          .placements
+          .sortedWith(compareBy({ it.row }, { it.lane }, { it.positionMeters }))
+          .indexedByKey { it.type.idLabel }
+          .map { (sp, indexWithinType) ->
+            PlacementSpec(
+                vehId = getVehicleId(sp.type.idLabel, indexWithinType),
+                typeId = if (sp.type == GridVehicleType.EGO) MUTANT_TYPE_ID else sp.type.sumoId,
+                laneIndex = sp.lane,
+                positionMeters = sp.positionMeters.toDouble(),
+                speedMps = sp.placementSpeedMps,
+                maxSpeedMps = sp.maxSpeedMps,
+            )
+          }
 
   /**
    * Phase 1 of vehicle placement: `vehicle.add` for every [placements] entry. Must fully complete
@@ -442,14 +448,16 @@ class LibsumoDynamicDataCollector(
   }
 
   /**
-   * Phase 2 of vehicle placement: force-places every vehicle onto its exact lane/position, then
-   * re-applies [PlacementSpec.speedMps]. `vehicle.moveTo` resets whatever speed `vehicle.add`'s
-   * `departSpeed` established at insertion, so without this explicit `vehicle.setSpeed` call every
-   * vehicle silently ends up at SUMO's own default speed instead of the requested one.
+   * Phase 2 of vehicle placement: force-places every vehicle onto its exact lane/position, sets its
+   * own maximum speed ([PlacementSpec.maxSpeedMps]) if given, then re-applies
+   * [PlacementSpec.speedMps]. `vehicle.moveTo` resets whatever speed `vehicle.add`'s `departSpeed`
+   * established at insertion, so without this explicit `vehicle.setSpeed` call every vehicle
+   * silently ends up at SUMO's own default speed instead of the requested one.
    */
   private fun forcePlaceVehicles(placements: List<PlacementSpec>) {
     for (p in placements) {
       SumoVehicle.moveTo(p.vehId, "highway_${p.laneIndex}", p.positionMeters)
+      p.maxSpeedMps?.let { SumoVehicle.setMaxSpeed(p.vehId, it) }
       SumoVehicle.setSpeed(p.vehId, p.speedMps)
     }
   }
@@ -482,7 +490,9 @@ class LibsumoDynamicDataCollector(
       val laneId = SumoVehicle.getLaneID(vehId)
       val lane = laneById[laneId] ?: error("Unknown lane $laneId")
 
-      val typeId = SumoVehicle.getTypeID(vehId)
+      // A vehicle with its own maximum speed (see forcePlaceVehicles) runs on a vehicle-specific
+      // copy of its vType, which SUMO names "<vType>@<vehicle>".
+      val typeId = SumoVehicle.getTypeID(vehId).substringBefore('@')
       val rawVType =
           if (typeId.lowercase().contains("mutant")) {
             vehicleTypesById["ego"] ?: error("Unknown vehicle type $typeId")

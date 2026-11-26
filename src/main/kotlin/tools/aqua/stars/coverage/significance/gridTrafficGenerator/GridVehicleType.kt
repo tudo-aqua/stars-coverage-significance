@@ -17,62 +17,29 @@
 
 package tools.aqua.stars.coverage.significance.gridTrafficGenerator
 
-import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState
-import tools.aqua.stars.coverage.significance.db.dataclasses.ScenarioStartingConfigurationVehicleState.*
-
 /**
- * Vehicle categories used by the 3x3-grid scenario generator.
+ * Vehicle types of the 3x3-grid scenario generator. Every type except [EGO] is a driver profile;
+ * [GridTrafficScenarioGenerator] chooses it from the vehicle's start speed.
  *
- * @property sumoId Must match the SUMO vType id.
- * @property departSpeedKmh Initial departure speed in km/h (converted to m/s for SUMO exports).
+ * @property sumoId SUMO vType id in `sumoData/experiment/vTypes.add.xml`.
+ * @property idLabel Short label used to build SUMO vehicle ids (see
+ *   [tools.aqua.stars.coverage.significance.utils.getVehicleId]).
+ * @property idCode One-letter code used in human-readable scenario ids (see
+ *   [Spawn.getHumanReadableString]).
  */
-enum class GridVehicleType(val sumoId: String, val departSpeedKmh: Int) {
+enum class GridVehicleType(val sumoId: String, val idLabel: String, val idCode: Char) {
   /** The ego vehicle (AUT). */
-  EGO("ego", 100),
+  EGO("ego", "ego", 'E'),
 
-  /** Passenger car with calm driving style (70 km/h at initialization). */
-  CALM("car_calm", 70),
+  /** Careful driver: large gaps, strong keep-right discipline. */
+  CALM("car_calm", "slow", 'C'),
 
-  /** Passenger car with normal driving style (100 km/h at initialization). */
-  NORMAL("car_normal", 100),
+  /** Normal driver: balanced lane changing. */
+  NORMAL("car_normal", "normal", 'N'),
 
-  /** Passenger car with fast driving style (130 km/h at initialization). */
-  SPEEDY("car_speedy", 130);
+  /** Sporty driver: halfway between [NORMAL] and [SPEEDY]. */
+  SPORTY("car_sporty", "sporty", 'P'),
 
-  /** Initial departure speed in m/s (converted from km/h). */
-  val departSpeedMs: Double
-    get() = departSpeedKmh / 3.6
-
-  /**
-   * Short, human-readable type label used to build SUMO vehicle ids (see
-   * [tools.aqua.stars.coverage.significance.utils.getVehicleId]) — e.g. `"veh_slow_[0][2]_in_..."`
-   * instead of the raw enum name (`"veh_CALM_..."`).
-   */
-  val idLabel: String
-    get() =
-        when (this) {
-          EGO -> "ego"
-          CALM -> "slow"
-          NORMAL -> "normal"
-          SPEEDY -> "fast"
-        }
-
-  /** Static utility methods. */
-  companion object {
-
-    /**
-     * Maps a [ScenarioStartingConfigurationVehicleState] to a [GridVehicleType], or `null` if the
-     * state is [NONE].
-     */
-    fun fromScenarioStartingConfigurationVehicleState(
-        state: ScenarioStartingConfigurationVehicleState
-    ): GridVehicleType? =
-        when (state) {
-          SLOWER -> CALM
-          SAME_SPEED -> NORMAL
-          FASTER -> SPEEDY
-          ScenarioStartingConfigurationVehicleState.EGO -> EGO
-          NONE -> null
-        }
-  }
+  /** Careless driver: small gaps, weak keep-right discipline, assertive lane changes. */
+  SPEEDY("car_speedy", "fast", 'S'),
 }

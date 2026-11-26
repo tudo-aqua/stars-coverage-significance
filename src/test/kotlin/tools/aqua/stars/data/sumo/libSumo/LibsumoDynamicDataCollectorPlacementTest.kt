@@ -51,33 +51,36 @@ class LibsumoDynamicDataCollectorPlacementTest {
       LibsumoDynamicDataCollector(
           baseDir = Path("src/test/resources"), netFileName = "grid_highway.net.xml")
 
-  /**
-   * Every placement speed is requested 10 km/h below the type's configured
-   * [GridVehicleType.departSpeedKmh] (see [LibsumoDynamicDataCollector.runGeneratedScenario]).
-   * Recomputed here from the same public constant instead of hard-coding the resulting m/s value,
-   * so a change to that offset shows up as an assertion diff instead of silently passing.
-   */
-  private fun expectedPlacementSpeedMps(type: GridVehicleType): Double =
-      (type.departSpeedKmh - 10) / 3.6
-
-  /** Asserts [actualMps] matches [type]'s [expectedPlacementSpeedMps] within float rounding. */
-  private fun assertPlacementSpeed(type: GridVehicleType, vehId: String, actualMps: Float) {
-    val expected = expectedPlacementSpeedMps(type)
+  /** Asserts that [vehId] drives at [spawn]'s start speed in [actualMps], within float rounding. */
+  private fun assertPlacementSpeed(spawn: Spawn, vehId: String, actualMps: Float) {
     assertTrue(
-        abs(expected - actualMps) < 1e-3,
-        "expected $vehId to be placed at ${expected}m/s (${type.name}'s departSpeedKmh=" +
-            "${type.departSpeedKmh} minus 10km/h) but was ${actualMps}m/s")
+        abs(spawn.placementSpeedMps - actualMps) < 1e-3,
+        "expected $vehId to be placed at ${spawn.placementSpeedMps}m/s (${spawn.speedKmh}km/h) but " +
+            "was ${actualMps}m/s")
+  }
+
+  /**
+   * Asserts that [vehId]'s own maximum speed in SUMO is [spawn]'s [Spawn.maxSpeedMps], within float
+   * rounding.
+   */
+  private fun assertMaxSpeed(spawn: Spawn, vehId: String) {
+    val expected = checkNotNull(spawn.maxSpeedMps)
+    val actual = SumoVehicle.getMaxSpeed(vehId)
+    assertTrue(
+        abs(expected - actual) < 1e-3,
+        "expected $vehId to have a maximum speed of ${expected}m/s but had ${actual}m/s")
   }
 
   @Test
   fun `every vehicle has its exact configured departure speed at the first tick`() {
-    val spawns = Array(3) { arrayOfNulls<Spawn>(3) }
-    spawns[MIDDLE_ROW][CENTER_LANE] = Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO)
-    spawns[BOTTOM_ROW][RIGHT_LANE] = Spawn(BOTTOM_ROW, RIGHT_LANE, 700.0f, GridVehicleType.CALM)
-    spawns[BOTTOM_ROW][CENTER_LANE] = Spawn(BOTTOM_ROW, CENTER_LANE, 700.0f, GridVehicleType.NORMAL)
-    spawns[TOP_ROW][RIGHT_LANE] = Spawn(TOP_ROW, RIGHT_LANE, 1300.0f, GridVehicleType.SPEEDY)
-
-    val scenario = GeneratedScenario(spawns).toScenarioStartingConfigurationEntry(id = 1)
+    val ego = Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO, 100)
+    val calm = Spawn(BOTTOM_ROW, RIGHT_LANE, 700.0f, GridVehicleType.CALM, 70)
+    val normal = Spawn(BOTTOM_ROW, CENTER_LANE, 700.0f, GridVehicleType.NORMAL, 90)
+    val sporty = Spawn(TOP_ROW, CENTER_LANE, 1300.0f, GridVehicleType.SPORTY, 110)
+    val speedy = Spawn(TOP_ROW, RIGHT_LANE, 1300.0f, GridVehicleType.SPEEDY, 130)
+    val scenario =
+        GeneratedScenario(listOf(ego, calm, normal, sporty, speedy))
+            .toScenarioStartingConfigurationEntry(id = 1)
 
     try {
       val ticks =
@@ -86,14 +89,18 @@ class LibsumoDynamicDataCollectorPlacementTest {
                   runId = 1, scenario = scenario, mutantId = 1, onlyFirstTick = true)
       val firstTick = ticks.single()
       val byId = firstTick.vehiclesInTick.associateBy { it.vehicleId }
+      val spawnById =
+          mapOf(
+              "ego" to ego,
+              "slow_1" to calm,
+              "normal_1" to normal,
+              "sporty_1" to sporty,
+              "fast_1" to speedy)
 
-      assertPlacementSpeed(GridVehicleType.EGO, "ego", byId.getValue("ego").speedMetersPerSecond)
-      assertPlacementSpeed(
-          GridVehicleType.CALM, "slow_1", byId.getValue("slow_1").speedMetersPerSecond)
-      assertPlacementSpeed(
-          GridVehicleType.NORMAL, "normal_1", byId.getValue("normal_1").speedMetersPerSecond)
-      assertPlacementSpeed(
-          GridVehicleType.SPEEDY, "fast_1", byId.getValue("fast_1").speedMetersPerSecond)
+      spawnById.forEach { (vehId, spawn) ->
+        assertPlacementSpeed(spawn, vehId, byId.getValue(vehId).speedMetersPerSecond)
+        if (spawn.type != GridVehicleType.EGO) assertMaxSpeed(spawn, vehId)
+      }
     } finally {
       Simulation.close()
     }
@@ -108,12 +115,14 @@ class LibsumoDynamicDataCollectorPlacementTest {
     // per-step decel bound (~4.5 m/s^2 * 0.1s = ~0.45 m/s), so several steps are taken to build
     // up a clearly-outside-noise cumulative difference instead of asserting on one step's tiny
     // change.
-    val spawns = Array(3) { arrayOfNulls<Spawn>(3) }
-    spawns[MIDDLE_ROW][CENTER_LANE] = Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO)
-    spawns[BOTTOM_ROW][RIGHT_LANE] = Spawn(BOTTOM_ROW, RIGHT_LANE, 1000.0f, GridVehicleType.CALM)
-    spawns[TOP_ROW][RIGHT_LANE] = Spawn(TOP_ROW, RIGHT_LANE, 990.0f, GridVehicleType.SPEEDY)
-
-    val scenario = GeneratedScenario(spawns).toScenarioStartingConfigurationEntry(id = 2)
+    val speedy = Spawn(TOP_ROW, RIGHT_LANE, 990.0f, GridVehicleType.SPEEDY, 130)
+    val scenario =
+        GeneratedScenario(
+                listOf(
+                    Spawn(MIDDLE_ROW, CENTER_LANE, 1000.0f, GridVehicleType.EGO, 100),
+                    Spawn(BOTTOM_ROW, RIGHT_LANE, 1000.0f, GridVehicleType.CALM, 70),
+                    speedy))
+            .toScenarioStartingConfigurationEntry(id = 2)
 
     try {
       val ticks =
@@ -123,7 +132,7 @@ class LibsumoDynamicDataCollectorPlacementTest {
       val placementSpeed =
           ticks.single().vehiclesInTick.first { it.vehicleId == "fast_1" }.speedMetersPerSecond
 
-      assertPlacementSpeed(GridVehicleType.SPEEDY, "fast_1", placementSpeed)
+      assertPlacementSpeed(speedy, "fast_1", placementSpeed)
 
       // The collector leaves the simulation loaded after onlyFirstTick=true; step it several more
       // times directly to observe what SUMO itself does afterward, without going through the full
