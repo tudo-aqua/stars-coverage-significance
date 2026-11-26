@@ -95,6 +95,30 @@ object CliArgs {
   }
 
   /**
+   * Parses an optional comma-separated list of Int arguments from the command-line arguments.
+   *
+   * @param args Array of command-line arguments.
+   * @param name Name of the argument to parse.
+   * @return The parsed Int values, or `null` if the argument is not found.
+   * @throws NumberFormatException if the argument is present but any comma-separated part isn't a
+   *   valid Int.
+   */
+  fun optionalIntList(args: Array<String>, name: String): List<Int>? =
+      optionalString(args, name)?.split(",")?.map { it.trim().toInt() }
+
+  /**
+   * Parses an optional string argument from the command-line arguments.
+   *
+   * @param args Array of command-line arguments.
+   * @param name Name of the argument to parse.
+   * @return The raw value, or `null` if the argument is not found.
+   */
+  fun optionalString(args: Array<String>, name: String): String? {
+    val prefix = "--$name="
+    return args.firstOrNull { it.startsWith(prefix) }?.substringAfter(prefix)
+  }
+
+  /**
    * Parses an optional boolean argument from the command-line arguments.
    *
    * @param args Array of command-line arguments.
