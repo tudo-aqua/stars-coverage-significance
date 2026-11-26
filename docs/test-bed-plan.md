@@ -58,6 +58,13 @@ scenarios.
 | D12 | TTC threshold 1.5 s, front and rear; 2 s and 3 s as sensitivity runs. The sweep cannot set it: the baseline never goes below 6.5 s TTC, the tick-0 value (`NOTES.md`) | Till, 2026-11-18 |
 | D13 | TG threshold 0.8 s front, 0.5 s rear. Front: the baseline's violations cluster at 0.795 s and 0.808 s, so 0.8 s removes 3.7% of scenarios, while 0.85 s and above remove 5.1%. Rear: the baseline never goes below 0.64 s after its own lane change | Till, 2026-11-18 |
 | D14 | Rear vehicle counts only within 20 ticks after an ego lane change (`after_lane_change`); otherwise the oracle measures the other vehicles' behaviour, not the mutant's | Till, 2026-11-18 |
+| D15 | Every mutant has a G0 kill share of at most 0.001% of the scenarios | Till, 2026-11-26 |
+| D16 | 10 to 20 times more scenarios; the number of mutants grows by the remaining storage factor | Till, 2026-11-26 |
+| D17 | Only (scenario, mutant) outcomes are stored, not ticks | Till, 2026-11-26 |
+| D18 | An unmutated vehicle layer (physical limits only) and a layered, fully mutable safety design in `Autopilot.kt` | Till, 2026-11-26 |
+| D19 | New mutation operators (off by one, scale by ±x%) go into a local fork of MutantKraken | Till, 2026-11-26 |
+| D20 | Speed grid: ego 80/100/120 km/h, other vehicles 70/90/110/130 km/h with one driver profile per speed, all combinations enumerated (3,515,625), positions drawn inside the cells | Till, 2026-11-26 |
+| D21 | The speed grid replaces the old enumeration; the database is rebuilt from scratch and no old data are used | Till, 2026-11-26 |
 
 ### Proposed, pending confirmation with the supervisor
 
@@ -244,3 +251,13 @@ their distribution; draw random ticks per class and use each as a new starting s
 mutants (4 s); use these to learn a better tree or refine the existing one. Note that the current
 highway table (`highway_traffic_scenarios`) stores lane, position, speed and TSC class per vehicle and
 tick, but not the TTC and TG values the trees need; these must be recorded or recomputed.
+
+## 8. Next iteration: rare-kill mutants and the speed grid
+
+On the first scenario set, 12 mutants had an accident in 17 to 29% of the scenarios. That is far above the target
+of D15, so the next iteration changes the scenario set, the Autopilot and the mutation operators (D15 to D21). The
+plan, the size calculation and the order of work are in `docs/v2-scenarios-and-mutants-plan.md`.
+
+Several numbers in this file were measured on the old grid and must be measured again on the new data: the 196,608
+scenarios, the 55 m start gap, the 68 and 160 TSC classes at tick 0 (step B and P3), and the thresholds of D12 and
+D13.
