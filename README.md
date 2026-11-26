@@ -105,14 +105,14 @@ docker compose -p stars up -d
 ## Mutating the Autopilot
 
 The reproduction artifact already includes all mutations of the autopilot. In the case you want to mutate the autopilot yourself,
-a Docker image `mutations` is provided. For the mutation, this artifact uses `mutant-kraken` which is publicly available on [GitHub](https://github.com/JosueMolinaMorales/mutant-kraken).
+a Docker image `mutations` is provided. For the mutation, this artifact uses a fork of `mutant-kraken` (publicly available on [GitHub](https://github.com/JosueMolinaMorales/mutant-kraken)) that adds the operators `LiteralOffByOneOperator` and `LiteralScaleOperator` (see `docs/v2-scenarios-and-mutants-plan.md`, section 7). The fork is expected next to this repository, in `../mutant-kraken`, on branch `stars-operators`.
 
 ### Building the Mutant Image
 
-First, build the base image:
+First, build the base image, passing the fork's checkout as the build context `mutant-kraken`:
 
 ```powershell
-docker build -t mutation-base-image -f Dockerfile_Mutation .
+docker build --build-context mutant-kraken=../mutant-kraken -t mutation-base-image -f Dockerfile_Mutation .
 ```
 
 ### Mutating the Autopilot on Windows (PowerShell)
@@ -183,10 +183,10 @@ This produces the compressed base image archive `base-image.tar.gz`.
 
 ### Building and Shipping of Mutation Base Image
 
-Build the base image:
+Build the base image from the `mutant-kraken` fork in `../mutant-kraken`:
 
 ```bash
-docker build -t mutation-base-image -f Dockerfile_Mutation .
+docker build --build-context mutant-kraken=../mutant-kraken -t mutation-base-image -f Dockerfile_Mutation .
 ```
 
 Save the base image to a tar archive:

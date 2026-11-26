@@ -1,4 +1,11 @@
-# Install mutant-kraken with Rust toolchain ----
+# Build mutant-kraken from the local fork ----
+# The fork (branch stars-operators) adds LiteralOffByOneOperator and LiteralScaleOperator
+# (docs/v2-scenarios-and-mutants-plan.md, section 7). Pass its checkout as a named build context:
+#
+#   docker build --build-context mutant-kraken=../mutant-kraken -t mutation-base-image -f Dockerfile_Mutation .
+#
+# Once the fork is pushed, the COPY and install below can be replaced by
+#   RUN cargo install --locked --git <fork url> --rev <commit> mutant-kraken
 FROM rust:1-bookworm AS builder
 
 ENV CARGO_HOME=/usr/local/cargo \
@@ -6,15 +13,16 @@ ENV CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:/usr/local/rustup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Install mutant-kraken into /usr/local/cargo/bin
-RUN cargo install mutant-kraken
+COPY --from=mutant-kraken . /mutant-kraken
+RUN cargo install --locked --path /mutant-kraken/mutant-kraken
 
 FROM debian:bookworm-slim AS runtime
 
 # Minimal runtime deps.
-# jq/diffutils are used by create_mutants.sh to read mutations.json and match each generated
-# mutant file back to the mutation operator that produced it (see that script for details).
+# jq is used by create_mutants.sh to read mutations.json, which names the operator and the file of
+# every generated mutant.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates jq diffutils \
+ && apt-get install -y --no-install-recommends ca-certificates jq \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy the installed binary from the builder stage

@@ -3,14 +3,18 @@
     "operators": [
       "UnaryRemovalOperator",
       "LogicalReplacementOperator",
-      "ArithmeticReplacementOperator"
-    ]
+      "ArithmeticReplacementOperator",
+      "LiteralOffByOneOperator",
+      "LiteralScaleOperator"
+    ],
+    "literal_scale_percents": [10],
+    "literal_off_by_one_mode": "LastDigit"
   },
   "ignore": {
-    "ignore_files": [],
-    "ignore_directories": []
+    "ignore_files": ["^(HighwayLane|Mutant|Mutant200kmh|MutantManeuver)\\.kt$"],
+    "ignore_directories": ["mutants"]
   },
   "threading": { "max_threads": 30 },
   "output": { "display_end_table": false },
-  "logging": { "log_level": "WARNING" }
+  "logging": { "log_level": "warn" }
 }
