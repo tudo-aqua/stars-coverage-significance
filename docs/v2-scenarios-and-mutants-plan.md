@@ -189,3 +189,24 @@ directory.
   - An unknown operator name stops the tool instead of falling back to all operators.
 - **In this repository,** `scripts/create_mutants.sh` maps each mutant file through `mutations.json`, and
   `mutantkraken.config.json` mutates only `Autopilot.kt`.
+
+## 8. Status (2026-11-26)
+
+Roadmap items 1 to 3 are implemented; items 4 to 8 are open.
+
+- **Seeding (items 1 and 2).**
+  - `./gradlew prepareDatabaseAndSeedWithScenariosAndMutants` seeds the speed grid. The generator arguments of
+    section 5 can be passed with `--args`, and `--dryRun=true` generates the scenarios without a database.
+  - With the defaults it generated 3,515,625 scenarios, all ids unique. 25.8% of the lane draws were redrawn by the
+    start conditions. The smallest start gap and time to collision were 10.00 m and 4.00 s.
+  - Seeding into a local PostgreSQL 16 took 261 s, and the table needs 2.1 GB including indexes.
+  - A rerun skips a complete table, continues an interrupted one with identical rows, and refuses a table filled
+    with another configuration.
+- **MutantKraken fork (item 3).**
+  - Five commits on `stars-operators`: the two operators, then one commit for each fix. 109 unit tests pass in
+    `rust:1-bookworm`; the Gradle test needs a JDK and is skipped there.
+  - With `sumo/mutantkraken.config.json`, the current `Autopilot.kt` yields 362 mutants: 144 arithmetic,
+    19 unary removal, 11 logical, 122 off by one and 66 scale.
+  - All 362 compile, and two runs give the same registry.
+  - These mutants are not registered in this repository. They were only generated to test the fork, because the
+    mutants for the study come from Autopilot v2 (item 6).
